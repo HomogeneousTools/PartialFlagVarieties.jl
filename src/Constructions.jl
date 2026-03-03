@@ -1,0 +1,349 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Constructions — named convenience constructors for classical varieties
+#
+#  Provides familiar notation for well-known partial flag varieties:
+#  Grassmannians, projective spaces, quadrics, isotropic Grassmannians,
+#  exceptional varieties, etc.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+export Gr, OGr, SGr, LGr, IGr
+export projective_space, quadric
+export cayley_plane, freudenthal_variety
+export adjoint_variety, coadjoint_variety
+export flag_variety
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Type A: Grassmannians and flags
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    Gr(k, n) -> PartialFlagVariety
+
+The Grassmannian ``\\mathrm{Gr}(k, n)`` of ``k``-planes in ``\\mathbb{C}^n``.
+
+Encodes as ``A_{n-1}`` with node ``k`` marked.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = Gr(2, 5);
+
+julia> dimension(V)
+6
+
+julia> euler_characteristic(V)
+10
+```
+"""
+function Gr(k::Int, n::Int)
+  1 <= k <= n - 1 || throw(ArgumentError("Gr($k, $n): need 1 ≤ k ≤ n-1"))
+  DT = TypeA{n - 1}
+  return partial_flag_variety(DT, (k,), "Gr($k, $n)")
+end
+
+"""
+    projective_space(n) -> PartialFlagVariety
+
+The projective space ``\\mathbb{P}^n = \\mathrm{Gr}(1, n+1)``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = projective_space(4);
+
+julia> dimension(V)
+4
+
+julia> betti_numbers(V)
+5-element Vector{BigInt}:
+ 1
+ 1
+ 1
+ 1
+ 1
+```
+"""
+function projective_space(n::Int)
+  n >= 1 || throw(ArgumentError("projective_space($n): need n ≥ 1"))
+  DT = TypeA{n}
+  return partial_flag_variety(DT, (1,), "ℙ$n")
+end
+
+"""
+    flag_variety(n, marking::NTuple) -> PartialFlagVariety
+
+A partial flag variety of type ``A_{n-1}``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = flag_variety(4, (1, 2));
+
+julia> dimension(V)
+5
+```
+"""
+function flag_variety(n::Int, marking::NTuple{K,Int}) where {K}
+  DT = TypeA{n - 1}
+  marking_str = join(marking, ",")
+  return partial_flag_variety(DT, marking, "Fl($(marking_str); $n)")
+end
+
+function flag_variety(n::Int, marking::Vector{Int})
+  return flag_variety(n, Tuple(sort(marking)))
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Type B/D: Orthogonal Grassmannians
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    OGr(k, n) -> PartialFlagVariety
+
+The orthogonal Grassmannian ``\\mathrm{OGr}(k, n)`` of isotropic ``k``-planes
+in ``\\mathbb{C}^n`` with a symmetric bilinear form.
+
+For ``n = 2m + 1`` (odd): type ``B_m``, mark node ``k``.
+For ``n = 2m`` (even) and ``k < m``: type ``D_m``, mark node ``k``.
+For ``n = 2m`` and ``k = m``: this is the spinor variety ``\\mathrm{OGr}_+(m, 2m)``,
+type ``D_m`` mark node ``m``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = OGr(5, 10);  # spinor variety S₅
+
+julia> dimension(V)
+10
+
+julia> euler_characteristic(V)
+16
+```
+"""
+function OGr(k::Int, n::Int)
+  1 <= k || throw(ArgumentError("OGr($k, $n): need k ≥ 1"))
+  if isodd(n)
+    m = (n - 1) ÷ 2
+    1 <= k <= m || throw(ArgumentError("OGr($k, $n): need k ≤ $m for B$m"))
+    DT = TypeB{m}
+    return partial_flag_variety(DT, (k,), "OGr($k, $n)")
+  else
+    m = n ÷ 2
+    1 <= k <= m || throw(ArgumentError("OGr($k, $n): need k ≤ $m for D$m"))
+    DT = TypeD{m}
+    return partial_flag_variety(DT, (k,), "OGr($k, $n)")
+  end
+end
+
+"""
+    SGr(k, n) -> PartialFlagVariety
+
+The symplectic Grassmannian ``\\mathrm{SGr}(k, n)`` of isotropic ``k``-planes
+in ``\\mathbb{C}^n`` with a skew-symmetric form (``n`` must be even).
+
+Type ``C_{n/2}``, mark node ``k``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = SGr(2, 6);
+
+julia> dimension(V)
+7
+```
+"""
+function SGr(k::Int, n::Int)
+  iseven(n) || throw(ArgumentError("SGr($k, $n): n must be even"))
+  m = n ÷ 2
+  1 <= k <= m || throw(ArgumentError("SGr($k, $n): need 1 ≤ k ≤ $m"))
+  DT = TypeC{m}
+  return partial_flag_variety(DT, (k,), "SGr($k, $n)")
+end
+
+"""
+    LGr(n) -> PartialFlagVariety
+
+The Lagrangian Grassmannian ``\\mathrm{LGr}(n, 2n) = \\mathrm{SGr}(n, 2n)``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = LGr(3);
+
+julia> dimension(V)
+6
+```
+"""
+function LGr(n::Int)
+  n >= 1 || throw(ArgumentError("LGr($n): need n ≥ 1"))
+  return SGr(n, 2n)
+end
+
+"""
+    IGr(k, n) -> PartialFlagVariety
+
+Synonym for [`OGr`](@ref) — isotropic Grassmannian for an orthogonal form.
+"""
+IGr(k::Int, n::Int) = OGr(k, n)
+
+"""
+    quadric(n) -> PartialFlagVariety
+
+The smooth quadric hypersurface ``Q_n \\subset \\mathbb{P}^{n+1}``.
+
+For odd ``n = 2m - 1``: ``\\mathrm{OGr}(1, 2m + 1)`` = ``B_m / P_1``.
+For even ``n = 2m - 2``: ``\\mathrm{OGr}(1, 2m)`` = ``D_m / P_1``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = quadric(4);
+
+julia> dimension(V)
+4
+
+julia> betti_numbers(V)
+5-element Vector{BigInt}:
+ 1
+ 1
+ 2
+ 1
+ 1
+```
+"""
+function quadric(n::Int)
+  n >= 1 || throw(ArgumentError("quadric($n): need n ≥ 1"))
+  if isodd(n)
+    m = (n + 1) ÷ 2
+    DT = TypeB{m}
+    return partial_flag_variety(DT, (1,), "Q$n")
+  else
+    m = n ÷ 2 + 1
+    DT = TypeD{m}
+    return partial_flag_variety(DT, (1,), "Q$n")
+  end
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Exceptional varieties
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    cayley_plane() -> PartialFlagVariety
+
+The Cayley plane ``\\mathbb{OP}^2 = E_6 / P_1``, the 16-dimensional
+cominuscule variety.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = cayley_plane();
+
+julia> dimension(V)
+16
+
+julia> euler_characteristic(V)
+27
+```
+"""
+function cayley_plane()
+  return partial_flag_variety(TypeE{6}, (1,), "OP²")
+end
+
+"""
+    freudenthal_variety() -> PartialFlagVariety
+
+The Freudenthal variety ``E_7 / P_7``, the 27-dimensional cominuscule variety.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = freudenthal_variety();
+
+julia> dimension(V)
+27
+
+julia> euler_characteristic(V)
+56
+```
+"""
+function freudenthal_variety()
+  return partial_flag_variety(TypeE{7}, (7,), "E₇/P₇")
+end
+
+"""
+    adjoint_variety(::Type{DT}) -> PartialFlagVariety
+
+The adjoint variety of type `DT` (projectivization of the minimal nilpotent orbit).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = adjoint_variety(TypeE{6});
+
+julia> dimension(V)
+21
+```
+"""
+function adjoint_variety(::Type{DT}) where {DT<:SimpleDynkinType}
+  R = rank(DT)
+
+  # Determine the adjoint node
+  DT <: TypeA && return _adjoint_A(DT)
+  DT <: TypeB && return partial_flag_variety(DT, (2,), "Adj($(Lie._type_name(DT)))")
+  DT <: TypeC && return partial_flag_variety(DT, (1,), "Adj($(Lie._type_name(DT)))")
+  DT <: TypeD && return partial_flag_variety(DT, (2,), "Adj($(Lie._type_name(DT)))")
+  DT <: TypeE{6} && return partial_flag_variety(DT, (2,), "Adj(E₆)")
+  DT <: TypeE{7} && return partial_flag_variety(DT, (1,), "Adj(E₇)")
+  DT <: TypeE{8} && return partial_flag_variety(DT, (8,), "Adj(E₈)")
+  DT <: TypeF4 && return partial_flag_variety(DT, (1,), "Adj(F₄)")
+  DT <: TypeG2 && return partial_flag_variety(DT, (2,), "Adj(G₂)")
+
+  error("Adjoint variety not implemented for $DT")
+end
+
+function _adjoint_A(::Type{DT}) where {DT<:TypeA}
+  R = rank(DT)
+  return partial_flag_variety(DT, (1, R), "Adj($(Lie._type_name(DT)))")
+end
+
+"""
+    coadjoint_variety(::Type{DT}) -> PartialFlagVariety
+
+The coadjoint variety of type `DT`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> V = coadjoint_variety(TypeG2);
+
+julia> dimension(V)
+5
+```
+"""
+function coadjoint_variety(::Type{DT}) where {DT<:SimpleDynkinType}
+  R = rank(DT)
+
+  DT <: TypeA && return _adjoint_A(DT)  # self-dual
+  DT <: TypeB && return partial_flag_variety(DT, (1,), "Coadj($(Lie._type_name(DT)))")
+  DT <: TypeC && return partial_flag_variety(DT, (2,), "Coadj($(Lie._type_name(DT)))")
+  DT <: TypeD && return partial_flag_variety(DT, (2,), "Coadj($(Lie._type_name(DT)))")
+  DT <: TypeE{6} && return partial_flag_variety(DT, (2,), "Coadj(E₆)")
+  DT <: TypeE{7} && return partial_flag_variety(DT, (1,), "Coadj(E₇)")
+  DT <: TypeE{8} && return partial_flag_variety(DT, (8,), "Coadj(E₈)")
+  DT <: TypeF4 && return partial_flag_variety(DT, (4,), "Coadj(F₄)")
+  DT <: TypeG2 && return partial_flag_variety(DT, (1,), "Coadj(G₂)")
+
+  error("Coadjoint variety not implemented for $DT")
+end

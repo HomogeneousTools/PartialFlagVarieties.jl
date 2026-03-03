@@ -1,0 +1,31 @@
+using Documenter
+using PartialFlagVarieties
+
+makedocs(
+  sitename="PartialFlagVarieties.jl",
+  authors="Pieter Belmans",
+  format=Documenter.HTML(
+    prettyurls=get(ENV, "CI", nothing) == "true",
+    canonical="https://pbelmans.github.io/PartialFlagVarieties.jl",
+    assets=String[],
+  ),
+  modules=[PartialFlagVarieties],
+  pages=[
+    "Home" => "index.md",
+    "Mathematical Background" => "math.md",
+    "API Reference" => [
+      "MarkedDynkinType" => "api/marked_dynkin_type.md",
+      "PartialFlagVariety" => "api/partial_flag_variety.md",
+      "IrrepLevi" => "api/irrep_levi.md",
+      "CompletelyReducibleBundle" => "api/bundle.md",
+      "Cohomology" => "api/cohomology.md",
+      "Constructions" => "api/constructions.md",
+    ],
+  ],
+  doctest=true,
+)
+
+deploydocs(
+  repo="github.com/pbelmans/PartialFlagVarieties.jl.git",
+  devbranch="main",
+)
