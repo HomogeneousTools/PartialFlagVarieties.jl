@@ -685,7 +685,7 @@ function Base.show(io::IO, ::MarkedDynkinType{DT,Marked}) where {DT,Marked}
   print(io, "$(Lie._type_name(DT)) / P_{$(join(Marked, ","))}")
 end
 
-function Base.show(io::IO, ::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
+function Base.show(io::IO, ::Type{MarkedDynkinType{DT,Marked}}) where {DT<:DynkinType,Marked}
   print(io, "MarkedDynkinType{$(Lie._type_name(DT)), $Marked}")
 end
 
