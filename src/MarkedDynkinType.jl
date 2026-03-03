@@ -336,6 +336,8 @@ julia> M = decomposition_matrix(MDT);
 
 julia> Minv = decomposition_matrix_inv(MDT);
 
+julia> using StaticArrays: SMatrix
+
 julia> M * Minv ≈ SMatrix{3,3}(1.0I)
 true
 ```

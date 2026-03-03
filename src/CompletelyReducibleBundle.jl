@@ -220,7 +220,7 @@ julia> X = Gr(2, 4);
 julia> T = tangent_bundle(X);
 
 julia> n_components(T)
-2
+1
 
 julia> rank_bundle(T)
 4

@@ -98,7 +98,7 @@ julia> dimension(X)
 4
 
 julia> Y = PartialFlagVariety("A2xB3", [1, 3, 4])
-A2xB3 / P_{1,3,4}
+A2 × B3 / P_{1,3,4}
 
 julia> picard_rank(Y)
 3

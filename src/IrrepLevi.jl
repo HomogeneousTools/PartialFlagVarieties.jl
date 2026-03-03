@@ -104,7 +104,7 @@ julia> ω₁ = fundamental_weight(TypeA{4}, 1);
 julia> rep = IrrepLevi(MDT, ω₁);
 
 julia> fiber_dimension(rep)
-1
+2
 ```
 """
 function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
@@ -264,12 +264,12 @@ julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
 julia> ω₁ = fundamental_weight(TypeA{3}, 1);
 
 julia> fiber_dimension(IrrepLevi(MDT, ω₁))
-1
+2
 
 julia> ω₂ = fundamental_weight(TypeA{3}, 2);
 
 julia> fiber_dimension(IrrepLevi(MDT, ω₂))
-1
+2
 ```
 """
 function fiber_dimension(rep::IrrepLevi{MDT}) where {MDT}
