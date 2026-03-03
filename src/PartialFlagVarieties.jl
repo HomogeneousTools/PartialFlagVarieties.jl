@@ -16,6 +16,7 @@
 module PartialFlagVarieties
 
 using Lie
+using Preferences
 using StaticArrays
 using LinearAlgebra
 using Combinatorics
@@ -54,12 +55,54 @@ export tangent_weights, positive_nonparabolic_roots, positive_parabolic_roots
 export direct_sum, twist
 export cartan_type, cartan_type_with_ordering, parse_dynkin_type
 
-# ─── Precompilation hints ────────────────────────────────────────────────────
+# ─── Startup banner ──────────────────────────────────────────────────────────
 
-# Warm up key @generated methods for common types
+function _print_banner()
+  v = pkgversion(@__MODULE__)
+  version_str = v === nothing ? "dev" : string(v)
+
+  println()
+  printstyled(" ██████╗     "; color=:blue)
+  print("██╗")
+  printstyled("██████╗  "; color=:red)
+  println(" │  equivariant bundles on partial flag varieties G/P")
+
+  printstyled("██╔════╝    "; color=:blue)
+  print("██╔╝")
+  printstyled("██╔══██╗"; color=:red)
+  println("  │  cohomology via the Borel–Weil–Bott theorem")
+
+  printstyled("██║  ███╗  "; color=:blue)
+  print("██╔╝ ")
+  printstyled("██████╔╝"; color=:red)
+  println("  │")
+
+  printstyled("██║   ██║ "; color=:blue)
+  print("██╔╝  ")
+  printstyled("██╔═══╝ "; color=:red)
+  println("  │  Docs:    https://homogeneous.tools")
+
+  printstyled("╚██████╔╝"; color=:blue)
+  print("██╔╝   ")
+  printstyled("██║     "; color=:red)
+  println("  │  Version: ", version_str)
+
+  printstyled(" ╚═════╝ "; color=:blue)
+  print("╚═╝    ")
+  printstyled("╚═╝     "; color=:red)
+  println("  │")
+end
+
+# ─── Initialization ──────────────────────────────────────────────────────────
+
 function __init__()
-  # Intentionally left minimal; Julia 1.9+ pkgimage precompilation
-  # handles @generated functions automatically.
+  # Suppress the Lie.jl startup banner: PartialFlagVarieties will show its own
+  set_preferences!(Lie, "show_banner" => false)
+
+  if displaysize(stdout)[2] >= 80
+    _print_banner()
+  end
+  return nothing
 end
 
 if Base.VERSION >= v"1.9"
