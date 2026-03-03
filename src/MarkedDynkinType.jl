@@ -45,7 +45,7 @@ to its center.
 julia> using PartialFlagVarieties
 
 julia> MDT = MarkedDynkinType{TypeA{4}, (2,)}
-MarkedDynkinType{TypeA{4}, (2,)}
+MarkedDynkinType{A4, (2,)}
 
 julia> marked_nodes(MDT)
 (2,)
@@ -88,10 +88,10 @@ Construct a `MarkedDynkinType` from a Dynkin type and a tuple of marked node ind
 julia> using PartialFlagVarieties
 
 julia> MarkedDynkinType(TypeA{3}, (2,))
-MarkedDynkinType{TypeA{3}, (2,)}
+A3 / P_{2}
 
 julia> MarkedDynkinType(TypeB{4}, (1, 3))
-MarkedDynkinType{TypeB{4}, (1, 3)}
+B4 / P_{1,3}
 ```
 """
 function MarkedDynkinType(::Type{DT}, marked::NTuple{K,Int}) where {DT<:DynkinType,K}
