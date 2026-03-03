@@ -37,7 +37,7 @@ An **irreducible** representation of ``L`` decomposes as:
 where ``\chi`` is a character of the center ``Z(L)^\circ`` (the "central part")
 and ``W`` is an irreducible representation of ``[L, L]`` (the "semisimple part").
 
-This decomposition is effected by the **special matrix** ``M`` which performs
+This decomposition is effected by the **decomposition matrix** ``M`` which performs
 the change of basis from the fundamental weight coordinates of ``G`` to the
 (center + semisimple) coordinate system.
 

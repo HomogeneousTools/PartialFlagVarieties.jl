@@ -31,9 +31,9 @@ euler_characteristic(V) # 10
 betti_numbers(V)        # [1, 1, 1, 1, 1, 1, 1]
 
 # Sheaf cohomology on ℙ⁴
-MDT = MarkedDynkinType{TypeA{4}, (1,)}
-L = line_bundle(MDT, 1)
-H = dimensions(cohomology(MDT, L))
+X = projective_space(4)
+L = line_bundle(X, 1)
+H = dimensions(cohomology(L))
 H[0]                    # 5 = dim H⁰(ℙ⁴, 𝒪(1))
 
 # The Cayley plane
@@ -46,11 +46,12 @@ euler_characteristic(V) # 27
 
 The package follows the same compile-time specialization pattern as Lie.jl:
 
-1. Each partial flag variety ``G/P`` is encoded as a `MarkedDynkinType{DT, Marked}`
-   where both `DT` (Dynkin type) and `Marked` (crossed-out nodes) are **type parameters**.
+1. Each partial flag variety ``G/P`` is encoded as a `PartialFlagVariety{MDT}` wrapping
+   a `MarkedDynkinType{DT, Marked}` where both `DT` (Dynkin type) and `Marked`
+   (crossed-out nodes) are **type parameters**.
 
 2. Heavy mathematical computations (Cartan matrices, Levi decomposition, Betti numbers,
-   special matrices) are performed at **compile time** via `@generated` functions,
+   decomposition matrices) are performed at **compile time** via `@generated` functions,
    yielding zero runtime overhead for repeated queries.
 
 3. Bundle operations use the Levi decomposition: each equivariant bundle decomposes

@@ -34,11 +34,11 @@ Entries are 0-indexed: `H[i]` returns ``H^i(G/P, E)``.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = structure_sheaf(MDT);
+julia> E = structure_sheaf(X);
 
-julia> H = cohomology(MDT, E);
+julia> H = cohomology(E);
 
 julia> H[0]  # H⁰(ℙ⁴, 𝒪) = k
 1
@@ -78,12 +78,14 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    cohomology(::Type{MDT}, E::CompletelyReducibleBundle{MDT}) -> Cohomology{WeylCharacter}
+    cohomology(E::CompletelyReducibleBundle) -> Cohomology{WeylCharacter}
 
 Compute the sheaf cohomology ``H^*(G/P, E)`` using the Borel–Weil–Bott theorem.
 
 Returns character-valued cohomology: each ``H^i`` is a virtual character
 (Weyl character) of the ambient group ``G``.
+
+The partial flag variety is inferred from `E`.
 
 # Algorithm
 For each irreducible Levi component ``V_\\lambda`` of ``E``:
@@ -95,19 +97,19 @@ For each irreducible Levi component ``V_\\lambda`` of ``E``:
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> H = cohomology(MDT, line_bundle(MDT, 1));
+julia> H = cohomology(line_bundle(X, 1));
 
 julia> degree(H[0])  # H⁰(ℙ⁴, 𝒪(1)) = V(ω₁) of dim 5
 5
 ```
 """
-function cohomology(::Type{MDT}, E::CompletelyReducibleBundle{MDT}) where {
+function cohomology(E::CompletelyReducibleBundle{MDT}) where {
   MDT<:MarkedDynkinType{DT,Marked}
 } where {DT,Marked}
   R = rank(DT)
-  d = dimension(MDT)
+  d = dimension(E.variety)
 
   # Initialize cohomology entries as zero characters
   entries = [WeylCharacter(DT) for _ in 0:d]
@@ -145,9 +147,9 @@ Convert character-valued cohomology to dimension-valued.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> H = cohomology(MDT, line_bundle(MDT, 1));
+julia> H = cohomology(line_bundle(X, 1));
 
 julia> dims = dimensions(H);
 
@@ -172,12 +174,12 @@ function dimensions(H::Cohomology{<:WeylCharacter{DT,R}}) where {DT,R}
 end
 
 """
-    dimensions(::Type{MDT}, E::CompletelyReducibleBundle{MDT}) -> Cohomology{BigInt}
+    dimensions(E::CompletelyReducibleBundle) -> Cohomology{BigInt}
 
 Compute dimension-valued cohomology directly.
 """
-function dimensions(::Type{MDT}, E::CompletelyReducibleBundle{MDT}) where {MDT}
-  return dimensions(cohomology(MDT, E))
+function dimensions(E::CompletelyReducibleBundle)
+  return dimensions(cohomology(E))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -193,9 +195,9 @@ Compute the Euler characteristic ``\\chi(E) = \\sum_i (-1)^i \\dim H^i(G/P, E)``
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> H = dimensions(MDT, line_bundle(MDT, 1));
+julia> H = dimensions(line_bundle(X, 1));
 
 julia> chi(H)
 5
@@ -214,7 +216,7 @@ function chi(H::Cohomology{<:WeylCharacter})
 end
 
 """
-    euler_char_bundle(::Type{MDT}, E::CompletelyReducibleBundle{MDT}) -> BigInt
+    euler_char_bundle(E::CompletelyReducibleBundle) -> BigInt
 
 Compute the Euler characteristic ``\\chi(G/P, E)`` directly.
 
@@ -222,14 +224,14 @@ Compute the Euler characteristic ``\\chi(G/P, E)`` directly.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> euler_char_bundle(MDT, structure_sheaf(MDT))
+julia> euler_char_bundle(structure_sheaf(X))
 1
 ```
 """
-function euler_char_bundle(::Type{MDT}, E::CompletelyReducibleBundle{MDT}) where {MDT}
-  return chi(dimensions(MDT, E))
+function euler_char_bundle(E::CompletelyReducibleBundle)
+  return chi(dimensions(E))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -237,8 +239,8 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    hilbert_polynomial(::Type{MDT}, E::CompletelyReducibleBundle{MDT};
-                       variable::Symbol=:t, max_degree::Int=20) -> Vector{Rational{BigInt}}
+    hilbert_polynomial(E::CompletelyReducibleBundle;
+                       max_degree::Int=20) -> Vector{Rational{BigInt}}
 
 Compute the Hilbert polynomial of a bundle ``E`` on a generalized Grassmannian.
 
@@ -253,22 +255,22 @@ Requires the variety to be a generalized Grassmannian (one marked node).
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};  # ℙ⁴
+julia> X = partial_flag_variety(TypeA{4}, (1,));  # ℙ⁴
 
-julia> coeffs = hilbert_polynomial(MDT, structure_sheaf(MDT));
+julia> coeffs = hilbert_polynomial(structure_sheaf(X));
 
 julia> length(coeffs) > 0
 true
 ```
 """
-function hilbert_polynomial(::Type{MDT}, E::CompletelyReducibleBundle{MDT};
+function hilbert_polynomial(E::CompletelyReducibleBundle{MDT};
   max_degree::Int=20
 ) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
   length(Marked) == 1 || throw(ArgumentError(
     "Hilbert polynomial requires a generalized Grassmannian (1 marked node)"
   ))
 
-  d = dimension(MDT)
+  d = dimension(E.variety)
   # By Riemann-Roch-Hirzebruch or direct computation,
   # evaluate χ(E(t)) at enough integer points to interpolate
 
@@ -277,7 +279,7 @@ function hilbert_polynomial(::Type{MDT}, E::CompletelyReducibleBundle{MDT};
 
   for t in 0:(n_points - 1)
     Et = twist(E, 1, t)
-    push!(values, Rational{BigInt}(euler_char_bundle(MDT, Et)))
+    push!(values, Rational{BigInt}(euler_char_bundle(Et)))
   end
 
   # Lagrange interpolation to recover polynomial

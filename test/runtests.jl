@@ -6,6 +6,46 @@ using StaticArrays
 @testset "PartialFlagVarieties.jl" begin
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  Lie.jl extensions: cartan_type, parse_dynkin_type
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "cartan_type" begin
+    # A3 Cartan matrix
+    C_A3 = cartan_matrix(TypeA{3})
+    @test cartan_type(C_A3) == [(:A, 3)]
+    ct_ord = cartan_type_with_ordering(C_A3)
+    @test ct_ord[1] == [(:A, 3)]
+    @test length(ct_ord[2]) == 3
+
+    # B3 Cartan matrix
+    C_B3 = cartan_matrix(TypeB{3})
+    @test cartan_type(C_B3) == [(:B, 3)]
+
+    # Product type A1 × A2 (block-diagonal Cartan matrix)
+    C_prod = cartan_matrix(ProductDynkinType{Tuple{TypeA{1},TypeA{2}}})
+    ct = cartan_type(C_prod)
+    @test length(ct) == 2
+    # Should contain A1 and A2 components (order may vary)
+    types = Set(ct)
+    @test (:A, 1) in types
+    @test (:A, 2) in types
+  end
+
+  @testset "parse_dynkin_type" begin
+    @test parse_dynkin_type("A3") === TypeA{3}
+    @test parse_dynkin_type("B4") === TypeB{4}
+    @test parse_dynkin_type("G2") === TypeG2
+    @test parse_dynkin_type("E6") === TypeE{6}
+
+    # Product types
+    DT = parse_dynkin_type("A2xB3")
+    @test DT === ProductDynkinType{Tuple{TypeA{2}, TypeB{3}}}
+
+    # Whitespace tolerance
+    @test parse_dynkin_type(" A3 ") === TypeA{3}
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  MarkedDynkinType
   # ═══════════════════════════════════════════════════════════════════════════
 
@@ -69,33 +109,66 @@ using StaticArrays
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  Dimensions
+  #  PartialFlagVariety constructors
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "PartialFlagVariety constructors" begin
+    V = partial_flag_variety(TypeA{3}, (2,))
+    @test V isa PartialFlagVariety
+    @test marked_nodes(V) == (2,)
+    @test dynkin_type(V) == TypeA{3}
+
+    V_full = full_flag_variety(TypeA{2})
+    @test is_full_flag(V_full)
+
+    # String constructor
+    V_str = PartialFlagVariety("A3", [2])
+    @test dimension(V_str) == 4
+    @test marked_nodes(V_str) == (2,)
+
+    # Product type string constructor
+    V_prod = PartialFlagVariety("A2xB3", [1, 4])
+    @test V_prod isa PartialFlagVariety
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Dimensions (on PartialFlagVariety)
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Dimensions" begin
     # Projective spaces: dim(ℙⁿ) = n
-    @test dimension(MarkedDynkinType{TypeA{1},(1,)}) == 1
-    @test dimension(MarkedDynkinType{TypeA{2},(1,)}) == 2
-    @test dimension(MarkedDynkinType{TypeA{4},(1,)}) == 4
+    @test dimension(partial_flag_variety(TypeA{1}, (1,))) == 1
+    @test dimension(partial_flag_variety(TypeA{2}, (1,))) == 2
+    @test dimension(partial_flag_variety(TypeA{4}, (1,))) == 4
 
     # Grassmannians: dim(Gr(k,n)) = k(n-k)
-    @test dimension(MarkedDynkinType{TypeA{3},(2,)}) == 4    # Gr(2,4)
-    @test dimension(MarkedDynkinType{TypeA{4},(2,)}) == 6    # Gr(2,5)
-    @test dimension(MarkedDynkinType{TypeA{5},(3,)}) == 9    # Gr(3,6)
+    @test dimension(Gr(2, 4)) == 4
+    @test dimension(Gr(2, 5)) == 6
+    @test dimension(Gr(3, 6)) == 9
 
     # Full flag: dim(G/B) = |Φ⁺|
-    @test dimension(MarkedDynkinType{TypeA{2},(1,2)}) == 3   # A2: 3 pos roots
-    @test dimension(MarkedDynkinType{TypeA{3},(1,2,3)}) == 6 # A3: 6 pos roots
+    @test dimension(partial_flag_variety(TypeA{2}, (1, 2))) == 3
+    @test dimension(full_flag_variety(TypeA{3})) == 6
 
     # Exceptional: Cayley plane OP² = E6/P1 has dim 16
-    @test dimension(MarkedDynkinType{TypeE{6},(1,)}) == 16
+    @test dimension(cayley_plane()) == 16
 
     # Quadrics: Q_n has dim n
-    @test dimension(MarkedDynkinType{TypeB{2},(1,)}) == 3    # Q3
-    @test dimension(MarkedDynkinType{TypeD{3},(1,)}) == 4    # Q4
+    @test dimension(quadric(3)) == 3
+    @test dimension(quadric(4)) == 4
 
     # OGr(5,10) = D5/P5: spinor variety, dim 10
-    @test dimension(MarkedDynkinType{TypeD{5},(5,)}) == 10
+    @test dimension(OGr(5, 10)) == 10
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Picard rank
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Picard rank" begin
+    @test picard_rank(Gr(2, 5)) == 1
+    @test picard_rank(partial_flag_variety(TypeA{3}, (1, 3))) == 2
+    @test picard_rank(full_flag_variety(TypeA{3})) == 3
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -104,25 +177,25 @@ using StaticArrays
 
   @testset "Euler characteristics" begin
     # χ(ℙⁿ) = n + 1
-    @test euler_characteristic(MarkedDynkinType{TypeA{4},(1,)}) == 5
+    @test euler_characteristic(projective_space(4)) == 5
 
     # χ(Gr(k,n)) = C(n,k)
-    @test euler_characteristic(MarkedDynkinType{TypeA{3},(2,)}) == 6    # C(4,2)
-    @test euler_characteristic(MarkedDynkinType{TypeA{4},(2,)}) == 10   # C(5,2)
-    @test euler_characteristic(MarkedDynkinType{TypeA{5},(2,)}) == 15   # C(6,2)
-    @test euler_characteristic(MarkedDynkinType{TypeA{5},(3,)}) == 20   # C(6,3)
+    @test euler_characteristic(Gr(2, 4)) == 6
+    @test euler_characteristic(Gr(2, 5)) == 10
+    @test euler_characteristic(Gr(2, 6)) == 15
+    @test euler_characteristic(Gr(3, 6)) == 20
 
     # χ(OP²) = 27 (Cayley plane)
-    @test euler_characteristic(MarkedDynkinType{TypeE{6},(1,)}) == 27
+    @test euler_characteristic(cayley_plane()) == 27
 
     # χ(E7/P7) = 56 (Freudenthal variety)
-    @test euler_characteristic(MarkedDynkinType{TypeE{7},(7,)}) == 56
+    @test euler_characteristic(freudenthal_variety()) == 56
 
     # χ(OGr(5,10)) = 2⁴ = 16
-    @test euler_characteristic(MarkedDynkinType{TypeD{5},(5,)}) == 16
+    @test euler_characteristic(OGr(5, 10)) == 16
 
     # χ(G/B) = |W|
-    @test euler_characteristic(MarkedDynkinType{TypeA{2},(1,2)}) == 6
+    @test euler_characteristic(full_flag_variety(TypeA{2})) == 6
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -131,33 +204,27 @@ using StaticArrays
 
   @testset "Betti numbers" begin
     # ℙⁿ: all Betti numbers = 1
-    betti_P2 = betti_numbers(MarkedDynkinType{TypeA{2},(1,)})
-    @test betti_P2 == [1, 1, 1]
-
-    betti_P4 = betti_numbers(MarkedDynkinType{TypeA{4},(1,)})
-    @test betti_P4 == [1, 1, 1, 1, 1]
+    @test betti_numbers(projective_space(2)) == [1, 1, 1]
+    @test betti_numbers(projective_space(4)) == [1, 1, 1, 1, 1]
 
     # Gr(2,4): Betti = 1, 1, 2, 1, 1
-    betti_Gr24 = betti_numbers(MarkedDynkinType{TypeA{3},(2,)})
-    @test betti_Gr24 == [1, 1, 2, 1, 1]
+    @test betti_numbers(Gr(2, 4)) == [1, 1, 2, 1, 1]
 
     # Gr(2,5): Betti = 1, 1, 2, 2, 2, 1, 1
-    betti_Gr25 = betti_numbers(MarkedDynkinType{TypeA{4},(2,)})
-    @test betti_Gr25 == [1, 1, 2, 2, 2, 1, 1]
+    @test betti_numbers(Gr(2, 5)) == [1, 1, 2, 2, 2, 1, 1]
 
     # Sum of Betti = χ
-    betti_OP2 = betti_numbers(MarkedDynkinType{TypeE{6},(1,)})
-    @test sum(betti_OP2) == 27
+    @test sum(betti_numbers(cayley_plane())) == 27
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  Special matrix
+  #  Decomposition matrix
   # ═══════════════════════════════════════════════════════════════════════════
 
-  @testset "Special matrix" begin
+  @testset "Decomposition matrix" begin
     MDT = MarkedDynkinType{TypeA{3},(2,)}
-    M = special_matrix(MDT)
-    Minv = special_matrix_inv(MDT)
+    M = decomposition_matrix(MDT)
+    Minv = decomposition_matrix_inv(MDT)
 
     # M * Minv = I
     @test M * Minv ≈ SMatrix{3,3,Rational{Int}}(1, 0, 0, 0, 1, 0, 0, 0, 1)
@@ -172,34 +239,34 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Classification predicates" begin
-    @test is_generalized_grassmannian(MarkedDynkinType{TypeA{3},(2,)})
-    @test !is_generalized_grassmannian(MarkedDynkinType{TypeA{3},(1,3)})
+    @test is_generalized_grassmannian(Gr(2, 4))
+    @test !is_generalized_grassmannian(partial_flag_variety(TypeA{3}, (1, 3)))
 
-    @test is_full_flag(MarkedDynkinType{TypeA{2},(1,2)})
-    @test !is_full_flag(MarkedDynkinType{TypeA{3},(2,)})
+    @test is_full_flag(full_flag_variety(TypeA{2}))
+    @test !is_full_flag(Gr(2, 4))
 
     # Cominuscule
-    @test is_cominuscule(MarkedDynkinType{TypeA{4},(2,)})      # Gr(2,5)
-    @test is_cominuscule(MarkedDynkinType{TypeD{5},(1,)})      # Quadric
-    @test is_cominuscule(MarkedDynkinType{TypeD{5},(5,)})      # Spinor
-    @test is_cominuscule(MarkedDynkinType{TypeE{6},(1,)})      # OP²
-    @test !is_cominuscule(MarkedDynkinType{TypeB{3},(2,)})
+    @test is_cominuscule(Gr(2, 5))
+    @test is_cominuscule(quadric(8))                            # D5/P1
+    @test is_cominuscule(OGr(5, 10))                            # D5/P5
+    @test is_cominuscule(cayley_plane())                        # E6/P1
+    @test !is_cominuscule(partial_flag_variety(TypeB{3}, (2,)))
 
     # Minuscule
-    @test is_minuscule(MarkedDynkinType{TypeA{4},(2,)})
-    @test is_minuscule(MarkedDynkinType{TypeB{3},(3,)})
-    @test is_minuscule(MarkedDynkinType{TypeD{5},(5,)})
-    @test !is_minuscule(MarkedDynkinType{TypeB{3},(1,)})
+    @test is_minuscule(Gr(2, 5))
+    @test is_minuscule(partial_flag_variety(TypeB{3}, (3,)))
+    @test is_minuscule(OGr(5, 10))
+    @test !is_minuscule(partial_flag_variety(TypeB{3}, (1,)))
 
     # Adjoint
-    @test is_adjoint(MarkedDynkinType{TypeA{3},(1,3)})         # ℙ(T*ℙ³)
-    @test is_adjoint(MarkedDynkinType{TypeB{3},(2,)})
-    @test is_adjoint(MarkedDynkinType{TypeG2,(2,)})
-    @test is_adjoint(MarkedDynkinType{TypeE{6},(2,)})
+    @test is_adjoint(partial_flag_variety(TypeA{3}, (1, 3)))    # ℙ(T*ℙ³)
+    @test is_adjoint(adjoint_variety(TypeB{3}))
+    @test is_adjoint(adjoint_variety(TypeG2))
+    @test is_adjoint(partial_flag_variety(TypeE{6}, (2,)))
 
     # Coadjoint
-    @test is_coadjoint(MarkedDynkinType{TypeB{3},(1,)})
-    @test is_coadjoint(MarkedDynkinType{TypeG2,(1,)})
+    @test is_coadjoint(coadjoint_variety(TypeB{3}))
+    @test is_coadjoint(coadjoint_variety(TypeG2))
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -231,22 +298,8 @@ using StaticArrays
     @test length(nonpar) + length(par) == Lie.n_positive_roots(TypeA{3})
 
     # dim(G/P) = number of nonparabolic positive roots
-    @test length(nonpar) == dimension(MDT)
-  end
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  #  PartialFlagVariety wrapper
-  # ═══════════════════════════════════════════════════════════════════════════
-
-  @testset "PartialFlagVariety wrapper" begin
-    V = partial_flag_variety(TypeA{3}, (2,))
-    @test dimension(V) == 4
-    @test euler_characteristic(V) == 6
-    @test marked_nodes(V) == (2,)
-
-    V_full = full_flag_variety(TypeA{2})
-    @test is_full_flag(V_full)
-    @test dimension(V_full) == 3
+    X = partial_flag_variety(TypeA{3}, (2,))
+    @test length(nonpar) == dimension(X)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -290,36 +343,63 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Structure sheaf" begin
-    MDT = MarkedDynkinType{TypeA{3},(2,)}
-    O = structure_sheaf(MDT)
+    X = Gr(2, 4)
+    O = structure_sheaf(X)
     @test rank_bundle(O) == 1
     @test n_components(O) == 1
+    @test variety(O) === X
   end
 
   @testset "Line bundles" begin
-    MDT = MarkedDynkinType{TypeA{4},(1,)}
-    L = line_bundle(MDT, 1)
+    X = projective_space(4)
+    L = line_bundle(X, 1)
     @test rank_bundle(L) == 1
+    @test variety(L) === X
+  end
+
+  @testset "Line bundle: Picard rank check" begin
+    # Picard rank 1 → single-int form works
+    X1 = Gr(2, 5)
+    @test picard_rank(X1) == 1
+    L = line_bundle(X1, 2)
+    @test rank_bundle(L) == 1
+
+    # Picard rank > 1 → single-int form errors
+    X2 = partial_flag_variety(TypeA{3}, (1, 3))
+    @test picard_rank(X2) == 2
+    @test_throws ArgumentError line_bundle(X2, 1)
+
+    # Multi-node form works for Picard rank > 1
+    L2 = line_bundle(X2, [2, 1])
+    @test rank_bundle(L2) == 1
+
+    # Multi-node form also works for Picard rank 1
+    L3 = line_bundle(X1, [3])
+    @test rank_bundle(L3) == 1
+
+    # Wrong number of degrees errors
+    @test_throws ArgumentError line_bundle(X2, [1, 2, 3])
   end
 
   @testset "Tangent and cotangent bundles" begin
     # Gr(2,4): T = S* ⊗ Q, both have rank 2, so T has rank 4
-    MDT = MarkedDynkinType{TypeA{3},(2,)}
-    T = tangent_bundle(MDT)
-    Ω = cotangent_bundle(MDT)
+    X = Gr(2, 4)
+    T = tangent_bundle(X)
+    Ω = cotangent_bundle(X)
     @test rank_bundle(T) == 4
     @test rank_bundle(Ω) == 4
+    @test variety(T) === X
 
     # ℙ⁴: T has rank 4
-    MDT2 = MarkedDynkinType{TypeA{4},(1,)}
-    T2 = tangent_bundle(MDT2)
+    X2 = projective_space(4)
+    T2 = tangent_bundle(X2)
     @test rank_bundle(T2) == 4
   end
 
   @testset "Bundle operations" begin
-    MDT = MarkedDynkinType{TypeA{4},(1,)}
-    O = structure_sheaf(MDT)
-    T = tangent_bundle(MDT)
+    X = projective_space(4)
+    O = structure_sheaf(X)
+    T = tangent_bundle(X)
 
     # O ⊗ T = T
     @test rank_bundle(tensor_product(O, T)) == rank_bundle(T)
@@ -330,18 +410,24 @@ using StaticArrays
     # ⋀⁰T = O, ⋀¹T = T
     @test rank_bundle(exterior_power(T, 0)) == 1
     @test rank_bundle(exterior_power(T, 1)) == rank_bundle(T)
+
+    # variety is propagated through operations
+    @test variety(tensor_product(O, T)) === X
+    @test variety(direct_sum(T, O)) === X
+    @test variety(exterior_power(T, 2)) === X
   end
 
   @testset "Twist" begin
-    MDT = MarkedDynkinType{TypeA{4},(1,)}
-    O = structure_sheaf(MDT)
+    X = projective_space(4)
+    O = structure_sheaf(X)
     Ot = twist(O, 1, 3)
     @test rank_bundle(Ot) == 1
+    @test variety(Ot) === X
   end
 
   @testset "Determinant bundle" begin
-    MDT = MarkedDynkinType{TypeA{3},(2,)}
-    T = tangent_bundle(MDT)
+    X = Gr(2, 4)
+    T = tangent_bundle(X)
     det_T = det_bundle(T)
     @test rank_bundle(det_T) == 1
   end
@@ -351,9 +437,9 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Cohomology: H*(ℙⁿ, 𝒪)" begin
-    MDT = MarkedDynkinType{TypeA{4},(1,)}
-    O = structure_sheaf(MDT)
-    H = cohomology(MDT, O)
+    X = projective_space(4)
+    O = structure_sheaf(X)
+    H = cohomology(O)
     d = dimensions(H)
 
     # H⁰(ℙ⁴, 𝒪) = 1, Hⁱ = 0 for i > 0
@@ -364,38 +450,38 @@ using StaticArrays
   end
 
   @testset "Cohomology: H*(ℙⁿ, 𝒪(k))" begin
-    MDT = MarkedDynkinType{TypeA{4},(1,)}
+    X = projective_space(4)
 
     # H⁰(ℙ⁴, 𝒪(1)) = 5 (standard rep of SL(5))
-    L1 = line_bundle(MDT, 1)
-    H1 = dimensions(cohomology(MDT, L1))
+    L1 = line_bundle(X, 1)
+    H1 = dimensions(cohomology(L1))
     @test H1[0] == 5
 
     # H⁰(ℙ⁴, 𝒪(2)) = C(6,2) = 15
-    L2 = twist(structure_sheaf(MDT), 1, 2)
-    H2 = dimensions(cohomology(MDT, L2))
+    L2 = twist(structure_sheaf(X), 1, 2)
+    H2 = dimensions(cohomology(L2))
     @test H2[0] == 15
 
     # H⁰(ℙ⁴, 𝒪(3)) = C(7,3) = 35
-    L3 = twist(structure_sheaf(MDT), 1, 3)
-    H3 = dimensions(cohomology(MDT, L3))
+    L3 = twist(structure_sheaf(X), 1, 3)
+    H3 = dimensions(cohomology(L3))
     @test H3[0] == 35
   end
 
   @testset "Cohomology: Euler characteristic" begin
-    MDT = MarkedDynkinType{TypeA{4},(1,)}
+    X = projective_space(4)
 
     # χ(ℙ⁴, 𝒪) = 1
-    @test euler_char_bundle(MDT, structure_sheaf(MDT)) == 1
+    @test euler_char_bundle(structure_sheaf(X)) == 1
 
     # χ(ℙ⁴, 𝒪(1)) = 5
-    @test euler_char_bundle(MDT, line_bundle(MDT, 1)) == 5
+    @test euler_char_bundle(line_bundle(X, 1)) == 5
   end
 
   @testset "Cohomology: 0-based indexing" begin
-    MDT = MarkedDynkinType{TypeA{2},(1,)}
-    O = structure_sheaf(MDT)
-    H = dimensions(cohomology(MDT, O))
+    X = projective_space(2)
+    O = structure_sheaf(X)
+    H = dimensions(cohomology(O))
     @test firstindex(H) == 0
     @test lastindex(H) == 2
     @test length(H) == 3
@@ -503,7 +589,8 @@ using StaticArrays
       (TypeG2, (1,)),
     ]
       MDT = MarkedDynkinType{DT,marks}
-      @test dimension(MDT) == length(positive_nonparabolic_roots(MDT))
+      X = partial_flag_variety(DT, marks)
+      @test dimension(X) == length(positive_nonparabolic_roots(MDT))
     end
   end
 
@@ -515,8 +602,8 @@ using StaticArrays
       (TypeD{5}, (5,)),
       (TypeE{6}, (1,)),
     ]
-      MDT = MarkedDynkinType{DT,marks}
-      @test euler_characteristic(MDT) == sum(betti_numbers(MDT))
+      X = partial_flag_variety(DT, marks)
+      @test euler_characteristic(X) == sum(betti_numbers(X))
     end
   end
 
@@ -526,8 +613,8 @@ using StaticArrays
       (TypeA{4}, (1,)),
       (TypeB{3}, (1,)),
     ]
-      MDT = MarkedDynkinType{DT,marks}
-      @test Int(rank_bundle(tangent_bundle(MDT))) == dimension(MDT)
+      X = partial_flag_variety(DT, marks)
+      @test Int(rank_bundle(tangent_bundle(X))) == dimension(X)
     end
   end
 

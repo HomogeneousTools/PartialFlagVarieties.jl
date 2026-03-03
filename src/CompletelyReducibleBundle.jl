@@ -3,11 +3,12 @@
 #
 #  A completely reducible equivariant bundle on G/P is an equivariant bundle
 #  whose underlying P-representation is completely reducible (semisimple).
-#  It is encoded as a formal (virtual) sum of irreducible Levi representations.
+#  It is encoded as a formal (virtual) sum of irreducible Levi representations,
+#  together with a reference to the underlying partial flag variety.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export CompletelyReducibleBundle
-export components
+export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
 export structure_sheaf, line_bundle, canonical_bundle, anticanonical_bundle
 export det_bundle
@@ -25,28 +26,37 @@ A completely reducible equivariant vector bundle on the partial flag variety
 ``G/P`` encoded by the marked Dynkin type `MDT`.
 
 Stored as a list of irreducible Levi representations (with multiplicity
-encoded by repetition).
+encoded by repetition), together with the underlying [`PartialFlagVariety`](@ref).
 
 # Fields
+- `variety::PartialFlagVariety{MDT}`: the partial flag variety
 - `components::Vector{IrrepLevi{MDT}}`: the irreducible summands
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
+julia> X = Gr(2, 4);
 
-julia> T = tangent_bundle(MDT);
+julia> T = tangent_bundle(X);
 
 julia> rank_bundle(T)
 4
 ```
 """
 struct CompletelyReducibleBundle{MDT<:MarkedDynkinType}
+  variety::PartialFlagVariety{MDT}
   components::Vector{IrrepLevi{MDT}}
 end
 
 # ─── Accessors ───────────────────────────────────────────────────────────────
+
+"""
+    variety(E::CompletelyReducibleBundle) -> PartialFlagVariety
+
+Return the partial flag variety on which this bundle lives.
+"""
+variety(E::CompletelyReducibleBundle) = E.variety
 
 """
     components(E::CompletelyReducibleBundle) -> Vector{IrrepLevi}
@@ -71,9 +81,9 @@ Return the total rank (fiber dimension) of the bundle.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> rank_bundle(structure_sheaf(MDT))
+julia> rank_bundle(structure_sheaf(X))
 1
 ```
 """
@@ -86,7 +96,7 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    structure_sheaf(::Type{MDT}) -> CompletelyReducibleBundle{MDT}
+    structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The trivial line bundle ``\\mathcal{O}_{G/P}``.
 
@@ -94,19 +104,18 @@ The trivial line bundle ``\\mathcal{O}_{G/P}``.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
+julia> X = Gr(2, 4);
 
-julia> rank_bundle(structure_sheaf(MDT))
+julia> rank_bundle(structure_sheaf(X))
 1
 ```
 """
-function structure_sheaf(::Type{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
   R = rank(DT)
   LT = levi_type(MDT)
 
   zero_central = zeros(Rational{Int}, length(Marked))
   if LT === nothing
-    # Full flag: use a dummy 0-dim semisimple part
     zero_ss = WeightLatticeElem(TypeA{1}, [0])
   else
     LR = rank(LT)
@@ -114,39 +123,80 @@ function structure_sheaf(::Type{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} w
   end
 
   triv = IrrepLevi{MDT}(zero_central, zero_ss)
-  return CompletelyReducibleBundle{MDT}([triv])
+  return CompletelyReducibleBundle{MDT}(X, [triv])
 end
 
 """
-    line_bundle(::Type{MDT}, i::Int) -> CompletelyReducibleBundle{MDT}
+    line_bundle(X::PartialFlagVariety, i::Int) -> CompletelyReducibleBundle
 
-The line bundle ``\\mathcal{O}(1)`` corresponding to the `i`-th marked node.
-This is ``\\mathcal{L}(\\omega_{m_i})`` where ``m_i`` is the `i`-th marked node.
+The line bundle ``\\mathcal{O}(i)`` on `X`.
+
+When the Picard rank of `X` is 1 (generalized Grassmannian), `i` is the
+degree. When the Picard rank is greater than 1, this method raises an
+error — use [`line_bundle(X, degrees)`](@ref) instead.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (2,)};
+julia> X = Gr(2, 4);
 
-julia> L = line_bundle(MDT, 1);
+julia> L = line_bundle(X, 1);
 
 julia> rank_bundle(L)
 1
 ```
 """
-function line_bundle(::Type{MDT}, i::Int=1) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  1 <= i <= length(Marked) || throw(ArgumentError(
-    "Index $i out of range. MDT has $(length(Marked)) marked node(s)."
-  ))
-  m = Marked[i]
+function line_bundle(X::PartialFlagVariety{MDT}, i::Int) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  pr = length(Marked)
+  if pr != 1
+    throw(ArgumentError(
+      "line_bundle(X, i::Int) requires Picard rank 1, but X has Picard rank $pr. " *
+      "Use line_bundle(X, degrees::Vector{<:Integer}) instead."
+    ))
+  end
+  m = Marked[1]
   ω = fundamental_weight(DT, m)
-  rep = IrrepLevi(MDT, ω)
-  return CompletelyReducibleBundle{MDT}([rep])
+  λ = i * ω
+  rep = IrrepLevi(MDT, λ)
+  return CompletelyReducibleBundle{MDT}(X, [rep])
 end
 
 """
-    tangent_bundle(::Type{MDT}) -> CompletelyReducibleBundle{MDT}
+    line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer}) -> CompletelyReducibleBundle
+
+The line bundle ``\\mathcal{O}(d_1, \\ldots, d_r)`` on `X`, where ``d_j`` is the
+degree at the ``j``-th marked node.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = partial_flag_variety(TypeA{3}, (1, 3));
+
+julia> L = line_bundle(X, [2, 1]);
+
+julia> rank_bundle(L)
+1
+```
+"""
+function line_bundle(X::PartialFlagVariety{MDT}, degrees::Vector{<:Integer}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  pr = length(Marked)
+  length(degrees) == pr || throw(ArgumentError(
+    "Expected $pr degrees (one per marked node), got $(length(degrees))."
+  ))
+  R = rank(DT)
+  coeffs = zeros(Int, R)
+  for (j, m) in enumerate(Marked)
+    coeffs[m] = degrees[j]
+  end
+  λ = WeightLatticeElem(DT, coeffs)
+  rep = IrrepLevi(MDT, λ)
+  return CompletelyReducibleBundle{MDT}(X, [rep])
+end
+
+"""
+    tangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The tangent bundle ``T_{G/P}``.
 
@@ -159,9 +209,9 @@ nonparabolic root class, we get one irreducible Levi summand.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
+julia> X = Gr(2, 4);
 
-julia> T = tangent_bundle(MDT);
+julia> T = tangent_bundle(X);
 
 julia> n_components(T)
 2
@@ -170,14 +220,14 @@ julia> rank_bundle(T)
 4
 ```
 """
-function tangent_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
+function tangent_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
   tw = tangent_weights(MDT)
   reps = [IrrepLevi(MDT, w) for w in tw]
-  return CompletelyReducibleBundle{MDT}(reps)
+  return CompletelyReducibleBundle{MDT}(X, reps)
 end
 
 """
-    cotangent_bundle(::Type{MDT}) -> CompletelyReducibleBundle{MDT}
+    cotangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The cotangent bundle ``\\Omega^1_{G/P} = T^*_{G/P}``.
 
@@ -185,18 +235,18 @@ The cotangent bundle ``\\Omega^1_{G/P} = T^*_{G/P}``.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
+julia> X = Gr(2, 4);
 
-julia> rank_bundle(cotangent_bundle(MDT)) == rank_bundle(tangent_bundle(MDT))
+julia> rank_bundle(cotangent_bundle(X)) == rank_bundle(tangent_bundle(X))
 true
 ```
 """
-function cotangent_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  return dual(tangent_bundle(MDT))
+function cotangent_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
+  return dual(tangent_bundle(X))
 end
 
 """
-    canonical_bundle(::Type{MDT}) -> CompletelyReducibleBundle{MDT}
+    canonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The canonical line bundle ``\\omega_{G/P} = \\det(\\Omega^1_{G/P})``.
 
@@ -204,18 +254,18 @@ The canonical line bundle ``\\omega_{G/P} = \\det(\\Omega^1_{G/P})``.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> rank_bundle(canonical_bundle(MDT))
+julia> rank_bundle(canonical_bundle(X))
 1
 ```
 """
-function canonical_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  return det_bundle(cotangent_bundle(MDT))
+function canonical_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
+  return det_bundle(cotangent_bundle(X))
 end
 
 """
-    anticanonical_bundle(::Type{MDT}) -> CompletelyReducibleBundle{MDT}
+    anticanonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The anticanonical line bundle ``\\omega_{G/P}^{-1}``.
 
@@ -223,18 +273,18 @@ The anticanonical line bundle ``\\omega_{G/P}^{-1}``.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> rank_bundle(anticanonical_bundle(MDT))
+julia> rank_bundle(anticanonical_bundle(X))
 1
 ```
 """
-function anticanonical_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  return dual(canonical_bundle(MDT))
+function anticanonical_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
+  return dual(canonical_bundle(X))
 end
 
 """
-    det_bundle(E::CompletelyReducibleBundle{MDT}) -> CompletelyReducibleBundle{MDT}
+    det_bundle(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
 
 The determinant line bundle ``\\det(E) = \\bigwedge^{\\mathrm{rk}(E)} E``.
 
@@ -242,40 +292,29 @@ The determinant line bundle ``\\det(E) = \\bigwedge^{\\mathrm{rk}(E)} E``.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
+julia> X = Gr(2, 4);
 
-julia> rank_bundle(det_bundle(tangent_bundle(MDT)))
+julia> rank_bundle(det_bundle(tangent_bundle(X)))
 1
 ```
 """
 function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT}
   total_central = zeros(Rational{Int}, central_rank(MDT))
   for c in E.components
-    # Each component contributes its central part scaled by its semisimple dimension
     d = fiber_dimension(c)
     total_central .+= d * c.central
   end
 
   LT = levi_type(MDT)
 
-  # Determinant representation of the semisimple part
-  # For each irreducible V_λ, det(V_λ) contributes one copy of the
-  # sum of weights = dim(V_λ) * (sum of weights / dim)
-  # But the determinant of a direct sum is the tensor product of determinants
   if LT === nothing
     zero_ss = WeightLatticeElem(TypeA{1}, [0])
   else
     LR = rank(LT)
-    # The determinant of V_λ is the character that maps the maximal torus
-    # to the wedge product. For a representation with highest weight λ,
-    # det(V_λ) has weight = sum of all weights of V_λ.
-    # A simpler approach: det of a direct sum ⊕ V_i = ⊗ det(V_i)
-    # For the central part, det(V_λ) = dim(V_λ) * central_weight
-    # For the semisimple part, det(V_λ) = 0 (it's a character of the center)
     zero_ss = WeightLatticeElem(LT, zeros(Int, LR))
   end
 
-  return CompletelyReducibleBundle{MDT}([IrrepLevi{MDT}(total_central, zero_ss)])
+  return CompletelyReducibleBundle{MDT}(E.variety, [IrrepLevi{MDT}(total_central, zero_ss)])
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -283,7 +322,7 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    dual(E::CompletelyReducibleBundle{MDT}) -> CompletelyReducibleBundle{MDT}
+    dual(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
 
 The dual bundle ``E^*``.
 
@@ -291,20 +330,20 @@ The dual bundle ``E^*``.
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
+julia> X = Gr(2, 4);
 
-julia> E = tangent_bundle(MDT);
+julia> E = tangent_bundle(X);
 
 julia> rank_bundle(dual(E)) == rank_bundle(E)
 true
 ```
 """
 function dual(E::CompletelyReducibleBundle{MDT}) where {MDT}
-  return CompletelyReducibleBundle{MDT}([dual(c) for c in E.components])
+  return CompletelyReducibleBundle{MDT}(E.variety, [dual(c) for c in E.components])
 end
 
 """
-    tensor_product(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibleBundle{MDT})
+    tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
 
 The tensor product ``E \\otimes F``.
 
@@ -314,11 +353,11 @@ Uses bilinearity: ``(\\bigoplus_i V_i) \\otimes (\\bigoplus_j W_j) = \\bigoplus_
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = tangent_bundle(MDT);
+julia> E = tangent_bundle(X);
 
-julia> S = structure_sheaf(MDT);
+julia> S = structure_sheaf(X);
 
 julia> rank_bundle(tensor_product(E, S)) == rank_bundle(E)
 true
@@ -331,20 +370,20 @@ function tensor_product(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibl
       append!(result, tensor_product(a, b))
     end
   end
-  return CompletelyReducibleBundle{MDT}(result)
+  return CompletelyReducibleBundle{MDT}(E.variety, result)
 end
 
 """
-    direct_sum(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibleBundle{MDT})
+    direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
 
 The direct sum ``E \\oplus F``.
 """
 function direct_sum(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
-  return CompletelyReducibleBundle{MDT}(vcat(E.components, F.components))
+  return CompletelyReducibleBundle{MDT}(E.variety, vcat(E.components, F.components))
 end
 
 """
-    exterior_power(E::CompletelyReducibleBundle{MDT}, k::Int) -> CompletelyReducibleBundle{MDT}
+    exterior_power(E::CompletelyReducibleBundle, k::Int) -> CompletelyReducibleBundle
 
 The k-th exterior power ``\\bigwedge^k E``.
 
@@ -358,9 +397,9 @@ where ``\\alpha`` runs over compositions (multiexponents) of ``k`` in
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = tangent_bundle(MDT);
+julia> E = tangent_bundle(X);
 
 julia> rank_bundle(exterior_power(E, 0))
 1
@@ -371,22 +410,17 @@ true
 """
 function exterior_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
   n = n_components(E)
-  k < 0 && return CompletelyReducibleBundle{MDT}(IrrepLevi{MDT}[])
-  k == 0 && return structure_sheaf(MDT)
+  k < 0 && return CompletelyReducibleBundle{MDT}(E.variety, IrrepLevi{MDT}[])
+  k == 0 && return structure_sheaf(E.variety)
   k == 1 && return E
 
-  # Compute fiber ranks of each irreducible summand
   ranks = [Int(fiber_dimension(c)) for c in E.components]
 
   result = IrrepLevi{MDT}[]
 
-  # Iterate over multiexponents: compositions of k into n parts
-  # where each part αᵢ ≤ rank(Vᵢ)
   for α in multiexponents(n, k)
-    # Check feasibility: αᵢ ≤ rank of i-th summand
     any(α[i] > ranks[i] for i in 1:n) && continue
 
-    # Build tensor product of ⋀^{αᵢ}(Vᵢ)
     factors = Vector{Vector{IrrepLevi{MDT}}}()
     skip = false
     for i in 1:n
@@ -399,7 +433,6 @@ function exterior_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
     end
     skip && continue
 
-    # Tensor all factors together
     current = factors[1]
     for i in 2:length(factors)
       next = IrrepLevi{MDT}[]
@@ -413,11 +446,11 @@ function exterior_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
     append!(result, current)
   end
 
-  return CompletelyReducibleBundle{MDT}(result)
+  return CompletelyReducibleBundle{MDT}(E.variety, result)
 end
 
 """
-    symmetric_power(E::CompletelyReducibleBundle{MDT}, k::Int) -> CompletelyReducibleBundle{MDT}
+    symmetric_power(E::CompletelyReducibleBundle, k::Int) -> CompletelyReducibleBundle
 
 The k-th symmetric power ``\\mathrm{Sym}^k E``.
 
@@ -428,9 +461,9 @@ For a direct sum ``E = \\bigoplus_i V_i``, we use:
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = tangent_bundle(MDT);
+julia> E = tangent_bundle(X);
 
 julia> rank_bundle(symmetric_power(E, 0))
 1
@@ -441,8 +474,8 @@ true
 """
 function symmetric_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
   n = n_components(E)
-  k < 0 && return CompletelyReducibleBundle{MDT}(IrrepLevi{MDT}[])
-  k == 0 && return structure_sheaf(MDT)
+  k < 0 && return CompletelyReducibleBundle{MDT}(E.variety, IrrepLevi{MDT}[])
+  k == 0 && return structure_sheaf(E.variety)
   k == 1 && return E
 
   result = IrrepLevi{MDT}[]
@@ -452,6 +485,7 @@ function symmetric_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
     skip = false
     for i in 1:n
       sym_i = symmetric_power(E.components[i], α[i])
+      # TODO should be iszero?
       if isempty(sym_i)
         skip = true
         break
@@ -473,13 +507,13 @@ function symmetric_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
     append!(result, current)
   end
 
-  return CompletelyReducibleBundle{MDT}(result)
+  return CompletelyReducibleBundle{MDT}(E.variety, result)
 end
 
 # ─── Twist ───────────────────────────────────────────────────────────────────
 
 """
-    twist(E::CompletelyReducibleBundle{MDT}, i::Int, k::Int=1) -> CompletelyReducibleBundle{MDT}
+    twist(E::CompletelyReducibleBundle, i::Int, k::Int=1) -> CompletelyReducibleBundle
 
 Twist ``E`` by ``\\mathcal{O}(k)`` at the `i`-th marked node:
 ``E(k) = E \\otimes \\mathcal{L}(k \\omega_{m_i})``.
@@ -488,9 +522,9 @@ Twist ``E`` by ``\\mathcal{O}(k)`` at the `i`-th marked node:
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (1,)};
+julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = structure_sheaf(MDT);
+julia> E = structure_sheaf(X);
 
 julia> rank_bundle(twist(E, 1, 3))
 1
@@ -501,18 +535,16 @@ function twist(E::CompletelyReducibleBundle{MDT}, i::Int, k::Int=1) where {MDT<:
     "Index $i out of range. MDT has $(length(Marked)) marked node(s)."
   ))
 
-  # Create line bundle L(k·ω_{m_i})
   m = Marked[i]
   ω = fundamental_weight(DT, m)
   λ = k * ω
   twist_rep = IrrepLevi(MDT, λ)
 
-  # Twist each component
   result = IrrepLevi{MDT}[]
   for c in E.components
     append!(result, tensor_product(c, twist_rep))
   end
-  return CompletelyReducibleBundle{MDT}(result)
+  return CompletelyReducibleBundle{MDT}(E.variety, result)
 end
 
 # ─── Arithmetic operators ───────────────────────────────────────────────────

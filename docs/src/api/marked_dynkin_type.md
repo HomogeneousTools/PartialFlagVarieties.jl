@@ -1,6 +1,7 @@
 # MarkedDynkinType
 
-The core type encoding a partial flag variety ``G/P`` at the type level.
+The core type encoding both the partial flag variety ``G/P_I`` and the
+Levi factor of the parabolic subgroup ``P_I`` at the type level.
 
 ## Type
 
@@ -18,20 +19,11 @@ levi_rank
 levi_type
 ```
 
-## Special matrix
+## Decomposition matrix
 
 ```@docs
-special_matrix
-special_matrix_inv
-```
-
-## Topological invariants
-
-```@docs
-dimension
-picard_rank
-euler_characteristic
-betti_numbers
+decomposition_matrix
+decomposition_matrix_inv
 ```
 
 ## Roots

@@ -6,7 +6,7 @@
 #  tensored with an irreducible representation of the semisimple part [L,L]
 #  (the "semisimple part").
 #
-#  The decomposition uses the special_matrix change-of-basis from
+#  The decomposition uses the decomposition_matrix change-of-basis from
 #  MarkedDynkinType.jl.
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -35,7 +35,7 @@ marked Dynkin type `MDT`.
 
 The ambient weight ``\\lambda`` decomposes under the Levi as:
 ``\\lambda \\mapsto (\\text{central part}, \\text{semisimple part})``
-via the [`special_matrix`](@ref) change of basis.
+via the [`decomposition_matrix`](@ref) change of basis.
 
 # Examples
 ```jldoctest
@@ -82,7 +82,7 @@ semisimple_part(rep::IrrepLevi) = rep.semisimple
     IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) -> IrrepLevi{MDT}
 
 Construct an irreducible Levi representation from a weight ``\\lambda``
-of the ambient group ``G``, by applying the [`special_matrix`](@ref)
+of the ambient group ``G``, by applying the [`decomposition_matrix`](@ref)
 change of basis to decompose into central + semisimple parts.
 
 # Examples
@@ -102,9 +102,9 @@ julia> fiber_dimension(rep)
 function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
   MDT<:MarkedDynkinType
 }
-  M = special_matrix(MDT)
+  M = decomposition_matrix(MDT)
   Marked = marked_nodes(MDT)
-  um = unmarked_nodes(MDT)
+  unmarked = unmarked_nodes(MDT)
   LT = levi_type(MDT)
 
   # Apply change of basis
@@ -121,7 +121,7 @@ function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
     semisimple = WeightLatticeElem(TypeA{1}, [0])
   else
     LR = rank(LT)
-    ss_coords = [Int(new_coords[u]) for u in um]
+    ss_coords = [Int(new_coords[u]) for u in unmarked]
     semisimple = WeightLatticeElem(LT, ss_coords)
   end
 
@@ -155,8 +155,8 @@ function to_ambient_weight(::Type{MDT}, rep::IrrepLevi{MDT}) where {
   DT = _ambient_type(MDT)
   Marked = marked_nodes(MDT)
   R = rank(DT)
-  Minv = special_matrix_inv(MDT)
-  um = unmarked_nodes(MDT)
+  Minv = decomposition_matrix_inv(MDT)
+  unmarked = unmarked_nodes(MDT)
 
   # Reconstruct the full coordinate vector
   coords = zeros(Rational{Int}, R)
@@ -168,7 +168,7 @@ function to_ambient_weight(::Type{MDT}, rep::IrrepLevi{MDT}) where {
 
   # Semisimple part at unmarked positions
   ss_vec = coefficients(rep.semisimple)
-  for (idx, u) in enumerate(um)
+  for (idx, u) in enumerate(unmarked)
     coords[u] = Rational{Int}(ss_vec[idx])
   end
 

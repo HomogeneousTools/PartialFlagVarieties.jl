@@ -11,6 +11,7 @@ CompletelyReducibleBundle
 ## Accessors
 
 ```@docs
+variety
 components
 n_components
 rank_bundle

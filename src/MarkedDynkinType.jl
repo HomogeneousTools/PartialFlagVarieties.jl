@@ -1,9 +1,11 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #  MarkedDynkinType — a Dynkin type with crossed-out nodes (type-level encoding)
 #
-#  A marked Dynkin diagram encodes a partial flag variety G/P_I where I is
-#  the set of crossed-out (nonparabolic / removed) nodes. The remaining
-#  (unmarked) nodes determine the Levi subgroup.
+#  A marked Dynkin diagram encodes both the partial flag variety G/P_I
+#  (where I is the set of crossed-out / nonparabolic / removed nodes)
+#  and the Levi factor of P_I: the unmarked nodes determine the semisimple
+#  part of the Levi subgroup, while the marked nodes correspond to the
+#  center of the Levi (whose rank equals the Picard rank of G/P_I).
 #
 #  Both the Dynkin type and the set of marked nodes are encoded as type
 #  parameters, enabling heavy compile-time specialization following the
@@ -12,7 +14,7 @@
 
 export MarkedDynkinType
 export marked_nodes, unmarked_nodes, levi_type, levi_rank, central_rank
-export special_matrix, special_matrix_inv
+export decomposition_matrix, decomposition_matrix_inv
 export marked_dynkin_diagram
 
 # Names from Lie, StaticArrays, LinearAlgebra are available via the parent module.
@@ -29,7 +31,9 @@ encoded as a compile-time sorted tuple `Marked`.
 
 The marked nodes are the nodes removed from the Dynkin diagram to define
 the parabolic subgroup ``P_I``, so that the partial flag variety is ``G/P_I``.
-The unmarked nodes determine the Levi factor of ``P_I``.
+The unmarked nodes determine the Levi factor of ``P_I``: they give the
+semisimple part of the Levi subgroup, while the marked nodes correspond
+to its center.
 
 # Type parameters
 - `DT <: DynkinType`: the ambient Dynkin type (e.g., `TypeA{4}`)
@@ -169,203 +173,11 @@ Lie.rank(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked} = rank(DT)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    _levi_dynkin_type(C_sub::Matrix{Int}) -> Type{<:DynkinType}
-
-Given a sub-Cartan matrix (for the unmarked nodes), determine the
-`DynkinType` of the semisimple part of the Levi subgroup by decomposing
-into connected components and identifying each component.
-"""
-function _levi_dynkin_type(C_sub::AbstractMatrix{Int}, n::Int)
-  if n == 0
-    # Full flag variety: Levi is a torus, semisimple part is trivial
-    # Return TypeA{1} as a dummy (rank 0 isn't representable);
-    # we handle this specially
-    return nothing
-  end
-
-  # Find connected components via adjacency in the Cartan matrix
-  adj = [Int[] for _ in 1:n]
-  for i in 1:n, j in (i + 1):n
-    if C_sub[i, j] != 0 || C_sub[j, i] != 0
-      push!(adj[i], j)
-      push!(adj[j], i)
-    end
-  end
-
-  visited = falses(n)
-  components = Vector{Vector{Int}}()
-  for start in 1:n
-    visited[start] && continue
-    comp = Int[]
-    stack = [start]
-    visited[start] = true
-    while !isempty(stack)
-      u = pop!(stack)
-      push!(comp, u)
-      for v in adj[u]
-        if !visited[v]
-          visited[v] = true
-          push!(stack, v)
-        end
-      end
-    end
-    sort!(comp)
-    push!(components, comp)
-  end
-
-  # Identify each connected component
-  component_types = []
-  for comp in components
-    C_comp = C_sub[comp, comp]
-    r = length(comp)
-    dt = _identify_cartan_matrix(C_comp, r)
-    push!(component_types, dt)
-  end
-
-  if length(component_types) == 1
-    return component_types[1]
-  else
-    # Build ProductDynkinType
-    return _make_product_type(component_types)
-  end
-end
-
-"""
-    _identify_cartan_matrix(C::AbstractMatrix{Int}, r::Int) -> Type{<:SimpleDynkinType}
-
-Identify a connected Cartan matrix of rank `r`, handling arbitrary
-row/column orderings (permuted sub-Cartan matrices).
-
-Uses graph structure: builds the adjacency graph, then classifies by
-degree sequence and branch lengths.
-"""
-function _identify_cartan_matrix(C::AbstractMatrix{Int}, r::Int)
-  # A_1
-  r == 1 && return TypeA{1}
-
-  # Build adjacency graph and detect edge types
-  adj = [Int[] for _ in 1:r]
-  has_double = false
-  has_triple = false
-  double_edge = (0, 0)  # (i, j) where C[i,j] = -2 (i is the "short" side)
-  for i in 1:r, j in (i+1):r
-    C[i, j] == 0 && C[j, i] == 0 && continue
-    push!(adj[i], j)
-    push!(adj[j], i)
-    if C[i, j] == -2
-      has_double = true
-      double_edge = (i, j)
-    elseif C[j, i] == -2
-      has_double = true
-      double_edge = (j, i)
-    end
-    if C[i, j] == -3 || C[j, i] == -3
-      has_triple = true
-    end
-  end
-
-  degrees = [length(adj[i]) for i in 1:r]
-  max_deg = maximum(degrees)
-
-  # ── Simply-laced ──────────────────────────────────────────────────────
-  if !has_double && !has_triple
-    if max_deg <= 2
-      # Path graph → A_r
-      return TypeA{r}
-    end
-
-    # Has a node of degree 3 → D_r or E_r
-    branch_node = findfirst(==(3), degrees)
-    branch_node === nothing && error(
-      "Could not identify simply-laced Cartan matrix of rank $r: $C"
-    )
-
-    # Compute branch lengths (distance from branch node to leaf in each direction)
-    branch_lengths = Int[]
-    for neighbor in adj[branch_node]
-      len = 1
-      prev = branch_node
-      curr = neighbor
-      while length(adj[curr]) == 2
-        next = (adj[curr][1] == prev) ? adj[curr][2] : adj[curr][1]
-        prev = curr
-        curr = next
-        len += 1
-      end
-      push!(branch_lengths, len)
-    end
-    sort!(branch_lengths)
-
-    # D_r: branch lengths [1, 1, r-3]
-    if branch_lengths == [1, 1, r - 3]
-      return TypeD{r}
-    end
-    # E_6: [1, 2, 2], E_7: [1, 2, 3], E_8: [1, 2, 4]
-    if branch_lengths == [1, 2, 2] && r == 6
-      return TypeE{6}
-    elseif branch_lengths == [1, 2, 3] && r == 7
-      return TypeE{7}
-    elseif branch_lengths == [1, 2, 4] && r == 8
-      return TypeE{8}
-    end
-
-    error("Could not identify simply-laced Cartan matrix of rank $r " *
-          "with branch lengths $branch_lengths: $C")
-  end
-
-  # ── Non-simply-laced ──────────────────────────────────────────────────
-
-  # G2: rank 2, triple bond
-  if has_triple && r == 2
-    return TypeG2
-  end
-
-  # B2/C2: rank 2, double bond
-  if has_double && r == 2
-    # B2 and C2 are isomorphic; Lie.jl uses B2
-    return TypeB{2}
-  end
-
-  # F4: rank 4, double bond in the middle of a path
-  if has_double && r == 4 && max_deg <= 2
-    (di, dj) = double_edge
-    # Both sides of the double bond should be interior (degree 2)
-    if degrees[di] == 2 && degrees[dj] == 2
-      return TypeF4
-    end
-  end
-
-  # B_r or C_r: path with double bond at one end
-  if has_double && max_deg <= 2
-    (di, dj) = double_edge  # C[di, dj] = -2
-    # di is the "short root" side
-    # B_r: short root is a leaf → di is a leaf
-    if degrees[di] == 1
-      return TypeB{r}
-    end
-    # C_r: short root is not a leaf → di is interior, dj is leaf
-    if degrees[dj] == 1
-      return TypeC{r}
-    end
-  end
-
-  error("Could not identify Cartan matrix of rank $r: $C")
-end
-
-function _make_product_type(types::Vector)
-  if length(types) == 1
-    return types[1]
-  end
-  # Build the ProductDynkinType at the type level
-  # We need to construct: ProductDynkinType{Tuple{T1, T2, ...}}
-  return ProductDynkinType{Tuple{types...}}
-end
-
-"""
     levi_type(::Type{MarkedDynkinType{DT,Marked}}) -> Type{<:DynkinType}
 
 Return the Dynkin type of the semisimple part of the Levi subgroup.
-This is computed from the sub-Cartan matrix on the unmarked nodes.
+This is computed from the sub-Cartan matrix on the unmarked nodes,
+using [`cartan_type`](@ref) to identify the resulting Cartan matrix.
 
 Returns `nothing` for the full flag variety (all nodes marked), since the
 Levi is then a torus with trivial semisimple part.
@@ -389,14 +201,15 @@ true
 """
 @generated function levi_type(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
   R = rank(DT)
-  um = [i for i in 1:R if !(i in Marked)]
-  n = length(um)
+  unmarked = [i for i in 1:R if !(i in Marked)]
+  n = length(unmarked)
   if n == 0
     return :(nothing)
   end
   C = Lie._cartan_matrix_data(DT)
-  C_sub = C[um, um]
-  lt = _levi_dynkin_type(C_sub, n)
+  C_sub = C[unmarked, unmarked]
+  ct = cartan_type(C_sub)
+  lt = _cartan_type_to_dynkin_type(ct)
   return :($lt)
 end
 
@@ -423,11 +236,11 @@ julia> levi_rank(MarkedDynkinType{TypeE{6}, (1, 6)})
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Special matrix (change of basis)
+#  Decomposition matrix (change of basis)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    special_matrix(::Type{MarkedDynkinType{DT,Marked}}) -> SMatrix
+    decomposition_matrix(::Type{MarkedDynkinType{DT,Marked}}) -> SMatrix
 
 Return the change-of-basis matrix ``M`` from fundamental weight coordinates
 to the (central + semisimple) coordinate system of the Levi decomposition.
@@ -447,7 +260,7 @@ The matrix is constructed as:
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> M = special_matrix(MarkedDynkinType{TypeA{3}, (2,)});
+julia> M = decomposition_matrix(MarkedDynkinType{TypeA{3}, (2,)});
 
 julia> M[1, 1] == 1  # parabolic row
 true
@@ -456,17 +269,17 @@ julia> M[3, 3] == 1  # parabolic row
 true
 ```
 """
-@generated function special_matrix(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
+@generated function decomposition_matrix(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
   R = rank(DT)
   C = Lie._cartan_matrix_data(DT)
   Crat = Rational{Int}.(C)
   Cinv = inv(Crat)
 
-  um = [i for i in 1:R if !(i in Marked)]
+  unmarked = [i for i in 1:R if !(i in Marked)]
 
   M = zeros(Rational{Int}, R, R)
   # Parabolic (unmarked) rows: identity
-  for i in um
+  for i in unmarked
     M[i, i] = 1
   end
   # Nonparabolic (marked) rows: C^{-1}[j, :]
@@ -481,9 +294,9 @@ true
 end
 
 """
-    special_matrix_inv(::Type{MarkedDynkinType{DT,Marked}}) -> SMatrix
+    decomposition_matrix_inv(::Type{MarkedDynkinType{DT,Marked}}) -> SMatrix
 
-Return the inverse of [`special_matrix`](@ref).
+Return the inverse of [`decomposition_matrix`](@ref).
 
 # Examples
 ```jldoctest
@@ -491,24 +304,24 @@ julia> using PartialFlagVarieties, StaticArrays
 
 julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
 
-julia> M = special_matrix(MDT);
+julia> M = decomposition_matrix(MDT);
 
-julia> Minv = special_matrix_inv(MDT);
+julia> Minv = decomposition_matrix_inv(MDT);
 
 julia> M * Minv ≈ SMatrix{3,3}(1.0I)
 true
 ```
 """
-@generated function special_matrix_inv(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
+@generated function decomposition_matrix_inv(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
   R = rank(DT)
   C = Lie._cartan_matrix_data(DT)
   Crat = Rational{Int}.(C)
   Cinv = inv(Crat)
 
-  um = [i for i in 1:R if !(i in Marked)]
+  unmarked = [i for i in 1:R if !(i in Marked)]
 
   M = zeros(Rational{Int}, R, R)
-  for i in um
+  for i in unmarked
     M[i, i] = 1
   end
   for j in Marked
@@ -520,193 +333,6 @@ true
   Minv = inv(M)
   entries = Tuple(Minv[i, j] for j in 1:R for i in 1:R)
   return :(SMatrix{$R, $R, Rational{Int}, $(R * R)}($entries))
-end
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Dimension and topological invariants
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    dimension(::Type{MDT}) -> Int
-    dimension(::Type{MDT}) -> Int
-
-Return the dimension of the partial flag variety ``G/P``.
-
-This equals the number of positive roots of ``G`` that are not roots of the Levi:
-``\\dim(G/P) = |\\Phi^+_G| - |\\Phi^+_L|``
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> dimension(MarkedDynkinType{TypeA{3}, (2,)})  # Gr(2,4)
-4
-
-julia> dimension(MarkedDynkinType{TypeA{4}, (1,)})  # ℙ⁴
-4
-
-julia> dimension(MarkedDynkinType{TypeE{6}, (1,)})  # Cayley plane
-16
-```
-"""
-@generated function dimension(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
-  R = rank(DT)
-  um = [i for i in 1:R if !(i in Marked)]
-  n_pos_G = n_positive_roots(DT)
-  if isempty(um)
-    n_pos_L = 0
-  else
-    C = Lie._cartan_matrix_data(DT)
-    C_sub = C[um, um]
-    lt = _levi_dynkin_type(C_sub, length(um))
-    n_pos_L = lt === nothing ? 0 : n_positive_roots(lt)
-  end
-  d = n_pos_G - n_pos_L
-  return :($d)
-end
-
-"""
-    picard_rank(::Type{MDT}) -> Int
-
-Return the Picard rank of ``G/P``, which equals the number of marked nodes.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> picard_rank(MarkedDynkinType{TypeA{3}, (2,)})
-1
-
-julia> picard_rank(MarkedDynkinType{TypeA{3}, (1, 3)})
-2
-```
-"""
-picard_rank(::Type{MDT}) where {MDT<:MarkedDynkinType} = central_rank(MDT)
-
-"""
-    euler_characteristic(::Type{MDT}) -> BigInt
-
-Return the Euler characteristic ``\\chi(G/P) = |W_G| / |W_L|``.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> euler_characteristic(MarkedDynkinType{TypeA{3}, (2,)})  # Gr(2,4) = 6
-6
-
-julia> euler_characteristic(MarkedDynkinType{TypeA{4}, (1,)})  # ℙ⁴ = 5
-5
-
-julia> euler_characteristic(MarkedDynkinType{TypeE{6}, (1,)})  # OP²
-27
-```
-"""
-@generated function euler_characteristic(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
-  R = rank(DT)
-  um = [i for i in 1:R if !(i in Marked)]
-  wG = weyl_order(DT)
-  if isempty(um)
-    wL = BigInt(1)
-  else
-    C = Lie._cartan_matrix_data(DT)
-    C_sub = C[um, um]
-    lt = _levi_dynkin_type(C_sub, length(um))
-    wL = lt === nothing ? BigInt(1) : weyl_order(lt)
-  end
-  chi = wG ÷ wL
-  return :($chi)
-end
-
-"""
-    betti_numbers(::Type{MDT}) -> Vector{BigInt}
-
-Compute the Betti numbers of ``G/P`` using the Poincaré polynomial formula:
-
-``P(t) = \\prod_i \\frac{1 - t^{d_i^G}}{1 - t} \\bigg/ \\prod_j \\frac{1 - t^{d_j^L}}{1 - t}``
-
-where ``d_i^G`` and ``d_j^L`` are the degrees of the fundamental invariants of
-the Weyl groups of ``G`` and ``L``.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> betti_numbers(MarkedDynkinType{TypeA{2}, (1,)})  # ℙ²
-3-element Vector{BigInt}:
- 1
- 1
- 1
-
-julia> betti_numbers(MarkedDynkinType{TypeA{3}, (2,)})  # Gr(2,4)
-5-element Vector{BigInt}:
- 1
- 1
- 2
- 1
- 1
-```
-"""
-@generated function betti_numbers(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
-  R = rank(DT)
-  um = [i for i in 1:R if !(i in Marked)]
-
-  degs_G = collect(degrees_fundamental_invariants(DT))
-
-  if isempty(um)
-    degs_L = Int[]
-  else
-    C = Lie._cartan_matrix_data(DT)
-    C_sub = C[um, um]
-    lt = _levi_dynkin_type(C_sub, length(um))
-    degs_L = lt === nothing ? Int[] : collect(degrees_fundamental_invariants(lt))
-  end
-
-  # Compute Poincaré polynomial as a coefficient vector
-  # P(t) = ∏(1 + t + ... + t^{d-1}) for each d in degs_G
-  #       / ∏(1 + t + ... + t^{d-1}) for each d in degs_L
-  # Compute numerator polynomial
-  function expand_factor(d)
-    return ones(BigInt, d)  # [1, 1, ..., 1] of length d = 1 + t + ... + t^{d-1}
-  end
-
-  function poly_mul(a, b)
-    la, lb = length(a), length(b)
-    result = zeros(BigInt, la + lb - 1)
-    for i in 1:la, j in 1:lb
-      result[i + j - 1] += a[i] * b[j]
-    end
-    return result
-  end
-
-  function poly_div(a, b)
-    # Exact polynomial division
-    la, lb = length(a), length(b)
-    a = copy(a)
-    result = zeros(BigInt, la - lb + 1)
-    for i in (la - lb + 1):-1:1
-      c = a[i + lb - 1] ÷ b[lb]
-      result[i] = c
-      for j in 1:lb
-        a[i + j - 1] -= c * b[j]
-      end
-    end
-    return result
-  end
-
-  num = BigInt[1]
-  for d in degs_G
-    num = poly_mul(num, expand_factor(d))
-  end
-
-  den = BigInt[1]
-  for d in degs_L
-    den = poly_mul(den, expand_factor(d))
-  end
-
-  result = poly_div(num, den)
-
-  return :($(Vector{BigInt}(result)))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -789,12 +415,12 @@ function tangent_weights(::Type{MDT}) where {MDT<:MarkedDynkinType}
   R = rank(DT)
   RS = RootSystem(DT)
   Marked = marked_nodes(MDT)
-  um = unmarked_nodes(MDT)
+  unmarked = unmarked_nodes(MDT)
 
   nonpar_roots = positive_nonparabolic_roots(MDT)
 
   # Simple parabolic roots (simple roots at unmarked positions)
-  simple_par = [simple_root(RS, i) for i in um]
+  simple_par = [simple_root(RS, i) for i in unmarked]
 
   # Set of nonparabolic root vectors for fast lookup
   nonpar_set = Set(coefficients(α) for α in nonpar_roots)
@@ -881,9 +507,7 @@ function is_cominuscule(::Type{MDT}) where {MDT<:MarkedDynkinType}
   DT = _ambient_type(MDT)
   Marked = marked_nodes(MDT)
 
-  # Must be a generalized Grassmannian for simple types
-  # For product types we'd need to check factors; for simple types:
-  DT <: SimpleDynkinType || return false  # TODO: handle products
+  DT <: SimpleDynkinType || return false
   length(Marked) != 1 && return false
 
   m = Marked[1]
@@ -962,7 +586,6 @@ function is_adjoint(::Type{MDT}) where {MDT<:MarkedDynkinType}
 
   DT <: SimpleDynkinType || return false
 
-  # Type A special case: adjoint has nodes 1 and r marked
   if DT <: TypeA
     return length(Marked) == 2 && Marked == (1, R)
   end
@@ -1004,7 +627,6 @@ function is_coadjoint(::Type{MDT}) where {MDT<:MarkedDynkinType}
 
   DT <: SimpleDynkinType || return false
 
-  # Type A: same as adjoint (self-dual)
   if DT <: TypeA
     return length(Marked) == 2 && Marked == (1, R)
   end
@@ -1055,17 +677,13 @@ julia> println(marked_dynkin_diagram(MarkedDynkinType{TypeB{3}, (1,)}))
 ```
 """
 function marked_dynkin_diagram(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
-  # Get the standard diagram and replace ○ at marked positions with ×
   diagram = dynkin_diagram(DT)
   lines = split(diagram, '\n')
 
   marked_set = Set(Marked)
   R = rank(DT)
 
-  # For simple types, the first line has the nodes
-  # We need to replace the i-th ○ with × if i ∈ Marked
   if DT <: SimpleDynkinType
-    # Handle D-type specially (has multi-line structure)
     if DT <: TypeD
       return _marked_diagram_D(DT, Marked)
     end
@@ -1073,7 +691,6 @@ function marked_dynkin_diagram(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Ma
       return _marked_diagram_E(DT, Marked)
     end
 
-    # For linear diagrams (A, B, C, F4, G2), first line has the nodes
     node_line = lines[1]
     result_chars = collect(node_line)
     node_idx = 0
@@ -1089,7 +706,6 @@ function marked_dynkin_diagram(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Ma
     return join(lines, '\n')
   end
 
-  # For product types, return diagram with marked annotations
   return diagram * "\n(marked: $(join(Marked, ", ")))"
 end
 
