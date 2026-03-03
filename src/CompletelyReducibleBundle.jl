@@ -10,7 +10,7 @@
 export CompletelyReducibleBundle
 export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
-export structure_sheaf, line_bundle, canonical_bundle, anticanonical_bundle
+export structure_sheaf, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
 export det_bundle
 
 # Names from Lie, StaticArrays, Combinatorics are available via the parent module.
@@ -111,9 +111,7 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  R = rank(DT)
   LT = levi_type(MDT)
-
   zero_central = zeros(Rational{Int}, length(Marked))
   if LT === nothing
     zero_ss = WeightLatticeElem(TypeA{1}, [0])
@@ -121,9 +119,17 @@ function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinTyp
     LR = rank(LT)
     zero_ss = WeightLatticeElem(LT, zeros(Int, LR))
   end
-
-  triv = IrrepLevi{MDT}(zero_central, zero_ss)
+  triv = IrrepLevi(MDT, zero_central, zero_ss)
   return CompletelyReducibleBundle{MDT}(X, [triv])
+end
+
+"""
+    zero_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
+
+The zero bundle on `X` (the empty direct sum).
+"""
+function zero_bundle(X::PartialFlagVariety{MDT}) where {MDT}
+  return CompletelyReducibleBundle{MDT}(X, IrrepLevi{MDT}[])
 end
 
 """
@@ -306,7 +312,6 @@ function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT}
   end
 
   LT = levi_type(MDT)
-
   if LT === nothing
     zero_ss = WeightLatticeElem(TypeA{1}, [0])
   else
@@ -314,7 +319,7 @@ function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT}
     zero_ss = WeightLatticeElem(LT, zeros(Int, LR))
   end
 
-  return CompletelyReducibleBundle{MDT}(E.variety, [IrrepLevi{MDT}(total_central, zero_ss)])
+  return CompletelyReducibleBundle{MDT}(E.variety, [IrrepLevi(MDT, total_central, zero_ss)])
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -551,10 +556,32 @@ end
 
 Base.:*(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) = tensor_product(E, F)
 
+"""
+    n * E -> CompletelyReducibleBundle
+
+The `n`-fold direct sum ``E \\oplus \\cdots \\oplus E`` (n ≥ 1).
+Returns the zero bundle when `n == 0` and throws for `n < 0`.
+"""
+function Base.:*(n::Integer, E::CompletelyReducibleBundle{MDT}) where {MDT}
+  n < 0 && throw(ArgumentError("Cannot multiply a bundle by a negative integer ($n)"))
+  n == 0 && return zero_bundle(E.variety)
+  return CompletelyReducibleBundle{MDT}(E.variety, repeat(E.components, n))
+end
+Base.:*(E::CompletelyReducibleBundle, n::Integer) = n * E
+
 const ⊕ = direct_sum
 const ⊗ = tensor_product
 
 export ⊕, ⊗
+
+# ─── iszero ──────────────────────────────────────────────────────────
+
+"""
+    iszero(E::CompletelyReducibleBundle) -> Bool
+
+Return `true` if `E` is the zero bundle (has no summands).
+"""
+Base.iszero(E::CompletelyReducibleBundle) = isempty(E.components)
 
 # ─── Display ─────────────────────────────────────────────────────────────────
 

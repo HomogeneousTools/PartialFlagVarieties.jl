@@ -11,9 +11,48 @@
 
 export Cohomology
 export cohomology, dimensions, characters
-export euler_char_bundle, hilbert_polynomial, chi
+export euler_characteristic, chi
+export hilbert_polynomial
+export borel_weil_bott
 
 # Names from Lie are available via the parent module.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Borel–Weil–Bott theorem
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    borel_weil_bott(λ::WeightLatticeElem{DT,R}) -> Union{Nothing, Tuple{Int, WeightLatticeElem{DT,R}}}
+
+Apply the Borel–Weil–Bott theorem to the weight `λ`.
+
+Compute `μ = λ + ρ` and find the unique Weyl group element `w` such that
+`w(μ)` is dominant.  If `μ` is singular (any coordinate zero after
+reflecting to the dominant chamber), all cohomology vanishes and
+`nothing` is returned.  Otherwise return `(d, w(μ) - ρ)` where
+`d = ℓ(w)` is the cohomological degree.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> borel_weil_bott(fundamental_weight(TypeA{2}, 1))
+(0, ω1)
+
+julia> borel_weil_bott(fundamental_weight(TypeA{2}, 1) * 0)
+(0, 0)
+
+julia> borel_weil_bott(-Lie.weyl_vector(TypeA{2})) === nothing
+true
+```
+"""
+function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
+  ρ = Lie.weyl_vector(DT)
+  μ = λ + ρ
+  μ_dom, d = Lie.conjugate_dominant_weight_with_length(μ)
+  any(==(0), μ_dom.vec) && return nothing
+  return (d, μ_dom - ρ)
+end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition (0-based indexing)
@@ -183,11 +222,28 @@ function dimensions(E::CompletelyReducibleBundle)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  iszero
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    iszero(H::Cohomology) -> Bool
+
+Return `true` when all cohomology groups vanish.
+"""
+function Base.iszero(H::Cohomology{BigInt})
+  return all(==(BigInt(0)), H.entries)
+end
+
+function Base.iszero(H::Cohomology{<:WeylCharacter})
+  return all(isempty(v.terms) for v in H.entries)
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  Euler characteristic
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    chi(H::Cohomology{BigInt}) -> BigInt
+    euler_characteristic(H::Cohomology{BigInt}) -> BigInt
 
 Compute the Euler characteristic ``\\chi(E) = \\sum_i (-1)^i \\dim H^i(G/P, E)``.
 
@@ -199,11 +255,11 @@ julia> X = partial_flag_variety(TypeA{4}, (1,));
 
 julia> H = dimensions(line_bundle(X, 1));
 
-julia> chi(H)
+julia> euler_characteristic(H)
 5
 ```
 """
-function chi(H::Cohomology{BigInt})
+function euler_characteristic(H::Cohomology{BigInt})
   result = BigInt(0)
   for i in 0:H.dim_variety
     result += (iseven(i) ? 1 : -1) * H[i]
@@ -211,12 +267,19 @@ function chi(H::Cohomology{BigInt})
   return result
 end
 
-function chi(H::Cohomology{<:WeylCharacter})
-  return chi(dimensions(H))
+function euler_characteristic(H::Cohomology{<:WeylCharacter})
+  return euler_characteristic(dimensions(H))
 end
 
 """
-    euler_char_bundle(E::CompletelyReducibleBundle) -> BigInt
+    chi(H::Cohomology) -> BigInt
+
+Synonym for [`euler_characteristic(H)`](@ref).
+"""
+chi(H::Cohomology) = euler_characteristic(H)
+
+"""
+    euler_characteristic(E::CompletelyReducibleBundle) -> BigInt
 
 Compute the Euler characteristic ``\\chi(G/P, E)`` directly.
 
@@ -226,13 +289,20 @@ julia> using PartialFlagVarieties, Lie
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> euler_char_bundle(structure_sheaf(X))
+julia> euler_characteristic(structure_sheaf(X))
 1
 ```
 """
-function euler_char_bundle(E::CompletelyReducibleBundle)
-  return chi(dimensions(E))
+function euler_characteristic(E::CompletelyReducibleBundle)
+  return euler_characteristic(dimensions(E))
 end
+
+"""
+    chi(E::CompletelyReducibleBundle) -> BigInt
+
+Synonym for [`euler_characteristic(E)`](@ref).
+"""
+chi(E::CompletelyReducibleBundle) = euler_characteristic(E)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Hilbert polynomial
@@ -279,7 +349,7 @@ function hilbert_polynomial(E::CompletelyReducibleBundle{MDT};
 
   for t in 0:(n_points - 1)
     Et = twist(E, 1, t)
-    push!(values, Rational{BigInt}(euler_char_bundle(Et)))
+    push!(values, Rational{BigInt}(euler_characteristic(Et)))
   end
 
   # Lagrange interpolation to recover polynomial
