@@ -2,9 +2,10 @@
 #  IrrepLevi — irreducible representation of the Levi subgroup
 #
 #  An irreducible representation of the Levi subgroup L of a parabolic P
-#  decomposes as a character of the center Z(L) (the "central part")
-#  tensored with an irreducible representation of the semisimple part [L,L]
-#  (the "semisimple part").
+#  is encoded by a P-dominant weight λ in the weight lattice of G.  It
+#  can also be described as a character of the center Z(L) (the "central
+#  part") tensored with an irreducible representation of the semisimple
+#  part [L,L] (the "semisimple part").
 #
 #  The decomposition uses the decomposition_matrix change-of-basis from
 #  MarkedDynkinType.jl.
@@ -12,7 +13,7 @@
 
 export IrrepLevi
 export central_part, semisimple_part
-export to_ambient_weight, fiber_dimension
+export to_ambient_weight, fiber_dimension, p_dominant_weight
 
 # Names from Lie and StaticArrays are available via the parent module's
 # `using Lie` and `using StaticArrays`.
@@ -25,17 +26,16 @@ export to_ambient_weight, fiber_dimension
     IrrepLevi{MDT}
 
 An irreducible representation of the Levi subgroup associated to the
-marked Dynkin type `MDT`.
+marked Dynkin type `MDT`, encoded by its P-dominant weight `λ` in the
+weight lattice of the ambient group ``G``.
 
-# Fields
+Internally the weight also stores the decomposition into:
 - `central::Vector{Rational{Int}}`: coordinates of the central character,
   indexed by the marked (nonparabolic) nodes
 - `semisimple::WeightLatticeElem`: highest weight of the semisimple part,
   as a weight in the Levi's weight lattice
 
-The ambient weight ``\\lambda`` decomposes under the Levi as:
-``\\lambda \\mapsto (\\text{central part}, \\text{semisimple part})``
-via the [`decomposition_matrix`](@ref) change of basis.
+The decomposition is via the [`decomposition_matrix`](@ref) change of basis.
 
 # Examples
 ```jldoctest
@@ -56,11 +56,19 @@ julia> semisimple_part(rep)
 ```
 """
 struct IrrepLevi{MDT<:MarkedDynkinType}
-  central::Vector{Rational{Int}}
-  semisimple::WeightLatticeElem
+  λ::WeightLatticeElem          # the P-dominant weight (ambient weight lattice)
+  central::Vector{Rational{Int}} # central character coordinates (at marked nodes)
+  semisimple::WeightLatticeElem  # highest weight of semisimple part (Levi lattice)
 end
 
 # ─── Core accessors ──────────────────────────────────────────────────────────
+
+"""
+    p_dominant_weight(rep::IrrepLevi) -> WeightLatticeElem
+
+Return the P-dominant weight ``\\lambda`` that defines this Levi representation.
+"""
+p_dominant_weight(rep::IrrepLevi) = rep.λ
 
 """
     central_part(rep::IrrepLevi) -> Vector{Rational{Int}}
@@ -121,11 +129,59 @@ function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
     semisimple = WeightLatticeElem(TypeA{1}, [0])
   else
     LR = rank(LT)
-    ss_coords = [Int(new_coords[u]) for u in unmarked]
+    # Natural coords: ss_nat[i] = new_coords at the i-th unmarked node
+    ss_nat = [Int(new_coords[u]) for u in unmarked]
+    # Apply levi_permutation: canonical coord j = ss_nat[perm[j]]
+    perm = levi_permutation(MDT)
+    ss_coords = [ss_nat[perm[j]] for j in 1:LR]
     semisimple = WeightLatticeElem(LT, ss_coords)
   end
 
-  return IrrepLevi{MDT}(central, semisimple)
+  return IrrepLevi{MDT}(λ, central, semisimple)
+end
+
+"""
+    IrrepLevi(::Type{MDT}, central, semisimple) -> IrrepLevi{MDT}
+
+Construct an `IrrepLevi` from its central character `central` (a
+`Vector{Rational{Int}}` indexed by marked nodes) and the highest weight
+`semisimple` of its semisimple part (a `WeightLatticeElem` in the Levi
+weight lattice).  The ambient P-dominant weight ``\\lambda`` is recovered
+automatically.
+"""
+function IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem) where {
+  MDT<:MarkedDynkinType
+}
+  # Recover the ambient weight λ from (central, semisimple)
+  DT = _ambient_type(MDT)
+  Marked = marked_nodes(MDT)
+  R = rank(DT)
+  Minv = decomposition_matrix_inv(MDT)
+  unmarked = unmarked_nodes(MDT)
+
+  coords = zeros(Rational{Int}, R)
+  for (idx, m) in enumerate(Marked)
+    coords[m] = central[idx]
+  end
+
+  ss_vec = Lie.coefficients(semisimple)
+  LR = length(ss_vec)
+  if LR > 0
+    perm = levi_permutation(MDT)
+    inv_perm = Vector{Int}(undef, LR)
+    for j in 1:LR
+      inv_perm[perm[j]] = j
+    end
+    for (i, u) in enumerate(unmarked)
+      coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
+    end
+  end
+
+  ambient_coords = Minv * SVector{R,Rational{Int}}(Tuple(coords))
+  ambient_int = [Int(round(c)) for c in ambient_coords]
+  λ = WeightLatticeElem(DT, ambient_int)
+
+  return IrrepLevi{MDT}(λ, central, semisimple)
 end
 
 # ─── Back-conversion to ambient weight ───────────────────────────────────────
@@ -167,9 +223,19 @@ function to_ambient_weight(::Type{MDT}, rep::IrrepLevi{MDT}) where {
   end
 
   # Semisimple part at unmarked positions
+  # Apply inverse of levi_permutation: ss_nat[perm[j]] = ss_canonical[j]
   ss_vec = coefficients(rep.semisimple)
-  for (idx, u) in enumerate(unmarked)
-    coords[u] = Rational{Int}(ss_vec[idx])
+  LR = length(ss_vec)
+  if LR > 0
+    perm = levi_permutation(MDT)
+    # Invert the permutation: nat[perm[j]] = canon[j]  so  nat[i] = canon[perm⁻¹[i]]
+    inv_perm = Vector{Int}(undef, LR)
+    for j in 1:LR
+      inv_perm[perm[j]] = j
+    end
+    for (i, u) in enumerate(unmarked)
+      coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
+    end
   end
 
   # Apply inverse change of basis
@@ -217,21 +283,8 @@ end
 # ─── Display ─────────────────────────────────────────────────────────────────
 
 function Base.show(io::IO, rep::IrrepLevi{MDT}) where {MDT}
-  # Format central part
-  central_strs = String[]
-  for c in rep.central
-    if denominator(c) == 1
-      push!(central_strs, string(numerator(c)))
-    else
-      push!(central_strs, string(c))
-    end
-  end
-  central_str = join(central_strs, ", ")
-
-  # Format semisimple part
-  ss_str = sprint(show, rep.semisimple)
-
-  print(io, "(", central_str, " | ", ss_str, ")")
+  # Print the P-dominant weight directly
+  print(io, "(", sprint(show, rep.λ), ")")
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -274,14 +327,14 @@ function tensor_product(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) where {MDT}
 
   # Semisimple parts: tensor product decomposition
   if LT === nothing || (iszero(a.semisimple) && iszero(b.semisimple))
-    return [IrrepLevi{MDT}(new_central, a.semisimple)]
+    return [IrrepLevi(MDT, new_central, a.semisimple)]
   end
 
   if iszero(a.semisimple)
-    return [IrrepLevi{MDT}(new_central, b.semisimple)]
+    return [IrrepLevi(MDT, new_central, b.semisimple)]
   end
   if iszero(b.semisimple)
-    return [IrrepLevi{MDT}(new_central, a.semisimple)]
+    return [IrrepLevi(MDT, new_central, a.semisimple)]
   end
 
   # Tensor product via Lie.jl's Weyl character ring
@@ -290,7 +343,7 @@ function tensor_product(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) where {MDT}
   result = IrrepLevi{MDT}[]
   for (hw, mult) in χ
     for _ in 1:mult
-      push!(result, IrrepLevi{MDT}(copy(new_central), hw))
+      push!(result, IrrepLevi(MDT, copy(new_central), hw))
     end
   end
   return result
@@ -324,11 +377,11 @@ function dual(rep::IrrepLevi{MDT}) where {MDT}
   new_central = -rep.central
 
   if LT === nothing || iszero(rep.semisimple)
-    return IrrepLevi{MDT}(new_central, rep.semisimple)
+    return IrrepLevi(MDT, new_central, rep.semisimple)
   end
 
   new_ss = Lie.dual(rep.semisimple)
-  return IrrepLevi{MDT}(new_central, new_ss)
+  return IrrepLevi(MDT, new_central, new_ss)
 end
 
 """
@@ -357,22 +410,15 @@ function exterior_power(rep::IrrepLevi{MDT}, k::Int) where {MDT}
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]
-  if k == 0
-    zero_central = zeros(Rational{Int}, length(rep.central))
-    LT_actual = LT === nothing ? TypeA{1} : LT
-    zero_ss = WeightLatticeElem(LT_actual, zeros(Int, rank(LT_actual)))
-    return [IrrepLevi{MDT}(zero_central, zero_ss)]
-  end
-  k == 1 && return [IrrepLevi{MDT}(copy(rep.central), rep.semisimple)]
+  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(rep.central)),
+                              WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
+                                               zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
+  k == 1 && return [rep]
 
   new_central = k * rep.central
 
   if LT === nothing || iszero(rep.semisimple)
-    if k == 1
-      return [IrrepLevi{MDT}(new_central, rep.semisimple)]
-    else
-      return IrrepLevi{MDT}[]  # ⋀^k of a 1-dim rep for k > 1 is 0
-    end
+    return IrrepLevi{MDT}[]  # ⋀^k of a 1-dim rep for k > 1 is 0
   end
 
   dim_ss = Int(degree(rep.semisimple))
@@ -383,7 +429,7 @@ function exterior_power(rep::IrrepLevi{MDT}, k::Int) where {MDT}
   result = IrrepLevi{MDT}[]
   for (hw, mult) in χ
     for _ in 1:mult
-      push!(result, IrrepLevi{MDT}(copy(new_central), hw))
+      push!(result, IrrepLevi(MDT, copy(new_central), hw))
     end
   end
   return result
@@ -414,18 +460,15 @@ function symmetric_power(rep::IrrepLevi{MDT}, k::Int) where {MDT}
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]
-  if k == 0
-    zero_central = zeros(Rational{Int}, length(rep.central))
-    LT_actual = LT === nothing ? TypeA{1} : LT
-    zero_ss = WeightLatticeElem(LT_actual, zeros(Int, rank(LT_actual)))
-    return [IrrepLevi{MDT}(zero_central, zero_ss)]
-  end
-  k == 1 && return [IrrepLevi{MDT}(copy(rep.central), rep.semisimple)]
+  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(rep.central)),
+                              WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
+                                               zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
+  k == 1 && return [rep]
 
   new_central = k * rep.central
 
   if LT === nothing || iszero(rep.semisimple)
-    return [IrrepLevi{MDT}(new_central, rep.semisimple)]
+    return [IrrepLevi(MDT, new_central, rep.semisimple)]
   end
 
   χ = Lie.symmetric_power(rep.semisimple, k)
@@ -433,7 +476,7 @@ function symmetric_power(rep::IrrepLevi{MDT}, k::Int) where {MDT}
   result = IrrepLevi{MDT}[]
   for (hw, mult) in χ
     for _ in 1:mult
-      push!(result, IrrepLevi{MDT}(copy(new_central), hw))
+      push!(result, IrrepLevi(MDT, copy(new_central), hw))
     end
   end
   return result
@@ -442,7 +485,7 @@ end
 # ─── Equality ────────────────────────────────────────────────────────────────
 
 function Base.:(==)(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) where {MDT}
-  return a.central == b.central && a.semisimple == b.semisimple
+  return a.λ == b.λ
 end
 
-Base.hash(a::IrrepLevi, h::UInt) = hash((a.central, a.semisimple), h)
+Base.hash(a::IrrepLevi, h::UInt) = hash(a.λ, h)
