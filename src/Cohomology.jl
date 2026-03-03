@@ -80,7 +80,7 @@ julia> E = structure_sheaf(X);
 julia> H = cohomology(E);
 
 julia> H[0]  # H⁰(ℙ⁴, 𝒪) = k
-1
+A4(0, 0, 0, 0)
 
 julia> H[1]  # H¹(ℙ⁴, 𝒪) = 0
 0
