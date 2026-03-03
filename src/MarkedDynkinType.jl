@@ -15,6 +15,7 @@
 export MarkedDynkinType
 export marked_nodes, unmarked_nodes, levi_type, levi_rank, central_rank
 export decomposition_matrix, decomposition_matrix_inv
+export levi_permutation
 export marked_dynkin_diagram
 
 # Names from Lie, StaticArrays, LinearAlgebra are available via the parent module.
@@ -211,6 +212,33 @@ true
   ct = cartan_type(C_sub)
   lt = _cartan_type_to_dynkin_type(ct)
   return :($lt)
+end
+
+"""
+    levi_permutation(::Type{MDT}) -> Tuple{Int,...}
+
+Return the permutation that converts from natural (sub-diagram position) ordering
+of the unmarked nodes to the canonical Dynkin ordering of `levi_type(MDT)`.
+
+For `i` in `1:levi_rank(MDT)`, the `i`-th fundamental weight of `levi_type` corresponds
+to the `perm[i]`-th unmarked node (in 1-based position order of unmarked nodes).
+
+This permutation is computed via `cartan_type_with_ordering` of the sub-Cartan matrix.
+"""
+@generated function levi_permutation(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
+  R = rank(DT)
+  unmarked = [i for i in 1:R if !(i in Marked)]
+  n = length(unmarked)
+  if n == 0
+    return :(())
+  end
+  C = Lie._cartan_matrix_data(DT)
+  C_sub = C[unmarked, unmarked]
+  _, ord = cartan_type_with_ordering(C_sub)
+  # ord[i] = which sub-node corresponds to canonical LT node i
+  # i.e., ss_coords_LT[i] <- ss_coords_nat[ord[i]]
+  perm_tuple = Tuple(ord)
+  return :($perm_tuple)
 end
 
 """
