@@ -269,7 +269,7 @@ julia> fiber_dimension(IrrepLevi(MDT, ω₁))
 julia> ω₂ = fundamental_weight(TypeA{3}, 2);
 
 julia> fiber_dimension(IrrepLevi(MDT, ω₂))
-2
+1
 ```
 """
 function fiber_dimension(rep::IrrepLevi{MDT}) where {MDT}
