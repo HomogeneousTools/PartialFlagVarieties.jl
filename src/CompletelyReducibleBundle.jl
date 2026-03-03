@@ -552,6 +552,11 @@ function twist(E::CompletelyReducibleBundle{MDT}, i::Int, k::Int=1) where {MDT<:
   return CompletelyReducibleBundle{MDT}(E.variety, result)
 end
 
+# Support for BigInt as well
+function twist(E::CompletelyReducibleBundle{MDT}, i::Int, k::BigInt) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  twist(E, i, Int(k))
+end
+
 # ─── Arithmetic operators ───────────────────────────────────────────────────
 
 Base.:*(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) = tensor_product(E, F)
