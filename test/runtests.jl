@@ -335,7 +335,12 @@ using StaticArrays
     ω₁ = fundamental_weight(TypeA{3}, 1)
     rep = IrrepLevi(MDT, ω₁)
     d = dual(rep)
-    @test d.central == -rep.central
+    # Central part is negated under dual
+    @test central_part(d) == -central_part(rep)
+    # P-dominant weight is stored and accessible
+    @test p_dominant_weight(rep) == ω₁
+    # Round-trip: dual of dual recovers original
+    @test p_dominant_weight(dual(d)) == ω₁
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -472,10 +477,10 @@ using StaticArrays
     X = projective_space(4)
 
     # χ(ℙ⁴, 𝒪) = 1
-    @test euler_char_bundle(structure_sheaf(X)) == 1
+    @test euler_characteristic(structure_sheaf(X)) == 1
 
-    # χ(ℙ⁴, 𝒪(1)) = 5
-    @test euler_char_bundle(line_bundle(X, 1)) == 5
+    # χ(ℜ⁴, 𝒪(1)) = 5
+    @test euler_characteristic(line_bundle(X, 1)) == 5
   end
 
   @testset "Cohomology: 0-based indexing" begin
@@ -616,6 +621,201 @@ using StaticArrays
       X = partial_flag_variety(DT, marks)
       @test Int(rank_bundle(tangent_bundle(X))) == dimension(X)
     end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  levi_permutation
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "levi_permutation" begin
+    # For type A, canonical ordering = natural ordering → identity permutation
+    perm_A4 = levi_permutation(MarkedDynkinType{TypeA{4},(2,)})
+    @test collect(perm_A4) == [1, 2, 3]
+
+    # D4/P1: unmarked nodes (2,3,4) of D4 form an A3 sub-diagram
+    # cartan_type_with_ordering finds the canonical A3 ordering = [2,1,3]
+    perm_D4 = levi_permutation(MarkedDynkinType{TypeD{4},(1,)})
+    @test collect(perm_D4) == [2, 1, 3]
+
+    # B3/P1: unmarked nodes (2,3) form a B2 sub-diagram → identity
+    perm_B3 = levi_permutation(MarkedDynkinType{TypeB{3},(1,)})
+    @test length(perm_B3) == 2
+
+    # G2/P1: unmarked node (2) → trivial A1 sub-diagram
+    perm_G2 = levi_permutation(MarkedDynkinType{TypeG2,(1,)})
+    @test collect(perm_G2) == [1]
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  IrrepLevi round-trip for non-A Dynkin types
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "IrrepLevi round-trip: D types" begin
+    MDT = MarkedDynkinType{TypeD{4},(1,)}
+    for i in 1:4
+      ω = fundamental_weight(TypeD{4}, i)
+      rep = IrrepLevi(MDT, ω)
+      @test to_ambient_weight(MDT, rep) == ω
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  IrrepLevi display: ambient node indices
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "IrrepLevi display uses ambient node indices" begin
+    # Gr(3,8) = A7/P3: tangent bundle weight should show ω7 (not ω6)
+    X = Gr(3, 8)
+    T = tangent_bundle(X)
+    s = sprint(show, T)
+    @test occursin("ω7", s)
+    @test !occursin("ω6", s)
+
+    # D4/P1: tangent bundle should show ω2 (ambient D4 node 2)
+    X_D4 = partial_flag_variety(TypeD{4}, (1,))
+    T_D4 = tangent_bundle(X_D4)
+    s_D4 = sprint(show, T_D4)
+    @test occursin("ω2", s_D4)
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Scalar multiplication on bundles (n * E = n-fold direct sum)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Scalar multiplication on bundles" begin
+    X = Gr(2, 4)
+    T = tangent_bundle(X)
+
+    @test rank_bundle(2 * T) == 2 * rank_bundle(T)
+    @test n_components(2 * T) == 2 * n_components(T)
+    @test rank_bundle(T * 3) == 3 * rank_bundle(T)
+    @test rank_bundle(1 * T) == rank_bundle(T)
+    @test rank_bundle(0 * T) == 0
+    @test variety(2 * T) === X
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Exterior power ranks (from reference output files)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Exterior power ranks: A-types" begin
+    # A3/P2 = Gr(2,4), dim=4: ranks = binomial(4, k)
+    T = tangent_bundle(Gr(2, 4))
+    @test rank_bundle(exterior_power(T, 0)) == 1
+    @test rank_bundle(exterior_power(T, 1)) == 4
+    @test rank_bundle(exterior_power(T, 2)) == 6
+    @test rank_bundle(exterior_power(T, 3)) == 4
+    @test rank_bundle(exterior_power(T, 4)) == 1
+
+    # A4/P2 = Gr(2,5), dim=6: ranks = binomial(6, k)
+    T2 = tangent_bundle(Gr(2, 5))
+    @test rank_bundle(exterior_power(T2, 0)) == 1
+    @test rank_bundle(exterior_power(T2, 1)) == 6
+    @test rank_bundle(exterior_power(T2, 2)) == 15
+    @test rank_bundle(exterior_power(T2, 3)) == 20
+    @test rank_bundle(exterior_power(T2, 4)) == 15
+    @test rank_bundle(exterior_power(T2, 5)) == 6
+    @test rank_bundle(exterior_power(T2, 6)) == 1
+
+    # A7/P3 = Gr(3,8), dim=15: spot-check ranks = binomial(15, k)
+    T3 = tangent_bundle(Gr(3, 8))
+    @test rank_bundle(exterior_power(T3, 1)) == 15
+    @test rank_bundle(exterior_power(T3, 2)) == 105
+    @test rank_bundle(exterior_power(T3, 3)) == 455
+  end
+
+  @testset "Exterior power ranks: B/C/D/G types" begin
+    # B3/P1, dim=5: ranks = binomial(5, k)
+    T_B3 = tangent_bundle(partial_flag_variety(TypeB{3}, (1,)))
+    @test rank_bundle(exterior_power(T_B3, 1)) == 5
+    @test rank_bundle(exterior_power(T_B3, 2)) == 10
+    @test rank_bundle(exterior_power(T_B3, 3)) == 10
+    @test rank_bundle(exterior_power(T_B3, 4)) == 5
+    @test rank_bundle(exterior_power(T_B3, 5)) == 1
+
+    # D4/P1, dim=6: ranks = binomial(6, k)
+    T_D4 = tangent_bundle(partial_flag_variety(TypeD{4}, (1,)))
+    @test rank_bundle(exterior_power(T_D4, 1)) == 6
+    @test rank_bundle(exterior_power(T_D4, 2)) == 15
+    @test rank_bundle(exterior_power(T_D4, 3)) == 20
+    @test rank_bundle(exterior_power(T_D4, 6)) == 1
+
+    # G2/P1, dim=5: ranks = binomial(5, k)
+    T_G2 = tangent_bundle(partial_flag_variety(TypeG2, (1,)))
+    @test rank_bundle(exterior_power(T_G2, 1)) == 5
+    @test rank_bundle(exterior_power(T_G2, 2)) == 10
+    @test rank_bundle(exterior_power(T_G2, 5)) == 1
+
+    # C3/P1, dim=5: ranks = binomial(5, k)
+    T_C3 = tangent_bundle(partial_flag_variety(TypeC{3}, (1,)))
+    @test rank_bundle(exterior_power(T_C3, 1)) == 5
+    @test rank_bundle(exterior_power(T_C3, 2)) == 10
+    @test rank_bundle(exterior_power(T_C3, 5)) == 1
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  H⁰ of exterior powers of tangent bundles (from reference output files)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "H⁰(∧ᵏT): A-types" begin
+    # A3/P2 = Gr(2,4), reference: A3-P2.txt
+    T = tangent_bundle(Gr(2, 4))
+    @test dimensions(exterior_power(T, 0))[0] == 1
+    @test dimensions(exterior_power(T, 1))[0] == 15
+    @test dimensions(exterior_power(T, 2))[0] == 90
+    @test dimensions(exterior_power(T, 3))[0] == 175
+    @test dimensions(exterior_power(T, 4))[0] == 105
+
+    # A4/P2 = Gr(2,5), reference: A4-P2.txt
+    T2 = tangent_bundle(Gr(2, 5))
+    @test dimensions(exterior_power(T2, 1))[0] == 24
+    @test dimensions(exterior_power(T2, 2))[0] == 252
+    @test dimensions(exterior_power(T2, 3))[0] == 1248
+    @test dimensions(exterior_power(T2, 6))[0] == 1176
+
+    # A7/P3 = Gr(3,8), reference: A7-P3.txt
+    T3 = tangent_bundle(Gr(3, 8))
+    @test dimensions(exterior_power(T3, 1))[0] == 63
+    @test dimensions(exterior_power(T3, 2))[0] == 1890
+  end
+
+  @testset "H⁰(∧ᵏT): B-types" begin
+    # B3/P1, reference: B3-P1.txt
+    T = tangent_bundle(partial_flag_variety(TypeB{3}, (1,)))
+    @test dimensions(exterior_power(T, 1))[0] == 21
+    @test dimensions(exterior_power(T, 2))[0] == 189
+    @test dimensions(exterior_power(T, 3))[0] == 616
+    @test dimensions(exterior_power(T, 4))[0] == 819
+    @test dimensions(exterior_power(T, 5))[0] == 378
+  end
+
+  @testset "H⁰(∧ᵏT): C-types" begin
+    # C3/P1, reference: C3-P1.txt
+    T = tangent_bundle(partial_flag_variety(TypeC{3}, (1,)))
+    @test dimensions(exterior_power(T, 1))[0] == 35
+    @test dimensions(exterior_power(T, 2))[0] == 280
+    @test dimensions(exterior_power(T, 3))[0] == 840
+    @test dimensions(exterior_power(T, 4))[0] == 1050
+    @test dimensions(exterior_power(T, 5))[0] == 462
+  end
+
+  @testset "H⁰(∧ᵏT): D-types" begin
+    # D4/P1, reference: D4-P1.txt
+    T = tangent_bundle(partial_flag_variety(TypeD{4}, (1,)))
+    @test dimensions(exterior_power(T, 1))[0] == 28
+    @test dimensions(exterior_power(T, 2))[0] == 350
+    @test dimensions(exterior_power(T, 3))[0] == 1680
+    @test dimensions(exterior_power(T, 6))[0] == 1386
+  end
+
+  @testset "H⁰(∧ᵏT): G2" begin
+    # G2/P1, reference: G2-P1.txt
+    T = tangent_bundle(partial_flag_variety(TypeG2, (1,)))
+    @test dimensions(exterior_power(T, 1))[0] == 21
+    @test dimensions(exterior_power(T, 2))[0] == 189
+    @test dimensions(exterior_power(T, 3))[0] == 616
+    @test dimensions(exterior_power(T, 4))[0] == 819
+    @test dimensions(exterior_power(T, 5))[0] == 378
   end
 
 end  # @testset "PartialFlagVarieties.jl"
