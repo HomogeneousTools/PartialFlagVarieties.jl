@@ -47,6 +47,6 @@ jobs:
         run: julia --project=docs -e 'using Pkg; Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")'
       - name: Install dependencies
         run: |
-          julia --project=docs -e 'using Pkg; Pkg.add("Documenter"); Pkg.develop(PackageSpec(path=".")); Pkg.instantiate()'
+          julia --project=docs -e 'using Pkg; Pkg.add(["Documenter", "StaticArrays"]); Pkg.develop(PackageSpec(path=".")); Pkg.instantiate()'
       - name: Run doctests
         run: julia --project=docs -e 'using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties; manual="docs/src")'
