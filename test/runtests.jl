@@ -836,4 +836,25 @@ using StaticArrays
     X4 = partial_flag_variety("D4", [1, 3])
     @test picard_rank(X4) == 2
   end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Integer widening: BigInt, Int32, etc.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Integer widening" begin
+    # BigInt nodes (vector form accepts <:Integer)
+    X_big = partial_flag_variety(TypeA{4}, [BigInt(2)])
+    @test dimension(X_big) == 6
+
+    # Int32 degree for line_bundle
+    X = projective_space(3)
+    L = line_bundle(X, Int32(2))
+    @test rank_bundle(L) == 1
+
+    # Vector of BigInt for line_bundle
+    X2 = partial_flag_variety(TypeA{3}, (1, 3))
+    L2 = line_bundle(X2, BigInt[1, 2])
+    @test rank_bundle(L2) == 1
+  end
+
 end  # @testset "PartialFlagVarieties.jl"
