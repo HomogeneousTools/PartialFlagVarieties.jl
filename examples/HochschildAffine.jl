@@ -1,8 +1,20 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-#  HochschildAffine.jl — Polyvector fields on affine cones
+#  HochschildAffine.jl — Euler characteristics of polyvector fields on G/P
 #
-#  Computes ∧ᵖ T_{G/P} and its cohomology via the Borel–Weil–Bott theorem
-#  for all generalized Grassmannians G/P up to rank 8.
+#  For each generalized Grassmannian G/P, computes the Euler characteristics
+#  χ(∧ᵖ T_{G/P}) for p = 0, …, dim via the Borel–Weil–Bott theorem.
+#
+#  The HKR decomposition gives HH^n(X) = ⊕_{p+q=n} H^q(X, ∧ᵖ T_X), so the
+#  Euler characteristic χ(∧ᵖ T) = Σ_q (-1)^q h^q(∧ᵖ T) provides a signed
+#  count. When an isotypical component has NEGATIVE Euler characteristic, there
+#  must be nonvanishing higher cohomology, giving an obstruction to X being
+#  Hochschild affine (equivalently, to polyvector fields being formal).
+#
+#  In general, the individual dimensions h^q(X, ∧ᵖ T_X) cannot be read off
+#  from the Euler characteristics alone — only the alternating sum is computed.
+#  The BWB theorem computes each isotypical component exactly (each irreducible
+#  piece contributes to a single cohomological degree), so the per-component
+#  data is unambiguous.
 #
 #  Features:
 #  - All simple types up to rank 8 (E₈ optional, excluded by default)
@@ -10,7 +22,6 @@
 #  - Output written to output/D-Pk.txt (e.g. A4-P2.txt)
 #  - Timing per variety
 #  - Cache management: clear Lie.jl caches when > 16 GiB
-#  - Multithreaded processing of independent varieties
 #
 #  Usage:
 #    julia --project=. examples/HochschildAffine.jl
@@ -155,6 +166,8 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
   println(io)
 
   total_euler = BigInt(0)
+  has_higher_cohomology = false   # any isotypical piece landing in degree > 0
+  has_negative_euler = false      # any p with χ(∧ᵖT) < 0
 
   for p in 0:d
     Ep = exterior_power(T, p)
@@ -164,10 +177,10 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
     # Collect table rows
     weights = String[]
     ranks = String[]
-    regulars = String[]
+    bwb_degrees = String[]
     dominants = String[]
-    degrees = String[]
     dims = String[]
+    chi_contributions = String[]
 
     for comp in components(Ep)
       λ = to_ambient_weight(MDT, comp)
@@ -178,55 +191,81 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
 
       bwb = borel_weil_bott(λ)
       if bwb === nothing
-        push!(regulars, "—")
-        push!(dominants, "")
-        push!(degrees, "")
-        push!(dims, "")
+        push!(bwb_degrees, "sing")
+        push!(dominants, "—")
+        push!(dims, "—")
+        push!(chi_contributions, "0")
       else
         deg, μ = bwb
-        push!(regulars, "✓")
+        dim_μ = degree(μ)
+        chi_val = (-1)^deg * dim_μ
+        push!(bwb_degrees, string(deg))
         push!(dominants, _format_weight(μ))
-        push!(degrees, string(deg))
-        push!(dims, string(degree(μ)))
+        push!(dims, string(dim_μ))
+        push!(chi_contributions, string(chi_val))
+        if deg > 0
+          has_higher_cohomology = true
+        end
       end
     end
 
     if !isempty(weights)
-      data = hcat(weights, ranks, regulars, dominants, degrees, dims)
+      data = hcat(weights, ranks, bwb_degrees, dominants, dims, chi_contributions)
       pretty_table(io, data;
-        column_labels=["weight", "rank", "regular", "dominant", "degree", "dim"],
+        column_labels=["weight", "rank", "deg", "dominant wt", "dim V_μ", "χ"],
         alignment=[:l, :r, :c, :l, :r, :r],
+        fit_table_in_display_horizontally=false,
+        maximum_number_of_columns=-1,
+        maximum_number_of_rows=-1,
       )
     end
 
-    # Cohomology of this exterior power
+    # Cohomology and Euler characteristic of this exterior power
     H = dimensions(Ep)
-    χ = euler_characteristic(H)
-    total_euler += (-1)^p * χ
+    χ_p = euler_characteristic(H)
+    total_euler += (-1)^p * χ_p
 
-    # Show non-zero cohomology
+    if χ_p < 0
+      has_negative_euler = true
+    end
+
+    # Show nonzero cohomology groups
     for q in 0:d
       h = H[q]
       h == 0 && continue
       println(io, "  H$(_superscript(q))(∧$(_superscript(p)) T) = $h")
     end
+    println(io, "  χ(∧$(_superscript(p)) T) = $χ_p")
     println(io)
   end
 
   # Summary
   χ_X = euler_characteristic(X)
   expected = (-1)^d * χ_X
-  passed = total_euler == expected
+  litmus_passed = total_euler == expected
 
   println(io, "─── Summary ───")
   println(io, "  dim(G/P) = $d")
   println(io, "  χ(G/P)   = $χ_X")
   println(io, "  Σ(-1)ᵖ χ(∧ᵖT) = $total_euler")
   println(io, "  (-1)^dim · χ  = $expected")
-  println(io, "  Litmus test: $(passed ? "PASSED ✓" : "FAILED ✗")")
+  println(io, "  Litmus test: $(litmus_passed ? "PASSED ✓" : "FAILED ✗")")
   println(io)
 
-  passed
+  if has_negative_euler
+    println(io, "  ⚠ Negative Euler characteristic detected for some ∧ᵖT:")
+    println(io, "    This PROVES higher cohomology exists → NOT Hochschild affine.")
+  elseif has_higher_cohomology
+    println(io, "  ⓘ Some isotypical components land in degree > 0.")
+    println(io, "    Higher cohomology exists, but Euler characteristics are non-negative.")
+    println(io, "    The Hochschild-affine property cannot be determined from this data alone.")
+  else
+    println(io, "  ✓ All cohomology concentrated in degree 0.")
+    println(io, "    The polyvector field dimensions are exact (no cancellations).")
+  end
+  println(io)
+
+  litmus_passed
 end
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -238,14 +277,14 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
   mkpath(OUTPUT_DIR)
 
   nthreads = Threads.nthreads()
-  println("╔══════════════════════════════════════════════════════════════════╗")
-  println("║  HochschildAffine — Polyvector fields on affine cones of G/P   ║")
-  println("╟──────────────────────────────────────────────────────────────────╢")
-  println("║  Varieties: $(lpad(n, 3))                                                ║")
-  println("║  Rank:      ≤ $(max_rank)$(include_e8 ? " (including E₈)" : "              ")                                ║")
-  println("║  Output:    $(rpad(relpath(OUTPUT_DIR), 50))║")
-  println("║  Threads:   $(lpad(nthreads, 3))                                                ║")
-  println("╚══════════════════════════════════════════════════════════════════╝")
+  println("╔══════════════════════════════════════════════════════════════════════╗")
+  println("║  Euler characteristics of polyvector fields ∧ᵖ T on G/P            ║")
+  println("╟──────────────────────────────────────────────────────────────────────╢")
+  println("║  Varieties: $(lpad(n, 3))                                                  ║")
+  println("║  Rank:      ≤ $(max_rank)$(include_e8 ? " (including E₈)" : "              ")                                  ║")
+  println("║  Output:    $(rpad(relpath(OUTPUT_DIR), 52))║")
+  println("║  Threads:   $(lpad(nthreads, 3))                                                  ║")
+  println("╚══════════════════════════════════════════════════════════════════════╝")
   println()
 
   n_passed = Threads.Atomic{Int}(0)
