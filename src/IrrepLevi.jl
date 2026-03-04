@@ -406,7 +406,8 @@ julia> length(result)
 1
 ```
 """
-function exterior_power(rep::IrrepLevi{MDT}, k::Int) where {MDT}
+function exterior_power(rep::IrrepLevi{MDT}, k::Integer) where {MDT}
+  k = Int(k)
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]
@@ -456,7 +457,8 @@ julia> length(result) >= 1
 true
 ```
 """
-function symmetric_power(rep::IrrepLevi{MDT}, k::Int) where {MDT}
+function symmetric_power(rep::IrrepLevi{MDT}, k::Integer) where {MDT}
+  k = Int(k)
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]

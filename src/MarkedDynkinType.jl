@@ -99,12 +99,12 @@ function MarkedDynkinType(::Type{DT}, marked::NTuple{K,Int}) where {DT<:DynkinTy
   return MarkedDynkinType{DT,sorted}(nothing)
 end
 
-function MarkedDynkinType(::Type{DT}, marked::Vector{Int}) where {DT<:DynkinType}
-  return MarkedDynkinType(DT, Tuple(sort(marked)))
+function MarkedDynkinType(::Type{DT}, marked::Vector{<:Integer}) where {DT<:DynkinType}
+  return MarkedDynkinType(DT, Tuple(sort(Int.(marked))))
 end
 
-function MarkedDynkinType(::Type{DT}, marked::Int) where {DT<:DynkinType}
-  return MarkedDynkinType(DT, (marked,))
+function MarkedDynkinType(::Type{DT}, marked::Integer) where {DT<:DynkinType}
+  return MarkedDynkinType(DT, (Int(marked),))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

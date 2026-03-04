@@ -36,7 +36,8 @@ julia> euler_characteristic(V)
 10
 ```
 """
-function Gr(k::Int, n::Int)
+function Gr(k::Integer, n::Integer)
+  k, n = Int(k), Int(n)
   1 <= k <= n - 1 || throw(ArgumentError("Gr($k, $n): need 1 ≤ k ≤ n-1"))
   DT = TypeA{n - 1}
   return partial_flag_variety(DT, (k,), "Gr($k, $n)")
@@ -65,7 +66,8 @@ julia> betti_numbers(V)
  1
 ```
 """
-function projective_space(n::Int)
+function projective_space(n::Integer)
+  n = Int(n)
   n >= 1 || throw(ArgumentError("projective_space($n): need n ≥ 1"))
   DT = TypeA{n}
   return partial_flag_variety(DT, (1,), "ℙ$n")
@@ -86,14 +88,15 @@ julia> dimension(V)
 5
 ```
 """
-function flag_variety(n::Int, marking::NTuple{K,Int}) where {K}
+function flag_variety(n::Integer, marking::NTuple{K,Int}) where {K}
+  n = Int(n)
   DT = TypeA{n - 1}
   marking_str = join(marking, ",")
   return partial_flag_variety(DT, marking, "Fl($(marking_str); $n)")
 end
 
-function flag_variety(n::Int, marking::Vector{Int})
-  return flag_variety(n, Tuple(sort(marking)))
+function flag_variety(n::Integer, marking::Vector{<:Integer})
+  return flag_variety(Int(n), Tuple(sort(Int.(marking))))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -124,7 +127,8 @@ julia> euler_characteristic(V)
 16
 ```
 """
-function OGr(k::Int, n::Int)
+function OGr(k::Integer, n::Integer)
+  k, n = Int(k), Int(n)
   1 <= k || throw(ArgumentError("OGr($k, $n): need k ≥ 1"))
   if isodd(n)
     m = (n - 1) ÷ 2
@@ -157,7 +161,8 @@ julia> dimension(V)
 7
 ```
 """
-function SGr(k::Int, n::Int)
+function SGr(k::Integer, n::Integer)
+  k, n = Int(k), Int(n)
   iseven(n) || throw(ArgumentError("SGr($k, $n): n must be even"))
   m = n ÷ 2
   1 <= k <= m || throw(ArgumentError("SGr($k, $n): need 1 ≤ k ≤ $m"))
@@ -180,7 +185,8 @@ julia> dimension(V)
 6
 ```
 """
-function LGr(n::Int)
+function LGr(n::Integer)
+  n = Int(n)
   n >= 1 || throw(ArgumentError("LGr($n): need n ≥ 1"))
   return SGr(n, 2n)
 end
@@ -190,7 +196,7 @@ end
 
 Synonym for [`OGr`](@ref) — isotropic Grassmannian for an orthogonal form.
 """
-IGr(k::Int, n::Int) = OGr(k, n)
+IGr(k::Integer, n::Integer) = OGr(k, n)
 
 """
     quadric(n) -> PartialFlagVariety
@@ -218,7 +224,8 @@ julia> betti_numbers(V)
  1
 ```
 """
-function quadric(n::Int)
+function quadric(n::Integer)
+  n = Int(n)
   n >= 1 || throw(ArgumentError("quadric($n): need n ≥ 1"))
   if isodd(n)
     m = (n + 1) ÷ 2

@@ -153,7 +153,8 @@ julia> rank_bundle(L)
 1
 ```
 """
-function line_bundle(X::PartialFlagVariety{MDT}, i::Int) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+function line_bundle(X::PartialFlagVariety{MDT}, i::Integer) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  i = Int(i)
   pr = length(Marked)
   if pr != 1
     throw(ArgumentError(
@@ -413,7 +414,8 @@ julia> rank_bundle(exterior_power(E, 1)) == rank_bundle(E)
 true
 ```
 """
-function exterior_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
+function exterior_power(E::CompletelyReducibleBundle{MDT}, k::Integer) where {MDT}
+  k = Int(k)
   n = n_components(E)
   k < 0 && return CompletelyReducibleBundle{MDT}(E.variety, IrrepLevi{MDT}[])
   k == 0 && return structure_sheaf(E.variety)
@@ -477,7 +479,8 @@ julia> rank_bundle(symmetric_power(E, 1)) == rank_bundle(E)
 true
 ```
 """
-function symmetric_power(E::CompletelyReducibleBundle{MDT}, k::Int) where {MDT}
+function symmetric_power(E::CompletelyReducibleBundle{MDT}, k::Integer) where {MDT}
+  k = Int(k)
   n = n_components(E)
   k < 0 && return CompletelyReducibleBundle{MDT}(E.variety, IrrepLevi{MDT}[])
   k == 0 && return structure_sheaf(E.variety)
@@ -535,7 +538,8 @@ julia> rank_bundle(twist(E, 1, 3))
 1
 ```
 """
-function twist(E::CompletelyReducibleBundle{MDT}, i::Int, k::Int=1) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+function twist(E::CompletelyReducibleBundle{MDT}, i::Integer, k::Integer=1) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  i, k = Int(i), Int(k)
   1 <= i <= length(Marked) || throw(ArgumentError(
     "Index $i out of range. MDT has $(length(Marked)) marked node(s)."
   ))
@@ -550,11 +554,6 @@ function twist(E::CompletelyReducibleBundle{MDT}, i::Int, k::Int=1) where {MDT<:
     append!(result, tensor_product(c, twist_rep))
   end
   return CompletelyReducibleBundle{MDT}(E.variety, result)
-end
-
-# Support for BigInt as well
-function twist(E::CompletelyReducibleBundle{MDT}, i::Int, k::BigInt) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  twist(E, i, Int(k))
 end
 
 # ─── Arithmetic operators ───────────────────────────────────────────────────

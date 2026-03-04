@@ -72,8 +72,8 @@ function partial_flag_variety(::Type{DT}, marked::NTuple{K,Int}, name::String=""
   return PartialFlagVariety{MDT}(name)
 end
 
-function partial_flag_variety(::Type{DT}, marked::Vector{Int}, name::String="") where {DT<:DynkinType}
-  return partial_flag_variety(DT, Tuple(sort(marked)), name)
+function partial_flag_variety(::Type{DT}, marked::Vector{<:Integer}, name::String="") where {DT<:DynkinType}
+  return partial_flag_variety(DT, Tuple(sort(Int.(marked))), name)
 end
 
 function partial_flag_variety(::Type{DT}, marked::Int, name::String="") where {DT<:DynkinType}
