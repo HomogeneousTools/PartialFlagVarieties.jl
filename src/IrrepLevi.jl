@@ -164,16 +164,19 @@ function IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple::Weig
     coords[m] = central[idx]
   end
 
-  ss_vec = Lie.coefficients(semisimple)
-  LR = length(ss_vec)
-  if LR > 0
-    perm = levi_permutation(MDT)
-    inv_perm = Vector{Int}(undef, LR)
-    for j in 1:LR
-      inv_perm[perm[j]] = j
-    end
-    for (i, u) in enumerate(unmarked)
-      coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
+  # Only process semisimple part if there are unmarked nodes
+  if length(unmarked) > 0
+    ss_vec = Lie.coefficients(semisimple)
+    LR = length(ss_vec)
+    if LR > 0
+      perm = levi_permutation(MDT)
+      inv_perm = Vector{Int}(undef, LR)
+      for j in 1:LR
+        inv_perm[perm[j]] = j
+      end
+      for (i, u) in enumerate(unmarked)
+        coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
+      end
     end
   end
 
@@ -224,17 +227,19 @@ function to_ambient_weight(::Type{MDT}, rep::IrrepLevi{MDT}) where {
 
   # Semisimple part at unmarked positions
   # Apply inverse of levi_permutation: ss_nat[perm[j]] = ss_canonical[j]
-  ss_vec = coefficients(rep.semisimple)
-  LR = length(ss_vec)
-  if LR > 0
-    perm = levi_permutation(MDT)
-    # Invert the permutation: nat[perm[j]] = canon[j]  so  nat[i] = canon[perm⁻¹[i]]
-    inv_perm = Vector{Int}(undef, LR)
-    for j in 1:LR
-      inv_perm[perm[j]] = j
-    end
-    for (i, u) in enumerate(unmarked)
-      coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
+  if length(unmarked) > 0
+    ss_vec = coefficients(rep.semisimple)
+    LR = length(ss_vec)
+    if LR > 0
+      perm = levi_permutation(MDT)
+      # Invert the permutation: nat[perm[j]] = canon[j]  so  nat[i] = canon[perm⁻¹[i]]
+      inv_perm = Vector{Int}(undef, LR)
+      for j in 1:LR
+        inv_perm[perm[j]] = j
+      end
+      for (i, u) in enumerate(unmarked)
+        coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
+      end
     end
   end
 
