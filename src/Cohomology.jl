@@ -448,7 +448,7 @@ function Base.show(io::IO, H::Cohomology{BigInt})
   if isempty(parts)
     print(io, "H* = 0")
   else
-    print(io, join(parts, ", "))
+    print(io, join(parts, "\n"))
   end
 end
 
@@ -462,7 +462,7 @@ function Base.show(io::IO, H::Cohomology{<:WeylCharacter})
   if isempty(parts)
     print(io, "H* = 0")
   else
-    print(io, join(parts, ", "))
+    print(io, join(parts, "\n"))
   end
 end
 
