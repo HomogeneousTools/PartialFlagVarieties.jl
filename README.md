@@ -1,6 +1,6 @@
 # PartialFlagVarieties.jl
 
-[![CI](https://github.com/pbelmans/PartialFlagVarieties.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/pbelmans/PartialFlagVarieties.jl/actions/workflows/CI.yml)
+[![CI](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/CI.yml)
 
 A Julia package for computing with **partial flag varieties** $G/P$:
 equivariant bundles, sheaf cohomology via the Borel–Weil–Bott theorem,
@@ -87,13 +87,17 @@ F = filtered_tangent_bundle(X)
 n_filtration_steps(F)   # number of graded pieces
 total_bundle(F)         # the underlying tangent bundle
 graded_pieces(F)        # the associated graded (CompletelyReducibleBundle[])
+
+# Exterior/symmetric powers inherit the filtration
+F2 = exterior_power(F, 2)   # ∧² with induced filtration
+S2 = symmetric_power(F, 2)  # Sym² with induced filtration
 ```
 
 ## Examples
 
 The `examples/` directory contains standalone scripts:
 
-- **`HochschildAffine.jl`** — Polyvector fields on affine cones of $G/P$ for all types up to rank 8, with progress bars, output files, and cache management
+- **`HochschildAffine.jl`** — Euler characteristics of polyvector fields $\chi(\bigwedge^p T_{G/P})$ for all types up to rank 8, with progress bars, output files, and cache management
 - **`BottVanishing.jl`** — Verification of Bott vanishing failure for (co)adjoint varieties
 
 Run with:
@@ -107,7 +111,7 @@ julia --project=. examples/BottVanishing.jl
 ```julia
 using Pkg
 Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")
-Pkg.add(url="https://github.com/pbelmans/PartialFlagVarieties.jl")
+Pkg.add(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl")
 ```
 
 Requires Julia ≥ 1.9.
