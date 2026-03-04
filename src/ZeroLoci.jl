@@ -16,6 +16,7 @@ export zero_locus, ambient_variety, defining_bundle
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction
 export is_calabi_yau, is_calabi_yau_candidate
+export hilbert_polynomial
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -535,6 +536,54 @@ function _resolve_remaining!(
   # After pairing, if only one free parameter remains, solve from χ
   # For now, leave unsolved — the values determined by symmetry from
   # earlier rows are the most reliable.
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Hilbert polynomial
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    hilbert_polynomial(Z::ZeroLocus) -> Vector{Rational{BigInt}}
+
+Compute the Hilbert polynomial ``P(t) = \\chi(Z, \\mathcal{O}_Z(t))`` as a
+polynomial in ``t``.
+
+Returns coefficients ``[a_0, a_1, \\ldots, a_d]`` so that
+``P(t) = \\sum_k a_k t^k``.
+
+For a Fano 4-fold ``Z`` of index ``i``, the anticanonical degree is
+``(-K_Z)^4 = i^4 \\cdot 24 \\cdot a_4``, and ``h^0(-K_Z) = P(i)`` (by
+Kodaira–Nakano vanishing).
+
+Requires the ambient variety to have Picard rank 1.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(4);
+
+julia> Z = zero_locus(line_bundle(X, 5));
+
+julia> hp = hilbert_polynomial(Z);
+
+julia> length(hp) >= 3
+true
+```
+"""
+function hilbert_polynomial(Z::ZeroLocus{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  length(Marked) == 1 || throw(ArgumentError(
+    "hilbert_polynomial requires Picard rank 1 (single marked node)"
+  ))
+  X = Z.ambient
+  d = dimension(Z)
+  n_pts = d + 4  # degree-d polynomial needs d+1 points; extra for numerical stability
+  values = Rational{BigInt}[]
+  for t in 0:(n_pts - 1)
+    Lt = line_bundle(X, t)
+    push!(values, Rational{BigInt}(euler_characteristic(Z, Lt)))
+  end
+  _lagrange_interpolation(values)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
