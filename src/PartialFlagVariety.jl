@@ -13,6 +13,7 @@ export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule
 export is_adjoint, is_coadjoint, is_full_flag
+export marked_type, marked_nodes
 
 """
     PartialFlagVariety{MDT}
@@ -76,8 +77,35 @@ function partial_flag_variety(::Type{DT}, marked::Vector{<:Integer}, name::Strin
   return partial_flag_variety(DT, Tuple(sort(Int.(marked))), name)
 end
 
-function partial_flag_variety(::Type{DT}, marked::Int, name::String="") where {DT<:DynkinType}
-  return partial_flag_variety(DT, (marked,), name)
+function partial_flag_variety(::Type{DT}, marked::Integer, name::String="") where {DT<:DynkinType}
+  return partial_flag_variety(DT, (Int(marked),), name)
+end
+
+"""
+    partial_flag_variety(s::AbstractString, marked, name="") -> PartialFlagVariety
+
+Construct a partial flag variety from a Dynkin type string (parsed by
+[`parse_dynkin_type`](@ref)) and a set of marked nodes.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> partial_flag_variety("A3", 2)
+A3 / P_{2}
+
+julia> partial_flag_variety("E6", [1, 2])
+E6 / P_{1,2}
+```
+"""
+function partial_flag_variety(s::AbstractString, marked::AbstractVector{<:Integer}, name::String="")
+  DT = parse_dynkin_type(s)
+  return partial_flag_variety(DT, Vector{Int}(marked), name)
+end
+
+function partial_flag_variety(s::AbstractString, marked::Integer, name::String="")
+  DT = parse_dynkin_type(s)
+  return partial_flag_variety(DT, Int(marked), name)
 end
 
 """
