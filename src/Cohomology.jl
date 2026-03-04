@@ -10,7 +10,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export Cohomology
-export cohomology, dimensions, characters
+export cohomology, dimensions
 export euler_characteristic, chi
 export hilbert_polynomial
 export borel_weil_bott

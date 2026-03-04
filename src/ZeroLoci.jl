@@ -15,7 +15,7 @@ export ZeroLocus
 export zero_locus, ambient_variety, defining_bundle
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction
-export hodge_numbers, is_calabi_yau, is_calabi_yau_candidate
+export is_calabi_yau, is_calabi_yau_candidate
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -136,8 +136,8 @@ conormal_bundle(Z::ZeroLocus) = dual(Z.defining_bundle)
       -> Vector{CompletelyReducibleBundle}
 
 Return the terms of the twisted Koszul complex:
-``[F \\otimes \\wedge^0 E^*, F \\otimes \\wedge^1 E^*, \\ldots, F \\otimes \\wedge^r E^*]``
-
+``[F \\otimes \\wedge^0 E^*, F \\otimes \\wedge^1 E^*, \\ldots,
+   F \\otimes \\wedge^r E^*]``
 where ``E`` is the defining bundle and ``r = \\mathrm{rank}(E)``.
 """
 function koszul_terms(Z::ZeroLocus{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
@@ -168,7 +168,6 @@ end
     euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle) -> BigInt
 
 Compute ``\\chi(Z, F|_Z) = \\sum_{i=0}^{r} (-1)^i \\chi(X, F \\otimes \\wedge^i E^*)``.
-
 This is always exact — no long exact sequence ambiguity.
 
 # Examples
@@ -222,7 +221,6 @@ function cohomology_on_restriction(
   Z::ZeroLocus{MDT},
   F::CompletelyReducibleBundle{MDT},
 ) where {MDT}
-  d_X = dimension(Z.ambient)
   d_Z = dimension(Z)
 
   terms = koszul_terms(Z, F)
@@ -235,8 +233,7 @@ function cohomology_on_restriction(
 end
 
 """
-    cohomology_on_restriction(Z::ZeroLocus)
-      -> (Cohomology{BigInt}, Bool)
+    cohomology_on_restriction(Z::ZeroLocus) -> (Cohomology{BigInt}, Bool)
 
 Compute ``H^*(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
 """
@@ -270,29 +267,13 @@ false
 ```
 """
 function is_calabi_yau_candidate(E::CompletelyReducibleBundle{MDT}) where {MDT}
-  X = E.variety
-  # The CY condition: c₁(E) = c₁(-K_X) in the Picard group.
-  # For equivariant bundles on G/P, c₁ is determined by the central
-  # character. The center Z(L) acts by scalar c_j on each irrep V_λ
-  # at marked node j. Since the center acts uniformly on V_λ:
-  #   c₁(V_λ) at node j = rank(V_λ) * central_j(λ)
-  # For a direct sum: c₁(⊕ V_λᵢ) = Σ rank_i * central_j(λᵢ)
-  #
-  # The anticanonical bundle -K is the line bundle L(μ) where μ is
-  # the sum of positive non-parabolic roots. Its central character is
-  # obtained by decomposing μ via the decomposition matrix.
-
   det_c1 = _determinant_central(E)
   antican_c1 = _anticanonical_central(MDT)
-
   det_c1 == antican_c1
 end
 
 """Compute c₁(E) as central character coordinates at the marked nodes."""
 function _determinant_central(E::CompletelyReducibleBundle{MDT}) where {MDT}
-  # For equivariant bundles on G/P, the center Z(L) acts by scalar
-  # central_j on each irrep V_λ.  Since the center acts uniformly:
-  #   c₁(V_λ) at node j = rank(V_λ) * central_j(λ)
   Marked = marked_nodes(MDT)
   c1 = zeros(Rational{Int}, length(Marked))
   for comp in components(E)
@@ -306,14 +287,10 @@ end
 
 """Compute the central character of the anticanonical bundle -K_{G/P}."""
 function _anticanonical_central(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  # -K_{G/P} = L(μ) where μ = sum of positive non-parabolic roots (in ω-basis).
-  # To get the central character, apply the decomposition matrix to μ and
-  # extract the marked-node coordinates.
   DT = _ambient_type(MDT)
   R = rank(DT)
   anticK = _anticanonical_weight_direct(MDT)
 
-  # Build weight in ω-basis and apply decomposition matrix
   M = decomposition_matrix(MDT)
   anticK_svec = SVector{R,Rational{Int}}(Tuple(anticK))
   new_coords = M * anticK_svec
@@ -324,7 +301,6 @@ end
 
 """Compute the anticanonical weight of G/P in the fundamental weight basis."""
 function _anticanonical_weight_direct(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  # -K_{G/P} = sum of positive non-parabolic roots, converted to ω-basis.
   DT = _ambient_type(MDT)
   R = rank(DT)
   pos_roots = positive_nonparabolic_roots(MDT)
@@ -375,10 +351,8 @@ function is_calabi_yau(Z::ZeroLocus)
   d = dimension(Z)
   d < 2 && return false
 
-  # Check c₁ = 0
   is_calabi_yau_candidate(Z.defining_bundle) || return false
 
-  # Check H^i(O_Z) = 0 for 0 < i < d
   (H, _) = cohomology_on_restriction(Z)
   H[0] == 1 || return false
   for i in 1:(d - 1)
@@ -388,7 +362,7 @@ function is_calabi_yau(Z::ZeroLocus)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Hodge numbers
+#  Hodge numbers of zero loci
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -485,7 +459,6 @@ function hodge_numbers(Z::ZeroLocus{MDT}) where {MDT}
       hodge[p + 1, q + 1] = (-1)^q * (chi_omega[p + 1] - known_sum)
       known[p + 1, q + 1] = true
     elseif length(unknown_qs) >= 2
-      # Try to resolve via Serre duality pairing unknowns
       _resolve_remaining!(hodge, known, p, d, chi_omega[p + 1])
     end
   end
@@ -512,13 +485,13 @@ a bundle on ``X`` (restricted to ``Z`` via Koszul).
 Base case: ``j = 0``, returns ``\\chi(Z, G|_Z)`` via Koszul.
 Recursion: ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z) =
             \\chi(Z, \\wedge^j \\Omega_X \\otimes G|_Z) -
-            \\sum_{i=1}^{\\min(j,r)} \\chi(Z, \\Omega^{j-i}_Z \\otimes \\wedge^i E^* \\otimes G|_Z)``
+            \\sum_{i=1}^{\\min(j,r)} \\chi(Z, \\Omega^{j-i}_Z \\otimes
+            \\wedge^i E^* \\otimes G|_Z)``
 """
 function _chi_omega_tensor(
   Z::ZeroLocus{MDT}, j::Int, G::CompletelyReducibleBundle{MDT},
 ) where {MDT}
   X = Z.ambient
-  r = codimension(Z)
 
   if j == 0
     return euler_characteristic(Z, G)
@@ -540,10 +513,6 @@ end
 function _resolve_remaining!(
   hodge::Matrix{BigInt}, known::BitMatrix, p::Int, d::Int, χ::BigInt,
 )
-  # When multiple entries in row p are unknown, try to pair them using
-  # Serre duality: h^{p,q} = h^{d-p,d-q}. If d-p = p (middle dimension),
-  # Serre becomes h^{p,q} = h^{p,d-q}, constraining pairs within the row.
-
   unknown_qs = [q for q in 0:d if !known[p + 1, q + 1]]
 
   if d - p == p
@@ -554,18 +523,18 @@ function _resolve_remaining!(
       q in handled && continue
       dq = d - q
       if dq == q
-        # Self-paired (diagonal): remains unknown by itself
         push!(handled, q)
       elseif dq in Set(unknown_qs) && !(dq in handled)
         # Paired unknowns: h^{p,q} = h^{p,d-q}
+        # This halves the unknowns but doesn't resolve them
         push!(handled, q, dq)
       end
     end
   end
 
-  # If after pairing, only one free parameter remains, solve from χ
-  # For now, leave unsolved — the values that are determined by
-  # symmetry from earlier rows are the most reliable.
+  # After pairing, if only one free parameter remains, solve from χ
+  # For now, leave unsolved — the values determined by symmetry from
+  # earlier rows are the most reliable.
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -574,7 +543,6 @@ end
 
 function Base.show(io::IO, Z::ZeroLocus)
   X = Z.ambient
-  E = Z.defining_bundle
   r = codimension(Z)
   d = dimension(Z)
   print(io, "Z(s) ⊂ $X, dim = $d, codim = $r")

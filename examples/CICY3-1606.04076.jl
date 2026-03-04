@@ -1,14 +1,23 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-#  CICY3-1606.04076.jl — Calabi–Yau threefolds in flag varieties
+#  CICY3-1606.04076.jl — Calabi–Yau threefolds as zero loci
 #
-#  Classifies Calabi–Yau threefolds as zero loci of sections of
-#  completely reducible equivariant bundles on partial flag varieties G/P.
+#  Searches for Calabi–Yau threefolds arising as zero loci of sections
+#  of completely reducible equivariant vector bundles on:
+#    • Projective spaces ℙ^n  (n = 4,…,7)
+#    • Grassmannians Gr(2,n)  (n = 5,…,7)
+#    • Quadrics Q_n           (n = 5,…,7)
+#    • Lagrangian Grassmannians LGr(n,2n)  (n = 3,4)
+#    • Orthogonal Grassmannians OGr(n,2n)  (n = 5)
+#    • G₂-Grassmannian G₂/P₁ (5-dimensional quadric)
+#    • Cayley plane OP²
 #
-#  For Picard rank 1 varieties, we enumerate direct sums of line bundles
-#  O(d₁) ⊕ ⋯ ⊕ O(dₖ) with d₁ + ⋯ + dₖ = index(G/P) and k = dim(G/P) - 3.
+#  The classification recovers results from:
+#    Benedetti–Fatighenti–Mongardi–Ruiperez, "Calabi-Yau threefolds in
+#    flag varieties" (arXiv:1606.04076)
 #
-#  Reference: Manivel, "Calabi–Yau threefolds in exceptional flag varieties"
-#             (arXiv:1606.04076)
+#  For each ambient variety X, we enumerate completely reducible bundles E
+#  with rk(E) = dim(X) - 3 (so Z(s) is a threefold) and check the
+#  Calabi–Yau condition det(E) ≅ ω_X^{-1}.
 #
 #  Usage: julia --project=. examples/CICY3-1606.04076.jl
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -18,121 +27,198 @@ using PrettyTables
 using Lie
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Fano index
+#  Enumeration of completely reducible bundles
 # ═══════════════════════════════════════════════════════════════════════════════
 
-"""Compute the Fano index of a Picard rank 1 variety G/P."""
-function fano_index(X::PartialFlagVariety)
-  MDT = marked_type(X)
-  Marked = marked_nodes(MDT)
-  @assert length(Marked) == 1 "Only Picard rank 1 varieties"
-  anticK = PartialFlagVarieties._anticanonical_weight_direct(MDT)
-  Int(anticK[Marked[1]])
-end
+"""
+    enumerate_cr_bundles(X, irreps, target_rank, target_det)
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Partition enumeration
-# ═══════════════════════════════════════════════════════════════════════════════
+Enumerate completely reducible bundles on `X` with given `target_rank`
+and `target_det` (determinant central character), using summands from
+`irreps` (a list of (IrrepLevi, rank, det_central) triples).
 
-"""Enumerate all partitions of `n` into exactly `k` parts, each ≥ `min_val`."""
-function partitions_into_k(n::Int, k::Int, min_val::Int=1)
-  results = Vector{Int}[]
-  if k == 0
-    n == 0 && push!(results, Int[])
-    return results
-  end
-  if k == 1
-    n >= min_val && push!(results, [n])
-    return results
-  end
-  for d in min_val:div(n, k)
-    for rest in partitions_into_k(n - d, k - 1, d)
-      push!(results, vcat(d, rest))
+Returns a Vector of CompletelyReducibleBundle.
+"""
+function enumerate_cr_bundles(
+  X::PartialFlagVariety{MDT},
+  irreps::Vector{<:Tuple},
+  target_rank::Int,
+  target_det::Vector{Rational{Int}},
+) where {MDT}
+  results = CompletelyReducibleBundle{MDT}[]
+
+  function backtrack(idx, remaining_rank, remaining_det, summands)
+    if remaining_rank == 0 && all(remaining_det .== 0)
+      # Wrap IrrepLevi summands as CompletelyReducibleBundle and combine
+      bundles = [CompletelyReducibleBundle{MDT}(X, [s]) for s in summands]
+      E = reduce(direct_sum, bundles)
+      push!(results, E)
+      return
+    end
+    if remaining_rank <= 0 || idx > length(irreps)
+      return
+    end
+
+    irr, rk, det_c = irreps[idx]
+    rk_int = Int(rk)
+
+    # Maximum multiplicity of this summand
+    max_mult = remaining_rank ÷ rk_int
+
+    for m in 0:max_mult
+      new_rank = remaining_rank - m * rk_int
+      new_det = remaining_det .- m .* det_c
+
+      new_summands = copy(summands)
+      for _ in 1:m
+        push!(new_summands, irr)
+      end
+
+      backtrack(idx + 1, new_rank, new_det, new_summands)
     end
   end
+
+  backtrack(1, target_rank, target_det, IrrepLevi{MDT}[])
   results
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  CY3 search: complete intersections on Picard-rank-1 varieties
+#  Candidate irreducible summands for each variety type
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Get irreducible representations to use as summands, together with their
+rank and determinant central character.
+"""
+function get_candidate_irreps(X::PartialFlagVariety{MDT}; max_rank::Int=0) where {MDT}
+  DT = PartialFlagVarieties._ambient_type(MDT)
+  R = Lie.rank(DT)
+  Marked = marked_nodes(MDT)
+
+  candidates = Tuple{IrrepLevi{MDT},BigInt,Vector{Rational{Int}}}[]
+
+  # For each marked node m, the line bundle O(1) has weight ω_m
+  # We consider line bundles O(d) for d = 1, 2, 3, ...
+  # and low-dimensional irreps
+
+  # Strategy: build a list of candidate irreps:
+  # 1) Line bundles O(d) for each marked node
+  # 2) Small exterior powers of universal quotient/subbundle duals
+
+  # d_max controls the maximum degree of line bundles O(d) we try.
+  # Must be large enough to capture all relevant summands.
+  # For line bundles, total degree = sum(d_i) must match anticanonical degree.
+  d_max = max_rank > 0 ? max(max_rank, 8) : 8
+
+  for m in Marked
+    for d in 1:d_max
+      omega = zeros(Int, R)
+      omega[m] = d
+      λ = WeightLatticeElem(DT, omega)
+      irr = IrrepLevi(MDT, λ)
+
+      rk = rank_bundle(CompletelyReducibleBundle{MDT}(X, [irr]))
+      det_c = collect(PartialFlagVarieties._determinant_central(
+        CompletelyReducibleBundle{MDT}(X, [irr])))
+
+      push!(candidates, (irr, rk, det_c))
+    end
+  end
+
+  # Add small exterior powers for Grassmannians (2 marked nodes = full flag,
+  # but for Gr(k,n) we have 1 marked node)
+  if length(Marked) == 1
+    m = Marked[1]
+
+    # For type A: ω_i gives ∧^i(S*) if i ≤ k, or ∧^i(S*) ⊗ det
+    # We just enumerate small fundamental representations
+    for i in 1:R
+      if i != m  # ω_m is already covered as O(1)
+        omega = zeros(Int, R)
+        omega[i] = 1
+        λ = WeightLatticeElem(DT, omega)
+        irr = IrrepLevi(MDT, λ)
+
+        rk = rank_bundle(CompletelyReducibleBundle{MDT}(X, [irr]))
+        det_c = collect(PartialFlagVarieties._determinant_central(
+          CompletelyReducibleBundle{MDT}(X, [irr])))
+
+        push!(candidates, (irr, rk, det_c))
+      end
+    end
+  end
+
+  # Filter: only keep candidates with rank ≤ target
+  if max_rank > 0
+    filter!(c -> c[2] <= max_rank, candidates)
+  end
+
+  # Remove duplicates (same irrep)
+  unique!(c -> c[1], candidates)
+
+  candidates
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Result type
 # ═══════════════════════════════════════════════════════════════════════════════
 
 struct CY3Result
-  variety_name::String
+  ambient::String
   dim_ambient::Int
-  index::Int
-  degrees::Vector{Int}
-  chi_top::BigInt
+  bundle_desc::String
+  rank_E::Int
+  chi_O::BigInt
   h11::BigInt
   h21::BigInt
-  determined::Bool
 end
 
-"""Build the bundle O(d₁) ⊕ ⋯ ⊕ O(dₖ) on X."""
-function ci_bundle(X, degrees::Vector{Int})
-  E = line_bundle(X, degrees[1])
-  for i in 2:length(degrees)
-    E = direct_sum(E, line_bundle(X, degrees[i]))
-  end
-  E
-end
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Search on a given variety
+# ═══════════════════════════════════════════════════════════════════════════════
 
-"""
-Search for CY3 complete intersections on a Picard rank 1 variety.
-Returns a vector of CY3Result.
-"""
-function search_cy3(X, name::String; compute_hodge::Bool=true)
+function search_cy3(X::PartialFlagVariety{MDT}, name::String, results::Vector{CY3Result};
+  max_summand_rank::Int=0) where {MDT}
   d = dimension(X)
-  d < 4 && return CY3Result[]  # Need dim ≥ 4 for a 3-fold
-  idx = fano_index(X)
   codim = d - 3
-  parts = partitions_into_k(idx, codim)
+  codim >= 1 || return
 
-  results = CY3Result[]
-  for degrees in parts
-    E = ci_bundle(X, degrees)
+  print("  Searching $name (dim=$d, codim=$codim)... ")
+  flush(stdout)
 
-    # Check CY condition
-    is_calabi_yau_candidate(E) || continue
+  target_rank = Int(codim)
 
+  # Compute anticanonical central character = target determinant
+  antican = collect(PartialFlagVarieties._anticanonical_central(MDT))
+
+  # Get candidate irreps
+  irreps = get_candidate_irreps(X; max_rank=max_summand_rank > 0 ? max_summand_rank : target_rank)
+
+  # Enumerate bundles with correct rank and CY determinant condition
+  bundles = enumerate_cr_bundles(X, irreps, target_rank, antican)
+
+  println("found $(length(bundles)) CY candidate(s)")
+
+  for E in bundles
     Z = zero_locus(E)
+    chi_O = euler_characteristic(Z)
 
-    # Euler characteristic is always exact
-    χ_O = euler_characteristic(Z)
-
-    # Compute Hodge numbers if requested and feasible
+    # Attempt Hodge numbers
     h11 = BigInt(-1)
     h21 = BigInt(-1)
-    det = false
-
-    if compute_hodge
-      try
-        h = hodge_numbers(Z)
-        h11 = h[2, 2]
-        h21 = h[3, 2]
-        det = true
-      catch e
-        # Fall back: compute just χ_top from Ω^p restrictions
-      end
+    try
+      h = hodge_numbers(Z)
+      h11 = h[2, 2]  # h^{1,1}
+      h21 = h[2, 3]  # h^{1,2} = h^{2,1}
+    catch e
+      println("    (Hodge failed for $E: $(sprint(showerror, e)))")
     end
 
-    # Topological Euler characteristic: χ_top = 2(h^{1,1} - h^{2,1})
-    # (for CY3 with h^{0,0}=h^{3,3}=1, h^{3,0}=h^{0,3}=1, rest 0)
-    if h11 >= 0 && h21 >= 0
-      chi_top = 2 * (h11 - h21)
-    else
-      # Compute χ_top = Σ_p (-1)^p χ(Z, Ω^p_X|_Z)
-      chi_top = BigInt(0)
-      for p in 0:3
-        Ωp = exterior_power(cotangent_bundle(X), p)
-        chi_top += (-1)^p * euler_characteristic(Z, Ωp)
-      end
-    end
+    # Build bundle description from summands
+    desc = join([string(s) for s in E.components], " ⊕ ")
 
-    push!(results, CY3Result(name, d, idx, degrees, chi_top, h11, h21, det))
+    push!(results, CY3Result(name, d, desc, Int(rank_bundle(E)), chi_O, h11, h21))
   end
-
-  results
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -141,133 +227,85 @@ end
 
 function main()
   println("=" ^ 72)
-  println("  Calabi–Yau threefolds as zero loci in homogeneous varieties G/P")
-  println("  Reference: arXiv:1606.04076")
+  println("  Calabi–Yau threefolds as zero loci in flag varieties")
+  println("  Following Benedetti–Fatighenti–Mongardi–Ruiperez (1606.04076)")
   println("=" ^ 72)
   println()
 
-  all_results = CY3Result[]
+  results = CY3Result[]
 
-  # ── Classical: Projective spaces ──────────────────────────────────────
-  println("Searching projective spaces...")
+  # ── Projective spaces ──────────────────────────────────────────────
+  println("Projective spaces:")
   for n in 4:7
     X = projective_space(n)
-    append!(all_results, search_cy3(X, "ℙ$n"))
+    search_cy3(X, "ℙ$n", results)
   end
+  println()
 
-  # ── Classical: Grassmannians ──────────────────────────────────────────
-  println("Searching Grassmannians...")
+  # ── Grassmannians ──────────────────────────────────────────────────
+  println("Grassmannians:")
+  for (k, n) in [(2, 5), (2, 6), (2, 7)]
+    X = Gr(k, n)
+    search_cy3(X, "Gr($k,$n)", results; max_summand_rank=Int(dimension(X) - 3))
+  end
+  println()
+
+  # ── Quadrics ───────────────────────────────────────────────────────
+  println("Quadrics:")
   for n in 5:7
-    for k in 2:div(n, 2)
-      d = k * (n - k)
-      d >= 4 || continue
-      X = Gr(k, n)
-      append!(all_results, search_cy3(X, "Gr($k,$n)"))
-    end
-  end
-
-  # ── Quadrics ──────────────────────────────────────────────────────────
-  println("Searching quadrics...")
-  for n in 4:6
     X = quadric(n)
-    append!(all_results, search_cy3(X, "Q$n"))
+    search_cy3(X, "Q$n", results)
   end
-
-  # ── Symplectic/Lagrangian Grassmannians (small) ───────────────────────
-  println("Searching symplectic/Lagrangian Grassmannians...")
-  for n in [6]
-    for k in 2:div(n, 2)
-      X = SGr(k, n)
-      d = dimension(X)
-      d >= 4 || continue
-      append!(all_results, search_cy3(X, "SGr($k,$n)"))
-    end
-  end
-  # LGr(3) = SGr(3,6)
-  let X = LGr(3)
-    append!(all_results, search_cy3(X, "LGr(3)"))
-  end
-
-  # ── Orthogonal Grassmannians (small) ──────────────────────────────────
-  println("Searching orthogonal Grassmannians...")
-  for (k, n) in [(2, 7), (5, 10)]
-    X = OGr(k, n)
-    d = dimension(X)
-    d >= 4 || continue
-    append!(all_results, search_cy3(X, "OGr($k,$n)"))
-  end
-
-  # ── G₂ varieties ─────────────────────────────────────────────────────
-  println("Searching G₂ varieties...")
-  let X = partial_flag_variety(TypeG2, 1, "G₂/P₁")
-    append!(all_results, search_cy3(X, "G₂/P₁"))
-  end
-  let X = partial_flag_variety(TypeG2, 2, "G₂/P₂")
-    append!(all_results, search_cy3(X, "G₂/P₂"))
-  end
-
-  # ── Exceptional: Cayley plane (E₆/P₁) ────────────────────────────────
-  println("Searching Cayley plane (dim 16, χ computation only)...")
-  let X = cayley_plane()
-    idx = fano_index(X)
-    d = dimension(X)
-    codim = d - 3
-    parts = partitions_into_k(idx, codim)
-    println("  E₆/P₁: dim=$d, index=$idx, codim=$codim")
-    println("  Number of partitions: $(length(parts))")
-    # Only compute Euler characteristic (Hodge too expensive for codim 13)
-    for degrees in parts
-      E = ci_bundle(X, degrees)
-      is_calabi_yau_candidate(E) || continue
-
-      Z = zero_locus(E)
-      # χ_top via alternating sum of χ(Ω^p|_Z)
-      chi_top = BigInt(0)
-      for p in 0:3
-        Ωp = exterior_power(cotangent_bundle(X), p)
-        chi_top += (-1)^p * euler_characteristic(Z, Ωp)
-      end
-      push!(all_results, CY3Result("OP²", d, idx, degrees, chi_top,
-        BigInt(-1), BigInt(-1), false))
-    end
-  end
-
-  # ── Display results ───────────────────────────────────────────────────
   println()
+
+  # ── Lagrangian Grassmannians ───────────────────────────────────────
+  println("Lagrangian/Symplectic Grassmannians:")
+  for n in 3:4
+    X = LGr(n)
+    search_cy3(X, "LGr($n,$(2n))", results)
+  end
+  println()
+
+  # ── Orthogonal Grassmannians ───────────────────────────────────────
+  println("Orthogonal Grassmannians:")
+  X = OGr(5, 10)
+  search_cy3(X, "OGr(5,10)", results)
+  println()
+
+  # ── Cayley plane ───────────────────────────────────────────────────
+  println("Exceptional varieties:")
+  try
+    X = cayley_plane()
+    search_cy3(X, "OP²", results)
+  catch e
+    println("  OP² skipped: $(sprint(showerror, e))")
+  end
+  println()
+
+  # ── Display results ────────────────────────────────────────────────
   println("=" ^ 72)
-  println("  Results: $(length(all_results)) CY3 candidates found")
+  println("  Results: $(length(results)) Calabi–Yau threefold(s) found")
   println("=" ^ 72)
   println()
 
-  if isempty(all_results)
-    println("No CY3 candidates found.")
+  if isempty(results)
+    println("  No CY3 candidates found.")
     return
   end
 
-  # Build table data
-  names = String[]
-  dims = String[]
-  indices = String[]
-  degree_strs = String[]
-  chi_strs = String[]
-  h11_strs = String[]
-  h21_strs = String[]
+  ambients = [r.ambient for r in results]
+  descs = [r.bundle_desc for r in results]
+  ranks = [string(r.rank_E) for r in results]
+  chis = [string(r.chi_O) for r in results]
+  h11s = [r.h11 >= 0 ? string(r.h11) : "—" for r in results]
+  h21s = [r.h21 >= 0 ? string(r.h21) : "—" for r in results]
 
-  for r in all_results
-    push!(names, r.variety_name)
-    push!(dims, string(r.dim_ambient))
-    push!(indices, string(r.index))
-    push!(degree_strs, "(" * join(r.degrees, ",") * ")")
-    push!(chi_strs, string(r.chi_top))
-    push!(h11_strs, r.h11 >= 0 ? string(r.h11) : "—")
-    push!(h21_strs, r.h21 >= 0 ? string(r.h21) : "—")
-  end
-
-  data = hcat(names, dims, indices, degree_strs, chi_strs, h11_strs, h21_strs)
+  data = hcat(ambients, descs, ranks, chis, h11s, h21s)
   pretty_table(data;
-    column_labels=["G/P", "dim", "index", "degrees", "χ_top", "h¹¹", "h²¹"],
-    alignment=[:l, :r, :r, :c, :r, :r, :r],
+    column_labels=["Ambient", "Bundle E", "rk(E)", "χ(O_Z)", "h¹¹", "h²¹"],
+    alignment=[:l, :l, :r, :r, :r, :r],
     fit_table_in_display_vertically=false,
+    fit_table_in_display_horizontally=false,
   )
 end
 

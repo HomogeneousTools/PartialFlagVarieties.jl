@@ -7,6 +7,7 @@
 #  together with a reference to the underlying partial flag variety.
 # ═══════════════════════════════════════════════════════════════════════════════
 
+export Bundle
 export CompletelyReducibleBundle
 export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
@@ -14,6 +15,22 @@ export structure_sheaf, zero_bundle, line_bundle, canonical_bundle, anticanonica
 export det_bundle
 
 # Names from Lie, StaticArrays, Combinatorics are available via the parent module.
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Abstract Bundle type
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    Bundle{MDT}
+
+Abstract supertype for equivariant vector bundles on the partial flag variety
+``G/P`` encoded by the marked Dynkin type `MDT`.
+
+Concrete subtypes:
+- [`CompletelyReducibleBundle`](@ref): semisimple equivariant bundles
+- [`FilteredBundle`](@ref): bundles with a filtration by equivariant subbundles
+"""
+abstract type Bundle{MDT<:MarkedDynkinType} end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -44,7 +61,7 @@ julia> rank_bundle(T)
 4
 ```
 """
-struct CompletelyReducibleBundle{MDT<:MarkedDynkinType}
+struct CompletelyReducibleBundle{MDT<:MarkedDynkinType} <: Bundle{MDT}
   variety::PartialFlagVariety{MDT}
   components::Vector{IrrepLevi{MDT}}
 end

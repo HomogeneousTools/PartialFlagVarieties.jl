@@ -858,6 +858,197 @@ using StaticArrays
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  Bundle type hierarchy
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Bundle type hierarchy" begin
+    X = Gr(2, 4)
+    T = tangent_bundle(X)
+    @test T isa Bundle
+    @test T isa CompletelyReducibleBundle
+    @test T isa Bundle{marked_type(X)}
+    @test structure_sheaf(X) isa Bundle
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  FilteredBundle
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "FilteredBundle" begin
+    # Grassmannian: tangent bundle is irreducible → 1 filtration step
+    X = Gr(2, 4)
+    F = filtered_tangent_bundle(X)
+    @test F isa FilteredBundle
+    @test F isa Bundle
+    @test n_filtration_steps(F) == 1
+    @test rank_bundle(F) == dimension(X)
+    @test rank_bundle(total_bundle(F)) == dimension(X)
+
+    # Projective space: tangent is irreducible → 1 step
+    X2 = projective_space(3)
+    F2 = filtered_tangent_bundle(X2)
+    @test n_filtration_steps(F2) == 1
+    @test rank_bundle(F2) == 3
+
+    # Full flag: more steps
+    X3 = full_flag_variety(TypeA{3})
+    F3 = filtered_tangent_bundle(X3)
+    @test n_filtration_steps(F3) >= 2
+    @test rank_bundle(F3) == dimension(X3)
+
+    # Total bundle of filtered tangent = tangent bundle (same components)
+    X4 = Gr(2, 5)
+    F4 = filtered_tangent_bundle(X4)
+    T4 = tangent_bundle(X4)
+    @test rank_bundle(total_bundle(F4)) == rank_bundle(T4)
+
+    # Tensor product with structure sheaf preserves filtration
+    S = structure_sheaf(X)
+    FS = tensor_product(F, S)
+    @test n_filtration_steps(FS) == n_filtration_steps(F)
+    @test rank_bundle(FS) == rank_bundle(F)
+
+    # Exterior powers of filtered bundles
+    d = dimension(X)
+    @test rank_bundle(exterior_power(F, 0)) == 1
+    @test rank_bundle(exterior_power(F, 1)) == d
+    @test rank_bundle(exterior_power(F, 2)) == binomial(d, 2)
+    @test rank_bundle(exterior_power(F, d)) == 1
+
+    # Symmetric powers of filtered bundles
+    @test rank_bundle(symmetric_power(F, 0)) == 1
+    @test rank_bundle(symmetric_power(F, 1)) == d
+    @test rank_bundle(symmetric_power(F, 2)) == binomial(d + 1, 2)
+
+    # Multi-step filtration: exterior power increases steps
+    F3w2 = exterior_power(F3, 2)
+    d3 = dimension(X3)
+    @test rank_bundle(F3w2) == binomial(d3, 2)
+    @test n_filtration_steps(F3w2) >= n_filtration_steps(F3)
+
+    # Dual reverses filtration
+    Fd = dual(F3)
+    @test n_filtration_steps(Fd) == n_filtration_steps(F3)
+    @test rank_bundle(Fd) == rank_bundle(F3)
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Universal bundles
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Universal bundles" begin
+    # Gr(2, 5): U has rank 2, Q has rank 3
+    X = Gr(2, 5)
+    U = universal_subbundle(X)
+    Q = universal_quotient_bundle(X)
+    @test rank_bundle(U) == 2
+    @test rank_bundle(Q) == 3
+
+    # Gr(3, 7)
+    X2 = Gr(3, 7)
+    @test rank_bundle(universal_subbundle(X2)) == 3
+    @test rank_bundle(universal_quotient_bundle(X2)) == 4
+
+    # ℙ^4 = Gr(1, 5)
+    X3 = projective_space(4)
+    @test rank_bundle(universal_subbundle(X3)) == 1
+    @test rank_bundle(universal_quotient_bundle(X3)) == 4
+
+    # Tautological bundles on partial flag
+    # On Fl(1,2;4) = A₃/P_{1,2}, the irreducible equivariant bundles
+    # E_{ω₁} and E_{ω₂} have fiber dimensions 1 and 1 respectively.
+    # (These are NOT the geometric tautological subbundles V₁, V₂;
+    #  the latter are filtered, not completely reducible.)
+    X4 = flag_variety(4, (1, 2))
+    Us = tautological_bundles(X4)
+    @test length(Us) == 2
+    @test rank_bundle(Us[1]) == 1
+    @test rank_bundle(Us[2]) == 1
+  end
+
+  @testset "Spinor bundles" begin
+    # Odd quadric Q^5 = B_3/P_1: single spinor of rank 2^{3-1} = 4
+    X5 = quadric(5)
+    S5 = spinor_bundle(X5)
+    @test rank_bundle(S5) == 4
+
+    # Even quadric Q^4 = D_3/P_1: two half-spinors of rank 2^{3-2} = 2
+    X4 = quadric(4)
+    Sp = spinor_bundle(X4, :plus)
+    Sm = spinor_bundle(X4, :minus)
+    @test rank_bundle(Sp) == 2
+    @test rank_bundle(Sm) == 2
+
+    # Both half-spinors together
+    S4 = spinor_bundle(X4)
+    @test rank_bundle(S4) == 4
+
+    # Q^3 = B_2/P_1: single spinor of rank 2
+    X3 = quadric(3)
+    S3 = spinor_bundle(X3)
+    @test rank_bundle(S3) == 2
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Hodge numbers
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Hodge numbers" begin
+    # ℙ^3: diagonal Hodge diamond
+    X = projective_space(3)
+    H = hodge_numbers(X)
+    @test H[1, 1] == 1  # h^{0,0}
+    @test H[2, 2] == 1  # h^{1,1}
+    @test H[3, 3] == 1  # h^{2,2}
+    @test H[4, 4] == 1  # h^{3,3}
+    @test H[1, 2] == 0  # h^{0,1}
+    @test H[2, 1] == 0  # h^{1,0}
+
+    # Gr(2, 4): b₀=1, b₂=1, b₄=2, b₆=1, b₈=1
+    #           h^{p,q} = 0 for p ≠ q, h^{p,p} = b_{2p}
+    X2 = Gr(2, 4)
+    H2 = hodge_numbers(X2)
+    @test H2[1, 1] == 1  # h^{0,0} = b₀ = 1
+    @test H2[2, 2] == 1  # h^{1,1} = b₂ = 1
+    @test H2[3, 3] == 2  # h^{2,2} = b₄ = 2
+    @test H2[1, 3] == 0
+  end
+
+  @testset "Twisted Hodge numbers" begin
+    # ℙ³, twist 0: h^q(Ω^p) for p ≠ q is 0
+    X = projective_space(3)
+    H0 = twisted_hodge_numbers(X, 0)
+    @test H0[1, 1] == 1  # h^0(𝒪)
+    @test H0[2, 2] == 1  # h^1(Ω^1)
+    @test H0[3, 3] == 1  # h^2(Ω^2)
+    @test H0[4, 4] == 1  # h^3(Ω^3)
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Hochschild cohomology
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Hochschild cohomology" begin
+    # ℙ^2: HH^0 = 1, HH^2 = h^0(∧²T) + h^1(T) + h^2(𝒪)
+    X = projective_space(2)
+    P = hochschild_cohomology(X)
+    @test P isa PolyvectorParallelogram
+    @test P[0, 0] == 1    # h^0(𝒪) = 1
+    @test P[1, 0] == 8    # h^0(T_ℙ²) = h^0(𝒪(1)^3) = dim Aut(ℙ²) = 8
+    @test P[2, 0] == 10   # h^0(∧²T) = h^0(𝒪(3)) = 10
+    @test P[0, 1] == 0    # h^1(𝒪) = 0
+    @test P[0, 2] == 0    # h^2(𝒪) = 0
+
+    # ℙ^1
+    X1 = projective_space(1)
+    P1 = hochschild_cohomology(X1)
+    @test P1[0, 0] == 1   # h^0(𝒪) = 1
+    @test P1[1, 0] == 3   # h^0(T_ℙ¹) = dim SL₂ = 3
+    @test P1[0, 1] == 0   # h^1(𝒪) = 0
+    @test P1[1, 1] == 0   # h^1(T_ℙ¹) = 0
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  Koszul: SES solver
   # ═══════════════════════════════════════════════════════════════════════════
 

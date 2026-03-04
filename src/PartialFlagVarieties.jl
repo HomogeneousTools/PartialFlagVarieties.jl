@@ -33,7 +33,10 @@ include("MarkedDynkinType.jl")
 include("PartialFlagVariety.jl")
 include("IrrepLevi.jl")
 include("CompletelyReducibleBundle.jl")
+include("FilteredBundle.jl")
+include("UniversalBundles.jl")
 include("Cohomology.jl")
+include("Hochschild.jl")
 include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
@@ -56,6 +59,16 @@ export n_components
 export tangent_weights, positive_nonparabolic_roots, positive_parabolic_roots
 export direct_sum, twist
 export cartan_type, cartan_type_with_ordering, parse_dynkin_type
+export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
+export universal_subbundle, universal_quotient_bundle, spinor_bundle
+export tautological_bundles, quotient_bundles
+export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology
+export PolyvectorParallelogram
+export ZeroLocus, zero_locus, ambient_variety, defining_bundle
+export codimension, normal_bundle, conormal_bundle
+export koszul_terms, cohomology_on_restriction
+export is_calabi_yau, is_calabi_yau_candidate
+export solve_ses_cohomology, solve_koszul_filtration
 
 # ─── Startup banner ──────────────────────────────────────────────────────────
 
