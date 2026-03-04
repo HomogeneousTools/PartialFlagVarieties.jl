@@ -818,4 +818,22 @@ using StaticArrays
     @test dimensions(exterior_power(T, 5))[0] == 378
   end
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  String constructors
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "String constructors" begin
+    X1 = partial_flag_variety("A4", 1)
+    @test dimension(X1) == 4
+    @test picard_rank(X1) == 1
+
+    X2 = partial_flag_variety("A3", [1, 3])
+    @test picard_rank(X2) == 2
+
+    X3 = partial_flag_variety("B3", 1)
+    @test dimension(X3) == 5
+
+    X4 = partial_flag_variety("D4", [1, 3])
+    @test picard_rank(X4) == 2
+  end
 end  # @testset "PartialFlagVarieties.jl"
