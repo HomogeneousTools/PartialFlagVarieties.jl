@@ -857,4 +857,157 @@ using StaticArrays
     @test rank_bundle(L2) == 1
   end
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Koszul: SES solver
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Koszul SES solver" begin
+    # Simple case: 0 → A → B → C → 0 on dim=1 variety
+    # H*(A) = [1,0], H*(B) = [2,0]
+    # H*(C) should be [1,0] (determined)
+    a = Cohomology{BigInt}(BigInt[1, 0], 1)
+    b = Cohomology{BigInt}(BigInt[2, 0], 1)
+    (c, det) = solve_ses_cohomology(a, b)
+    @test c[0] == 1
+    @test c[1] == 0
+    @test det == true
+
+    # Case with connecting homomorphism ambiguity
+    # H*(A) = [0,0,1], H*(B) = [0,0,0] on dim=2 variety
+    a2 = Cohomology{BigInt}(BigInt[0, 0, 1], 2)
+    b2 = Cohomology{BigInt}(BigInt[0, 0, 0], 2)
+    (c2, det2) = solve_ses_cohomology(a2, b2)
+    # χ(C) = χ(B) - χ(A) = 0 - 1 = -1
+    @test sum((-1)^i * c2[i] for i in 0:2) == -1
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Zero loci
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "ZeroLocus: construction" begin
+    X = projective_space(4)
+    E = line_bundle(X, 5)
+    Z = zero_locus(E)
+
+    @test dimension(Z) == 3
+    @test codimension(Z) == 1
+    @test ambient_variety(Z) === X
+  end
+
+  @testset "ZeroLocus: Euler characteristic" begin
+    # Quintic CY3: χ(O_Z) = 0
+    X = projective_space(4)
+    Z = zero_locus(line_bundle(X, 5))
+    @test euler_characteristic(Z) == 0
+
+    # Quartic K3: χ(O_Z) = 2
+    X3 = projective_space(3)
+    Z3 = zero_locus(line_bundle(X3, 4))
+    @test euler_characteristic(Z3) == 2
+
+    # Quadric surface in P^3: χ(O_Z) = 1
+    Z_q = zero_locus(line_bundle(X3, 2))
+    @test euler_characteristic(Z_q) == 1
+  end
+
+  @testset "ZeroLocus: CY detection" begin
+    X = projective_space(4)
+
+    # Quintic in P^4: CY candidate and CY
+    @test is_calabi_yau_candidate(line_bundle(X, 5)) == true
+    @test is_calabi_yau(zero_locus(line_bundle(X, 5))) == true
+
+    # Cubic in P^4: NOT CY candidate (degree 3 ≠ index 5)
+    @test is_calabi_yau_candidate(line_bundle(X, 3)) == false
+
+    # Two cubics in P^5: CY candidate and CY
+    X5 = projective_space(5)
+    E = direct_sum(line_bundle(X5, 3), line_bundle(X5, 3))
+    @test is_calabi_yau_candidate(E) == true
+    @test is_calabi_yau(zero_locus(E)) == true
+  end
+
+  @testset "ZeroLocus: Hodge numbers (CY3)" begin
+    # Quintic CY3: h^{1,1}=1, h^{2,1}=101
+    X = projective_space(4)
+    Z = zero_locus(line_bundle(X, 5))
+    h = hodge_numbers(Z)
+    @test h[1, 1] == 1   # h^{0,0}
+    @test h[1, 4] == 1   # h^{0,3}
+    @test h[2, 2] == 1   # h^{1,1}
+    @test h[3, 2] == 101 # h^{2,1}
+    @test h[2, 3] == 101 # h^{1,2} = h^{2,1}
+    @test h[3, 3] == 1   # h^{2,2} = h^{1,1}
+
+    # Two cubics in P^5: CY3, h^{1,1}=1, h^{2,1}=73
+    X5 = projective_space(5)
+    E = direct_sum(line_bundle(X5, 3), line_bundle(X5, 3))
+    Z5 = zero_locus(E)
+    h5 = hodge_numbers(Z5)
+    @test h5[2, 2] == 1   # h^{1,1}
+    @test h5[3, 2] == 73  # h^{2,1}
+  end
+
+  @testset "ZeroLocus: Hodge numbers (Fano 4-fold)" begin
+    X = projective_space(5)
+
+    # Quadric 4-fold: h^{1,1}=1, h^{2,2}=2
+    Z_q = zero_locus(line_bundle(X, 2))
+    h_q = hodge_numbers(Z_q)
+    @test h_q[2, 2] == 1  # h^{1,1}
+    @test h_q[3, 3] == 2  # h^{2,2}
+
+    # Cubic 4-fold: h^{1,1}=1, h^{1,3}=1, h^{2,2}=21
+    Z_c = zero_locus(line_bundle(X, 3))
+    h_c = hodge_numbers(Z_c)
+    @test h_c[2, 2] == 1  # h^{1,1}
+    @test h_c[2, 4] == 1  # h^{1,3}
+    @test h_c[3, 3] == 21 # h^{2,2}
+
+    # Quartic 4-fold: h^{1,1}=1, h^{1,3}=21, h^{2,2}=142
+    Z_4 = zero_locus(line_bundle(X, 4))
+    h_4 = hodge_numbers(Z_4)
+    @test h_4[2, 2] == 1   # h^{1,1}
+    @test h_4[2, 4] == 21  # h^{1,3}
+    @test h_4[3, 3] == 142 # h^{2,2}
+  end
+
+  @testset "ZeroLocus: Hodge numbers (Grassmannian)" begin
+    # O(1)^4 on Gr(2,6): Küchle c6, h^{1,1}=1, h^{2,2}=8
+    X = Gr(2, 6)
+    E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:4])
+    Z = zero_locus(E)
+    @test dimension(Z) == 4
+    h = hodge_numbers(Z)
+    @test h[2, 2] == 1  # h^{1,1}
+    @test h[3, 3] == 8  # h^{2,2}
+  end
+
+  @testset "ZeroLocus: conormal χ recursion" begin
+    # Verify χ(Ω^p_Z) via the conormal recursion agrees with
+    # the known identity χ(Ω^p) = (-1)^d χ(Ω^{d-p}) (Serre)
+    X = projective_space(5)
+    Z = zero_locus(line_bundle(X, 2))
+    d = dimension(Z)  # 4
+
+    chi = [PartialFlagVarieties._chi_omega_p_conormal(Z, p) for p in 0:d]
+    # χ(Ω^0) = 1, χ(Ω^4) = 1 (Serre)
+    @test chi[1] == chi[5]
+    # χ(Ω^1) = χ(Ω^3) (Serre, d=4, (-1)^4=1)
+    @test chi[2] == chi[4]
+  end
+
+  @testset "ZeroLocus: quartic K3 Hodge" begin
+    X = projective_space(3)
+    Z = zero_locus(line_bundle(X, 4))
+    @test dimension(Z) == 2
+    h = hodge_numbers(Z)
+    @test h[1, 1] == 1   # h^{0,0}
+    @test h[2, 2] == 20  # h^{1,1}
+    @test h[1, 3] == 1   # h^{0,2}
+    @test h[3, 1] == 1   # h^{2,0}
+    @test h[3, 3] == 1   # h^{2,2} = h^{0,0}
+  end
+
 end  # @testset "PartialFlagVarieties.jl"

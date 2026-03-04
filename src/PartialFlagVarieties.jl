@@ -35,6 +35,8 @@ include("IrrepLevi.jl")
 include("CompletelyReducibleBundle.jl")
 include("Cohomology.jl")
 include("Constructions.jl")
+include("Koszul.jl")
+include("ZeroLoci.jl")
 
 # ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
 
