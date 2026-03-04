@@ -45,9 +45,12 @@ julia> euler_characteristic(Z)
 0
 ```
 """
-struct ZeroLocus{MDT<:MarkedDynkinType}
-  ambient::PartialFlagVariety{MDT}
-  defining_bundle::CompletelyReducibleBundle{MDT}
+mutable struct ZeroLocus{MDT<:MarkedDynkinType}
+  const ambient::PartialFlagVariety{MDT}
+  const defining_bundle::CompletelyReducibleBundle{MDT}
+  # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧˾i E*.
+  # Populated lazily on the first call that needs them; reused thereafter.
+  koszul_wedges::Union{Nothing, Vector{CompletelyReducibleBundle{MDT}}}
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -79,12 +82,27 @@ function zero_locus(E::CompletelyReducibleBundle{MDT}) where {MDT}
   r <= d || throw(ArgumentError(
     "Bundle rank $r exceeds ambient dimension $d."
   ))
-  ZeroLocus{MDT}(X, E)
+  ZeroLocus{MDT}(X, E, nothing)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Accessors
 # ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Return (and lazily compute) the cached vector `[∧°E*, ∧¹E*, …, ∧ʳE*]`.
+All Koszul computations go through this accessor so the exterior powers
+are computed at most once per `ZeroLocus`, regardless of how many times
+different twists are requested.
+"""
+function _koszul_wedges!(Z::ZeroLocus{MDT}) where {MDT}
+  if Z.koszul_wedges === nothing
+    r = Int(rank_bundle(Z.defining_bundle))
+    E_dual = dual(Z.defining_bundle)
+    Z.koszul_wedges = CompletelyReducibleBundle{MDT}[exterior_power(E_dual, i) for i in 0:r]
+  end
+  Z.koszul_wedges
+end
 
 """
     ambient_variety(Z::ZeroLocus) -> PartialFlagVariety
@@ -142,14 +160,7 @@ Return the terms of the twisted Koszul complex:
 where ``E`` is the defining bundle and ``r = \\mathrm{rank}(E)``.
 """
 function koszul_terms(Z::ZeroLocus{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
-  E_dual = dual(Z.defining_bundle)
-  r = codimension(Z)
-  terms = CompletelyReducibleBundle{MDT}[]
-  for i in 0:r
-    wedge_i = exterior_power(E_dual, i)
-    push!(terms, tensor_product(F, wedge_i))
-  end
-  terms
+  CompletelyReducibleBundle{MDT}[tensor_product(F, w) for w in _koszul_wedges!(Z)]
 end
 
 """
@@ -499,12 +510,11 @@ function _chi_omega_tensor(
   end
 
   Ωj_X = exterior_power(cotangent_bundle(X), j)
-  E_dual = dual(Z.defining_bundle)
+  r = length(_koszul_wedges!(Z)) - 1  # = codimension(Z)
 
   result = euler_characteristic(Z, tensor_product(Ωj_X, G))
-  for i in 1:min(j, Int(rank_bundle(E_dual)))
-    ext_i = exterior_power(E_dual, i)
-    result -= _chi_omega_tensor(Z, j - i, tensor_product(ext_i, G))
+  for i in 1:min(j, r)
+    result -= _chi_omega_tensor(Z, j - i, tensor_product(_koszul_wedges!(Z)[i + 1], G))
   end
 
   result
