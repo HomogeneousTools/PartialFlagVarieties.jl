@@ -129,7 +129,7 @@ julia> rank_bundle(structure_sheaf(X))
 """
 function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
   LT = levi_type(MDT)
-  zero_central = zeros(Rational{Int}, length(Marked))
+  zero_central = zeros(Int, length(Marked))
   if LT === nothing
     zero_ss = WeightLatticeElem(TypeA{1}, [0])
   else
@@ -219,6 +219,27 @@ function line_bundle(X::PartialFlagVariety{MDT}, degrees::Vector{<:Integer}) whe
   return CompletelyReducibleBundle{MDT}(X, [rep])
 end
 
+# ─── Type-level caches for tangent/cotangent rep lists ───────────────────────
+# These avoid repeatedly computing tangent_weights + IrrepLevi decomposition
+# for the same MDT.  The caches store only the IrrepLevi component vectors;
+# fresh CompletelyReducibleBundle wrappers are created with the correct parent.
+
+const _tangent_reps_cache = Dict{DataType,Vector}()
+const _cotangent_reps_cache = Dict{DataType,Vector}()
+
+function _tangent_reps(::Type{MDT}) where {MDT<:MarkedDynkinType}
+  get!(_tangent_reps_cache, MDT) do
+    tw = tangent_weights(MDT)
+    IrrepLevi{MDT}[IrrepLevi(MDT, w) for w in tw]
+  end::Vector{IrrepLevi{MDT}}
+end
+
+function _cotangent_reps(::Type{MDT}) where {MDT<:MarkedDynkinType}
+  get!(_cotangent_reps_cache, MDT) do
+    IrrepLevi{MDT}[dual(r) for r in _tangent_reps(MDT)]
+  end::Vector{IrrepLevi{MDT}}
+end
+
 """
     tangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
@@ -245,9 +266,7 @@ julia> rank_bundle(T)
 ```
 """
 function tangent_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  tw = tangent_weights(MDT)
-  reps = [IrrepLevi(MDT, w) for w in tw]
-  return CompletelyReducibleBundle{MDT}(X, reps)
+  return CompletelyReducibleBundle{MDT}(X, _tangent_reps(MDT))
 end
 
 """
@@ -266,7 +285,7 @@ true
 ```
 """
 function cotangent_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  return dual(tangent_bundle(X))
+  return CompletelyReducibleBundle{MDT}(X, _cotangent_reps(MDT))
 end
 
 """
@@ -323,10 +342,10 @@ julia> rank_bundle(det_bundle(tangent_bundle(X)))
 ```
 """
 function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT}
-  total_central = zeros(Rational{Int}, central_rank(MDT))
+  total_central = zeros(Int, central_rank(MDT))
   for c in E.components
-    d = fiber_dimension(c)
-    total_central .+= d * central_part(c)
+    d = Int(fiber_dimension(c))
+    total_central .+= d * c.central
   end
 
   LT = levi_type(MDT)
