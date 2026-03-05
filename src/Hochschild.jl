@@ -205,10 +205,8 @@ function Base.show(io::IO, ::MIME"text/plain", P::PolyvectorParallelogram)
     print(io, " " ^ indent)
 
     entries = String[]
-    for p in 0:d
-      q = n - p
-      0 <= q <= d || continue
-      push!(entries, lpad(string(P[p, q]), w))
+    for p in min(d, n):-1:max(0, n - d)
+      push!(entries, lpad(string(P[p, n - p]), w))
     end
 
     println(io, join(entries, "  "))
