@@ -23,6 +23,7 @@ makedocs(
       "Cohomology" => "api/cohomology.md",
       "Hodge & Hochschild" => "api/hochschild.md",
       "Constructions" => "api/constructions.md",
+      "ExceptionalCollections" => "api/exceptional_collections.md",
     ],
   ],
   doctest=true,

@@ -40,6 +40,7 @@ include("Hochschild.jl")
 include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
+include("ExceptionalCollections.jl")
 
 # ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
 
