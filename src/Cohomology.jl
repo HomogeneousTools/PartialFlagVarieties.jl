@@ -281,7 +281,12 @@ chi(H::Cohomology) = euler_characteristic(H)
 """
     euler_characteristic(E::CompletelyReducibleBundle) -> BigInt
 
-Compute the Euler characteristic ``\\chi(G/P, E)`` directly.
+Compute the Euler characteristic ``\\chi(G/P, E)`` directly via BWB,
+without constructing intermediate `WeylCharacter` objects.
+
+For each irreducible Levi component, converts to the ambient weight,
+applies the Borel–Weil–Bott theorem, and accumulates
+``(-1)^{\\ell(w)} \\dim V_{w(\\lambda+\\rho)-\\rho}``.
 
 # Examples
 ```jldoctest
@@ -293,8 +298,23 @@ julia> euler_characteristic(structure_sheaf(X))
 1
 ```
 """
-function euler_characteristic(E::CompletelyReducibleBundle)
-  return euler_characteristic(dimensions(E))
+function euler_characteristic(E::CompletelyReducibleBundle{MDT}) where {
+  MDT<:MarkedDynkinType
+}
+  # Deduplicate: count multiplicities of identical ambient weights
+  weight_counts = Dict{WeightLatticeElem,Int}()
+  for comp in components(E)
+    λ = to_ambient_weight(MDT, comp)
+    weight_counts[λ] = get(weight_counts, λ, 0) + 1
+  end
+  result = BigInt(0)
+  for (λ, mult) in weight_counts
+    bwb = borel_weil_bott(λ)
+    bwb === nothing && continue
+    (deg, μ) = bwb
+    result += (iseven(deg) ? 1 : -1) * mult * degree(μ)
+  end
+  result
 end
 
 """

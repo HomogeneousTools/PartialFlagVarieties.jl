@@ -387,10 +387,25 @@ true
 ```
 """
 function tensor_product(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
-  result = IrrepLevi{MDT}[]
+  # Deduplicate components to avoid redundant tensor product calls.
+  # E.g., O(1)⁶ has 6 identical components → compute ⊗ once, replicate.
+  e_counts = Dict{IrrepLevi{MDT},Int}()
   for a in E.components
-    for b in F.components
-      append!(result, tensor_product(a, b))
+    e_counts[a] = get(e_counts, a, 0) + 1
+  end
+  f_counts = Dict{IrrepLevi{MDT},Int}()
+  for b in F.components
+    f_counts[b] = get(f_counts, b, 0) + 1
+  end
+
+  result = IrrepLevi{MDT}[]
+  for (a, ma) in e_counts
+    for (b, mb) in f_counts
+      tp = tensor_product(a, b)
+      total = ma * mb
+      for _ in 1:total
+        append!(result, tp)
+      end
     end
   end
   return CompletelyReducibleBundle{MDT}(E.variety, result)
