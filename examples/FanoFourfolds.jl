@@ -7,52 +7,44 @@
 #  computes Hodge numbers via the Koszul complex, and compares with the
 #  reference values.
 #
-#  Data format (Schubert2/Macaulay2 convention):
-#   - ambient: list of factors [k₁,...,kₘ, n], each encoding Fl(k₁,...,kₘ; n)
-#   - bundle: nested arrays encoding direct sums of box products of
-#     Schur functor bundles
+#  For entries with indeterminate Hodge numbers, the computation returns
+#  symbolic AffineExpr values (x_0, x_1, ...) which are compared with the
+#  symbolic expressions in the reference data.
 #
-#  Usage: julia --project=. examples/FanoFourfolds.jl [data.json path]
+#  Uses Distributed for parallel processing with pmap.
+#
+#  Usage:
+#    julia --project=. examples/FanoFourfolds.jl [data.json path] [max_entries]
 # ═══════════════════════════════════════════════════════════════════════════════
+
+using Distributed
+
+# Add worker processes before loading packages on them
+const NWORKERS = parse(Int, get(ENV, "JULIA_NUM_PROCS", "8"))
+if nworkers() < NWORKERS
+  addprocs(NWORKERS - nworkers() + 1)
+end
+
+@everywhere begin
 
 using PartialFlagVarieties
 using Lie
 using JSON
-using PrettyTables
-using Printf
-using ProgressMeter
 
 # =============================================================================
-#  GL(n) weight → omega coordinates (general flag)
+#  GL(n) weight -> omega coordinates (general flag)
 # =============================================================================
 
 """
 Convert a Schubert2-convention GL(n) weight vector to omega coordinates.
-
-For a flag variety Fl(k₁,...,kₘ; n), the weight vector `w` of length `n`
-stores eigenvalues in Schubert2 block order (quotient first, smallest
-tautological sub last).  This function reorders to standard epsilon order
-(smallest sub first) and takes successive differences.
-
-# Arguments
-- `ks`: sorted step sizes `[k₁, k₂, ..., kₘ]` with `k₁ < k₂ < ... < kₘ < n`
-- `n`:  ambient dimension
-- `w`:  GL(n) weight vector of length `n`
 """
 function gl_weight_to_omega_flag(ks::Vector{Int}, n::Int, w::Vector{Int})
-  # Schubert2 block order (left to right):
-  #   Q*:           w[1 : n-kₘ]           (size n-kₘ)
-  #   (Uₘ/Uₘ₋₁)*:  w[n-kₘ+1 : n-kₘ₋₁]  (size kₘ-kₘ₋₁)
-  #   ...
-  #   U₁*:          w[n-k₁+1 : n]         (size k₁)
-  #
-  # Standard epsilon order: [U₁*, (U₂/U₁)*, ..., Q*]
   eps = Int[]
-  append!(eps, w[n - ks[1] + 1:n])            # U₁*
+  append!(eps, w[n - ks[1] + 1:n])
   for i in 2:length(ks)
-    append!(eps, w[n - ks[i] + 1:n - ks[i - 1]])  # (Uᵢ/Uᵢ₋₁)*
+    append!(eps, w[n - ks[i] + 1:n - ks[i - 1]])
   end
-  append!(eps, w[1:n - ks[end]])              # Q*
+  append!(eps, w[1:n - ks[end]])
   [eps[i] - eps[i + 1] for i in 1:n - 1]
 end
 
@@ -62,12 +54,8 @@ end
 
 """
 Build a PartialFlagVariety from the `ambient` field of data.json.
-
-Each factor `[k₁,...,kₘ, n]` becomes `Fl(k₁,...,kₘ; n) = A_{n-1}` with
-marked nodes `(k₁,...,kₘ)`.  Products use `ProductDynkinType`.
 """
 function build_ambient(factors::Vector)
-  # Parse each factor
   factor_types = []
   factor_marks = Vector{Int}[]
   for f in factors
@@ -84,7 +72,6 @@ function build_ambient(factors::Vector)
     return partial_flag_variety(DT, marking)
   end
 
-  # Build ProductDynkinType by nesting
   DT = factor_types[1]
   offset = rank(DT)
   all_marks = Int[factor_marks[1]...]
@@ -104,103 +91,152 @@ end
 
 """
 Build a `CompletelyReducibleBundle` from the `bundle` field and `ambient` factors.
-
-The bundle field encodes:
-  bundle[1]           = the bundle (always length 1 wrapper)
-  bundle[1][i]        = i-th direct summand (a box product across factors)
-  bundle[1][i][j]     = weight contribution from factor j (length-1 list)
-  bundle[1][i][j][1]  = GL(nⱼ) weight vector
 """
 function build_bundle(X, factors::Vector, bundle_data::Vector)
   MDT = marked_type(X)
   DT = PartialFlagVarieties._ambient_type(MDT)
 
-  # Parse factor dimensions and step sizes
   factor_ks = Vector{Int}[]
   factor_ns = Int[]
-  factor_ranks = Int[]
   for f in factors
     fv = Int.(f)
-    n = fv[end]
-    ks = fv[1:end - 1]
-    push!(factor_ks, ks)
-    push!(factor_ns, n)
-    push!(factor_ranks, n - 1)
+    push!(factor_ks, fv[1:end - 1])
+    push!(factor_ns, fv[end])
   end
 
   summands = IrrepLevi{MDT}[]
-
-  # bundle_data[1] is the direct sum
   isempty(bundle_data) && return CompletelyReducibleBundle{MDT}(X, summands)
   ds = bundle_data[1]
   (ds isa Vector && isempty(ds)) && return CompletelyReducibleBundle{MDT}(X, summands)
 
   for summand in ds
-    # summand[j] = weight contribution from factor j
-    # Each summand[j] is a length-1 list containing the weight vector
     omega_coords = Int[]
     for (j, factor_weight) in enumerate(summand)
       w = Int.(factor_weight[1])
-      ω = gl_weight_to_omega_flag(factor_ks[j], factor_ns[j], w)
-      append!(omega_coords, ω)
+      omega = gl_weight_to_omega_flag(factor_ks[j], factor_ns[j], w)
+      append!(omega_coords, omega)
     end
-
-    λ = WeightLatticeElem(DT, omega_coords)
-    push!(summands, IrrepLevi(MDT, λ))
+    lam = WeightLatticeElem(DT, omega_coords)
+    push!(summands, IrrepLevi(MDT, lam))
   end
 
   CompletelyReducibleBundle{MDT}(X, summands)
 end
 
 # =============================================================================
-#  Hodge diamond comparison
+#  Parsing symbolic reference values
 # =============================================================================
 
 """
-Parse the reference Hodge diamond from data.json format.
+Parse a symbolic expression string from data.json (e.g. "2 * x_0 + 16")
+into an AffineExpr.
+"""
+function parse_symbolic_expr(s::AbstractString)
+  s = strip(s)
+  constant = BigInt(0)
+  coeffs = Dict{Int,BigInt}()
 
-Returns a 5×5 Matrix{BigInt} indexed as `[p+1, q+1]` = h^{p,q}.
-Rows 0–2 have 5 entries; rows 3–4 have only 3, filled by Serre duality.
+  # Tokenize: split on + or - (keeping the sign)
+  tokens = String[]
+  current = ""
+  for (i, c) in enumerate(s)
+    if c in ('+', '-') && i > 1 && !isempty(strip(current))
+      push!(tokens, strip(current))
+      current = string(c)
+    else
+      current *= c
+    end
+  end
+  !isempty(strip(current)) && push!(tokens, strip(current))
+
+  for tok in tokens
+    tok = strip(tok)
+    isempty(tok) && continue
+
+    # Strip leading '+' (kept by tokenizer for positive terms after split)
+    if startswith(tok, "+")
+      tok = strip(tok[2:end])
+      isempty(tok) && continue
+    end
+
+    # "2 * x_0", "-2 * x_0"
+    m = match(r"^(-?\s*\d+)\s*\*\s*x_(\d+)$", tok)
+    if m !== nothing
+      coeff = parse(BigInt, replace(m.captures[1], " " => ""))
+      var_id = parse(Int, m.captures[2])
+      coeffs[var_id] = get(coeffs, var_id, BigInt(0)) + coeff
+      continue
+    end
+
+    # "x_0", "-x_0"
+    m = match(r"^(-?\s*)x_(\d+)$", tok)
+    if m !== nothing
+      sign_str = strip(m.captures[1])
+      coeff = sign_str == "-" ? BigInt(-1) : BigInt(1)
+      var_id = parse(Int, m.captures[2])
+      coeffs[var_id] = get(coeffs, var_id, BigInt(0)) + coeff
+      continue
+    end
+
+    # Plain integer
+    m = match(r"^-?\s*\d+$", tok)
+    if m !== nothing
+      constant += parse(BigInt, replace(tok, " " => ""))
+      continue
+    end
+
+    error("Cannot parse token '$tok' in expression '$s'")
+  end
+
+  filter!(p -> p.second != 0, coeffs)
+  AffineExpr(constant, coeffs)
+end
+
+"""
+Parse a reference hodge value: number or symbolic string -> AffineExpr.
+"""
+function parse_hodge_value(val)
+  if val isa Number
+    AffineExpr(BigInt(round(Int, val)))
+  elseif val isa AbstractString
+    parse_symbolic_expr(val)
+  else
+    error("Unexpected hodge value type: $(typeof(val))")
+  end
+end
+
+"""
+Parse the reference Hodge diamond from data.json format into AffineExpr matrix.
+Fills by Serre duality h^{p,q} = h^{d-p,d-q} for d=4.
 """
 function parse_reference_hodge(hodge_data::Vector)
-  H = zeros(BigInt, 5, 5)
+  H = Matrix{AffineExpr}(undef, 5, 5)
+  for i in eachindex(H)
+    H[i] = AffineExpr(0)
+  end
   known = falses(5, 5)
+
   for (q, row) in enumerate(hodge_data)
     for (p, val) in enumerate(row)
-      if val isa Number
-        H[p, q] = BigInt(round(Int, val))
-        known[p, q] = true
-      end
+      H[p, q] = parse_hodge_value(val)
+      known[p, q] = true
     end
   end
-  # Fill unknown entries via Serre duality: h^{p,q} = h^{d-p,d-q}
-  for p in 0:4
-    for q in 0:4
-      pi, qi = p + 1, q + 1
-      sp, sq = 4 - p + 1, 4 - q + 1
-      if !known[pi, qi] && sp >= 1 && sq >= 1 && known[sp, sq]
-        H[pi, qi] = H[sp, sq]
-        known[pi, qi] = true
-      end
+
+  # Fill by Serre duality: h^{p,q} = h^{d-p,d-q}
+  for p in 0:4, q in 0:4
+    pi, qi = p + 1, q + 1
+    sp, sq = 4 - p + 1, 4 - q + 1
+    if !known[pi, qi] && sp >= 1 && sq >= 1 && known[sp, sq]
+      H[pi, qi] = H[sp, sq]
+      known[pi, qi] = true
     end
   end
+
   H
 end
 
-"""Compare computed and reference Hodge diamonds; return number of mismatches."""
-function compare_hodge(computed::Matrix{BigInt}, reference::Matrix{BigInt})
-  mismatches = 0
-  for p in 0:4
-    for q in 0:4
-      if computed[p + 1, q + 1] != reference[p + 1, q + 1]
-        mismatches += 1
-      end
-    end
-  end
-  mismatches
-end
-
-"""Check if the reference Hodge data contains symbolic (non-numeric) values."""
+"""Check if the reference Hodge data contains symbolic values."""
 function has_symbolic_hodge(hodge_data::Vector)
   for row in hodge_data
     for val in row
@@ -211,25 +247,130 @@ function has_symbolic_hodge(hodge_data::Vector)
 end
 
 # =============================================================================
+#  Symbolic comparison with variable renaming
+# =============================================================================
+
+"""Rename variables in an AffineExpr according to a mapping.
+Variables in `zero_vars` are set to 0."""
+function rename_vars(e::AffineExpr, mapping::Dict{Int,Int};
+  zero_vars::Set{Int}=Set{Int}())
+  new_constant = e.constant
+  new_coeffs = Dict{Int,BigInt}()
+  for (var_id, coeff) in e.coeffs
+    if var_id in zero_vars
+      continue  # Variable specialized to 0
+    elseif haskey(mapping, var_id)
+      new_id = mapping[var_id]
+      new_coeffs[new_id] = get(new_coeffs, new_id, BigInt(0)) + coeff
+      new_coeffs[new_id] == 0 && delete!(new_coeffs, new_id)
+    else
+      # Unmapped variable — keep as-is
+      new_coeffs[var_id] = get(new_coeffs, var_id, BigInt(0)) + coeff
+      new_coeffs[var_id] == 0 && delete!(new_coeffs, var_id)
+    end
+  end
+  AffineExpr(new_constant, new_coeffs)
+end
+
+"""
+Try to find a consistent variable renaming (and zero-specialization)
+from computed to reference expressions.
+
+Each computed variable is either:
+  - mapped to a reference variable (injective), or
+  - specialized to 0 (the connecting map rank was actually zero).
+
+Returns `(matches, mapping)`.
+"""
+function find_variable_mapping(
+  computed::Matrix{AffineExpr}, reference::Matrix{AffineExpr},
+)
+  c_var_set = Set{Int}()
+  r_var_set = Set{Int}()
+  for e in computed
+    for k in keys(e.coeffs)
+      push!(c_var_set, k)
+    end
+  end
+  for e in reference
+    for k in keys(e.coeffs)
+      push!(r_var_set, k)
+    end
+  end
+
+  c_vars = sort(collect(c_var_set))
+  r_vars = sort(collect(r_var_set))
+
+  # No computed variables: direct comparison
+  if isempty(c_vars)
+    ok = all(computed[i] == reference[i] for i in eachindex(computed))
+    return (ok, Dict{Int,Int}())
+  end
+
+  # Brute-force search over all assignments
+  best_mapping = Dict{Int,Int}()
+  best_zeros = Set{Int}()
+
+  function verify(mapping, zero_set)
+    for i in eachindex(computed)
+      renamed = rename_vars(computed[i], mapping; zero_vars=zero_set)
+      renamed != reference[i] && return false
+    end
+    true
+  end
+
+  function search(idx, mapping, zero_set, used_r)
+    if idx > length(c_vars)
+      if verify(mapping, zero_set)
+        merge!(best_mapping, mapping)
+        union!(best_zeros, zero_set)
+        return true
+      end
+      return false
+    end
+
+    cv = c_vars[idx]
+
+    # Try mapping to each unused reference variable
+    for rv in r_vars
+      rv in used_r && continue
+      mapping[cv] = rv
+      push!(used_r, rv)
+      if search(idx + 1, mapping, zero_set, used_r)
+        return true
+      end
+      delete!(mapping, cv)
+      delete!(used_r, rv)
+    end
+
+    # Try setting to 0
+    push!(zero_set, cv)
+    if search(idx + 1, mapping, zero_set, used_r)
+      return true
+    end
+    delete!(zero_set, cv)
+
+    false
+  end
+
+  found = search(1, Dict{Int,Int}(), Set{Int}(), Set{Int}())
+  (found, best_mapping)
+end
+
+# =============================================================================
 #  Ambient Hodge numbers (for empty bundle case)
 # =============================================================================
 
-"""
-Hodge numbers of a flag variety G/P (or product thereof).
-
-For rational homogeneous varieties:
-  h^{p,q} = 0 for p ≠ q
-  h^{p,p} = b_{2p}  (Betti numbers are concentrated in even degrees)
-
-`betti_numbers(X)` returns the (d+1)-element vector [b₀, b₂, b₄, ...].
-"""
 function ambient_hodge_numbers(X)
   d = dimension(X)
-  d == 4 || error("ambient dimension $d ≠ 4")
+  d == 4 || error("ambient dimension $d != 4")
   betti = betti_numbers(X)
-  H = zeros(BigInt, 5, 5)
+  H = Matrix{AffineExpr}(undef, 5, 5)
+  for i in eachindex(H)
+    H[i] = AffineExpr(0)
+  end
   for p in 0:4
-    H[p + 1, p + 1] = betti[p + 1]  # betti[p+1] = b_{2p}
+    H[p + 1, p + 1] = AffineExpr(betti[p + 1])
   end
   H
 end
@@ -238,58 +379,86 @@ end
 #  Main computation
 # =============================================================================
 
-function process_entry(entry, idx)
+function process_entry(entry_with_idx)
+  entry, idx = entry_with_idx
   factors = entry["ambient"]
   bundle_data = entry["bundle"]
-
-  # Skip entries with symbolic Hodge values
-  if has_symbolic_hodge(entry["hodge"])
-    return (status=:symbolic, idx=idx, msg="symbolic Hodge values")
-  end
-
+  is_sym = has_symbolic_hodge(entry["hodge"])
   ref_hodge = parse_reference_hodge(entry["hodge"])
 
-  # Build ambient
   X = build_ambient(factors)
   d = dimension(X)
 
-  # Empty bundle: ambient is the 4-fold
   is_empty_bundle = (bundle_data isa Vector && length(bundle_data) == 1 &&
                      bundle_data[1] isa Vector && isempty(bundle_data[1]))
 
   if is_empty_bundle
-    d == 4 || return (status=:dim_error, idx=idx, msg="ambient dim $d ≠ 4")
+    d == 4 || return (status=:dim_error, idx=idx, msg="ambient dim $d != 4",
+      is_symbolic=is_sym, hodge=nothing, ref=ref_hodge,
+      matches=false, mapping=Dict{Int,Int}())
     H = ambient_hodge_numbers(X)
-    mismatches = compare_hodge(H, ref_hodge)
-    return (status=:ok, idx=idx, hodge=H, ref=ref_hodge, mismatches=mismatches,
-      h11=H[2, 2], h22=H[3, 3], h13=H[2, 4])
+    (matches, mapping) = find_variable_mapping(H, ref_hodge)
+    return (status=:ok, idx=idx, hodge=H, ref=ref_hodge,
+      matches=matches, mapping=mapping, is_symbolic=is_sym)
   end
 
-  # Build bundle
   E = build_bundle(X, factors, bundle_data)
   r = Int(rank_bundle(E))
 
   if d - r != 4
-    return (status=:dim_error, idx=idx, msg="dim(Z) = $(d-r) ≠ 4")
+    return (status=:dim_error, idx=idx, msg="dim(Z) = $(d-r) != 4",
+      is_symbolic=is_sym, hodge=nothing, ref=ref_hodge,
+      matches=false, mapping=Dict{Int,Int}())
   end
 
   Z = zero_locus(E)
+  H = hodge_numbers_symbolic(Z)
+  (matches, mapping) = find_variable_mapping(H, ref_hodge)
 
-  # Compute Hodge numbers
-  H = hodge_numbers(Z)
-  mismatches = compare_hodge(H, ref_hodge)
-  return (status=:ok, idx=idx, hodge=H, ref=ref_hodge, mismatches=mismatches,
-    h11=H[2, 2], h22=H[3, 3], h13=H[2, 4])
+  return (status=:ok, idx=idx, hodge=H, ref=ref_hodge,
+    matches=matches, mapping=mapping, is_symbolic=is_sym)
+end
+
+end  # @everywhere
+
+# =============================================================================
+#  Pretty-print helpers
+# =============================================================================
+
+using Printf
+
+function format_hodge_matrix(H::Matrix{AffineExpr})
+  d = size(H, 1) - 1
+  lines = String[]
+  for q in 0:d
+    entries = String[]
+    for p in 0:d
+      push!(entries, sprint(show, H[p + 1, q + 1]))
+    end
+    push!(lines, join(entries, "  "))
+  end
+  join(lines, "\n")
+end
+
+function print_discrepancy(r; io=stdout)
+  println(io, "  Entry $(r.idx): $(r.is_symbolic ? "symbolic" : "numeric")")
+  if r.hodge !== nothing
+    println(io, "  Computed:")
+    println(io, "    ", replace(format_hodge_matrix(r.hodge), "\n" => "\n    "))
+  end
+  println(io, "  Reference:")
+  println(io, "    ", replace(format_hodge_matrix(r.ref), "\n" => "\n    "))
+  println(io)
 end
 
 # =============================================================================
 #  Main entry point
 # =============================================================================
 
-function main(; datafile=nothing, max_entries=nothing, max_rank=nothing)
-  # Find data.json
+function main(; datafile=nothing, max_entries=500)
   if datafile === nothing
     candidates = [
+      joinpath(@__DIR__, "FanoFourfolds.json"),
       joinpath(@__DIR__, "..", "..", "fano-fourfolds", "data.json"),
       joinpath(homedir(), "Documents", "Projects", "fano-fourfolds", "data.json"),
     ]
@@ -305,100 +474,77 @@ function main(; datafile=nothing, max_entries=nothing, max_rank=nothing)
   println("\nLoading $datafile...")
   data = JSON.parsefile(datafile)
   n_total = length(data)
-  println("  $n_total entries loaded.\n")
+  println("  $n_total entries loaded.")
 
-  # Sort by bundle rank (proxy for complexity), then truncate
+  # Sort by bundle rank (proxy for codimension / complexity)
   bundle_ranks = map(data) do entry
     bd = entry["bundle"]
     (bd isa Vector && length(bd) == 1 && bd[1] isa Vector && isempty(bd[1])) && return 0
     isempty(bd) && return 0
-    ds = bd[1]
-    return length(ds)
+    return length(bd[1])
   end
   order = sortperm(bundle_ranks)
   data = data[order]
 
-  # Filter by max bundle rank
-  if max_rank !== nothing
-    data = filter(data) do entry
-      bd = entry["bundle"]
-      (bd isa Vector && length(bd) == 1 && bd[1] isa Vector && isempty(bd[1])) && return true
-      isempty(bd) && return true
-      return length(bd[1]) <= max_rank
-    end
-  end
-
-  # Optional entry count limit (applied AFTER sorting)
-  if max_entries !== nothing
-    data = data[1:min(max_entries, length(data))]
-  end
-
+  # Trim to max_entries
+  data = data[1:min(max_entries, end)]
   n_run = length(data)
-  println("Processing $n_run entries (sorted by bundle rank)...\n")
+  println("  Processing $n_run entries (sorted by bundle rank).")
+  println("  Using $(nworkers()) worker process(es).\n")
 
-  results_ok = []
-  results_fail = []
-  results_mismatch = []
-  results_symbolic = []
-  n_processed = 0
+  # Process in parallel with pmap
+  entries_with_indices = collect(zip(data, 1:n_run))
+  results = pmap(process_entry, entries_with_indices)
 
-  p = Progress(n_run; dt=1.0, showspeed=true, enabled=stderr isa Base.TTY)
+  # Categorize results
+  ok_numeric = []
+  ok_symbolic = []
+  mismatch_numeric = []
+  mismatch_symbolic = []
+  failed = []
 
-  for (i, entry) in enumerate(data)
-    try
-      res = process_entry(entry, i)
-      if res.status == :ok
-        n_processed += 1
-        if res.mismatches > 0
-          push!(results_mismatch, res)
-        else
-          push!(results_ok, res)
-        end
-      elseif res.status == :symbolic
-        push!(results_symbolic, res)
+  for r in results
+    if r.status == :ok
+      if r.matches
+        r.is_symbolic ? push!(ok_symbolic, r) : push!(ok_numeric, r)
       else
-        push!(results_fail, (status=:skip, idx=i, msg=res.msg))
+        r.is_symbolic ? push!(mismatch_symbolic, r) : push!(mismatch_numeric, r)
       end
-    catch e
-      msg = sprint(showerror, e)
-      push!(results_fail, (status=:error, idx=i, msg=first(msg, 120)))
+    else
+      push!(failed, r)
     end
-
-    next!(p; showvalues=[
-      (:processed, n_processed),
-      (:ok, length(results_ok)),
-      (:mismatch, length(results_mismatch)),
-      (:symbolic, length(results_symbolic)),
-      (:failed, length(results_fail)),
-    ])
   end
-
-  finish!(p)
 
   # Summary
-  println("\n" * "="^60)
+  println("=" ^ 60)
   println("  RESULTS")
-  println("="^60)
-  @printf("  Total entries: %d\n", n_run)
-  @printf("  Processed:     %d\n", n_processed)
-  @printf("  Matched:       %d  ✓\n", length(results_ok))
-  @printf("  Mismatched:    %d  ✗\n", length(results_mismatch))
-  @printf("  Symbolic:      %d  (skipped — parametric Hodge numbers)\n", length(results_symbolic))
-  @printf("  Skipped/Error: %d\n", length(results_fail))
+  println("=" ^ 60)
+  @printf("  Total entries processed: %d\n", n_run)
+  @printf("  Numeric matches:    %4d\n", length(ok_numeric))
+  @printf("  Symbolic matches:   %4d  (with variable renaming)\n", length(ok_symbolic))
+  @printf("  Numeric mismatches: %4d\n", length(mismatch_numeric))
+  @printf("  Symbolic mismatches:%4d\n", length(mismatch_symbolic))
+  @printf("  Errors/skipped:     %4d\n", length(failed))
+  println("=" ^ 60)
 
-  if !isempty(results_mismatch)
-    println("\nMismatched entries:")
-    for r in results_mismatch[1:min(10, end)]
-      println("  Entry $(r.idx): $(r.mismatches) Hodge number mismatches")
-      println("    computed h¹¹=$(r.h11) h²²=$(r.h22) h¹³=$(r.h13)")
-      println("    expected h¹¹=$(r.ref[2,2]) h²²=$(r.ref[3,3]) h¹³=$(r.ref[2,4])")
+  if !isempty(mismatch_numeric)
+    println("\n-- Numeric mismatches --")
+    for r in mismatch_numeric
+      print_discrepancy(r)
     end
   end
 
-  if !isempty(results_fail)
-    println("\nFailed entries (first 10):")
-    for r in results_fail[1:min(10, end)]
-      println("  Entry $(r.idx) [$(r.status)]: $(r.msg)")
+  if !isempty(mismatch_symbolic)
+    println("\n-- Symbolic mismatches --")
+    for r in mismatch_symbolic
+      print_discrepancy(r)
+    end
+  end
+
+  if !isempty(failed)
+    println("\n-- Errors --")
+    for r in failed[1:min(20, end)]
+      println("  Entry $(r.idx): $(r.msg)")
     end
   end
 
@@ -408,7 +554,6 @@ end
 # Run with defaults or parse CLI args
 if abspath(PROGRAM_FILE) == @__FILE__
   datafile = length(ARGS) >= 1 ? ARGS[1] : nothing
-  max_entries = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : nothing
-  max_rank = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : nothing
-  main(; datafile, max_entries, max_rank)
+  max_entries = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 500
+  main(; datafile, max_entries)
 end
