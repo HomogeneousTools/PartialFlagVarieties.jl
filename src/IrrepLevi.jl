@@ -14,6 +14,7 @@
 export IrrepLevi
 export central_part, semisimple_part
 export to_ambient_weight, fiber_dimension, p_dominant_weight
+export central_scaling_factor
 
 # Names from Lie and StaticArrays are available via the parent module's
 # `using Lie` and `using StaticArrays`.
@@ -30,8 +31,9 @@ marked Dynkin type `MDT`, encoded by its P-dominant weight `λ` in the
 weight lattice of the ambient group ``G``.
 
 Internally the weight also stores the decomposition into:
-- `central::Vector{Rational{Int}}`: coordinates of the central character,
-  indexed by the marked (nonparabolic) nodes
+- `central::Vector{Int}`: scaled coordinates of the central character,
+  indexed by the marked (nonparabolic) nodes. Stored as integers
+  multiplied by [`central_scaling_factor`](@ref) for efficiency.
 - `semisimple::WeightLatticeElem`: highest weight of the semisimple part,
   as a weight in the Levi's weight lattice
 
@@ -57,7 +59,7 @@ julia> semisimple_part(rep)
 """
 struct IrrepLevi{MDT<:MarkedDynkinType}
   λ::WeightLatticeElem          # the P-dominant weight (ambient weight lattice)
-  central::Vector{Rational{Int}} # central character coordinates (at marked nodes)
+  central::Vector{Int}           # scaled central character (×central_scaling_factor)
   semisimple::WeightLatticeElem  # highest weight of semisimple part (Levi lattice)
 end
 
@@ -77,12 +79,60 @@ This accessor is `@generated` to ensure the return type
   return :(rep.λ::WeightLatticeElem{$DT,$R})
 end
 
+# ─── Central scaling factor ──────────────────────────────────────────────────
+
+"""
+    central_scaling_factor(::Type{MDT}) -> Int
+
+Return the scaling factor for the central part of Levi representations
+associated to `MDT`.  This is the LCM of all denominators of the
+inverse Cartan matrix entries at the marked rows:
+
+``\\mathrm{lcm}\\{\\mathrm{denom}(C^{-1}[j, k]) : j \\in \\mathrm{Marked},\\; 1 \\le k \\le R\\}``
+
+Central characters are stored internally as integers multiplied by this
+factor, eliminating all `Rational{Int}` arithmetic from hot paths.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> central_scaling_factor(MarkedDynkinType{TypeA{3}, (2,)})
+4
+
+julia> central_scaling_factor(MarkedDynkinType{TypeA{4}, (2,)})
+5
+```
+"""
+@generated function central_scaling_factor(
+  ::Type{MDT},
+) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  R = rank(DT)
+  C = Lie._cartan_matrix_data(DT)
+  Crat = Rational{Int}.(C)
+  Cinv = inv(Crat)
+  sf = 1
+  for j in Marked
+    for k in 1:R
+      sf = lcm(sf, denominator(Cinv[j, k]))
+    end
+  end
+  return :($sf)
+end
+
 """
     central_part(rep::IrrepLevi) -> Vector{Rational{Int}}
 
 Return the central character part of the Levi representation.
+
+Internally the central character is stored as scaled integers
+(multiplied by [`central_scaling_factor`](@ref)).  This accessor
+unscales and returns the original `Rational{Int}` values.
 """
-central_part(rep::IrrepLevi) = rep.central
+function central_part(rep::IrrepLevi{MDT}) where {MDT}
+  sf = central_scaling_factor(MDT)
+  return Rational{Int}[c // sf for c in rep.central]
+end
 
 """
     semisimple_part(rep::IrrepLevi{MDT}) -> WeightLatticeElem{LT,LR}
@@ -134,14 +184,15 @@ function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
   Marked = marked_nodes(MDT)
   unmarked = unmarked_nodes(MDT)
   LT = levi_type(MDT)
+  sf = central_scaling_factor(MDT)
 
   # Apply change of basis
   R = rank(_ambient_type(MDT))
   λ_vec = SVector{R,Rational{Int}}(Tuple(coefficients(λ)))
   new_coords = M * λ_vec
 
-  # Extract central part (at marked node positions)
-  central = Rational{Int}[new_coords[m] for m in Marked]
+  # Extract central part (at marked node positions), scaled to Int
+  central = Int[Int(new_coords[m] * sf) for m in Marked]
 
   # Extract semisimple part (at unmarked node positions)
   if LT === nothing
@@ -161,27 +212,27 @@ function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
 end
 
 """
-    IrrepLevi(::Type{MDT}, central, semisimple) -> IrrepLevi{MDT}
+    IrrepLevi(::Type{MDT}, central::Vector{Int}, semisimple) -> IrrepLevi{MDT}
 
-Construct an `IrrepLevi` from its central character `central` (a
-`Vector{Rational{Int}}` indexed by marked nodes) and the highest weight
-`semisimple` of its semisimple part (a `WeightLatticeElem` in the Levi
-weight lattice).  The ambient P-dominant weight ``\\lambda`` is recovered
-automatically.
+Construct an `IrrepLevi` from its **scaled** central character `central`
+(a `Vector{Int}`, pre-multiplied by [`central_scaling_factor`](@ref)),
+and the highest weight `semisimple` of its semisimple part.
+The ambient P-dominant weight ``\\lambda`` is recovered automatically.
 """
-function IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem) where {
+function IrrepLevi(::Type{MDT}, central::Vector{Int}, semisimple::WeightLatticeElem) where {
   MDT<:MarkedDynkinType
 }
   # Recover the ambient weight λ from (central, semisimple)
   DT = _ambient_type(MDT)
   Marked = marked_nodes(MDT)
   R = rank(DT)
+  sf = central_scaling_factor(MDT)
   Minv = decomposition_matrix_inv(MDT)
   unmarked = unmarked_nodes(MDT)
 
   coords = zeros(Rational{Int}, R)
   for (idx, m) in enumerate(Marked)
-    coords[m] = central[idx]
+    coords[m] = central[idx] // sf
   end
 
   # Only process semisimple part if there are unmarked nodes
@@ -205,6 +256,22 @@ function IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple::Weig
   λ = WeightLatticeElem(DT, ambient_int)
 
   return IrrepLevi{MDT}(λ, central, semisimple)
+end
+
+"""
+    IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple) -> IrrepLevi{MDT}
+
+Construct an `IrrepLevi` from its central character `central` (a
+`Vector{Rational{Int}}` indexed by marked nodes) and the highest weight
+`semisimple` of its semisimple part.  The rational values are converted
+to scaled integers internally.
+"""
+function IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem) where {
+  MDT<:MarkedDynkinType
+}
+  sf = central_scaling_factor(MDT)
+  central_scaled = Int[Int(c * sf) for c in central]
+  IrrepLevi(MDT, central_scaled, semisimple)
 end
 
 # ─── Back-conversion to ambient weight ───────────────────────────────────────
@@ -313,8 +380,8 @@ julia> length(result)
 function tensor_product(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) where {MDT}
   LT = levi_type(MDT)
 
-  # Central parts add
-  new_central = central_part(a) + central_part(b)
+  # Central parts add (in scaled representation)
+  new_central = a.central + b.central
 
   # Semisimple parts: tensor product decomposition
   ss_a = semisimple_part(a)
@@ -367,7 +434,7 @@ true
 """
 function dual(rep::IrrepLevi{MDT}) where {MDT}
   LT = levi_type(MDT)
-  new_central = -central_part(rep)
+  new_central = -rep.central
   ss = semisimple_part(rep)
 
   if LT === nothing || iszero(ss)
@@ -405,12 +472,12 @@ function exterior_power(rep::IrrepLevi{MDT}, k::Integer) where {MDT}
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]
-  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(central_part(rep))),
+  k == 0 && return [IrrepLevi(MDT, zeros(Int, length(rep.central)),
                               WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
                                                zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
   k == 1 && return [rep]
 
-  new_central = k * central_part(rep)
+  new_central = k * rep.central
   ss = semisimple_part(rep)
 
   if LT === nothing || iszero(ss)
@@ -457,12 +524,12 @@ function symmetric_power(rep::IrrepLevi{MDT}, k::Integer) where {MDT}
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]
-  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(central_part(rep))),
+  k == 0 && return [IrrepLevi(MDT, zeros(Int, length(rep.central)),
                               WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
                                                zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
   k == 1 && return [rep]
 
-  new_central = k * central_part(rep)
+  new_central = k * rep.central
   ss = semisimple_part(rep)
 
   if LT === nothing || iszero(ss)
