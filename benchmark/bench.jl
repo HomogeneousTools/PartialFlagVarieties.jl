@@ -118,4 +118,57 @@ end
 results_cohom = run(suite_cohom, seconds=3)
 display(results_cohom)
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ZeroLocus benchmarks
+# ═══════════════════════════════════════════════════════════════════════════════
+
+println("\n── ZeroLocus benchmarks ──\n")
+println("(Koszul wedge powers are now cached at zero_locus() construction time)\n")
+
+# Local helper: GL(n) weight vector → fundamental weight basis on Gr(k,n)
+function _gl_to_omega(k, n, w)
+  eps = vcat(w[(n - k + 1):n], w[1:(n - k)])
+  [eps[i] - eps[i + 1] for i in 1:(n - 1)]
+end
+
+function _Gr_bundle(k, n, weight_vecs)
+  X = Gr(k, n)
+  MDT = marked_type(X)
+  DT = PartialFlagVarieties._ambient_type(MDT)
+  summands = IrrepLevi{MDT}[]
+  for w in weight_vecs
+    lam = WeightLatticeElem(DT, _gl_to_omega(k, n, w))
+    push!(summands, IrrepLevi(MDT, lam))
+  end
+  CompletelyReducibleBundle{MDT}(X, summands)
+end
+
+suite_zl = BenchmarkGroup()
+
+# b1: O(3)+O(1) on Gr(2,5)  — simplest 4-fold case
+let E = _Gr_bundle(2, 5, [[0, 0, 0, 3, 3], [0, 0, 0, 1, 1]])
+  Z = zero_locus(E)
+  suite_zl["zero_locus/b1_construction"] = @benchmarkable zero_locus($E)
+  suite_zl["hilbert_polynomial/b1"]      = @benchmarkable hilbert_polynomial($Z)
+  suite_zl["euler_characteristic/b1"]   = @benchmarkable euler_characteristic($Z)
+  suite_zl["hodge_numbers/b1"]          = @benchmarkable hodge_numbers($Z)
+end
+
+# b3: ∧³Q*⊗O(2) on Gr(2,6)
+let E = _Gr_bundle(2, 6, [[1, 1, 1, 0, 2, 2]])
+  Z = zero_locus(E)
+  suite_zl["hilbert_polynomial/b3"] = @benchmarkable hilbert_polynomial($Z)
+  suite_zl["hodge_numbers/b3"]      = @benchmarkable hodge_numbers($Z)
+end
+
+# c3: Q*(1)² on Gr(3,7)  — larger ambient
+let E = _Gr_bundle(3, 7, [[1, 0, 0, 0, 1, 1, 1], [1, 0, 0, 0, 1, 1, 1]])
+  Z = zero_locus(E)
+  suite_zl["hilbert_polynomial/c3"] = @benchmarkable hilbert_polynomial($Z)
+  suite_zl["hodge_numbers/c3"]      = @benchmarkable hodge_numbers($Z)
+end
+
+results_zl = run(suite_zl, seconds=5)
+display(results_zl)
+
 println("\nBenchmarks complete.")
