@@ -64,11 +64,18 @@ end
 # ─── Core accessors ──────────────────────────────────────────────────────────
 
 """
-    p_dominant_weight(rep::IrrepLevi) -> WeightLatticeElem
+    p_dominant_weight(rep::IrrepLevi{MDT}) -> WeightLatticeElem{DT,R}
 
 Return the P-dominant weight ``\\lambda`` that defines this Levi representation.
+
+This accessor is `@generated` to ensure the return type
+`WeightLatticeElem{DT,R}` is fully inferred from `MDT`.
 """
-p_dominant_weight(rep::IrrepLevi) = rep.λ
+@generated function p_dominant_weight(rep::IrrepLevi{MDT}) where {MDT<:MarkedDynkinType}
+  DT = _ambient_type(MDT)
+  R = rank(DT)
+  return :(rep.λ::WeightLatticeElem{$DT,$R})
+end
 
 """
     central_part(rep::IrrepLevi) -> Vector{Rational{Int}}
@@ -78,11 +85,24 @@ Return the central character part of the Levi representation.
 central_part(rep::IrrepLevi) = rep.central
 
 """
-    semisimple_part(rep::IrrepLevi) -> WeightLatticeElem
+    semisimple_part(rep::IrrepLevi{MDT}) -> WeightLatticeElem{LT,LR}
 
 Return the highest weight of the semisimple part.
+
+This accessor is `@generated` to ensure the return type
+`WeightLatticeElem{LT,LR}` is fully inferred from `MDT`,
+eliminating dynamic dispatch on downstream Lie.jl operations
+(`degree`, `dual`, `tensor_product`, `exterior_power`, etc.).
 """
-semisimple_part(rep::IrrepLevi) = rep.semisimple
+@generated function semisimple_part(rep::IrrepLevi{MDT}) where {MDT<:MarkedDynkinType}
+  LT = levi_type(MDT)
+  if LT === nothing
+    return :(rep.semisimple::WeightLatticeElem{TypeA{1},1})
+  else
+    LR = rank(LT)
+    return :(rep.semisimple::WeightLatticeElem{$LT,$LR})
+  end
+end
 
 # ─── Construction from ambient weight ───────────────────────────────────────
 
@@ -194,6 +214,9 @@ end
 
 Convert an `IrrepLevi` back to a weight in the ambient group's weight lattice.
 
+Since the `IrrepLevi` already stores the ambient P-dominant weight ``\\lambda``,
+this simply returns it via `p_dominant_weight`.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
@@ -211,45 +234,7 @@ true
 function to_ambient_weight(::Type{MDT}, rep::IrrepLevi{MDT}) where {
   MDT<:MarkedDynkinType
 }
-  DT = _ambient_type(MDT)
-  Marked = marked_nodes(MDT)
-  R = rank(DT)
-  Minv = decomposition_matrix_inv(MDT)
-  unmarked = unmarked_nodes(MDT)
-
-  # Reconstruct the full coordinate vector
-  coords = zeros(Rational{Int}, R)
-
-  # Central part at marked positions
-  for (idx, m) in enumerate(Marked)
-    coords[m] = rep.central[idx]
-  end
-
-  # Semisimple part at unmarked positions
-  # Apply inverse of levi_permutation: ss_nat[perm[j]] = ss_canonical[j]
-  if length(unmarked) > 0
-    ss_vec = coefficients(rep.semisimple)
-    LR = length(ss_vec)
-    if LR > 0
-      perm = levi_permutation(MDT)
-      # Invert the permutation: nat[perm[j]] = canon[j]  so  nat[i] = canon[perm⁻¹[i]]
-      inv_perm = Vector{Int}(undef, LR)
-      for j in 1:LR
-        inv_perm[perm[j]] = j
-      end
-      for (i, u) in enumerate(unmarked)
-        coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
-      end
-    end
-  end
-
-  # Apply inverse change of basis
-  ambient_coords = Minv * SVector{R,Rational{Int}}(Tuple(coords))
-
-  # Convert to Int (should be integral)
-  ambient_int = [Int(round(c)) for c in ambient_coords]
-
-  return WeightLatticeElem(DT, ambient_int)
+  p_dominant_weight(rep)
 end
 
 # ─── Fiber dimension ─────────────────────────────────────────────────────────
@@ -280,16 +265,17 @@ julia> fiber_dimension(IrrepLevi(MDT, ω₂))
 function fiber_dimension(rep::IrrepLevi{MDT}) where {MDT}
   LT = levi_type(MDT)
   LT === nothing && return BigInt(1)
-  iszero(rep.semisimple) && return BigInt(1)
-  is_dominant(rep.semisimple) || return BigInt(0)
-  return degree(rep.semisimple)
+  ss = semisimple_part(rep)
+  iszero(ss) && return BigInt(1)
+  is_dominant(ss) || return BigInt(0)
+  degree(ss)
 end
 
 # ─── Display ─────────────────────────────────────────────────────────────────
 
 function Base.show(io::IO, rep::IrrepLevi{MDT}) where {MDT}
   # Print the P-dominant weight directly
-  print(io, "(", sprint(show, rep.λ), ")")
+  print(io, "(", sprint(show, p_dominant_weight(rep)), ")")
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -328,22 +314,24 @@ function tensor_product(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) where {MDT}
   LT = levi_type(MDT)
 
   # Central parts add
-  new_central = a.central + b.central
+  new_central = central_part(a) + central_part(b)
 
   # Semisimple parts: tensor product decomposition
-  if LT === nothing || (iszero(a.semisimple) && iszero(b.semisimple))
-    return [IrrepLevi(MDT, new_central, a.semisimple)]
+  ss_a = semisimple_part(a)
+  ss_b = semisimple_part(b)
+  if LT === nothing || (iszero(ss_a) && iszero(ss_b))
+    return [IrrepLevi(MDT, new_central, ss_a)]
   end
 
-  if iszero(a.semisimple)
-    return [IrrepLevi(MDT, new_central, b.semisimple)]
+  if iszero(ss_a)
+    return [IrrepLevi(MDT, new_central, ss_b)]
   end
-  if iszero(b.semisimple)
-    return [IrrepLevi(MDT, new_central, a.semisimple)]
+  if iszero(ss_b)
+    return [IrrepLevi(MDT, new_central, ss_a)]
   end
 
   # Tensor product via Lie.jl's Weyl character ring
-  χ = Lie.tensor_product(a.semisimple, b.semisimple)
+  χ = Lie.tensor_product(ss_a, ss_b)
 
   result = IrrepLevi{MDT}[]
   for (hw, mult) in χ
@@ -373,19 +361,20 @@ julia> rep = IrrepLevi(MDT, ω₁);
 
 julia> d = dual(rep);
 
-julia> d.central == -rep.central
+julia> central_part(d) == -central_part(rep)
 true
 ```
 """
 function dual(rep::IrrepLevi{MDT}) where {MDT}
   LT = levi_type(MDT)
-  new_central = -rep.central
+  new_central = -central_part(rep)
+  ss = semisimple_part(rep)
 
-  if LT === nothing || iszero(rep.semisimple)
-    return IrrepLevi(MDT, new_central, rep.semisimple)
+  if LT === nothing || iszero(ss)
+    return IrrepLevi(MDT, new_central, ss)
   end
 
-  new_ss = Lie.dual(rep.semisimple)
+  new_ss = Lie.dual(ss)
   return IrrepLevi(MDT, new_central, new_ss)
 end
 
@@ -416,21 +405,22 @@ function exterior_power(rep::IrrepLevi{MDT}, k::Integer) where {MDT}
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]
-  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(rep.central)),
+  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(central_part(rep))),
                               WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
                                                zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
   k == 1 && return [rep]
 
-  new_central = k * rep.central
+  new_central = k * central_part(rep)
+  ss = semisimple_part(rep)
 
-  if LT === nothing || iszero(rep.semisimple)
+  if LT === nothing || iszero(ss)
     return IrrepLevi{MDT}[]  # ⋀^k of a 1-dim rep for k > 1 is 0
   end
 
-  dim_ss = Int(degree(rep.semisimple))
+  dim_ss = Int(degree(ss))
   k > dim_ss && return IrrepLevi{MDT}[]
 
-  χ = Lie.exterior_power(rep.semisimple, k)
+  χ = Lie.exterior_power(ss, k)
 
   result = IrrepLevi{MDT}[]
   for (hw, mult) in χ
@@ -467,18 +457,19 @@ function symmetric_power(rep::IrrepLevi{MDT}, k::Integer) where {MDT}
   LT = levi_type(MDT)
 
   k < 0 && return IrrepLevi{MDT}[]
-  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(rep.central)),
+  k == 0 && return [IrrepLevi(MDT, zeros(Rational{Int}, length(central_part(rep))),
                               WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
                                                zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
   k == 1 && return [rep]
 
-  new_central = k * rep.central
+  new_central = k * central_part(rep)
+  ss = semisimple_part(rep)
 
-  if LT === nothing || iszero(rep.semisimple)
-    return [IrrepLevi(MDT, new_central, rep.semisimple)]
+  if LT === nothing || iszero(ss)
+    return [IrrepLevi(MDT, new_central, ss)]
   end
 
-  χ = Lie.symmetric_power(rep.semisimple, k)
+  χ = Lie.symmetric_power(ss, k)
 
   result = IrrepLevi{MDT}[]
   for (hw, mult) in χ
@@ -492,7 +483,7 @@ end
 # ─── Equality ────────────────────────────────────────────────────────────────
 
 function Base.:(==)(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) where {MDT}
-  return a.λ == b.λ
+  p_dominant_weight(a) == p_dominant_weight(b)
 end
 
 Base.hash(a::IrrepLevi, h::UInt) = hash(a.λ, h)

@@ -326,7 +326,7 @@ function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT}
   total_central = zeros(Rational{Int}, central_rank(MDT))
   for c in E.components
     d = fiber_dimension(c)
-    total_central .+= d * c.central
+    total_central .+= d * central_part(c)
   end
 
   LT = levi_type(MDT)

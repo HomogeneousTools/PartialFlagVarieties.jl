@@ -198,8 +198,7 @@ function euler_characteristic(Z::ZeroLocus{MDT}, F::CompletelyReducibleBundle{MD
   terms = koszul_terms(Z, F)
   result = BigInt(0)
   for (i, K) in enumerate(terms)
-    H = dimensions(K)
-    χ = euler_characteristic(H)
+    χ = euler_characteristic(K)
     result += (-1)^(i - 1) * χ
   end
   result
@@ -290,8 +289,9 @@ function _determinant_central(E::CompletelyReducibleBundle{MDT}) where {MDT}
   c1 = zeros(Rational{Int}, length(Marked))
   for comp in components(E)
     r = fiber_dimension(comp)
+    cc = central_part(comp)
     for (j, _) in enumerate(Marked)
-      c1[j] += r * comp.central[j]
+      c1[j] += r * cc[j]
     end
   end
   c1
