@@ -70,6 +70,9 @@ export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction
 export is_calabi_yau, is_calabi_yau_candidate
 export solve_ses_cohomology, solve_koszul_filtration
+export AffineExpr, is_determined, is_zero_expr, symbolic_variable
+export solve_ses_cohomology_symbolic, solve_koszul_filtration_symbolic
+export hodge_numbers_symbolic, cohomology_on_restriction_symbolic
 
 # ─── Startup banner ──────────────────────────────────────────────────────────
 
@@ -121,23 +124,12 @@ function __init__()
   return nothing
 end
 
-if Base.VERSION >= v"1.9"
-  # Type A
+@compile_workload begin
+  # Precompile the genuinely hot paths: IrrepLevi construction,
+  # BWB cohomology, and euler_characteristic on a small type-A case.
   let X = Gr(2, 4)
-    precompile(dimension, (typeof(X),))
-    precompile(betti_numbers, (typeof(X),))
-  end
-  precompile(levi_type, (Type{MarkedDynkinType{TypeA{3},(2,)}},))
-  precompile(decomposition_matrix, (Type{MarkedDynkinType{TypeA{3},(2,)}},))
-
-  # Type B
-  let X = partial_flag_variety(TypeB{3}, (1,))
-    precompile(dimension, (typeof(X),))
-  end
-
-  # Type D
-  let X = partial_flag_variety(TypeD{5}, (5,))
-    precompile(dimension, (typeof(X),))
+    O = structure_sheaf(X)
+    euler_characteristic(O)
   end
 end
 

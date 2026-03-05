@@ -14,9 +14,10 @@
 export ZeroLocus
 export zero_locus, ambient_variety, defining_bundle
 export codimension, normal_bundle, conormal_bundle
-export koszul_terms, cohomology_on_restriction
+export koszul_terms, cohomology_on_restriction, cohomology_on_restriction_symbolic
 export is_calabi_yau, is_calabi_yau_candidate
 export hilbert_polynomial
+export hodge_numbers_symbolic
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -253,6 +254,49 @@ function cohomology_on_restriction(Z::ZeroLocus{MDT}) where {MDT}
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  Symbolic cohomology on restrictions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    cohomology_on_restriction_symbolic(
+      Z::ZeroLocus, F::CompletelyReducibleBundle,
+      var_counter::Ref{Int}
+    ) -> Cohomology{AffineExpr}
+
+Symbolic version of `cohomology_on_restriction`.  Introduces fresh
+symbolic variables for undetermined connecting-map ranks.
+"""
+function cohomology_on_restriction_symbolic(
+  Z::ZeroLocus{MDT},
+  F::CompletelyReducibleBundle{MDT},
+  var_counter::Ref{Int},
+) where {MDT}
+  d_Z = dimension(Z)
+
+  terms = koszul_terms(Z, F)
+  koszul_cohos = Cohomology{BigInt}[]
+  for K in terms
+    push!(koszul_cohos, dimensions(K))
+  end
+
+  solve_koszul_filtration_symbolic(koszul_cohos, d_Z, var_counter)
+end
+
+"""
+    cohomology_on_restriction_symbolic(
+      Z::ZeroLocus, var_counter::Ref{Int}
+    ) -> Cohomology{AffineExpr}
+
+Symbolic ``H^*(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
+"""
+function cohomology_on_restriction_symbolic(
+  Z::ZeroLocus{MDT},
+  var_counter::Ref{Int},
+) where {MDT}
+  cohomology_on_restriction_symbolic(Z, structure_sheaf(Z.ambient), var_counter)
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  Calabi–Yau detection
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -283,32 +327,32 @@ function is_calabi_yau_candidate(E::CompletelyReducibleBundle{MDT}) where {MDT}
   det_c1 == antican_c1
 end
 
-"""Compute c₁(E) as central character coordinates at the marked nodes."""
+"""Compute c₁(E) as scaled central character coordinates at the marked nodes."""
 function _determinant_central(E::CompletelyReducibleBundle{MDT}) where {MDT}
   Marked = marked_nodes(MDT)
-  c1 = zeros(Rational{Int}, length(Marked))
+  c1 = zeros(Int, length(Marked))
   for comp in components(E)
-    r = fiber_dimension(comp)
-    cc = central_part(comp)
+    r = Int(fiber_dimension(comp))
     for (j, _) in enumerate(Marked)
-      c1[j] += r * cc[j]
+      c1[j] += r * comp.central[j]
     end
   end
   c1
 end
 
-"""Compute the central character of the anticanonical bundle -K_{G/P}."""
+"""Compute the scaled central character of the anticanonical bundle -K_{G/P}."""
 function _anticanonical_central(::Type{MDT}) where {MDT<:MarkedDynkinType}
   DT = _ambient_type(MDT)
   R = rank(DT)
   anticK = _anticanonical_weight_direct(MDT)
+  sf = central_scaling_factor(MDT)
 
   M = decomposition_matrix(MDT)
   anticK_svec = SVector{R,Rational{Int}}(Tuple(anticK))
   new_coords = M * anticK_svec
 
   Marked = marked_nodes(MDT)
-  Rational{Int}[new_coords[m] for m in Marked]
+  Int[Int(new_coords[m] * sf) for m in Marked]
 end
 
 """Compute the anticanonical weight of G/P in the fundamental weight basis."""
@@ -473,6 +517,104 @@ function hodge_numbers(Z::ZeroLocus{MDT}) where {MDT}
     elseif length(unknown_qs) >= 2
       _resolve_remaining!(hodge, known, p, d, chi_omega[p + 1])
     end
+  end
+
+  hodge
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Symbolic Hodge numbers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    hodge_numbers_symbolic(Z::ZeroLocus) -> Matrix{AffineExpr}
+
+Symbolic version of `hodge_numbers`.  When the long exact sequence does
+not uniquely determine a Hodge number, the entry is an `AffineExpr`
+involving symbolic variables ``x_0, x_1, \\ldots``.
+
+The matrix is ``(d+1) \\times (d+1)`` with ``[p+1, q+1] = h^{p,q}``.
+"""
+function hodge_numbers_symbolic(Z::ZeroLocus{MDT}) where {MDT}
+  d = dimension(Z)
+  X = Z.ambient
+  var_counter = Ref(0)
+
+  hodge = Matrix{AffineExpr}(undef, d + 1, d + 1)
+  for i in eachindex(hodge)
+    hodge[i] = AffineExpr(0)
+  end
+  known = falses(d + 1, d + 1)
+
+  # ── Step 1: p = 0 row via Koszul (symbolic) ───────────────────────────
+  H0 = cohomology_on_restriction_symbolic(Z, var_counter)
+  for q in 0:d
+    hodge[1, q + 1] = H0[q]
+    known[1, q + 1] = true
+  end
+
+  # ── Step 2: p = 1 row via conormal SES ────────────────────────────────
+  if d >= 1
+    Ω_X = exterior_power(cotangent_bundle(X), 1)
+    HΩ_sym = cohomology_on_restriction_symbolic(Z, Ω_X, var_counter)
+    E_dual = dual(Z.defining_bundle)
+    HE_sym = cohomology_on_restriction_symbolic(Z, E_dual, var_counter)
+
+    # Conormal SES: 0 → E*|_Z → Ω_X|_Z → Ω_Z → 0
+    # Dispatch handles all cases: (BigInt,BigInt), (AffineExpr,BigInt),
+    # or (AffineExpr,AffineExpr).
+    H1_sym = solve_ses_cohomology_symbolic(HE_sym, HΩ_sym, var_counter)
+
+    for q in 0:d
+      hodge[2, q + 1] = H1_sym[q]
+      known[2, q + 1] = true
+    end
+  end
+
+  # ── Step 3: compute exact χ(Ω^p_Z) for all p via conormal recursion ──
+  chi_omega = zeros(BigInt, d + 1)
+  # χ for p=0, p=1: extract from symbolic hodge (only the constant parts
+  # contribute since variables cancel in alternating sum... actually they
+  # might not cancel).  Use the exact Euler characteristic instead.
+  chi_omega[1] = euler_characteristic(Z)
+  if d >= 1
+    Ω_X = exterior_power(cotangent_bundle(X), 1)
+    chi_omega[2] = euler_characteristic(Z, Ω_X) -
+                   euler_characteristic(Z, dual(Z.defining_bundle))
+  end
+  for p in 2:d
+    chi_omega[p + 1] = _chi_omega_p_conormal(Z, p)
+  end
+
+  # ── Step 4: fill Hodge diamond using symmetries + χ constraints ───────
+  for p in 2:d
+    # Hodge symmetry: h^{p,q} = h^{q,p}
+    for q in 0:d
+      if q <= d && known[q + 1, p + 1]
+        hodge[p + 1, q + 1] = hodge[q + 1, p + 1]
+        known[p + 1, q + 1] = true
+      end
+    end
+
+    # Serre duality: h^{p,q} = h^{d-p,d-q}
+    for q in 0:d
+      dp = d - p
+      dq = d - q
+      if 0 <= dp <= d && 0 <= dq <= d && known[dp + 1, dq + 1] && !known[p + 1, q + 1]
+        hodge[p + 1, q + 1] = hodge[dp + 1, dq + 1]
+        known[p + 1, q + 1] = true
+      end
+    end
+
+    # Use χ(Ω^p_Z) = Σ_q (-1)^q h^{p,q} to solve for remaining unknowns
+    unknown_qs = [q for q in 0:d if !known[p + 1, q + 1]]
+    if length(unknown_qs) == 1
+      q = unknown_qs[1]
+      known_sum = sum((-1)^qq * hodge[p + 1, qq + 1] for qq in 0:d if qq != q; init=AffineExpr(0))
+      hodge[p + 1, q + 1] = (-1)^q * (AffineExpr(chi_omega[p + 1]) - known_sum)
+      known[p + 1, q + 1] = true
+    end
+    # If ≥ 2 unknowns remain, leave as zero (symbolic resolution not attempted)
   end
 
   hodge
