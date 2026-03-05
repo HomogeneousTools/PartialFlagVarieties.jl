@@ -20,11 +20,13 @@ using Preferences
 using StaticArrays
 using LinearAlgebra
 using Combinatorics
+using PrecompileTools
 
 # ─── Extend Lie.jl functions (avoids name collisions) ────────────────────────
 
 import Lie: dimension, dual, tensor_product, exterior_power, symmetric_power
 import Lie: n_components
+import Lie: rank, degree
 
 # ─── Core types and infrastructure ───────────────────────────────────────────
 
@@ -46,7 +48,6 @@ include("ZeroLoci.jl")
 using Lie: TypeA, TypeB, TypeC, TypeD, TypeE, TypeF4, TypeG2
 using Lie: DynkinType, SimpleDynkinType, ProductDynkinType
 using Lie: WeightLatticeElem, WeylCharacter, fundamental_weight
-using Lie: rank, degree
 
 export TypeA, TypeB, TypeC, TypeD, TypeE, TypeF4, TypeG2
 export DynkinType, SimpleDynkinType, ProductDynkinType
