@@ -21,6 +21,7 @@
 using PartialFlagVarieties
 using PrettyTables
 using Lie
+using Printf
 
 # =============================================================================
 #  GL(n) weight -> omega-basis and bundle construction
@@ -180,8 +181,10 @@ function compute_family(label, k, n, weights, desc)
 
   if d - r != 4
     @warn "  $label: dim(Z) = $(d - r) ≠ 4; skipping"
-    return nothing
+    return nothing, 0.0
   end
+
+  t_start = time()
 
   Z = zero_locus(E)
   idx = fano_index_zl(X, E)
@@ -218,7 +221,8 @@ function compute_family(label, k, n, weights, desc)
     @warn "  $label Hodge failed: $(sprint(showerror, e))"
   end
 
-  FanoResult(label, desc, k, n, idx, antiK4, h0aK, chi, β2, β3, h11, h22, h13)
+  elapsed = time() - t_start
+  FanoResult(label, desc, k, n, idx, antiK4, h0aK, chi, β2, β3, h11, h22, h13), elapsed
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -267,31 +271,34 @@ function main()
   println("\nComputing Küchle fourfold invariants...\n")
 
   kuechle_results = FanoResult[]
+  t_total = 0.0
   for (label, k, n, weights, desc) in KUECHLE_FAMILIES
     print("  $label ... ")
     flush(stdout)
-    res = compute_family(label, k, n, weights, desc)
+    res, elapsed = compute_family(label, k, n, weights, desc)
     if res !== nothing
       push!(kuechle_results, res)
-      println("done")
+      t_total += elapsed
+      println(@sprintf("done  (%.2fs)", elapsed))
     end
   end
+  println(@sprintf("\n  Total: %.2fs", t_total))
 
-  println("\nComputing Fatighenti–Mongardi families...")
-  fm_results = FanoResult[]
-  for (label, k, n, weights, desc) in FM_FAMILIES
-    print("  $label ... ")
-    flush(stdout)
-    res = compute_family(label, k, n, weights, desc)
-    if res !== nothing
-      push!(fm_results, res)
-      println("done")
-    end
-  end
+  #println("\nComputing Fatighenti–Mongardi families...")
+  #fm_results = FanoResult[]
+  #for (label, k, n, weights, desc) in FM_FAMILIES
+  #  print("  $label ... ")
+  #  flush(stdout)
+  #  res = compute_family(label, k, n, weights, desc)
+  #  if res !== nothing
+  #    push!(fm_results, res)
+  #    println("done")
+  #  end
+  #end
 
   println()
   show_kuechle_table(kuechle_results)
-  show_fm_table(fm_results)
+  #show_fm_table(fm_results)
 end
 
 main()
