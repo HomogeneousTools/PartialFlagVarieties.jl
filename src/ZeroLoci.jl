@@ -418,6 +418,67 @@ function is_calabi_yau(Z::ZeroLocus)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  Constraint propagation helpers for symbolic Hodge numbers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Substitute ``x_{\\mathrm{var\\_id}} = \\mathrm{replacement}`` in every entry
+of the ``\\mathrm{AffineExpr}`` matrix ``M``, in-place.
+"""
+function _substitute_var!(M::Matrix{AffineExpr}, var_id::Int, replacement::AffineExpr)
+  for i in eachindex(M)
+    e = M[i]
+    haskey(e.coeffs, var_id) || continue
+    c = e.coeffs[var_id]
+    new_constant = e.constant + c * replacement.constant
+    new_coeffs = copy(e.coeffs)
+    delete!(new_coeffs, var_id)
+    for (k, v) in replacement.coeffs
+      new_coeffs[k] = get(new_coeffs, k, BigInt(0)) + c * v
+      new_coeffs[k] == 0 && delete!(new_coeffs, k)
+    end
+    M[i] = AffineExpr(new_constant, new_coeffs)
+  end
+end
+
+"""
+Given a linear equation ``\\mathrm{expr} = 0`` in the symbolic variables,
+solve for the variable with the smallest index and substitute the solution
+throughout the matrix ``M``.  Returns `true` if a variable was eliminated.
+
+Only eliminates when integer divisibility holds.
+"""
+function _apply_equation!(M::Matrix{AffineExpr}, expr::AffineExpr)
+  isempty(expr.coeffs) && return false
+  var_id = minimum(keys(expr.coeffs))
+  coeff = expr.coeffs[var_id]
+
+  rest_const = expr.constant
+  rest_coeffs = copy(expr.coeffs)
+  delete!(rest_coeffs, var_id)
+
+  # Check integer divisibility
+  rest_const % coeff == 0 || return false
+  all(v % coeff == 0 for (_, v) in rest_coeffs) || return false
+
+  sub_const = -(rest_const ÷ coeff)
+  sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
+  filter!(p -> p.second != 0, sub_coeffs)
+  _substitute_var!(M, var_id, AffineExpr(sub_const, sub_coeffs))
+  true
+end
+
+"""
+Apply the constraint ``\\mathrm{hodge}[pi, qi] = \\mathrm{target}`` by
+eliminating one symbolic variable.
+"""
+function _apply_linear_constraint!(hodge::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt)
+  expr = hodge[pi, qi]
+  is_determined(expr) && return false
+  _apply_equation!(hodge, expr - AffineExpr(target))
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  Hodge numbers of zero loci
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -465,15 +526,28 @@ function hodge_numbers(Z::ZeroLocus{MDT}) where {MDT}
   end
 
   # ── Step 2: p = 1 row via conormal SES 0 → E*|_Z → Ω_X|_Z → Ω_Z → 0
+  ses_determined = true
   if d >= 1
     Ω_X = exterior_power(cotangent_bundle(X), 1)
     (HΩ, _) = cohomology_on_restriction(Z, Ω_X)
     E_dual = dual(Z.defining_bundle)
     (HE, _) = cohomology_on_restriction(Z, E_dual)
-    (H1, _) = solve_ses_cohomology(HE, HΩ)
+    (H1, det1) = solve_ses_cohomology(HE, HΩ)
+    ses_determined = det1
     for q in 0:d
       hodge[2, q + 1] = H1[q]
       known[2, q + 1] = true
+    end
+  end
+
+  # ── Step 2.5: When SES is ambiguous, refine with symbolic solver ──────
+  if d >= 1 && !ses_determined
+    H_sym = hodge_numbers_symbolic(Z)
+    for q in 0:d
+      e = H_sym[2, q + 1]
+      if is_determined(e)
+        hodge[2, q + 1] = e.constant
+      end
     end
   end
 
@@ -534,6 +608,52 @@ not uniquely determine a Hodge number, the entry is an `AffineExpr`
 involving symbolic variables ``x_0, x_1, \\ldots``.
 
 The matrix is ``(d+1) \\times (d+1)`` with ``[p+1, q+1] = h^{p,q}``.
+
+After computing the ``p = 1`` row via the conormal short exact sequence,
+Hodge symmetry (``h^{1,0} = h^{0,1}``), Serre duality
+(``h^{1,d} = h^{0,d-1}``), and the exact ``\\chi(\\Omega^1_Z)`` are used
+to eliminate up to three symbolic variables.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(4);
+
+julia> Z = zero_locus(line_bundle(X, 5));
+
+julia> H = hodge_numbers_symbolic(Z);
+
+julia> is_determined(H[2, 2])  # h^{1,1} fully determined
+true
+
+julia> H[2, 2].constant
+1
+
+julia> H[3, 2].constant  # h^{2,1}
+101
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 6);
+
+julia> E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:4]);
+
+julia> Z = zero_locus(E);
+
+julia> H = hodge_numbers_symbolic(Z);
+
+julia> all(is_determined(H[p+1, q+1]) for p in 0:4, q in 0:4)
+true
+
+julia> H[2, 2].constant  # h^{1,1}
+1
+
+julia> H[3, 3].constant  # h^{2,2}
+8
+```
 """
 function hodge_numbers_symbolic(Z::ZeroLocus{MDT}) where {MDT}
   d = dimension(Z)
@@ -569,6 +689,32 @@ function hodge_numbers_symbolic(Z::ZeroLocus{MDT}) where {MDT}
       hodge[2, q + 1] = H1_sym[q]
       known[2, q + 1] = true
     end
+  end
+
+  # ── Step 2.5: Constrain p=1 row using Hodge/Serre symmetries + χ ─────
+  #
+  # The conormal SES may leave symbolic unknowns in h^{1,q}.  We can
+  # eliminate some by exploiting:
+  #   1. Hodge symmetry:  h^{1,0} = h^{0,1}      (known from step 1)
+  #   2. Serre + Hodge:   h^{1,d} = h^{0,d-1}    (chain: Serre then Hodge)
+  #   3. χ(Ω^1_Z) = Σ (-1)^q h^{1,q}             (exact Euler characteristic)
+  if d >= 1
+    # Constraint 1: h^{1,0} = h^{0,1}
+    if is_determined(hodge[1, 2])
+      _apply_linear_constraint!(hodge, 2, 1, hodge[1, 2].constant)
+    end
+
+    # Constraint 2: h^{1,d} = h^{0,d-1}
+    if d >= 2 && is_determined(hodge[1, d])
+      _apply_linear_constraint!(hodge, 2, d + 1, hodge[1, d].constant)
+    end
+
+    # Constraint 3: χ(Ω^1_Z) = Σ_q (-1)^q h^{1,q}
+    Ω_X_c = exterior_power(cotangent_bundle(X), 1)
+    chi_1 = euler_characteristic(Z, Ω_X_c) -
+            euler_characteristic(Z, dual(Z.defining_bundle))
+    alt_sum = sum((-1)^q * hodge[2, q + 1] for q in 0:d; init=AffineExpr(0))
+    _apply_equation!(hodge, alt_sum - AffineExpr(chi_1))
   end
 
   # ── Step 3: compute exact χ(Ω^p_Z) for all p via conormal recursion ──
@@ -723,10 +869,7 @@ julia> length(hp) >= 3
 true
 ```
 """
-function hilbert_polynomial(Z::ZeroLocus{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  length(Marked) == 1 || throw(ArgumentError(
-    "hilbert_polynomial requires Picard rank 1 (single marked node)"
-  ))
+function hilbert_polynomial(Z::ZeroLocus)
   X = Z.ambient
   d = dimension(Z)
   n_pts = d + 4  # degree-d polynomial needs d+1 points; extra for numerical stability

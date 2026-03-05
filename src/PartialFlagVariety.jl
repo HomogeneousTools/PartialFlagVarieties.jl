@@ -269,7 +269,11 @@ julia> euler_characteristic(partial_flag_variety(TypeE{6}, (1,)))
 27
 ```
 """
-@generated function euler_characteristic(::PartialFlagVariety{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
+function euler_characteristic(::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
+  _euler_characteristic(MDT)
+end
+
+function _euler_characteristic(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
   R = rank(DT)
   unmarked = [i for i in 1:R if !(i in Marked)]
   wG = weyl_order(DT)
@@ -282,8 +286,7 @@ julia> euler_characteristic(partial_flag_variety(TypeE{6}, (1,)))
     lt = _cartan_type_to_dynkin_type(ct)
     wL = lt === nothing ? BigInt(1) : weyl_order(lt)
   end
-  chi = wG ÷ wL
-  return :($chi)
+  wG ÷ wL
 end
 
 """
@@ -315,7 +318,11 @@ julia> betti_numbers(Gr(2, 4))
  1
 ```
 """
-@generated function betti_numbers(::PartialFlagVariety{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
+function betti_numbers(::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
+  _betti_numbers(MDT)
+end
+
+function _betti_numbers(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
   R = rank(DT)
   unmarked = [i for i in 1:R if !(i in Marked)]
 
@@ -331,47 +338,40 @@ julia> betti_numbers(Gr(2, 4))
     degs_L = lt === nothing ? Int[] : collect(degrees_fundamental_invariants(lt))
   end
 
-  # Compute Poincaré polynomial as a coefficient vector
-  function expand_factor(d)
-    return ones(BigInt, d)
-  end
-
-  function poly_mul(a, b)
-    la, lb = length(a), length(b)
-    result = zeros(BigInt, la + lb - 1)
-    for i in 1:la, j in 1:lb
-      result[i + j - 1] += a[i] * b[j]
-    end
-    return result
-  end
-
-  function poly_div(a, b)
-    la, lb = length(a), length(b)
-    a = copy(a)
-    result = zeros(BigInt, la - lb + 1)
-    for i in (la - lb + 1):-1:1
-      c = a[i + lb - 1] ÷ b[lb]
-      result[i] = c
-      for j in 1:lb
-        a[i + j - 1] -= c * b[j]
-      end
-    end
-    return result
-  end
-
   num = BigInt[1]
   for d in degs_G
-    num = poly_mul(num, expand_factor(d))
+    num = _poly_mul(num, ones(BigInt, d))
   end
 
   den = BigInt[1]
   for d in degs_L
-    den = poly_mul(den, expand_factor(d))
+    den = _poly_mul(den, ones(BigInt, d))
   end
 
-  result = poly_div(num, den)
+  _poly_div(num, den)
+end
 
-  return :($(Vector{BigInt}(result)))
+function _poly_mul(a, b)
+  la, lb = length(a), length(b)
+  result = zeros(BigInt, la + lb - 1)
+  for i in 1:la, j in 1:lb
+    result[i + j - 1] += a[i] * b[j]
+  end
+  result
+end
+
+function _poly_div(a, b)
+  la, lb = length(a), length(b)
+  a = copy(a)
+  result = zeros(BigInt, la - lb + 1)
+  for i in (la - lb + 1):-1:1
+    c = a[i + lb - 1] ÷ b[lb]
+    result[i] = c
+    for j in 1:lb
+      a[i + j - 1] -= c * b[j]
+    end
+  end
+  result
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

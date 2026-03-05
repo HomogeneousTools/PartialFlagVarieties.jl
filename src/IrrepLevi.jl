@@ -108,9 +108,7 @@ julia> central_scaling_factor(MarkedDynkinType{TypeA{4}, (2,)})
   ::Type{MDT},
 ) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
   R = rank(DT)
-  C = Lie._cartan_matrix_data(DT)
-  Crat = Rational{Int}.(C)
-  Cinv = inv(Crat)
+  Cinv = Lie.cartan_matrix_inverse(DT)
   sf = 1
   for j in Marked
     for k in 1:R
@@ -118,6 +116,108 @@ julia> central_scaling_factor(MarkedDynkinType{TypeA{4}, (2,)})
     end
   end
   return :($sf)
+end
+
+"""
+    _apply_central_ext(::Type{MDT}, λ_ivec::SVector{R,Int}) -> SVector{K,Int}
+
+Apply the central-extraction map inline: emits
+`result[i] = Σ_k (sf * C⁻¹[Marked[i],k]) * λ_ivec[k]`
+as direct scalar arithmetic baked into the generated code,
+so no `SMatrix` or `Rational` type appears at runtime.
+"""
+@generated function _apply_central_ext(
+  ::Type{MDT},
+  λ_ivec::SVector{R0,Int},
+) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked,R0}
+  R = rank(DT)
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  K = length(Marked)
+  sf = 1
+  for j in Marked, k in 1:R
+    sf = lcm(sf, denominator(Cinv[j, k]))
+  end
+  row_exprs = map(1:K) do i
+    terms = [:($(round(Int, Cinv[Marked[i], k] * sf)) * λ_ivec[$k]) for k in 1:R]
+    length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
+  end
+  return :(SVector{$K,Int}($(row_exprs...)))
+end
+
+"""
+    _amb_scalars(::Type{MDT}) -> (sf_total, ratio)
+
+At code-generation time, compute the two integer scaling factors needed by
+`IrrepLevi(MDT, central, semisimple)` to reconstruct the ambient weight:
+- `sf_total`: lcm of `sf_central` and all denominators of `Minv`
+- `ratio = sf_total ÷ sf_central`
+
+Returns only plain integers (no `SMatrix`), so no StaticArrays specialization
+is triggered by the return type.
+"""
+@generated function _amb_scalars(
+  ::Type{MDT},
+) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  R = rank(DT)
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  sf = 1
+  for j in Marked, k in 1:R
+    sf = lcm(sf, denominator(Cinv[j, k]))
+  end
+  unmarked = [i for i in 1:R if !(i in Marked)]
+  M = zeros(Rational{Int}, R, R)
+  for i in unmarked
+    M[i, i] = 1
+  end
+  for j in Marked, k in 1:R
+    M[j, k] = Cinv[j, k]
+  end
+  Minv = inv(M)
+  sf_total = sf
+  for j in 1:R, k in 1:R
+    sf_total = lcm(sf_total, denominator(Minv[j, k]))
+  end
+  ratio = sf_total ÷ sf
+  return :(($(sf_total), $(ratio)))
+end
+
+"""
+    _apply_Minv_int(::Type{MDT}, x::SVector{R,Int}) -> SVector{R,Int}
+
+Apply `sf_total * Minv` inline: emits
+`result[i] = Σ_j (sf_total * Minv[i,j]) * x[j]`
+as direct scalar arithmetic baked into the generated code.
+No `SMatrix` type is constructed or dispatched at runtime, avoiding
+the StaticArrays `gen_by_access` / `mul_parent` specialization cost.
+"""
+@generated function _apply_Minv_int(
+  ::Type{MDT},
+  x::SVector{R0,Int},
+) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked,R0}
+  R = rank(DT)
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  sf = 1
+  for j in Marked, k in 1:R
+    sf = lcm(sf, denominator(Cinv[j, k]))
+  end
+  unmarked = [i for i in 1:R if !(i in Marked)]
+  M = zeros(Rational{Int}, R, R)
+  for i in unmarked
+    M[i, i] = 1
+  end
+  for j in Marked, k in 1:R
+    M[j, k] = Cinv[j, k]
+  end
+  Minv = inv(M)
+  sf_total = sf
+  for j in 1:R, k in 1:R
+    sf_total = lcm(sf_total, denominator(Minv[j, k]))
+  end
+  row_exprs = map(1:R) do i
+    terms = [:($(round(Int, Minv[i, j] * sf_total)) * x[$j]) for j in 1:R]
+    length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
+  end
+  return :(SVector{$R,Int}($(row_exprs...)))
 end
 
 """
@@ -180,29 +280,24 @@ julia> fiber_dimension(rep)
 function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
   MDT<:MarkedDynkinType
 }
-  M = decomposition_matrix(MDT)
-  Marked = marked_nodes(MDT)
-  unmarked = unmarked_nodes(MDT)
   LT = levi_type(MDT)
-  sf = central_scaling_factor(MDT)
+  unmarked = unmarked_nodes(MDT)
 
-  # Apply change of basis
+  # Use integer arithmetic throughout: the unmarked rows of the decomposition
+  # matrix are identity rows, so new_coords[u] == λ[u] for every unmarked u.
+  # The marked rows are sf-scaled integer multiples of C⁻¹; _apply_central_ext
+  # bakes them in at compile time and emits the multiply as inline scalar
+  # arithmetic — no SMatrix type appears at runtime.
   R = rank(_ambient_type(MDT))
-  λ_vec = SVector{R,Rational{Int}}(Tuple(coefficients(λ)))
-  new_coords = M * λ_vec
+  λ_ivec = SVector{R,Int}(Tuple(coefficients(λ)))
+  central = Vector{Int}(_apply_central_ext(MDT, λ_ivec))
 
-  # Extract central part (at marked node positions), scaled to Int
-  central = Int[Int(new_coords[m] * sf) for m in Marked]
-
-  # Extract semisimple part (at unmarked node positions)
+  # Semisimple part: read off unmarked coordinates directly from λ
   if LT === nothing
-    # Full flag: trivial semisimple part
     semisimple = WeightLatticeElem(TypeA{1}, [0])
   else
     LR = rank(LT)
-    # Natural coords: ss_nat[i] = new_coords at the i-th unmarked node
-    ss_nat = [Int(new_coords[u]) for u in unmarked]
-    # Apply levi_permutation: canonical coord j = ss_nat[perm[j]]
+    ss_nat = [λ_ivec[u] for u in unmarked]
     perm = levi_permutation(MDT)
     ss_coords = [ss_nat[perm[j]] for j in 1:LR]
     semisimple = WeightLatticeElem(LT, ss_coords)
@@ -222,20 +317,22 @@ The ambient P-dominant weight ``\\lambda`` is recovered automatically.
 function IrrepLevi(::Type{MDT}, central::Vector{Int}, semisimple::WeightLatticeElem) where {
   MDT<:MarkedDynkinType
 }
-  # Recover the ambient weight λ from (central, semisimple)
   DT = _ambient_type(MDT)
   Marked = marked_nodes(MDT)
-  R = rank(DT)
-  sf = central_scaling_factor(MDT)
-  Minv = decomposition_matrix_inv(MDT)
   unmarked = unmarked_nodes(MDT)
+  LT = levi_type(MDT)
+  R = rank(DT)
 
-  coords = zeros(Rational{Int}, R)
+  sf_total, ratio = _amb_scalars(MDT)
+
+  # Build integer coordinate vector: scaled by sf_total
+  #   coords_full[m] = central[idx] * ratio  (= sf_total/sf_central * central)
+  #   coords_full[u] = ss_nat[u]    * sf_total
+  coords_full = MVector{R,Int}(undef)
   for (idx, m) in enumerate(Marked)
-    coords[m] = central[idx] // sf
+    coords_full[m] = central[idx] * ratio
   end
 
-  # Only process semisimple part if there are unmarked nodes
   if length(unmarked) > 0
     ss_vec = Lie.coefficients(semisimple)
     LR = length(ss_vec)
@@ -246,13 +343,19 @@ function IrrepLevi(::Type{MDT}, central::Vector{Int}, semisimple::WeightLatticeE
         inv_perm[perm[j]] = j
       end
       for (i, u) in enumerate(unmarked)
-        coords[u] = Rational{Int}(ss_vec[inv_perm[i]])
+        coords_full[u] = ss_vec[inv_perm[i]] * sf_total
+      end
+    else
+      for u in unmarked
+        coords_full[u] = 0
       end
     end
   end
 
-  ambient_coords = Minv * SVector{R,Rational{Int}}(Tuple(coords))
-  ambient_int = [Int(round(c)) for c in ambient_coords]
+  # _apply_Minv_int emits sf_total*Minv inline; result = sf_total² * λ
+  ambient_scaled = _apply_Minv_int(MDT, SVector{R,Int}(coords_full))
+  sf_sq = sf_total * sf_total
+  ambient_int = [div(c, sf_sq) for c in ambient_scaled]
   λ = WeightLatticeElem(DT, ambient_int)
 
   return IrrepLevi{MDT}(λ, central, semisimple)

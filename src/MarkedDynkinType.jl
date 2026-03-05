@@ -299,9 +299,7 @@ true
 """
 @generated function decomposition_matrix(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
   R = rank(DT)
-  C = Lie._cartan_matrix_data(DT)
-  Crat = Rational{Int}.(C)
-  Cinv = inv(Crat)
+  Cinv = Lie.cartan_matrix_inverse(DT)
 
   unmarked = [i for i in 1:R if !(i in Marked)]
 
@@ -346,9 +344,7 @@ true
 """
 @generated function decomposition_matrix_inv(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
   R = rank(DT)
-  C = Lie._cartan_matrix_data(DT)
-  Crat = Rational{Int}.(C)
-  Cinv = inv(Crat)
+  Cinv = Lie.cartan_matrix_inverse(DT)
 
   unmarked = [i for i in 1:R if !(i in Marked)]
 

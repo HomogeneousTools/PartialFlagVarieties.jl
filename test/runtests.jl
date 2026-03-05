@@ -1201,4 +1201,41 @@ using StaticArrays
     @test h[3, 3] == 1   # h^{2,2} = h^{0,0}
   end
 
+  @testset "ZeroLocus: symbolic Hodge numbers" begin
+    # Fully determined case: symbolic = numeric
+    X = projective_space(4)
+    Z = zero_locus(line_bundle(X, 5))
+    H_sym = hodge_numbers_symbolic(Z)
+    H_num = hodge_numbers(Z)
+    for p in 0:3, q in 0:3
+      @test is_determined(H_sym[p + 1, q + 1])
+      @test H_sym[p + 1, q + 1].constant == H_num[p + 1, q + 1]
+    end
+
+    # Constraint propagation: h^{1,0} = 0 for Küchle c6 Fano fourfold
+    X2 = Gr(2, 6)
+    E2 = reduce(direct_sum, [line_bundle(X2, 1) for _ in 1:4])
+    Z2 = zero_locus(E2)
+    H2 = hodge_numbers_symbolic(Z2)
+    @test is_determined(H2[2, 1])       # h^{1,0} determined
+    @test H2[2, 1].constant == 0        # h^{1,0} = 0
+    @test is_determined(H2[2, 5])       # h^{1,4} determined
+    @test H2[2, 5].constant == 0        # h^{1,4} = 0
+    @test H2[2, 2].constant == 1        # h^{1,1} = 1
+    @test H2[3, 3].constant == 8        # h^{2,2} = 8
+
+    # Hodge + Serre symmetry in symbolic result
+    X3 = projective_space(5)
+    Z3 = zero_locus(line_bundle(X3, 3))
+    H3 = hodge_numbers_symbolic(Z3)
+    # h^{p,q} = h^{q,p} (Hodge symmetry)
+    for p in 0:4, q in 0:4
+      @test H3[p + 1, q + 1] == H3[q + 1, p + 1]
+    end
+    # h^{p,q} = h^{d-p,d-q} (Serre duality)
+    for p in 0:4, q in 0:4
+      @test H3[p + 1, q + 1] == H3[5 - p, 5 - q]
+    end
+  end
+
 end  # @testset "PartialFlagVarieties.jl"

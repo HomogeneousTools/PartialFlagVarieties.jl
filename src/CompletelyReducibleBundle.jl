@@ -104,7 +104,7 @@ julia> rank_bundle(structure_sheaf(X))
 1
 ```
 """
-function rank_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT}
+function rank_bundle(E::CompletelyReducibleBundle)
   return sum(fiber_dimension(c) for c in E.components; init=BigInt(0))
 end
 
@@ -640,7 +640,7 @@ Base.iszero(E::CompletelyReducibleBundle) = isempty(E.components)
 
 # ─── Display ─────────────────────────────────────────────────────────────────
 
-function Base.show(io::IO, E::CompletelyReducibleBundle{MDT}) where {MDT}
+function Base.show(io::IO, E::CompletelyReducibleBundle)
   if isempty(E.components)
     print(io, "0")
   elseif length(E.components) == 1
