@@ -31,35 +31,33 @@ using Lie
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    enumerate_cr_bundles(X, irreps, target_rank, target_det)
+    enumerate_cr_bundles(X, candidates, target_rank, target_det)
 
 Enumerate completely reducible bundles on `X` with given `target_rank`
 and `target_det` (determinant central character), using summands from
-`irreps` (a list of (IrrepLevi, rank, det_central) triples).
+`candidates` (a list of (bundle, rank, det_central) triples).
 
 Returns a Vector of CompletelyReducibleBundle.
 """
 function enumerate_cr_bundles(
   X::PartialFlagVariety{MDT},
-  irreps::Vector{<:Tuple},
+  candidates::Vector{<:Tuple},
   target_rank::Int,
-  target_det::Vector{Rational{Int}},
+  target_det::Vector{Int},
 ) where {MDT}
   results = CompletelyReducibleBundle{MDT}[]
 
   function backtrack(idx, remaining_rank, remaining_det, summands)
     if remaining_rank == 0 && all(remaining_det .== 0)
-      # Wrap IrrepLevi summands as CompletelyReducibleBundle and combine
-      bundles = [CompletelyReducibleBundle{MDT}(X, [s]) for s in summands]
-      E = reduce(direct_sum, bundles)
+      E = reduce(direct_sum, summands)
       push!(results, E)
       return
     end
-    if remaining_rank <= 0 || idx > length(irreps)
+    if remaining_rank <= 0 || idx > length(candidates)
       return
     end
 
-    irr, rk, det_c = irreps[idx]
+    bundle, rk, det_c = candidates[idx]
     rk_int = Int(rk)
 
     # Maximum multiplicity of this summand
@@ -71,14 +69,14 @@ function enumerate_cr_bundles(
 
       new_summands = copy(summands)
       for _ in 1:m
-        push!(new_summands, irr)
+        push!(new_summands, bundle)
       end
 
       backtrack(idx + 1, new_rank, new_det, new_summands)
     end
   end
 
-  backtrack(1, target_rank, target_det, IrrepLevi{MDT}[])
+  backtrack(1, target_rank, target_det, CompletelyReducibleBundle{MDT}[])
   results
 end
 
@@ -87,74 +85,59 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-Get irreducible representations to use as summands, together with their
-rank and determinant central character.
+Get candidate irreducible equivariant bundles to use as summands,
+together with their rank and determinant central character.
 """
-function get_candidate_irreps(X::PartialFlagVariety{MDT}; max_rank::Int=0) where {MDT}
+function get_candidate_bundles(X::PartialFlagVariety{MDT}; max_rank::Int=0) where {MDT}
   DT = PartialFlagVarieties._ambient_type(MDT)
   R = Lie.rank(DT)
   Marked = marked_nodes(MDT)
 
-  candidates = Tuple{IrrepLevi{MDT},BigInt,Vector{Rational{Int}}}[]
-
-  # For each marked node m, the line bundle O(1) has weight ω_m
-  # We consider line bundles O(d) for d = 1, 2, 3, ...
-  # and low-dimensional irreps
-
-  # Strategy: build a list of candidate irreps:
-  # 1) Line bundles O(d) for each marked node
-  # 2) Small exterior powers of universal quotient/subbundle duals
+  candidates = Tuple{CompletelyReducibleBundle{MDT},BigInt,Vector{Int}}[]
 
   # d_max controls the maximum degree of line bundles O(d) we try.
-  # Must be large enough to capture all relevant summands.
-  # For line bundles, total degree = sum(d_i) must match anticanonical degree.
   d_max = max_rank > 0 ? max(max_rank, 8) : 8
 
-  for m in Marked
+  # 1) Line bundles O(d) for each marked node
+  for (node_idx, m) in enumerate(Marked)
     for d in 1:d_max
-      omega = zeros(Int, R)
-      omega[m] = d
-      λ = WeightLatticeElem(DT, omega)
-      irr = IrrepLevi(MDT, λ)
+      degrees = zeros(Int, length(Marked))
+      degrees[node_idx] = d
+      bundle = line_bundle(X, degrees)
 
-      rk = rank_bundle(CompletelyReducibleBundle{MDT}(X, [irr]))
-      det_c = collect(PartialFlagVarieties._determinant_central(
-        CompletelyReducibleBundle{MDT}(X, [irr])))
+      rk = rank_bundle(bundle)
+      det_c = collect(PartialFlagVarieties._determinant_central(bundle))
 
-      push!(candidates, (irr, rk, det_c))
+      push!(candidates, (bundle, rk, det_c))
     end
   end
 
-  # Add small exterior powers for Grassmannians (2 marked nodes = full flag,
-  # but for Gr(k,n) we have 1 marked node)
+  # 2) For Picard rank 1: add fundamental representations ω_i for i ≠ m
   if length(Marked) == 1
     m = Marked[1]
-
-    # For type A: ω_i gives ∧^i(S*) if i ≤ k, or ∧^i(S*) ⊗ det
-    # We just enumerate small fundamental representations
     for i in 1:R
-      if i != m  # ω_m is already covered as O(1)
+      if i != m
         omega = zeros(Int, R)
         omega[i] = 1
         λ = WeightLatticeElem(DT, omega)
         irr = IrrepLevi(MDT, λ)
+        bundle = CompletelyReducibleBundle{MDT}(X, [irr])
 
-        rk = rank_bundle(CompletelyReducibleBundle{MDT}(X, [irr]))
-        det_c = collect(PartialFlagVarieties._determinant_central(
-          CompletelyReducibleBundle{MDT}(X, [irr])))
+        rk = rank_bundle(bundle)
+        det_c = collect(PartialFlagVarieties._determinant_central(bundle))
 
-        push!(candidates, (irr, rk, det_c))
+        push!(candidates, (bundle, rk, det_c))
       end
     end
   end
 
-  # Filter: only keep candidates with rank ≤ target
+  # Filter by max rank
   if max_rank > 0
     filter!(c -> c[2] <= max_rank, candidates)
   end
 
-  # Remove duplicates (same irrep)
-  unique!(c -> c[1], candidates)
+  # Remove duplicates
+  unique!(c -> c[1].components, candidates)
 
   candidates
 end
@@ -192,10 +175,10 @@ function search_cy3(X::PartialFlagVariety{MDT}, name::String, results::Vector{CY
   antican = collect(PartialFlagVarieties._anticanonical_central(MDT))
 
   # Get candidate irreps
-  irreps = get_candidate_irreps(X; max_rank=max_summand_rank > 0 ? max_summand_rank : target_rank)
+  candidates = get_candidate_bundles(X; max_rank=max_summand_rank > 0 ? max_summand_rank : target_rank)
 
   # Enumerate bundles with correct rank and CY determinant condition
-  bundles = enumerate_cr_bundles(X, irreps, target_rank, antican)
+  bundles = enumerate_cr_bundles(X, candidates, target_rank, antican)
 
   println("found $(length(bundles)) CY candidate(s)")
 
