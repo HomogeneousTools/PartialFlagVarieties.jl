@@ -128,13 +128,14 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  K = length(Marked)
   LT = levi_type(MDT)
-  zero_central = zeros(Int, length(Marked))
+  zero_central = SVector{K,Int}(ntuple(_ -> 0, K))
   if LT === nothing
-    zero_ss = WeightLatticeElem(TypeA{1}, [0])
+    zero_ss = WeightLatticeElem(TypeA{1}, SVector{1,Int}(0))
   else
     LR = rank(LT)
-    zero_ss = WeightLatticeElem(LT, zeros(Int, LR))
+    zero_ss = WeightLatticeElem(LT, zeros(SVector{LR,Int}))
   end
   triv = IrrepLevi(MDT, zero_central, zero_ss)
   return CompletelyReducibleBundle{MDT}(X, [triv])
