@@ -127,18 +127,27 @@ julia> rank_bundle(structure_sheaf(X))
 1
 ```
 """
-function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+@generated function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  # All type-level computation happens once at code-generation time.
   K = length(Marked)
+  R = rank(DT)
   LT = levi_type(MDT)
-  zero_central = SVector{K,Int}(ntuple(_ -> 0, K))
+
+  zero_central_expr = :(SVector{$K,Int}($(ntuple(_ -> 0, K))))
+  zero_λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(ntuple(_ -> 0, R)))))
+
   if LT === nothing
-    zero_ss = WeightLatticeElem(TypeA{1}, SVector{1,Int}(0))
+    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
   else
     LR = rank(LT)
-    zero_ss = WeightLatticeElem(LT, zeros(SVector{LR,Int}))
+    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
   end
-  triv = IrrepLevi(MDT, zero_central, zero_ss)
-  return CompletelyReducibleBundle{MDT}(X, [triv])
+
+  # Generated body: no dispatch on MDT-parameterised helpers at runtime.
+  return quote
+    triv = IrrepLevi{$MDT,$K}($zero_λ_expr, $zero_central_expr, $zero_ss_expr)
+    CompletelyReducibleBundle{$MDT}(X, [triv])
+  end
 end
 
 """
@@ -171,20 +180,49 @@ julia> rank_bundle(L)
 1
 ```
 """
-function line_bundle(X::PartialFlagVariety{MDT}, i::Integer) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  i = Int(i)
-  pr = length(Marked)
-  if pr != 1
-    throw(ArgumentError(
-      "line_bundle(X, i::Int) requires Picard rank 1, but X has Picard rank $pr. " *
+@generated function line_bundle(X::PartialFlagVariety{MDT}, i::Integer) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  K = length(Marked)
+  R = rank(DT)
+  LT = levi_type(MDT)
+
+  if K != 1
+    msg = "line_bundle(X, i::Int) requires Picard rank 1, but X has Picard rank $(K). " *
       "Use line_bundle(X, degrees::Vector{<:Integer}) instead."
-    ))
+    return :(throw(ArgumentError($msg)))
   end
+
   m = Marked[1]
-  ω = fundamental_weight(DT, m)
-  λ = i * ω
-  rep = IrrepLevi(MDT, λ)
-  return CompletelyReducibleBundle{MDT}(X, [rep])
+
+  # Central slope: central[1] = slope * i
+  # From _apply_central_ext: Σ_k round(Int, Cinv[m, k] * sf) * λ_ivec[k],
+  # and λ_ivec = i * e_m, so only the k==m term survives.
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  sf = 1
+  for j in Marked, k in 1:R
+    sf = lcm(sf, denominator(Cinv[j, k]))
+  end
+  slope = round(Int, Cinv[m, m] * sf)
+
+  # λ coords: i at position m, 0 elsewhere  (ω_m has coord 1 only at node m)
+  λ_comps = [k == m ? :ii : 0 for k in 1:R]
+  λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
+
+  # ss = 0: m is a marked node, so all unmarked coords of i·ω_m are 0
+  if LT === nothing
+    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
+  else
+    LR = rank(LT)
+    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
+  end
+
+  return quote
+    ii = Int(i)
+    λ = $λ_expr
+    central = SVector{$K,Int}($slope * ii)
+    ss = $zero_ss_expr
+    rep = IrrepLevi{$MDT,$K}(λ, central, ss)
+    CompletelyReducibleBundle{$MDT}(X, [rep])
+  end
 end
 
 """
@@ -205,19 +243,55 @@ julia> rank_bundle(L)
 1
 ```
 """
-function line_bundle(X::PartialFlagVariety{MDT}, degrees::Vector{<:Integer}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  pr = length(Marked)
-  length(degrees) == pr || throw(ArgumentError(
-    "Expected $pr degrees (one per marked node), got $(length(degrees))."
-  ))
+@generated function line_bundle(X::PartialFlagVariety{MDT}, degrees::Vector{<:Integer}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  K = length(Marked)
   R = rank(DT)
-  coeffs = zeros(Int, R)
-  for (j, m) in enumerate(Marked)
-    coeffs[m] = degrees[j]
+  LT = levi_type(MDT)
+
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  sf = 1
+  for j in Marked, k in 1:R
+    sf = lcm(sf, denominator(Cinv[j, k]))
   end
-  λ = WeightLatticeElem(DT, coeffs)
-  rep = IrrepLevi(MDT, λ)
-  return CompletelyReducibleBundle{MDT}(X, [rep])
+
+  # central[i] = Σ_j A[i,j] * degrees[j]
+  # where A[i,j] = round(Int, Cinv[Marked[i], Marked[j]] * sf)
+  # (from _apply_central_ext applied to Σ_j degrees[j]*e_{Marked[j]})
+  A = [round(Int, Cinv[Marked[i], Marked[j]] * sf) for i in 1:K, j in 1:K]
+
+  # λ coords: degrees[j] at position Marked[j], 0 elsewhere
+  λ_comps = map(1:R) do k
+    j = findfirst(m -> m == k, Marked)
+    j === nothing ? 0 : :(dd[$j])
+  end
+  λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
+
+  # central[i] = Σ_j A[i,j] * dd[j]
+  central_comps = map(1:K) do i
+    terms = [:($(A[i,j]) * dd[$j]) for j in 1:K if A[i,j] != 0]
+    isempty(terms) ? 0 : length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
+  end
+  central_expr = :(SVector{$K,Int}($(central_comps...)))
+
+  # ss = 0: all marked fundamental weights have zero unmarked coords
+  if LT === nothing
+    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
+  else
+    LR = rank(LT)
+    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
+  end
+
+  return quote
+    length(degrees) == $K || throw(ArgumentError(
+      string("Expected ", $K, " degrees (one per marked node), got ", length(degrees), ".")
+    ))
+    dd = Int.(degrees)
+    λ = $λ_expr
+    central = $central_expr
+    ss = $zero_ss_expr
+    rep = IrrepLevi{$MDT,$K}(λ, central, ss)
+    CompletelyReducibleBundle{$MDT}(X, [rep])
+  end
 end
 
 # ─── Type-level caches for tangent/cotangent rep lists ───────────────────────
@@ -342,22 +416,70 @@ julia> rank_bundle(det_bundle(tangent_bundle(X)))
 1
 ```
 """
-function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT}
-  total_central = zeros(Int, central_rank(MDT))
-  for c in E.components
-    d = Int(fiber_dimension(c))
-    total_central .+= d * c.central
-  end
-
+@generated function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  K = length(Marked)
+  R = rank(DT)
   LT = levi_type(MDT)
+
+  # Precompute the λ-reconstruction coefficients at code-gen time.
+  # For det_bundle the ss part is always 0 (the det only accumulates central
+  # characters), so coords_full[u] = 0 for all unmarked u.  The ambient weight
+  # reconstruction then reduces to:
+  #   λ[k] = div(Σ_j C[k,j] * central[j], sf_sq)
+  # where C[k,j] = round(Int, Minv[k, Marked[j]] * sf_total) * ratio.
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  sf_central = 1
+  for j in Marked, k in 1:R
+    sf_central = lcm(sf_central, denominator(Cinv[j, k]))
+  end
+  unmarked = [i for i in 1:R if !(i in Marked)]
+  M_mat = zeros(Rational{Int}, R, R)
+  for i in unmarked
+    M_mat[i, i] = 1
+  end
+  for j in Marked, k in 1:R
+    M_mat[j, k] = Cinv[j, k]
+  end
+  Minv = inv(M_mat)
+  sf_total = sf_central
+  for j in 1:R, k in 1:R
+    sf_total = lcm(sf_total, denominator(Minv[j, k]))
+  end
+  ratio = sf_total ÷ sf_central
+  sf_sq = sf_total * sf_total
+
+  C = [round(Int, Minv[k, Marked[j]] * sf_total) * ratio for k in 1:R, j in 1:K]
+
+  # Inline λ reconstruction: λ[k] = div(Σ_j C[k,j] * tc[j], sf_sq)
+  λ_comps = map(1:R) do k
+    terms = [:($(C[k,j]) * tc[$j]) for j in 1:K if C[k,j] != 0]
+    if isempty(terms)
+      :(0)
+    else
+      s = length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
+      :(div($s, $sf_sq))
+    end
+  end
+  λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
+
   if LT === nothing
-    zero_ss = WeightLatticeElem(TypeA{1}, [0])
+    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
   else
     LR = rank(LT)
-    zero_ss = WeightLatticeElem(LT, zeros(Int, LR))
+    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
   end
 
-  return CompletelyReducibleBundle{MDT}(E.variety, [IrrepLevi(MDT, total_central, zero_ss)])
+  return quote
+    tc = MVector{$K,Int}($(ntuple(_ -> 0, K)...))
+    for c in E.components
+      d = Int(fiber_dimension(c))
+      tc .+= d .* c.central
+    end
+    λ = $λ_expr
+    ss = $zero_ss_expr
+    rep = IrrepLevi{$MDT,$K}(λ, SVector{$K,Int}(tc), ss)
+    CompletelyReducibleBundle{$MDT}(E.variety, [rep])
+  end
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
