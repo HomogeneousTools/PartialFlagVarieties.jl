@@ -17,10 +17,12 @@ module PartialFlagVarieties
 
 using Lie
 using Preferences
+using PrettyTables
 using StaticArrays
 using LinearAlgebra
 using Combinatorics
 using PrecompileTools
+using Distributed: myid
 
 # ─── Extend Lie.jl functions (avoids name collisions) ────────────────────────
 
@@ -42,6 +44,7 @@ include("Hochschild.jl")
 include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
+include("Hodge.jl")
 
 # ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
 
@@ -118,18 +121,25 @@ function __init__()
   # Suppress the Lie.jl startup banner: PartialFlagVarieties will show its own
   set_preferences!(Lie, "show_banner" => false)
 
-  if displaysize(stdout)[2] >= 80
+  # Don't show the banner on worker processes or when stdout is too narrow
+  if myid() == 1 && displaysize(stdout)[2] >= 80
     _print_banner()
   end
   return nothing
 end
 
 @compile_workload begin
-  # Precompile the genuinely hot paths: IrrepLevi construction,
-  # BWB cohomology, and euler_characteristic on a small type-A case.
-  let X = Gr(2, 4)
+  # Precompile the hot paths: IrrepLevi construction, BWB cohomology,
+  # euler_characteristic, and the Koszul / zero-locus pipeline.
+  let X = Gr(2, 5)
     O = structure_sheaf(X)
     euler_characteristic(O)
+    betti_numbers(X)
+    L = line_bundle(X, 1)
+    direct_sum(L, L)
+    Z = zero_locus(L)
+    euler_characteristic(Z)
+    hodge_numbers(Z)
   end
 end
 
