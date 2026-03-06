@@ -11,7 +11,7 @@ export Bundle
 export CompletelyReducibleBundle
 export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
-export structure_sheaf, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
+export structure_sheaf, O, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
 export det_bundle
 export fano_index
 
@@ -67,6 +67,23 @@ struct CompletelyReducibleBundle{MDT<:MarkedDynkinType} <: Bundle{MDT}
   components::Vector{IrrepLevi{MDT}}
 end
 
+"""
+    CompletelyReducibleBundle(mdt::MarkedDynkinType, λ::WeightLatticeElem) -> CompletelyReducibleBundle
+
+Construct the equivariant bundle on the partial flag variety determined by `mdt`
+corresponding to the Levi representation of highest weight `λ`.
+"""
+function CompletelyReducibleBundle(mdt::MarkedDynkinType, λ::WeightLatticeElem)
+  MDT = typeof(mdt)
+  rep = IrrepLevi(MDT, λ)
+  return CompletelyReducibleBundle(PartialFlagVariety{MDT}(), IrrepLevi{MDT}[rep])
+end
+
+function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
+  E = CompletelyReducibleBundle(marked_dynkin_type(X), λ)
+  return CompletelyReducibleBundle(X, components(E))
+end
+
 # ─── Accessors ───────────────────────────────────────────────────────────────
 
 """
@@ -114,7 +131,8 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
+  O(X::PartialFlagVariety) -> CompletelyReducibleBundle
+  structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The trivial line bundle ``\\mathcal{O}_{G/P}``.
 
@@ -128,21 +146,11 @@ julia> rank_bundle(structure_sheaf(X))
 1
 ```
 """
-@generated function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  K = length(Marked)
-  R = rank(DT)
-  LT = levi_type(MDT)
-  LR = LT === nothing ? 1 : rank(LT)
-  LT_expr = LT === nothing ? TypeA{1} : LT
-  return quote
-    triv = IrrepLevi{$MDT,$K}(
-      zero(WeightLatticeElem{$DT,$R}),
-      zero(SVector{$K,Int}),
-      zero(WeightLatticeElem{$LT_expr,$LR}),
-    )
-    CompletelyReducibleBundle{$MDT}(X, IrrepLevi{$MDT}[triv])
-  end
+function O(X::PartialFlagVariety)
+  return CompletelyReducibleBundle(X, WeightLatticeElem(dynkin_type(X)))
 end
+
+structure_sheaf(X::PartialFlagVariety) = O(X)
 
 """
     zero_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
@@ -154,7 +162,7 @@ function zero_bundle(X::PartialFlagVariety{MDT}) where {MDT}
 end
 
 """
-    line_bundle(X::PartialFlagVariety, i::Int) -> CompletelyReducibleBundle
+  line_bundle(X::PartialFlagVariety, i::Integer) -> CompletelyReducibleBundle
 
 The line bundle ``\\mathcal{O}(i)`` on `X`.
 
@@ -174,45 +182,13 @@ julia> rank_bundle(L)
 1
 ```
 """
-@generated function line_bundle(X::PartialFlagVariety{MDT}, i::Integer) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  K = length(Marked)
-  R = rank(DT)
-  LT = levi_type(MDT)
+function line_bundle(X::PartialFlagVariety, i::Integer)
+  picard_rank(X) == 1 || throw(ArgumentError(
+    "line_bundle(X, i::Integer) requires Picard rank 1, but X has Picard rank $(picard_rank(X)). " *
+    "Use line_bundle(X, degrees::Vector{<:Integer}) instead."
+  ))
 
-  if K != 1
-    msg = "line_bundle(X, i::Int) requires Picard rank 1, but X has Picard rank $(K). " *
-      "Use line_bundle(X, degrees::Vector{<:Integer}) instead."
-    return :(throw(ArgumentError($msg)))
-  end
-
-  m = Marked[1]
-
-  # Central slope: central[1] = slope * i
-  # From _apply_central_ext: Σ_k round(Int, Cinv[m, k] * sf) * λ_ivec[k],
-  # and λ_ivec = i * e_m, so only the k==m term survives.
-  Cinv = Lie.cartan_matrix_inverse(DT)
-  sf = 1
-  for j in Marked, k in 1:R
-    sf = lcm(sf, denominator(Cinv[j, k]))
-  end
-  slope = round(Int, Cinv[m, m] * sf)
-
-  # λ coords: i at position m, 0 elsewhere  (ω_m has coord 1 only at node m)
-  λ_comps = [k == m ? :ii : 0 for k in 1:R]
-  λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
-
-  # ss = 0: m is a marked node, so all unmarked coords of i·ω_m are 0
-  LT_expr = LT === nothing ? TypeA{1} : LT
-  LR = LT === nothing ? 1 : rank(LT)
-
-  return quote
-    ii = Int(i)
-    λ = $λ_expr
-    central = SVector{$K,Int}($slope * ii)
-    ss = zero(WeightLatticeElem{$LT_expr,$LR})
-    rep = IrrepLevi{$MDT,$K}(λ, central, ss)
-    CompletelyReducibleBundle{$MDT}(X, IrrepLevi{$MDT}[rep])
-  end
+  return line_bundle(X, [i])
 end
 
 """
@@ -233,51 +209,19 @@ julia> rank_bundle(L)
 1
 ```
 """
-@generated function line_bundle(X::PartialFlagVariety{MDT}, degrees::Vector{<:Integer}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  K = length(Marked)
-  R = rank(DT)
-  LT = levi_type(MDT)
+function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
+  marked = marked_nodes(X)
+  length(degrees) == length(marked) || throw(ArgumentError(
+    string("Expected ", length(marked), " degrees (one per marked node), got ", length(degrees), ".")
+  ))
 
-  Cinv = Lie.cartan_matrix_inverse(DT)
-  sf = 1
-  for j in Marked, k in 1:R
-    sf = lcm(sf, denominator(Cinv[j, k]))
+  coords = zeros(Int, rank(X))
+  for (j, m) in enumerate(marked)
+    coords[m] = Int(degrees[j])
   end
 
-  # central[i] = Σ_j A[i,j] * degrees[j]
-  # where A[i,j] = round(Int, Cinv[Marked[i], Marked[j]] * sf)
-  # (from _apply_central_ext applied to Σ_j degrees[j]*e_{Marked[j]})
-  A = [round(Int, Cinv[Marked[i], Marked[j]] * sf) for i in 1:K, j in 1:K]
-
-  # λ coords: degrees[j] at position Marked[j], 0 elsewhere
-  λ_comps = map(1:R) do k
-    j = findfirst(m -> m == k, Marked)
-    j === nothing ? 0 : :(dd[$j])
-  end
-  λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
-
-  # central[i] = Σ_j A[i,j] * dd[j]
-  central_comps = map(1:K) do i
-    terms = [:($(A[i,j]) * dd[$j]) for j in 1:K if A[i,j] != 0]
-    isempty(terms) ? 0 : length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
-  end
-  central_expr = :(SVector{$K,Int}($(central_comps...)))
-
-  # ss = 0: all marked fundamental weights have zero unmarked coords
-  LT_expr = LT === nothing ? TypeA{1} : LT
-  LR = LT === nothing ? 1 : rank(LT)
-
-  return quote
-    length(degrees) == $K || throw(ArgumentError(
-      string("Expected ", $K, " degrees (one per marked node), got ", length(degrees), ".")
-    ))
-    dd = Int.(degrees)
-    λ = $λ_expr
-    central = $central_expr
-    ss = zero(WeightLatticeElem{$LT_expr,$LR})
-    rep = IrrepLevi{$MDT,$K}(λ, central, ss)
-    CompletelyReducibleBundle{$MDT}(X, IrrepLevi{$MDT}[rep])
-  end
+  λ = WeightLatticeElem(dynkin_type(X), SVector{rank(X),Int}(coords))
+  return CompletelyReducibleBundle(X, λ)
 end
 
 # ─── Type-level caches for tangent/cotangent rep lists ───────────────────────

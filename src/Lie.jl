@@ -14,6 +14,24 @@
 export cartan_type, cartan_type_with_ordering
 export parse_dynkin_type
 
+"""
+  Lie.WeightLatticeElem(::Type{DT}) -> WeightLatticeElem{DT,R}
+
+Construct the zero weight in the weight lattice of `DT`.
+
+# Examples
+```julia
+julia> WeightLatticeElem(TypeA{2})
+0
+```
+"""
+function Lie.WeightLatticeElem(::Type{DT}) where {DT<:DynkinType}
+  R = rank(DT)
+  return WeightLatticeElem(DT, zero(SVector{R,Int}))
+end
+
+Base.zero(::Type{Lie.WeightLatticeElem{DT,R}}) where {DT<:DynkinType,R} = WeightLatticeElem(DT)
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  cartan_type_with_ordering
 # ═══════════════════════════════════════════════════════════════════════════════
