@@ -454,66 +454,25 @@ julia> rank_bundle(det_bundle(tangent_bundle(X)))
 1
 ```
 """
-@generated function det_bundle(E::CompletelyReducibleBundle{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  K = length(Marked)
-  R = rank(DT)
+function _trivial_semisimple_weight(X::PartialFlagVariety)
+  MDT = typeof(marked_dynkin_type(X))
   LT = levi_type(MDT)
+  return WeightLatticeElem(LT === nothing ? TypeA{1} : LT)
+end
 
-  # Precompute the λ-reconstruction coefficients at code-gen time.
-  # For det_bundle the ss part is always 0 (the det only accumulates central
-  # characters), so coords_full[u] = 0 for all unmarked u.  The ambient weight
-  # reconstruction then reduces to:
-  #   λ[k] = div(Σ_j C[k,j] * central[j], sf_sq)
-  # where C[k,j] = round(Int, Minv[k, Marked[j]] * sf_total) * ratio.
-  Cinv = Lie.cartan_matrix_inverse(DT)
-  sf_central = 1
-  for j in Marked, k in 1:R
-    sf_central = lcm(sf_central, denominator(Cinv[j, k]))
-  end
-  unmarked = [i for i in 1:R if !(i in Marked)]
-  M_mat = zeros(Rational{Int}, R, R)
-  for i in unmarked
-    M_mat[i, i] = 1
-  end
-  for j in Marked, k in 1:R
-    M_mat[j, k] = Cinv[j, k]
-  end
-  Minv = inv(M_mat)
-  sf_total = sf_central
-  for j in 1:R, k in 1:R
-    sf_total = lcm(sf_total, denominator(Minv[j, k]))
-  end
-  ratio = sf_total ÷ sf_central
-  sf_sq = sf_total * sf_total
+function _det_bundle_irrep(X::PartialFlagVariety, rep::IrrepLevi)
+  MDT = typeof(marked_dynkin_type(X))
+  d = Int(fiber_dimension(rep))
+  return IrrepLevi(MDT, d * rep.central, _trivial_semisimple_weight(X))
+end
 
-  C = [round(Int, Minv[k, Marked[j]] * sf_total) * ratio for k in 1:R, j in 1:K]
-
-  # Inline λ reconstruction: λ[k] = div(Σ_j C[k,j] * tc[j], sf_sq)
-  λ_comps = map(1:R) do k
-    terms = [:($(C[k,j]) * tc[$j]) for j in 1:K if C[k,j] != 0]
-    if isempty(terms)
-      :(0)
-    else
-      s = length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
-      :(div($s, $sf_sq))
-    end
+function det_bundle(E::CompletelyReducibleBundle)
+  X = variety(E)
+  λ = WeightLatticeElem(dynkin_type(X))
+  for c in components(E)
+    λ += p_dominant_weight(_det_bundle_irrep(X, c))
   end
-  λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
-
-  LT_expr = LT === nothing ? TypeA{1} : LT
-  LR = LT === nothing ? 1 : rank(LT)
-
-  return quote
-    tc = MVector{$K,Int}($(ntuple(_ -> 0, K)...))
-    for c in E.components
-      d = Int(fiber_dimension(c))
-      tc .+= d .* c.central
-    end
-    λ = $λ_expr
-    ss = zero(WeightLatticeElem{$LT_expr,$LR})
-    rep = IrrepLevi{$MDT,$K}(λ, SVector{$K,Int}(tc), ss)
-    CompletelyReducibleBundle{$MDT}(E.variety, IrrepLevi{$MDT}[rep])
-  end
+  return CompletelyReducibleBundle(X, λ)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
