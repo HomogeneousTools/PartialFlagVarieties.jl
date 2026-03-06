@@ -16,6 +16,7 @@ export zero_locus, ambient_variety, defining_bundle
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction, cohomology_on_restriction_symbolic
 export is_calabi_yau, is_calabi_yau_candidate
+export fano_index
 export hilbert_polynomial
 export hodge_numbers_symbolic
 
@@ -228,6 +229,11 @@ Compute ``H^*(Z, F|_Z)`` by:
 
 Returns `(H*(F|_Z), determined)` where `determined` indicates whether
 all cohomology groups are uniquely determined by the LES.
+
+When the Koszul filtration leaves some groups undetermined, a Serre duality
+fallback is attempted: if ``H^*(Z, F^*|_Z)`` is fully determined, then
+``H^k(Z, F|_Z) = H^{d-k}(Z, F^*|_Z)`` by Serre duality (valid when
+``K_Z \\cong \\mathcal{O}_Z``, e.g. for Calabi–Yau and hyperkähler zero loci).
 """
 function cohomology_on_restriction(
   Z::ZeroLocus{MDT},
@@ -241,7 +247,57 @@ function cohomology_on_restriction(
     push!(koszul_cohos, dimensions(K))
   end
 
-  solve_koszul_filtration(koszul_cohos, d_Z)
+  (H, det) = solve_koszul_filtration(koszul_cohos, d_Z)
+  det && return (H, true)
+
+  # Serre duality fallback: H^k(Z, F) = H^{d-k}(Z, F*) when K_Z = O_Z.
+  # Try computing H*(Z, F*) directly (without further fallback to avoid recursion).
+  F_dual = dual(F)
+  terms_dual = koszul_terms(Z, F_dual)
+  koszul_cohos_dual = Cohomology{BigInt}[]
+  for K in terms_dual
+    push!(koszul_cohos_dual, dimensions(K))
+  end
+  (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+
+  # Serre duality is only valid H^k(F) = H^{d-k}(F*) when K_Z ≅ O_Z.
+  # Guard all Serre-duality paths by checking that the zero locus is
+  # a (candidate) Calabi–Yau (i.e. det(E) ≅ ω_X^{-1}).
+  if is_calabi_yau_candidate(Z.defining_bundle)
+    if det_dual
+      # Apply Serre duality: H^k(Z, F) = H^{d-k}(Z, F*)
+      entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
+      return (Cohomology{BigInt}(entries, d_Z), true)
+    end
+
+    # Both F and F* are underdetermined by the Koszul filtration alone.
+    # Cross-validate: if both numeric results satisfy the Euler characteristic
+    # constraint AND are Serre-dual to each other, the pair is consistent with
+    # all available constraints and the result can be trusted.
+    dim_ambient = koszul_cohos[1].dim_variety
+    chi_exact = sum(
+      ((-1)^(i - 1)) * sum((-1)^k * koszul_cohos[i][k] for k in 0:dim_ambient; init=BigInt(0))
+      for i in 1:length(koszul_cohos);
+      init=BigInt(0),
+    )
+    chi_numeric = sum((-1)^k * H[k] for k in 0:d_Z; init=BigInt(0))
+
+    dim_ambient_dual = koszul_cohos_dual[1].dim_variety
+    chi_exact_dual = sum(
+      ((-1)^(i - 1)) * sum((-1)^k * koszul_cohos_dual[i][k] for k in 0:dim_ambient_dual; init=BigInt(0))
+      for i in 1:length(koszul_cohos_dual);
+      init=BigInt(0),
+    )
+    chi_numeric_dual = sum((-1)^k * H_dual[k] for k in 0:d_Z; init=BigInt(0))
+
+    serre_consistent = all(H[k] == H_dual[d_Z - k] for k in 0:d_Z)
+
+    if chi_numeric == chi_exact && chi_numeric_dual == chi_exact_dual && serre_consistent
+      return (H, true)
+    end
+  end
+
+  (H, false)
 end
 
 """
@@ -273,13 +329,73 @@ function cohomology_on_restriction_symbolic(
 ) where {MDT}
   d_Z = dimension(Z)
 
+  # First try the numeric path (which includes Serre duality fallback).
+  # If fully determined, promote to AffineExpr immediately — no symbolic variables introduced.
+  (H_numeric, det_numeric) = cohomology_on_restriction(Z, F)
+  if det_numeric
+    entries = AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
+    return Cohomology{AffineExpr}(entries, d_Z)
+  end
+
+  # Numeric path underdetermined: fall back to symbolic filtration.
   terms = koszul_terms(Z, F)
   koszul_cohos = Cohomology{BigInt}[]
   for K in terms
     push!(koszul_cohos, dimensions(K))
   end
 
-  solve_koszul_filtration_symbolic(koszul_cohos, d_Z, var_counter)
+  # Run the symbolic Koszul filtration over the FULL ambient dimension,
+  # not just d_Z.  The entries at degrees d_Z+1..d_ambient must all vanish
+  # (cohomology of a sheaf on a d_Z-dimensional variety), so we use those
+  # as additional equations to eliminate symbolic variables.
+  d_ambient = koszul_cohos[1].dim_variety
+  H_sym_full = solve_koszul_filtration_symbolic(koszul_cohos, d_ambient, var_counter)
+
+  # Apply vanishing constraints: H^k = 0 for k = d_Z+1..d_ambient.
+  n_full = d_ambient + 1
+  mat = Matrix{AffineExpr}(undef, 1, n_full)
+  for k in 0:d_ambient
+    mat[1, k + 1] = H_sym_full[k]
+  end
+  for k in (d_Z + 1):d_ambient
+    # H^k(Z, F) = 0 for k > dim(Z)
+    expr = mat[1, k + 1]
+    if !is_determined(expr) || expr.constant != 0
+      _apply_equation!(mat, expr - AffineExpr(BigInt(0)))
+    end
+  end
+  # Extract the result at degrees 0..d_Z
+  H_sym = Cohomology{AffineExpr}(AffineExpr[mat[1, k + 1] for k in 0:d_Z], d_Z)
+
+  # Apply Serre duality constraints: H^k(Z, F) = H^{d-k}(Z, F*)
+  # for trivially-canonical Z (K_Z = O_Z).
+  # Try computing H*(F*) numerically without further Serre fallback.
+  F_dual = dual(F)
+  terms_dual = koszul_terms(Z, F_dual)
+  koszul_cohos_dual = Cohomology{BigInt}[]
+  for K in terms_dual
+    push!(koszul_cohos_dual, dimensions(K))
+  end
+  (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+
+  # Serre duality H^k(F) = H^{d-k}(F*) is only valid when K_Z ≅ O_Z.
+  if det_dual && is_calabi_yau_candidate(Z.defining_bundle)
+    # H^k(F) = H^{d-k}(F*) is fully known: substitute into symbolic result.
+    n = d_Z + 1
+    mat2 = Matrix{AffineExpr}(undef, 1, n)
+    for k in 0:d_Z
+      mat2[1, k + 1] = H_sym[k]
+    end
+    for k in 0:d_Z
+      val = H_dual[d_Z - k]
+      if !is_determined(mat2[1, k + 1])
+        _apply_equation!(mat2, mat2[1, k + 1] - AffineExpr(Int(val)))
+      end
+    end
+    return Cohomology{AffineExpr}(AffineExpr[mat2[1, k + 1] for k in 0:d_Z], d_Z)
+  end
+
+  H_sym
 end
 
 """
@@ -340,46 +456,28 @@ function _determinant_central(E::CompletelyReducibleBundle{MDT}) where {MDT}
   c1
 end
 
-"""Compute the scaled central character of the anticanonical bundle -K_{G/P}."""
+"""Compute the scaled central character of the anticanonical bundle -K_{G/P}.
+
+Uses [`anticanonical_degrees`](@ref) to obtain the anticanonical ω-coordinates
+at the marked nodes, then converts to the scaled central character used
+internally by `IrrepLevi` (coordinates multiplied by [`central_scaling_factor`](@ref)).
+"""
 function _anticanonical_central(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  DT = _ambient_type(MDT)
-  R = rank(DT)
-  anticK = _anticanonical_weight_direct(MDT)
-  sf = central_scaling_factor(MDT)
-
-  M = decomposition_matrix(MDT)
-  anticK_svec = SVector{R,Rational{Int}}(Tuple(anticK))
-  new_coords = M * anticK_svec
-
   Marked = marked_nodes(MDT)
-  Int[Int(new_coords[m] * sf) for m in Marked]
-end
-
-"""Compute the anticanonical weight of G/P in the fundamental weight basis."""
-function _anticanonical_weight_direct(::Type{MDT}) where {MDT<:MarkedDynkinType}
+  K = length(Marked)
+  sf = central_scaling_factor(MDT)
   DT = _ambient_type(MDT)
-  R = rank(DT)
-  pos_roots = positive_nonparabolic_roots(MDT)
-  C = Lie.cartan_matrix(DT)
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  degs = anticanonical_degrees(MDT)
 
-  # Sum all roots in simple root basis
-  total = zeros(Int, R)
-  for root in pos_roots
-    c = Lie.coefficients(root)
-    for j in 1:R
-      total[j] += c[j]
-    end
-  end
-
-  # Convert: ω-coord_j = Σ_i C[j,i] * total[i]
-  result = zeros(Rational{Int}, R)
-  for j in 1:R
-    for i in 1:R
-      result[j] += C[j, i] * total[i]
-    end
-  end
-
-  result
+  # central[i] = Σ_{j=1}^K  round(Int, Cinv[Marked[i], Marked[j]] * sf) * degs[j]
+  # (same formula as _apply_central_ext applied to the anticanonical weight vector)
+  Int[
+    sum(
+      round(Int, Cinv[Marked[i], Marked[j]] * sf) * Int(degs[j])
+      for j in 1:K
+    ) for i in 1:K
+  ]
 end
 
 """
@@ -418,81 +516,31 @@ function is_calabi_yau(Z::ZeroLocus)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Constraint propagation helpers for symbolic Hodge numbers
+#  Fano index of zero loci
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-Substitute ``x_{\\mathrm{var\\_id}} = \\mathrm{replacement}`` in every entry
-of the ``\\mathrm{AffineExpr}`` matrix ``M``, in-place.
-"""
-function _substitute_var!(M::Matrix{AffineExpr}, var_id::Int, replacement::AffineExpr)
-  for i in eachindex(M)
-    e = M[i]
-    haskey(e.coeffs, var_id) || continue
-    c = e.coeffs[var_id]
-    new_constant = e.constant + c * replacement.constant
-    new_coeffs = copy(e.coeffs)
-    delete!(new_coeffs, var_id)
-    for (k, v) in replacement.coeffs
-      new_coeffs[k] = get(new_coeffs, k, BigInt(0)) + c * v
-      new_coeffs[k] == 0 && delete!(new_coeffs, k)
-    end
-    M[i] = AffineExpr(new_constant, new_coeffs)
-  end
-end
+    fano_index(Z::ZeroLocus) -> Int
 
-"""
-Given a linear equation ``\\mathrm{expr} = 0`` in the symbolic variables,
-solve for the variable with the smallest index and substitute the solution
-throughout the matrix ``M``.  Returns `true` if a variable was eliminated.
+The Fano index of the zero locus ``Z``, defined (when ``\\mathrm{Pic}(Z) \\cong
+\\mathbb{Z}``) as the unique positive integer ``r`` such that
+``-K_Z = r\\,H`` where ``H`` is the restriction of the ample generator of
+``\\mathrm{Pic}(X)`` to ``Z``.
 
-Only eliminates when integer divisibility holds.
-"""
-function _apply_equation!(M::Matrix{AffineExpr}, expr::AffineExpr)
-  isempty(expr.coeffs) && return false
-  var_id = minimum(keys(expr.coeffs))
-  coeff = expr.coeffs[var_id]
+Computed via the adjunction formula: ``K_Z = (K_X \\otimes \\det E)|_Z``, giving
 
-  rest_const = expr.constant
-  rest_coeffs = copy(expr.coeffs)
-  delete!(rest_coeffs, var_id)
+```math
+r_Z = r_X - \\deg(\\det E),
+```
 
-  # Check integer divisibility
-  rest_const % coeff == 0 || return false
-  all(v % coeff == 0 for (_, v) in rest_coeffs) || return false
+where ``r_X = \\mathop{\\mathrm{fano\\_index}}(X)`` and ``\\deg(\\det E)`` is the degree of ``\\det(E)`` as a multiple of the
+ample generator ``\\omega_m``.
 
-  sub_const = -(rest_const ÷ coeff)
-  sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
-  filter!(p -> p.second != 0, sub_coeffs)
-  _substitute_var!(M, var_id, AffineExpr(sub_const, sub_coeffs))
-  true
-end
+Requires the ambient variety to have Picard rank 1 (i.e., `picard_rank(ambient_variety(Z)) == 1`).
+For higher-rank ambient Picard groups, use `anticanonical_degrees` and
+`det_bundle` directly.
 
-"""
-Apply the constraint ``\\mathrm{hodge}[pi, qi] = \\mathrm{target}`` by
-eliminating one symbolic variable.
-"""
-function _apply_linear_constraint!(hodge::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt)
-  expr = hodge[pi, qi]
-  is_determined(expr) && return false
-  _apply_equation!(hodge, expr - AffineExpr(target))
-end
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Hodge numbers of zero loci
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    hodge_numbers(Z::ZeroLocus) -> Matrix{BigInt}
-
-Compute the Hodge diamond ``h^{p,q}(Z)`` for ``p, q = 0, \\ldots, \\dim Z``.
-
-Uses the Koszul resolution and the conormal exact sequence.
-Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = h^{p,q}``.
-
-For ``p = 0``: computed directly from the Koszul resolution of ``\\mathcal{O}_Z``.
-For ``p \\ge 1``: uses the conormal sequence and previously computed ``h^{j,q}``
-for ``j < p``.
+Throws an `ArgumentError` if the ambient Picard rank exceeds 1.
 
 # Examples
 ```jldoctest
@@ -500,104 +548,31 @@ julia> using PartialFlagVarieties
 
 julia> X = projective_space(4);
 
-julia> Z = zero_locus(line_bundle(X, 5));
+julia> Z = zero_locus(line_bundle(X, 3));
 
-julia> h = hodge_numbers(Z);
+julia> fano_index(Z)  # -K_Z = O(5-3) = O(2)
+2
 
-julia> h[2, 2]  # h^{1,1}
-1
+julia> Z_CY = zero_locus(line_bundle(X, 5));
 
-julia> h[3, 2]  # h^{2,1}
-101
+julia> fano_index(Z_CY)  # Calabi–Yau: -K_Z = O(0)
+0
 ```
 """
-function hodge_numbers(Z::ZeroLocus{MDT}) where {MDT}
-  d = dimension(Z)
-  X = Z.ambient
-
-  hodge = zeros(BigInt, d + 1, d + 1)
-  known = falses(d + 1, d + 1)
-
-  # ── Step 1: p = 0 row via Koszul ──────────────────────────────────────
-  (H0, _) = cohomology_on_restriction(Z)
-  for q in 0:d
-    hodge[1, q + 1] = H0[q]
-    known[1, q + 1] = true
-  end
-
-  # ── Step 2: p = 1 row via conormal SES 0 → E*|_Z → Ω_X|_Z → Ω_Z → 0
-  ses_determined = true
-  if d >= 1
-    Ω_X = exterior_power(cotangent_bundle(X), 1)
-    (HΩ, _) = cohomology_on_restriction(Z, Ω_X)
-    E_dual = dual(Z.defining_bundle)
-    (HE, _) = cohomology_on_restriction(Z, E_dual)
-    (H1, det1) = solve_ses_cohomology(HE, HΩ)
-    ses_determined = det1
-    for q in 0:d
-      hodge[2, q + 1] = H1[q]
-      known[2, q + 1] = true
-    end
-  end
-
-  # ── Step 2.5: When SES is ambiguous, refine with symbolic solver ──────
-  if d >= 1 && !ses_determined
-    H_sym = hodge_numbers_symbolic(Z)
-    for q in 0:d
-      e = H_sym[2, q + 1]
-      if is_determined(e)
-        hodge[2, q + 1] = e.constant
-      end
-    end
-  end
-
-  # ── Step 3: compute χ(Ω^p_Z) for all p via conormal recursion ────────
-  chi_omega = zeros(BigInt, d + 1)
-  chi_omega[1] = sum((-1)^q * hodge[1, q + 1] for q in 0:d)
-  if d >= 1
-    chi_omega[2] = sum((-1)^q * hodge[2, q + 1] for q in 0:d)
-  end
-  for p in 2:d
-    chi_omega[p + 1] = _chi_omega_p_conormal(Z, p)
-  end
-
-  # ── Step 4: fill Hodge diamond using symmetries + χ constraints ───────
-  for p in 2:d
-    # Hodge symmetry: h^{p,q} = h^{q,p}
-    for q in 0:d
-      if q <= d && known[q + 1, p + 1]
-        hodge[p + 1, q + 1] = hodge[q + 1, p + 1]
-        known[p + 1, q + 1] = true
-      end
-    end
-
-    # Serre duality: h^{p,q} = h^{d-p,d-q}
-    for q in 0:d
-      dp = d - p
-      dq = d - q
-      if 0 <= dp <= d && 0 <= dq <= d && known[dp + 1, dq + 1] && !known[p + 1, q + 1]
-        hodge[p + 1, q + 1] = hodge[dp + 1, dq + 1]
-        known[p + 1, q + 1] = true
-      end
-    end
-
-    # Use χ(Ω^p_Z) = Σ_q (-1)^q h^{p,q} to solve for remaining unknowns
-    unknown_qs = [q for q in 0:d if !known[p + 1, q + 1]]
-    if length(unknown_qs) == 1
-      q = unknown_qs[1]
-      known_sum = sum((-1)^qq * hodge[p + 1, qq + 1] for qq in 0:d if qq != q)
-      hodge[p + 1, q + 1] = (-1)^q * (chi_omega[p + 1] - known_sum)
-      known[p + 1, q + 1] = true
-    elseif length(unknown_qs) >= 2
-      _resolve_remaining!(hodge, known, p, d, chi_omega[p + 1])
-    end
-  end
-
-  hodge
+function fano_index(Z::ZeroLocus{MDT}) where {MDT<:MarkedDynkinType}
+  Marked = marked_nodes(MDT)
+  length(Marked) == 1 || throw(ArgumentError(
+    "fano_index is only defined for zero loci in Picard-rank-1 ambient varieties; " *
+    "use anticanonical_degrees and det_bundle for the general case.")
+  )
+  m = Marked[1]
+  det_E = det_bundle(Z.defining_bundle)
+  deg_det = p_dominant_weight(only(det_E.components)).vec[m]
+  fano_index(Z.ambient) - deg_det
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Symbolic Hodge numbers
+#  Symbolic Hodge numbers  (concrete hodge_numbers is in Hodge.jl)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -613,6 +588,16 @@ After computing the ``p = 1`` row via the conormal short exact sequence,
 Hodge symmetry (``h^{1,0} = h^{0,1}``), Serre duality
 (``h^{1,d} = h^{0,d-1}``), and the exact ``\\chi(\\Omega^1_Z)`` are used
 to eliminate up to three symbolic variables.
+
+!!! warning "Lefschetz hyperplane theorem does not apply to higher-rank zero loci"
+    The Lefschetz hyperplane theorem guarantees ``\\mathrm{Pic}(X) \\xrightarrow{\\sim}
+    \\mathrm{Pic}(Z)`` only when ``Z`` is an ample *hypersurface* (codimension 1).
+    For a zero locus of a rank-``r`` bundle with ``r > 1``, the Picard rank of
+    ``Z`` can strictly exceed that of the ambient ``X``, so ``h^{1,1}(Z) > b_2(X)``
+    is possible and may be left as a free symbolic variable by this function.
+    Do **not** assume ``h^{1,1}(Z) = \\mathrm{picard\\_rank}(X)``.
+    Example: ``b9 = (\\mathrm{Sym}^2 S^*)^{\\oplus 2}`` on ``\\mathrm{Gr}(2,7)``
+    has ``h^{1,1} = 8`` even though ``\\mathrm{Pic}(\\mathrm{Gr}(2,7)) \\cong \\mathbb{Z}``.
 
 # Examples
 ```jldoctest
@@ -658,109 +643,132 @@ julia> H[3, 3].constant  # h^{2,2}
 function hodge_numbers_symbolic(Z::ZeroLocus{MDT}) where {MDT}
   d = dimension(Z)
   X = Z.ambient
+  E = Z.defining_bundle
+  E_dual = dual(E)
   var_counter = Ref(0)
 
   hodge = Matrix{AffineExpr}(undef, d + 1, d + 1)
   for i in eachindex(hodge)
     hodge[i] = AffineExpr(0)
   end
-  known = falses(d + 1, d + 1)
 
-  # ── Step 1: p = 0 row via Koszul (symbolic) ───────────────────────────
-  H0 = cohomology_on_restriction_symbolic(Z, var_counter)
-  for q in 0:d
-    hodge[1, q + 1] = H0[q]
-    known[1, q + 1] = true
-  end
+  # ── Precompute Sym^k(E*) and Ω^k_X for k = 0..⌊d/2⌋ ─────────────────
+  half = d ÷ 2
+  syms = CompletelyReducibleBundle{MDT}[symmetric_power(E_dual, k) for k in 0:half]
+  omegas = CompletelyReducibleBundle{MDT}[exterior_power(cotangent_bundle(X), k) for k in 0:half]
 
-  # ── Step 2: p = 1 row via conormal SES ────────────────────────────────
-  if d >= 1
-    Ω_X = exterior_power(cotangent_bundle(X), 1)
-    HΩ_sym = cohomology_on_restriction_symbolic(Z, Ω_X, var_counter)
-    E_dual = dual(Z.defining_bundle)
-    HE_sym = cohomology_on_restriction_symbolic(Z, E_dual, var_counter)
-
-    # Conormal SES: 0 → E*|_Z → Ω_X|_Z → Ω_Z → 0
-    # Dispatch handles all cases: (BigInt,BigInt), (AffineExpr,BigInt),
-    # or (AffineExpr,AffineExpr).
-    H1_sym = solve_ses_cohomology_symbolic(HE_sym, HΩ_sym, var_counter)
-
+  # ── Compute rows p = 0..⌊d/2⌋ via the conormal filtration ────────────
+  for p in 0:half
+    if p == 0
+      Hp = cohomology_on_restriction_symbolic(Z, var_counter)
+    else
+      cohos = Cohomology[]
+      for j in 0:p
+        F = tensor_product(syms[p - j + 1], omegas[j + 1])
+        Hj = cohomology_on_restriction_symbolic(Z, F, var_counter)
+        push!(cohos, Hj)
+      end
+      Hp = cohos[1]
+      for k in 2:length(cohos)
+        Hp = solve_ses_cohomology_symbolic(Hp, cohos[k], var_counter)
+      end
+      # Truncate to zero locus dimension
+      Hp = Cohomology{AffineExpr}(AffineExpr[Hp[i] for i in 0:d], d)
+    end
     for q in 0:d
-      hodge[2, q + 1] = H1_sym[q]
-      known[2, q + 1] = true
-    end
-  end
-
-  # ── Step 2.5: Constrain p=1 row using Hodge/Serre symmetries + χ ─────
-  #
-  # The conormal SES may leave symbolic unknowns in h^{1,q}.  We can
-  # eliminate some by exploiting:
-  #   1. Hodge symmetry:  h^{1,0} = h^{0,1}      (known from step 1)
-  #   2. Serre + Hodge:   h^{1,d} = h^{0,d-1}    (chain: Serre then Hodge)
-  #   3. χ(Ω^1_Z) = Σ (-1)^q h^{1,q}             (exact Euler characteristic)
-  if d >= 1
-    # Constraint 1: h^{1,0} = h^{0,1}
-    if is_determined(hodge[1, 2])
-      _apply_linear_constraint!(hodge, 2, 1, hodge[1, 2].constant)
+      hodge[p + 1, q + 1] = Hp[q]
     end
 
-    # Constraint 2: h^{1,d} = h^{0,d-1}
-    if d >= 2 && is_determined(hodge[1, d])
-      _apply_linear_constraint!(hodge, 2, d + 1, hodge[1, d].constant)
-    end
+    # Immediately apply Hodge symmetry to override conormal-computed values
+    # that are already determined but potentially wrong (constant-part lower bounds).
+    #
+    # When a corner entry h^{p,0} (or h^{p,d}) is forced to a new value `target`
+    # that differs from the determined constant the Koszul computation produced,
+    # the alternating sum χ = Σ (-1)^q h^{p,q} changes by ±delta.
+    #
+    # For the MIDDLE ROW (p == d÷2, even d): the symbolic variables in that row
+    # already satisfy χ = chi_exact for any variable assignment (they all cancel
+    # in the alternating sum).  The χ constraint in the second loop is therefore
+    # a no-op.  We must manually compensate h^{p, d÷2} to restore χ.
+    #
+    # For ALL OTHER ROWS (p ≠ d÷2): the symbolic variables do NOT all cancel in
+    # χ, so the χ constraint in the second loop will self-correct by eliminating
+    # one free variable.  No manual compensation is needed or safe.
+    mid = d ÷ 2  # middle q-index (0-based)
 
-    # Constraint 3: χ(Ω^1_Z) = Σ_q (-1)^q h^{1,q}
-    Ω_X_c = exterior_power(cotangent_bundle(X), 1)
-    chi_1 = euler_characteristic(Z, Ω_X_c) -
-            euler_characteristic(Z, dual(Z.defining_bundle))
-    alt_sum = sum((-1)^q * hodge[2, q + 1] for q in 0:d; init=AffineExpr(0))
-    _apply_equation!(hodge, alt_sum - AffineExpr(chi_1))
-  end
-
-  # ── Step 3: compute exact χ(Ω^p_Z) for all p via conormal recursion ──
-  chi_omega = zeros(BigInt, d + 1)
-  # χ for p=0, p=1: extract from symbolic hodge (only the constant parts
-  # contribute since variables cancel in alternating sum... actually they
-  # might not cancel).  Use the exact Euler characteristic instead.
-  chi_omega[1] = euler_characteristic(Z)
-  if d >= 1
-    Ω_X = exterior_power(cotangent_bundle(X), 1)
-    chi_omega[2] = euler_characteristic(Z, Ω_X) -
-                   euler_characteristic(Z, dual(Z.defining_bundle))
-  end
-  for p in 2:d
-    chi_omega[p + 1] = _chi_omega_p_conormal(Z, p)
-  end
-
-  # ── Step 4: fill Hodge diamond using symmetries + χ constraints ───────
-  for p in 2:d
-    # Hodge symmetry: h^{p,q} = h^{q,p}
-    for q in 0:d
-      if q <= d && known[q + 1, p + 1]
-        hodge[p + 1, q + 1] = hodge[q + 1, p + 1]
-        known[p + 1, q + 1] = true
+    # h^{p,0} = h^{0,p} (Hodge symmetry)
+    if p >= 1 && is_determined(hodge[1, p + 1])
+      target = hodge[1, p + 1].constant
+      entry = hodge[p + 1, 1]
+      if is_determined(entry) && entry.constant != target
+        delta = target - entry.constant  # change in h^{p,0}
+        hodge[p + 1, 1] = AffineExpr(target)
+        if p == half  # middle row: χ vars cancel → compensate h^{p,mid}
+          # (-1)^mid * Δmid = -delta  →  Δmid = -delta / (-1)^mid
+          comp = -delta * (iseven(mid) ? 1 : -1)
+          e_mid = hodge[p + 1, mid + 1]
+          hodge[p + 1, mid + 1] = AffineExpr(e_mid.constant + comp, e_mid.coeffs)
+        end
+        # For p ≠ half: let the χ constraint in the second loop handle it.
+      else
+        _apply_linear_constraint!(hodge, p + 1, 1, target)
       end
     end
-
-    # Serre duality: h^{p,q} = h^{d-p,d-q}
-    for q in 0:d
-      dp = d - p
-      dq = d - q
-      if 0 <= dp <= d && 0 <= dq <= d && known[dp + 1, dq + 1] && !known[p + 1, q + 1]
-        hodge[p + 1, q + 1] = hodge[dp + 1, dq + 1]
-        known[p + 1, q + 1] = true
+    # h^{p,d} = h^{0,d-p} (Serre + Hodge symmetry; skipped when dp == p)
+    dp = d - p
+    if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
+      target = hodge[1, dp + 1].constant
+      entry = hodge[p + 1, d + 1]
+      if is_determined(entry) && entry.constant != target
+        # p == half is impossible here (dp == p is excluded above),
+        # so no middle-row compensation is needed.
+        hodge[p + 1, d + 1] = AffineExpr(target)
+        # The χ constraint in the second loop will absorb the imbalance.
+      else
+        _apply_linear_constraint!(hodge, p + 1, d + 1, target)
       end
     end
+  end
 
-    # Use χ(Ω^p_Z) = Σ_q (-1)^q h^{p,q} to solve for remaining unknowns
-    unknown_qs = [q for q in 0:d if !known[p + 1, q + 1]]
-    if length(unknown_qs) == 1
-      q = unknown_qs[1]
-      known_sum = sum((-1)^qq * hodge[p + 1, qq + 1] for qq in 0:d if qq != q; init=AffineExpr(0))
-      hodge[p + 1, q + 1] = (-1)^q * (AffineExpr(chi_omega[p + 1]) - known_sum)
-      known[p + 1, q + 1] = true
+  # ── Apply Hodge/Serre symmetry constraints to eliminate variables ─────
+  for p in 0:half
+    # Hodge symmetry: h^{p,0} = h^{0,p}
+    if p >= 1 && is_determined(hodge[1, p + 1])
+      _apply_linear_constraint!(hodge, p + 1, 1, hodge[1, p + 1].constant)
     end
-    # If ≥ 2 unknowns remain, leave as zero (symbolic resolution not attempted)
+    # Serre + Hodge: h^{p,d} = h^{d-p,d} = h^{0,d-p} (known from p=0 row)
+    dp = d - p
+    if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
+      _apply_linear_constraint!(hodge, p + 1, d + 1, hodge[1, dp + 1].constant)
+    end
+    # χ(Ω^p_Z) constraint
+    chi_p = _chi_omega_p_conormal(Z, p)
+    alt_sum = sum((-1)^q * hodge[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
+    _apply_equation!(hodge, alt_sum - AffineExpr(chi_p))
+  end
+
+  # ── Cross-row Hodge symmetry: h^{p,q} = h^{q,p} for all computed rows ─
+  # Apply h^{p,q} = h^{q,p} for p,q = 0..half to eliminate more variables
+  for p in 0:half, q in 0:half
+    p == q && continue
+    expr = hodge[p + 1, q + 1] - hodge[q + 1, p + 1]
+    _apply_equation!(hodge, expr)
+  end
+
+  # ── Middle-row Hodge symmetry constraint: h^{p,q} = h^{p,d-q} ────────
+  if d % 2 == 0
+    p = half
+    for q in 0:(d ÷ 2 - 1)
+      expr = hodge[p + 1, q + 1] - hodge[p + 1, d - q + 1]
+      _apply_equation!(hodge, expr)
+    end
+  end
+
+  # ── Fill rows p > ⌊d/2⌋ via Serre duality ────────────────────────────
+  for p in (half + 1):d
+    for q in 0:d
+      hodge[p + 1, q + 1] = hodge[d - p + 1, d - q + 1]
+    end
   end
 
   hodge

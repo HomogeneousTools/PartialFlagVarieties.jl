@@ -59,8 +59,15 @@ function solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
   ub[d + 2] = BigInt(0)
 
   # δ_i ≤ a_{i+1} for i = 0, ..., d-1
+  # δ_i ≥ max(a_{i+1} - b_{i+1}, 0) for i = 0, ..., d-1
+  # (rank of connecting map δ_i equals dim ker(H^{i+1}(A)→H^{i+1}(B)),
+  #  and that map has rank ≤ min(a_{i+1}, b_{i+1}), so ker ≥ a_{i+1} - b_{i+1})
   for i in 0:(d - 1)
     ub[i + 2] = min(ub[i + 2], a[i + 1])
+    new_lb = a[i + 1] - b[i + 1]
+    if new_lb > lb[i + 2]
+      lb[i + 2] = new_lb
+    end
   end
 
   # Iterate forward-backward passes until convergence
@@ -195,8 +202,80 @@ function solve_koszul_filtration(
   for i in 0:dim_zero_locus
     push!(entries, current[i])
   end
+  result = Cohomology{BigInt}(entries, dim_zero_locus)
 
-  (Cohomology{BigInt}(entries, dim_zero_locus), all_determined)
+  if all_determined
+    return (result, true)
+  end
+
+  # Some intermediate SES had undetermined connecting maps, but the final output
+  # may still be uniquely determined (uncertain deltas may cancel in later steps).
+  # Use the symbolic solver over the FULL ambient dimension and apply vanishing
+  # constraints H^k = 0 for k > dim_zero_locus.
+  var_counter = Ref(0)
+  dim_ambient = koszul_cohos[1].dim_variety
+  sym_result_full = solve_koszul_filtration_symbolic(koszul_cohos, dim_ambient, var_counter)
+
+  # Build a matrix over the full ambient range.
+  n_full = dim_ambient + 1
+  mat = Matrix{AffineExpr}(undef, 1, n_full)
+  for k in 0:dim_ambient
+    mat[1, k + 1] = sym_result_full[k]
+  end
+
+  # Apply vanishing constraints: H^k(Z, F) = 0 for k > dim_zero_locus.
+  for k in (dim_zero_locus + 1):dim_ambient
+    expr = mat[1, k + 1]
+    if !is_determined(expr) || expr.constant != 0
+      _apply_equation!(mat, expr - AffineExpr(BigInt(0)))
+    end
+  end
+
+  # Extract symbolic entries at 0..dim_zero_locus.
+  sym_result = Cohomology{AffineExpr}(AffineExpr[mat[1, k + 1] for k in 0:dim_zero_locus], dim_zero_locus)
+
+  # Apply the Euler characteristic constraint: χ(F|_Z) = Σ_i (-1)^i χ(K_i).
+  # χ(K_i) is computed exactly from the ambient Koszul terms.
+  chi_exact = BigInt(0)
+  for (i, K) in enumerate(koszul_cohos)
+    chi_K = sum((-1)^k * K[k] for k in 0:dim_ambient; init=BigInt(0))
+    chi_exact += ((-1)^(i - 1)) * chi_K
+  end
+
+  # Re-use mat from above (restricted to 0..dim_zero_locus)
+  mat2 = Matrix{AffineExpr}(undef, 1, dim_zero_locus + 1)
+  for k in 0:dim_zero_locus
+    mat2[1, k + 1] = sym_result[k]
+  end
+
+  # Apply: Σ_k (-1)^k H^k(F|_Z) = chi_exact
+  alt_sum = sum((-1)^k * mat2[1, k + 1] for k in 0:dim_zero_locus; init=AffineExpr(0))
+  _apply_equation!(mat2, alt_sum - AffineExpr(chi_exact))
+
+  # Apply non-negativity propagation: if a symbolic entry equals a determined value,
+  # substitute it. Repeat until stable.
+  changed = true
+  while changed
+    changed = false
+    for k in 0:dim_zero_locus
+      if is_determined(mat2[1, k + 1])
+        continue
+      end
+      # Re-apply χ constraint in case new substitutions freed things
+      alt_sum2 = sum((-1)^j * mat2[1, j + 1] for j in 0:dim_zero_locus; init=AffineExpr(0))
+      changed = _apply_equation!(mat2, alt_sum2 - AffineExpr(chi_exact)) || changed
+    end
+  end
+
+  sym_determined = all(is_determined(mat2[1, k + 1]) for k in 0:dim_zero_locus)
+
+  if sym_determined
+    final_entries = BigInt[mat2[1, k + 1].constant for k in 0:dim_zero_locus]
+    final_result = Cohomology{BigInt}(final_entries, dim_zero_locus)
+    return (final_result, true)
+  end
+
+  (result, false)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -317,6 +396,67 @@ function Base.show(io::IO, H::Cohomology{AffineExpr})
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  Symbolic constraint propagation helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Substitute ``x_{\\mathrm{var\\_id}} = \\mathrm{replacement}`` in every entry
+of the ``\\mathrm{AffineExpr}`` matrix ``M``, in-place.
+"""
+function _substitute_var!(M::Matrix{AffineExpr}, var_id::Int, replacement::AffineExpr)
+  for i in eachindex(M)
+    e = M[i]
+    haskey(e.coeffs, var_id) || continue
+    c = e.coeffs[var_id]
+    new_constant = e.constant + c * replacement.constant
+    new_coeffs = copy(e.coeffs)
+    delete!(new_coeffs, var_id)
+    for (k, v) in replacement.coeffs
+      new_coeffs[k] = get(new_coeffs, k, BigInt(0)) + c * v
+      new_coeffs[k] == 0 && delete!(new_coeffs, k)
+    end
+    M[i] = AffineExpr(new_constant, new_coeffs)
+  end
+end
+
+"""
+Given a linear equation ``\\mathrm{expr} = 0`` in the symbolic variables,
+solve for the variable with the smallest index and substitute the solution
+throughout the matrix ``M``.  Returns `true` if a variable was eliminated.
+
+Only eliminates when integer divisibility holds.
+"""
+function _apply_equation!(M::Matrix{AffineExpr}, expr::AffineExpr)
+  isempty(expr.coeffs) && return false
+  var_id = minimum(keys(expr.coeffs))
+  coeff = expr.coeffs[var_id]
+
+  rest_const = expr.constant
+  rest_coeffs = copy(expr.coeffs)
+  delete!(rest_coeffs, var_id)
+
+  # Check integer divisibility
+  rest_const % coeff == 0 || return false
+  all(v % coeff == 0 for (_, v) in rest_coeffs) || return false
+
+  sub_const = -(rest_const ÷ coeff)
+  sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
+  filter!(p -> p.second != 0, sub_coeffs)
+  _substitute_var!(M, var_id, AffineExpr(sub_const, sub_coeffs))
+  true
+end
+
+"""
+Apply the constraint ``\\mathrm{hodge}[pi, qi] = \\mathrm{target}`` by
+eliminating one symbolic variable.
+"""
+function _apply_linear_constraint!(hodge::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt)
+  expr = hodge[pi, qi]
+  is_determined(expr) && return false
+  _apply_equation!(hodge, expr - AffineExpr(target))
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  Internal: shared bound propagation
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -335,6 +475,10 @@ function _ses_delta_bounds(a_vals::Vector{BigInt}, b_vals::Vector{BigInt}, d::In
 
   for i in 0:(d - 1)
     ub[i + 2] = min(ub[i + 2], a_vals[i + 2])  # δ_i ≤ a_{i+1}
+    new_lb = a_vals[i + 2] - b_vals[i + 2]      # δ_i ≥ a_{i+1} - b_{i+1}
+    if new_lb > lb[i + 2]
+      lb[i + 2] = new_lb
+    end
   end
 
   for _ in 1:(d + 2)
@@ -471,7 +615,7 @@ function solve_ses_cohomology_symbolic(
     return solve_ses_cohomology_symbolic(a_exact, b, var_counter)
   end
 
-  # ── Direct δ assignment (no cross-bound propagation) ──────────────────
+  # ── Direct δ assignment with constraint propagation ───────────────────
   δ = Vector{AffineExpr}(undef, d + 2)  # δ[j] for j=1..d+2 corresponds to δ_{j-2}
 
   # δ_{-1} = 0 and δ_d = 0
@@ -480,14 +624,19 @@ function solve_ses_cohomology_symbolic(
 
   for i in 0:(d - 1)
     a_next = a[i + 1]
+    b_next = b_vals[i + 2]  # b[i+1] in the 0-indexed sense
+
     if is_zero_expr(a_next)
       # a_{i+1} ≡ 0 ⟹ δ_i = 0
       δ[i + 2] = AffineExpr(0)
     elseif is_determined(a_next) && a_next.constant == 0
       # a_{i+1} is a known zero
       δ[i + 2] = AffineExpr(0)
+    elseif b_next == 0
+      # b_{i+1} = 0 ⟹ δ_i ≥ a_{i+1} - 0 = a_{i+1} and δ_i ≤ a_{i+1} ⟹ δ_i = a_{i+1}
+      δ[i + 2] = a_next
     else
-      # a_{i+1} is positive or symbolic with potentially positive values
+      # General case: a_{i+1} is positive or symbolic with potentially positive values
       var_counter[] += 1
       δ[i + 2] = symbolic_variable(var_counter[])
     end
