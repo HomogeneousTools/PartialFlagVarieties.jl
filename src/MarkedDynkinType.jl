@@ -17,6 +17,7 @@ export marked_nodes, unmarked_nodes, levi_type, levi_rank, central_rank
 export decomposition_matrix, decomposition_matrix_inv
 export levi_permutation
 export marked_dynkin_diagram
+export anticanonical_degrees
 
 # Names from Lie, StaticArrays, LinearAlgebra are available via the parent module.
 
@@ -378,6 +379,92 @@ function _nonparabolic_height(α_vec::SVector{R,Int}, marked::NTuple{K,Int}) whe
     h += α_vec[m]
   end
   return h
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Anticanonical degrees
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    anticanonical_degrees(::Type{MDT}) -> SVector{K,Int}
+    anticanonical_degrees(X::PartialFlagVariety{MDT}) -> SVector{K,Int}
+
+Return the degrees ``(a_1, \\ldots, a_K)`` of the anticanonical bundle
+``-K_{G/P}`` at the marked nodes, so that
+
+```math
+-K_{G/P} = \\sum_{i \\in \\mathrm{marked}} a_i \\,\\omega_i.
+```
+
+For each marked node ``i``, the coefficient is
+
+```math
+a_i = \\langle 2(\\rho_G - \\rho_P),\\, \\alpha_i^\\vee \\rangle
+```
+
+where ``\\rho_G`` is the Weyl vector of ``G`` and ``\\rho_P`` is the Weyl
+vector of the Levi subgroup.  Equivalently,
+
+```math
+a_i = 2 - \\langle 2\\rho_P, \\alpha_i^\\vee \\rangle,
+```
+
+since ``\\langle 2\\rho_G, \\alpha_i^\\vee \\rangle = 2`` for every simple root
+``\\alpha_i``.
+
+The Weyl vector of the Levi is determined from the Levi sub-Cartan matrix
+without enumerating positive roots: if ``x_L`` solves ``C_L x_L = \\mathbf{1}``
+(where ``C_L`` is the Levi sub-Cartan matrix restricted to the unmarked nodes),
+then
+``\\langle 2\\rho_P, \\alpha_i^\\vee \\rangle = 2 \\sum_{k \\in \\mathrm{unmarked}} C[i,k]\\,(x_L)_k``.
+
+The result is a compile-time constant embedded by the `@generated` mechanism.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> anticanonical_degrees(MarkedDynkinType{TypeA{3}, (2,)})[1]  # Gr(2,4): -K = 4ω₂
+4
+
+julia> anticanonical_degrees(MarkedDynkinType{TypeG2, (1,)})[1]   # G₂/P₁: -K = 5ω₁
+5
+
+julia> anticanonical_degrees(MarkedDynkinType{TypeG2, (2,)})[1]   # G₂/P₂: -K = 3ω₂
+3
+```
+"""
+@generated function anticanonical_degrees(
+  ::Type{MDT},
+) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  R = rank(DT)
+  K = length(Marked)
+  unmarked = [i for i in 1:R if !(i in Marked)]
+  n = length(unmarked)
+
+  C = Lie._cartan_matrix_data(DT)   # SMatrix{R,R,Int,...} — available at code-gen time
+
+  if n == 0
+    # All nodes marked: Levi is a torus, ρ_P = 0, so a_i = 2 for every marked node.
+    degs = fill(2, K)
+  else
+    # Solve  C_L · x_L = ones  (where C_L = C[unmarked, unmarked])
+    # to obtain the Levi Weyl vector coefficients in G's simple-root basis.
+    C_L = Rational{Int}[C[unmarked[p], unmarked[q]] for p in 1:n, q in 1:n]
+    ones_v = ones(Rational{Int}, n)
+    x_L = C_L \ ones_v   # exact rational solve
+
+    # a_i = 2 − 2 · ⟨ρ_P, α_i∨⟩
+    #      = 2 − 2 · Σ_{q=1}^n  C[i, unmarked[q]] · (x_L)[q]
+    degs = Int[]
+    for i in Marked
+      val = 2 - 2 * sum(C[i, unmarked[q]] * x_L[q] for q in 1:n)
+      push!(degs, round(Int, val))
+    end
+  end
+
+  tup = Tuple(degs)
+  return :(SVector{$K,Int}($tup...))
 end
 
 """
