@@ -306,7 +306,7 @@ julia> length(Qs)
 1
 
 julia> rank_bundle(Qs[1])
-2
+1
 ```
 """
 function quotient_bundles(X::PartialFlagVariety{MDT}) where {MDT}
