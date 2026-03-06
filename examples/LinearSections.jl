@@ -46,56 +46,6 @@ using PartialFlagVarieties
 using PrettyTables
 using Lie
 
-# ─── Hodge diamond display ────────────────────────────────────────────────────
-
-# Table format with no borders and no dividing lines, used for Hodge diamonds.
-const _DIAMOND_FMT = TextTableFormat(
-  borders = text_table_borders__borderless,
-  horizontal_line_at_beginning = false,
-  horizontal_lines_at_column_labels = :none,
-  horizontal_line_at_merged_column_labels = false,
-  horizontal_line_after_column_labels = false,
-  horizontal_lines_at_data_rows = :none,
-  horizontal_line_before_row_group_label = false,
-  horizontal_line_after_row_group_label = false,
-  horizontal_line_after_data_rows = false,
-  horizontal_line_before_summary_rows = false,
-  horizontal_line_after_summary_rows = false,
-  vertical_line_at_beginning = false,
-  vertical_line_after_row_number_column = false,
-  vertical_line_after_row_label_column = false,
-  vertical_lines_at_data_columns = :none,
-  vertical_line_after_data_columns = false,
-  vertical_line_after_continuation_column = false,
-)
-
-"""
-Print a centred Hodge diamond of arbitrary degree using PrettyTables
-for exact column-width alignment.
-
-`h[p+1, q+1] = h^{p,q}` (1-based).
-
-Layout: `h^{p,q}` goes to grid row `p+q+1`, column `p-q+d+1`, giving a
-`(2d+1)×(2d+1)` matrix with the diamond pattern. PrettyTables renders
-each column at the width of its widest entry, so all numbers align
-correctly regardless of digit count.
-"""
-function print_hodge_diamond(io::IO, h::Matrix{BigInt})
-  d = size(h, 1) - 1
-  sz = 2 * d + 1
-
-  cells = fill("", sz, sz)
-  for p in 0:d, q in 0:d
-    cells[p + q + 1, p - q + d + 1] = string(h[p + 1, q + 1])
-  end
-
-  pretty_table(io, cells;
-    table_format = _DIAMOND_FMT,
-    show_column_labels = false,
-    alignment = :c,
-  )
-end
-
 # ─── Summary row data ─────────────────────────────────────────────────────────
 
 struct SectionRecord

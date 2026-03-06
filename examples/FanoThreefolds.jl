@@ -193,21 +193,6 @@ printed with p decreasing (h^{n,0} on the left, h^{0,n} on the right).
 Rows are indented by `ceil((w+1)/2)` characters per step from the widest
 row, so the diamond is visually centred.
 """
-function print_hodge_diamond(io::IO, h::Matrix{BigInt})
-  d = size(h, 1) - 1
-  @assert d == 3
-
-  w = max(1, maximum(ndigits(x) for x in h))
-  pad(x) = lpad(string(x), w)
-  half = cld(w + 1, 2)   # half-cell indent step
-
-  for n in 0:(2 * d)
-    indent = abs(d - n) * half
-    entries = [pad(h[p + 1, n - p + 1]) for p in min(d, n):-1:max(0, n - d)]
-    println(io, " " ^ indent, join(entries, " "))
-  end
-end
-
 # ─── Main computation ────────────────────────────────────────────────────────
 
 function main()
