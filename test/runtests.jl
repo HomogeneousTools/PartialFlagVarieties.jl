@@ -437,6 +437,87 @@ using StaticArrays
     @test rank_bundle(det_T) == 1
   end
 
+  @testset "Canonical and anticanonical bundles" begin
+    # Rank is always 1
+    @test rank_bundle(canonical_bundle(projective_space(3))) == 1
+    @test rank_bundle(anticanonical_bundle(projective_space(3))) == 1
+
+    # K_{P^1} = O(-2): H^1(P^1, O(-2)) = 1
+    X1 = projective_space(1)
+    K = canonical_bundle(X1)
+    @test dimensions(K)[1] == 1
+    @test dimensions(K)[0] == 0
+
+    # -K_{P^1} = O(2): H^0(P^1, O(2)) = 3
+    aK = anticanonical_bundle(X1)
+    @test dimensions(aK)[0] == 3
+
+    # K_{P^4} = O(-5): H^4(P^4, O(-5)) = 1, H^0 = 0
+    X4 = projective_space(4)
+    K4 = canonical_bundle(X4)
+    @test dimensions(K4)[4] == 1
+    @test dimensions(K4)[0] == 0
+
+    # -K_{Gr(2,4)} = O(4): H^0(Gr(2,4), O(4)) = 105
+    G24 = Gr(2, 4)
+    aK24 = anticanonical_bundle(G24)
+    @test rank_bundle(aK24) == 1
+    @test dimensions(aK24)[0] == 105
+
+    # canonical ⊗ anticanonical = structure sheaf (trivial bundle)
+    X = projective_space(2)
+    prod = canonical_bundle(X) ⊗ anticanonical_bundle(X)
+    @test dimensions(prod)[0] == 1  # H^0(O) = 1
+
+    # Type-level dispatch: canonical_bundle(::Type{MDT})
+    MDT = marked_type(projective_space(2))
+    @test rank_bundle(canonical_bundle(MDT)) == 1
+    @test rank_bundle(anticanonical_bundle(MDT)) == 1
+  end
+
+  @testset "Fano index: ambient varieties" begin
+    # P^n has Fano index n+1
+    @test fano_index(projective_space(1)) == 2
+    @test fano_index(projective_space(4)) == 5
+
+    # Gr(k,n) has Fano index n
+    @test fano_index(Gr(2, 5)) == 5
+    @test fano_index(Gr(3, 6)) == 6
+    @test fano_index(Gr(2, 4)) == 4
+
+    # n-dimensional quadric has Fano index n
+    @test fano_index(quadric(4)) == 4
+    @test fano_index(quadric(3)) == 3
+
+    # Exceptional varieties
+    @test fano_index(cayley_plane()) == 12
+    @test fano_index(freudenthal_variety()) == 18
+
+    # Throws for Picard rank > 1
+    @test_throws ArgumentError fano_index(partial_flag_variety(TypeA{3}, (1, 3)))
+  end
+
+  @testset "Fano index: zero loci" begin
+    # Z(O(k)) in P^n: fano_index = (n+1) - k
+    X = projective_space(4)
+    @test fano_index(zero_locus(line_bundle(X, 3))) == 2   # -K = O(2)
+    @test fano_index(zero_locus(line_bundle(X, 5))) == 0   # CY: -K = O(0)
+
+    # Z(O(1) ⊕ O(1)) in P^4: a codim-2 surface, fano_index = 5 - 2 = 3
+    E2 = direct_sum(line_bundle(X, 1), line_bundle(X, 1))
+    @test fano_index(zero_locus(E2)) == 3
+
+    # Adjunction consistency: fano_index(Z) = fano_index(X) - deg(det E)
+    X5 = Gr(2, 5)
+    E5 = direct_sum(line_bundle(X5, 3), line_bundle(X5, 1))  # det = O(4)
+    @test fano_index(zero_locus(E5)) == fano_index(X5) - 4
+
+    # Throws for Picard rank > 1 ambient
+    X_flag = partial_flag_variety(TypeA{3}, (1, 3))
+    E_flag = structure_sheaf(X_flag)
+    @test_throws ArgumentError fano_index(zero_locus(E_flag))
+  end
+
   # ═══════════════════════════════════════════════════════════════════════════
   #  Cohomology
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1086,6 +1167,31 @@ using StaticArrays
     @test ambient_variety(Z) === X
   end
 
+  # The zero locus of a section of O(1) on the Cayley plane OP² = E6/P1
+  # is (up to isomorphism) the coadjoint variety of F4, i.e. F4/P4 = Coadj(F₄).
+  # We verify this by checking that the Hilbert polynomial of Z (= h⁰(Z, O(t)))
+  # matches that of F4/P4 for t = 0, 1, 2, 3 (which together uniquely determine the
+  # polynomial of a 15-dimensional projective variety).
+  @testset "ZeroLocus: O(1) on Cayley plane = coadjoint F4" begin
+    X_E6 = cayley_plane()                         # E6/P1, dim = 16
+    Y_F4 = coadjoint_variety(TypeF4)              # F4/P4, dim = 15
+    Z = zero_locus(line_bundle(X_E6, 1))          # hyperplane section, dim = 15
+
+    @test dimension(Z) == 15
+    @test dimension(Z) == dimension(Y_F4)
+
+    # Hilbert polynomial: h⁰(Z, O(t)) = dim H⁰(F4/P4, O(t)) for t = 0,1,2,3
+    # t=0: both give 1 (structure sheaf)
+    # t=1: both give 26 (sections of the hyperplane class)
+    # t=2: both give 324
+    # t=3: both give 2652
+    for t in 0:3
+      (H_Z, _) = cohomology_on_restriction(Z, line_bundle(X_E6, t))
+      H_F4 = dimensions(cohomology(line_bundle(Y_F4, t)))
+      @test H_Z[0] == H_F4[0]
+    end
+  end
+
   @testset "ZeroLocus: Euler characteristic" begin
     # Quintic CY3: χ(O_Z) = 0
     X = projective_space(4)
@@ -1235,6 +1341,141 @@ using StaticArrays
     # h^{p,q} = h^{d-p,d-q} (Serre duality)
     for p in 0:4, q in 0:4
       @test H3[p + 1, q + 1] == H3[5 - p, 5 - q]
+    end
+  end
+
+  @testset "ZeroLocus: Hodge numbers (HK fourfolds, K3^[2]-type)" begin
+    # Fano variety of lines on a cubic fourfold — Beauville–Donagi (1985)
+    # Zero locus of Sym³(S*) on Gr(2,6); dim = 8 - 4 = 4.
+    # Hodge numbers of K3^[2]-type: h^{1,1}=21, h^{2,2}=232.
+    X1 = Gr(2, 6)
+    E1 = symmetric_power(universal_subbundle(X1), 3)
+    Z1 = zero_locus(E1)
+    @test dimension(Z1) == 4
+    h1 = hodge_numbers(Z1)
+    @test h1[1, 1] == 1   # h^{0,0}
+    @test h1[2, 1] == 0   # h^{1,0}
+    @test h1[2, 2] == 21  # h^{1,1}
+    @test h1[2, 3] == 0   # h^{1,2}
+    @test h1[2, 4] == 21  # h^{1,3}
+    @test h1[2, 5] == 0   # h^{1,4}
+    @test h1[3, 1] == 1   # h^{2,0}
+    @test h1[3, 2] == 0   # h^{2,1}
+    @test h1[3, 3] == 232 # h^{2,2}
+    @test h1[3, 4] == 0   # h^{2,3}
+    @test h1[3, 5] == 1   # h^{2,4}
+
+    # Debarre–Voisin variety — Debarre–Voisin (2010)
+    # Zero locus of ∧³(S*) on Gr(6,10); dim = 24 - 20 = 4.
+    # Also of K3^[2]-type: same Hodge numbers.
+    X2 = Gr(6, 10)
+    E2 = exterior_power(universal_subbundle(X2), 3)
+    Z2 = zero_locus(E2)
+    @test dimension(Z2) == 4
+    h2 = hodge_numbers(Z2)
+    @test h2[1, 1] == 1   # h^{0,0}
+    @test h2[2, 2] == 21  # h^{1,1}
+    @test h2[3, 1] == 1   # h^{2,0}
+    @test h2[3, 3] == 232 # h^{2,2}
+
+    # Both Hodge diamonds agree
+    @test h1 == h2
+  end
+
+  @testset "ZeroLocus: Hodge numbers (Küchle Fano fourfolds)" begin
+    # Selected families from Küchle, Math. Z. 218 (1995), 563–575.
+    # Invariants verified against the paper and by χ_top = 2 + 2b₂ + 2h¹³ + h²²
+    # (using b₃=0 and b₂=h¹¹ for these Fano fourfolds).
+    # Note: h^{p,q} is at matrix index h[p+1, q+1].
+    # These families are Fano (not CY), so Serre duality H^k(F) = H^{d-k}(F*)
+    # must NOT be applied when computing cohomology of bundles on the zero locus.
+
+    # b2: O(2)² on Gr(2,5)   — h¹¹=1, h¹³=20, h²²=132, χ_top=176
+    let X = Gr(2, 5),
+      E = direct_sum(line_bundle(X, 2), line_bundle(X, 2)),
+      Z = zero_locus(E),
+      h = hodge_numbers(Z)
+
+      @test dimension(Z) == 4
+      @test h[2, 2] == 1     # h^{1,1}
+      @test h[2, 4] == 20    # h^{1,3}
+      @test h[3, 3] == 132   # h^{2,2}
+      # χ_top = 2 + 2b₂ + 2h¹³ + h²²
+      @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 176
+    end
+
+    # b6: O(1)³ + O(2) on Gr(2,6)   — h¹¹=1, h¹³=15, h²²=106, χ_top=140
+    let X = Gr(2, 6),
+      O1 = line_bundle(X, 1),
+      E = direct_sum(direct_sum(O1, direct_sum(O1, O1)), line_bundle(X, 2)),
+      Z = zero_locus(E),
+      h = hodge_numbers(Z)
+
+      @test dimension(Z) == 4
+      @test h[2, 2] == 1     # h^{1,1}
+      @test h[2, 4] == 15    # h^{1,3}
+      @test h[3, 3] == 106   # h^{2,2}
+      @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 140
+    end
+
+    # b7: O(1)⁶ on Gr(2,7)   — h¹¹=1, h¹³=6, h²²=57, χ_top=73
+    let X = Gr(2, 7),
+      O1 = line_bundle(X, 1),
+      E = foldl(direct_sum, [line_bundle(X, 1) for _ in 1:6]),
+      Z = zero_locus(E),
+      h = hodge_numbers(Z)
+
+      @test dimension(Z) == 4
+      @test h[2, 2] == 1     # h^{1,1}
+      @test h[2, 4] == 6     # h^{1,3}
+      @test h[3, 3] == 57    # h^{2,2}
+      @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 73
+    end
+
+    # b10: O(2) + Q*(1) on Gr(2,7)   — h¹¹=1, h¹³=14, h²²=100, χ_top=132
+    # (Q*(1) = dual(universal_quotient_bundle) ⊗ O(1))
+    let X = Gr(2, 7),
+      Q = universal_quotient_bundle(X),
+      E = direct_sum(line_bundle(X, 2), twist(dual(Q), 1)),
+      Z = zero_locus(E),
+      h = hodge_numbers(Z)
+
+      @test dimension(Z) == 4
+      @test h[2, 2] == 1     # h^{1,1}
+      @test h[2, 4] == 14    # h^{1,3}
+      @test h[3, 3] == 100   # h^{2,2}
+      @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 132
+    end
+
+    # c3: Q*(1)² on Gr(3,7)   — h¹¹=1, h¹³=0, h²²=15, χ_top=19
+    let X = Gr(3, 7),
+      Q = universal_quotient_bundle(X),
+      Qd1 = twist(dual(Q), 1),
+      E = direct_sum(Qd1, Qd1),
+      Z = zero_locus(E),
+      h = hodge_numbers(Z)
+
+      @test dimension(Z) == 4
+      @test h[2, 2] == 1     # h^{1,1}
+      @test h[2, 4] == 0     # h^{1,3}
+      @test h[3, 3] == 15    # h^{2,2}
+      @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 19
+    end
+
+    # c7: O(1) + (∧²Q* ⊗ O(1)) on Gr(3,8)   — h¹¹=2, h¹³=1, h²²=22, χ_top=30
+    # This was previously catastrophically wrong (h²²=-1888) due to a spurious
+    # Serre duality application on the Fano zero locus.
+    let X = Gr(3, 8),
+      Q = universal_quotient_bundle(X),
+      E = direct_sum(line_bundle(X, 1), twist(exterior_power(dual(Q), 2), 1)),
+      Z = zero_locus(E),
+      h = hodge_numbers(Z)
+
+      @test dimension(Z) == 4
+      @test h[2, 2] == 2     # h^{1,1}
+      @test h[2, 4] == 1     # h^{1,3}
+      @test h[3, 3] == 22    # h^{2,2}
+      @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 30
     end
   end
 
