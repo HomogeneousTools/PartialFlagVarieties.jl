@@ -9,11 +9,11 @@
 #    Int. Math. Res. Not. (2021), arXiv:1904.05679.
 #
 #  Küchle's 21 Fano-index-1 families are labeled b1–d3 in his notation.
-#  The Hilbert polynomial P(t) = χ(Z, O_Z(t)) is computed via the Koszul
-#  complex and used to extract:
-#    • (-K_X)^4 = (Fano index)^4 * 4! * [leading coeff of P]
-#    • h^0(-K_X) = P(Fano index)  [by Kawamata–Nakano vanishing]
-#  Hodge numbers come from the Koszul long exact sequence.
+#  h^0(-K_Z) is computed via sheaf cohomology: by adjunction
+#    ω_Z ≅ (ω_X ⊗ det(E))|_Z,
+#  so H^0(Z, ω_Z^{-1}) = H^0(Z, (anticanonical(X) ⊗ det(E)^{-1})|_Z),
+#  computed through the Koszul long exact sequence.
+#  Hodge numbers come from the same Koszul long exact sequence.
 #
 #  Usage: julia --project=. examples/Kuechle.jl
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -39,7 +39,7 @@ end
 function bundle_from_gl_weights(
   X::PartialFlagVariety{MDT}, k::Int, n::Int, weights::Vector{Vector{Int}}
 ) where {MDT}
-  DT = PartialFlagVarieties._ambient_type(MDT)
+  DT = dynkin_type(X)
   summands = IrrepLevi{MDT}[]
   for w in weights
     omega = gl_weight_to_omega(k, n, w)
@@ -50,22 +50,17 @@ function bundle_from_gl_weights(
 end
 
 # =============================================================================
-#  Fano index and polynomial evaluation
+#  Fano index
 # =============================================================================
 
-"Fano index of Z(E) in G/P; -1 if Picard rank > 1."
-function fano_index_zl(X, E)
-  MDT = marked_type(X)
-  Marked = marked_nodes(MDT)
-  length(Marked) == 1 || return -1
-  m = Marked[1]
-  anticK = PartialFlagVarieties._anticanonical_central(MDT)
-  det_c  = PartialFlagVarieties._determinant_central(E)
-  M      = PartialFlagVarieties.decomposition_matrix(MDT)
-  Int((anticK[1] - det_c[1]) / M[m, m])
+# Fano index of Z(E) in G/P via adjunction, or -1 if Picard rank > 1.
+function _fano_index_zl(Z)
+  try
+    fano_index(Z)
+  catch ArgumentError
+    -1
+  end
 end
-
-poly_eval(cs, t) = sum(c * t^(i - 1) for (i, c) in enumerate(cs))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Fano fourfold families in Küchle's notation (Theorem 3.1)
@@ -131,9 +126,9 @@ const KUECHLE_FAMILIES = [
     "O(1) + (∧²Q* ⊗ O(1)) on Gr(3,8)"),
 
   # ── Gr(5,10): d3 ───────────────────────────────────────────────────
-  ("d3", 5, 10,
-    [[0, 0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],
-    "(∧²S*)² + O(1) on Gr(5,10)"),
+  #("d3", 5, 10,
+  #  [[0, 0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],
+  #  "(∧²S*)² + O(1) on Gr(5,10)"),
 ]
 
 # Fatighenti–Mongardi K3-type families (Fano index > 1, not in Küchle)
@@ -159,7 +154,6 @@ struct FanoResult
   k::Int
   n::Int
   fano_index::Int
-  antiK_fourth::Union{BigInt, Nothing}
   h0_antiK::Union{BigInt, Nothing}
   chi_top::Union{BigInt, Nothing}
   b2::Union{BigInt, Nothing}
@@ -186,19 +180,19 @@ function compute_family(label, k, n, weights, desc)
 
   t_start = time()
 
-  Z = zero_locus(E)
-  idx = fano_index_zl(X, E)
+  @time Z = zero_locus(E)
+  idx = _fano_index_zl(Z)
 
-  # (-K_X)^4 and h^0(-K_X) via Hilbert polynomial χ(Z, O_Z(t))
-  antiK4 = nothing
+  # h^0(-K_Z) via sheaf cohomology: by adjunction ω_Z ≅ (ω_X ⊗ det(E))|_Z,
+  # so H^0(Z, ω_Z^{-1}) = H^0(Z, F_antiK|_Z) where
+  #   F_antiK = anticanonical_bundle(X) ⊗ dual(det_bundle(E)).
   h0aK = nothing
   try
-    hp = hilbert_polynomial(Z)           # [a₀, a₁, a₂, a₃, a₄]
-    a4 = hp[5]                           # leading coefficient of degree-4 poly
-    antiK4 = BigInt(round(idx^4 * 24 * a4))
-    h0aK = BigInt(round(Int, poly_eval(hp, idx)))
+    F_antiK = anticanonical_bundle(X) ⊗ dual(det_bundle(E))
+    @time (H_antiK, _) = cohomology_on_restriction(Z, F_antiK)
+    h0aK = H_antiK[0]
   catch e
-    @warn "  $label Hilbert failed: $(sprint(showerror, e))"
+    @warn "  $label h⁰(-K) failed: $(sprint(showerror, e))"
   end
 
   # Hodge numbers, Betti numbers, topological Euler characteristic
@@ -209,7 +203,7 @@ function compute_family(label, k, n, weights, desc)
   h22 = nothing
   h13 = nothing
   try
-    hm = hodge_numbers(Z)
+    @time hm = hodge_numbers(Z)
     # χ_top = Σ_{p,q} (-1)^{p+q} h^{p,q}
     chi = BigInt(sum((-1)^(p + q) * hm[p + 1, q + 1] for p in 0:4, q in 0:4))
     β2 = BigInt(hm[2, 2])                    # h^{1,1}
@@ -222,7 +216,7 @@ function compute_family(label, k, n, weights, desc)
   end
 
   elapsed = time() - t_start
-  FanoResult(label, desc, k, n, idx, antiK4, h0aK, chi, β2, β3, h11, h22, h13), elapsed
+  FanoResult(label, desc, k, n, idx, h0aK, chi, β2, β3, h11, h22, h13), elapsed
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -235,14 +229,14 @@ fmt(x) = string(x)
 function show_kuechle_table(results)
   rows = map(results) do r
     [r.label, "Gr($(r.k),$(r.n))", r.description,
-      fmt(r.antiK_fourth), fmt(r.h0_antiK), fmt(r.chi_top), fmt(r.b2), fmt(r.b3),
+      fmt(r.h0_antiK), fmt(r.chi_top), fmt(r.b2), fmt(r.b3),
       fmt(r.h11), fmt(r.h22), fmt(r.h13)]
   end
   data = permutedims(hcat(rows...), (2, 1))
   pretty_table(
     data;
-    column_labels = ["#", "G/P", "Bundle E", "(-K)⁴", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"],
-    alignment = [:l, :c, :l, :r, :r, :r, :r, :r, :r, :r, :r],
+    column_labels = ["#", "G/P", "Bundle E", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"],
+    alignment = [:l, :c, :l, :r, :r, :r, :r, :r, :r, :r],
     display_size = (-1, -1),
   )
 end
@@ -251,14 +245,14 @@ function show_fm_table(results)
   println()
   rows = map(results) do r
     [r.label, "Gr($(r.k),$(r.n))", r.description, string(r.fano_index),
-      fmt(r.antiK_fourth), fmt(r.h0_antiK), fmt(r.chi_top), fmt(r.b2), fmt(r.b3),
+      fmt(r.h0_antiK), fmt(r.chi_top), fmt(r.b2), fmt(r.b3),
       fmt(r.h11), fmt(r.h22), fmt(r.h13)]
   end
   data = permutedims(hcat(rows...), (2, 1))
   pretty_table(
     data;
-    column_labels = ["#", "G/P", "Bundle E", "idx", "(-K)⁴", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"],
-    alignment = [:l, :c, :l, :r, :r, :r, :r, :r, :r, :r, :r, :r],
+    column_labels = ["#", "G/P", "Bundle E", "idx", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"],
+    alignment = [:l, :c, :l, :r, :r, :r, :r, :r, :r, :r, :r],
     display_size = (-1, -1),
   )
 end
@@ -297,7 +291,7 @@ function main()
   #end
 
   println()
-  show_kuechle_table(kuechle_results)
+   show_kuechle_table(kuechle_results)
   #show_fm_table(fm_results)
 end
 
