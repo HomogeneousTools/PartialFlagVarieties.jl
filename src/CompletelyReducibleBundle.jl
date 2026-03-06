@@ -13,6 +13,7 @@ export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
 export structure_sheaf, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
 export det_bundle
+export fano_index
 
 # Names from Lie, StaticArrays, Combinatorics are available via the parent module.
 
@@ -349,41 +350,149 @@ function cotangent_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinTy
 end
 
 """
+    canonical_bundle(::Type{MDT}) -> CompletelyReducibleBundle
     canonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The canonical line bundle ``\\omega_{G/P} = \\det(\\Omega^1_{G/P})``.
+The canonical line bundle ``\\omega_{G/P} = K_{G/P}``.
+
+This is computed directly from the formula
+
+```math
+K_{G/P} = -\\sum_{i \\in \\mathrm{marked}} a_i\\,\\omega_i,
+\\qquad a_i = \\langle 2(\\rho_G - \\rho_P),\\,\\alpha_i^\\vee\\rangle,
+```
+
+without constructing the (co)tangent bundle.  See [`anticanonical_degrees`](@ref).
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> X = partial_flag_variety(TypeA{4}, (1,));
+julia> X = projective_space(1);
 
-julia> rank_bundle(canonical_bundle(X))
+julia> K = canonical_bundle(X);
+
+julia> rank_bundle(K)
+1
+
+julia> dimensions(K)[1]  # H¹(ℙ¹, 𝒪(-2)) = 1
+1
+
+julia> K2 = canonical_bundle(projective_space(4));
+
+julia> dimensions(K2)[4]  # H⁴(ℙ⁴, 𝒪(-5)) = 1
 1
 ```
 """
 function canonical_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  return det_bundle(cotangent_bundle(X))
+  degs = anticanonical_degrees(MDT)
+  return line_bundle(X, Vector{Int}(-degs))
+end
+
+"""Type-level dispatch of [`canonical_bundle`](@ref): returns a zero-variety
+bundle placeholder for use in type-level computations.
+
+Same as `canonical_bundle(X)` where `X = PartialFlagVariety{MDT}()`."""
+function canonical_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
+  X = PartialFlagVariety{MDT}()
+  canonical_bundle(X)
 end
 
 """
+    anticanonical_bundle(::Type{MDT}) -> CompletelyReducibleBundle
     anticanonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The anticanonical line bundle ``\\omega_{G/P}^{-1}``.
+The anticanonical line bundle ``\\omega_{G/P}^{-1} = -K_{G/P}``.
+
+This is computed directly from the formula
+
+```math
+-K_{G/P} = \\sum_{i \\in \\mathrm{marked}} a_i\\,\\omega_i,
+\\qquad a_i = \\langle 2(\\rho_G - \\rho_P),\\,\\alpha_i^\\vee\\rangle.
+```
+
+See [`anticanonical_degrees`](@ref).
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
 
-julia> X = partial_flag_variety(TypeA{4}, (1,));
+julia> X = projective_space(1);
 
-julia> rank_bundle(anticanonical_bundle(X))
+julia> L = anticanonical_bundle(X);
+
+julia> rank_bundle(L)
 1
+
+julia> dimensions(L)[0]  # H⁰(ℙ¹, 𝒪(2)) = 3
+3
+
+julia> L2 = anticanonical_bundle(projective_space(4));
+
+julia> dimensions(L2)[0]  # H⁰(ℙ⁴, 𝒪(5)) = 126
+126
 ```
 """
 function anticanonical_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  return dual(canonical_bundle(X))
+  degs = anticanonical_degrees(MDT)
+  return line_bundle(X, Vector{Int}(degs))
+end
+
+"""Type-level dispatch of [`anticanonical_bundle`](@ref): returns a zero-variety
+bundle placeholder for use in type-level computations.
+
+Same as `anticanonical_bundle(X)` where `X = PartialFlagVariety{MDT}()`."""
+function anticanonical_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
+  X = PartialFlagVariety{MDT}()
+  anticanonical_bundle(X)
+end
+
+"""
+    anticanonical_degrees(X::PartialFlagVariety) -> SVector
+
+Instance-level dispatch of [`anticanonical_degrees(::Type{MDT})`](@ref).
+"""
+anticanonical_degrees(X::PartialFlagVariety{MDT}) where {MDT} = anticanonical_degrees(MDT)
+
+"""
+    fano_index(X::PartialFlagVariety) -> Int
+
+The Fano index of the partial flag variety ``G/P``, defined as the unique
+positive integer ``r`` such that
+
+```math
+-K_{G/P} = r\\,\\omega_m
+```
+
+where ``\\omega_m`` is the ample generator of ``\\mathrm{Pic}(G/P) \\cong \\mathbb{Z}``.
+
+All partial flag varieties are Fano (the anticanonical bundle is ample), so
+the Fano index is always a positive integer.
+
+Throws an `ArgumentError` when `picard_rank(X) > 1`; use
+[`anticanonical_degrees`](@ref) for the multi-degree description in that case.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> fano_index(projective_space(4))
+5
+
+julia> fano_index(Gr(2, 5))
+5
+
+julia> fano_index(quadric(4))
+4
+```
+"""
+function fano_index(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
+  Marked = marked_nodes(MDT)
+  length(Marked) == 1 || throw(ArgumentError(
+    "fano_index is only defined for Picard-rank-1 varieties; " *
+    "use anticanonical_degrees for the multi-degree description.")
+  )
+  anticanonical_degrees(MDT)[1]
 end
 
 """
@@ -447,12 +556,8 @@ julia> rank_bundle(det_bundle(tangent_bundle(X)))
   end
   λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
 
-  if LT === nothing
-    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
-  else
-    LR = rank(LT)
-    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
-  end
+  LT_expr = LT === nothing ? TypeA{1} : LT
+  LR = LT === nothing ? 1 : rank(LT)
 
   return quote
     tc = MVector{$K,Int}($(ntuple(_ -> 0, K)...))
@@ -461,9 +566,9 @@ julia> rank_bundle(det_bundle(tangent_bundle(X)))
       tc .+= d .* c.central
     end
     λ = $λ_expr
-    ss = $zero_ss_expr
+    ss = zero(WeightLatticeElem{$LT_expr,$LR})
     rep = IrrepLevi{$MDT,$K}(λ, SVector{$K,Int}(tc), ss)
-    CompletelyReducibleBundle{$MDT}(E.variety, [rep])
+    CompletelyReducibleBundle{$MDT}(E.variety, IrrepLevi{$MDT}[rep])
   end
 end
 
