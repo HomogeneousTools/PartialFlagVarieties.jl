@@ -247,7 +247,7 @@ unscales and returns the original `Rational{Int}` values.
 """
 function central_part(rep::IrrepLevi{MDT}) where {MDT}
   sf = central_scaling_factor(MDT)
-  return Rational{Int}[c // sf for c in rep.central]
+  return Vector{Rational{Int}}(Rational{Int}[c // sf for c in rep.central])
 end
 
 """
