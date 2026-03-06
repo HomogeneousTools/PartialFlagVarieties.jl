@@ -114,7 +114,7 @@ factor, eliminating all `Rational{Int}` arithmetic from hot paths.
 julia> using PartialFlagVarieties
 
 julia> central_scaling_factor(MarkedDynkinType{TypeA{3}, (2,)})
-4
+2
 
 julia> central_scaling_factor(MarkedDynkinType{TypeA{4}, (2,)})
 5
