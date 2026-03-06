@@ -128,25 +128,18 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 @generated function structure_sheaf(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  # All type-level computation happens once at code-generation time.
   K = length(Marked)
   R = rank(DT)
   LT = levi_type(MDT)
-
-  zero_central_expr = :(SVector{$K,Int}($(ntuple(_ -> 0, K))))
-  zero_λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(ntuple(_ -> 0, R)))))
-
-  if LT === nothing
-    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
-  else
-    LR = rank(LT)
-    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
-  end
-
-  # Generated body: no dispatch on MDT-parameterised helpers at runtime.
+  LR = LT === nothing ? 1 : rank(LT)
+  LT_expr = LT === nothing ? TypeA{1} : LT
   return quote
-    triv = IrrepLevi{$MDT,$K}($zero_λ_expr, $zero_central_expr, $zero_ss_expr)
-    CompletelyReducibleBundle{$MDT}(X, [triv])
+    triv = IrrepLevi{$MDT,$K}(
+      zero(WeightLatticeElem{$DT,$R}),
+      zero(SVector{$K,Int}),
+      zero(WeightLatticeElem{$LT_expr,$LR}),
+    )
+    CompletelyReducibleBundle{$MDT}(X, IrrepLevi{$MDT}[triv])
   end
 end
 
@@ -208,20 +201,16 @@ julia> rank_bundle(L)
   λ_expr = :(WeightLatticeElem($DT, SVector{$R,Int}($(λ_comps...))))
 
   # ss = 0: m is a marked node, so all unmarked coords of i·ω_m are 0
-  if LT === nothing
-    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
-  else
-    LR = rank(LT)
-    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
-  end
+  LT_expr = LT === nothing ? TypeA{1} : LT
+  LR = LT === nothing ? 1 : rank(LT)
 
   return quote
     ii = Int(i)
     λ = $λ_expr
     central = SVector{$K,Int}($slope * ii)
-    ss = $zero_ss_expr
+    ss = zero(WeightLatticeElem{$LT_expr,$LR})
     rep = IrrepLevi{$MDT,$K}(λ, central, ss)
-    CompletelyReducibleBundle{$MDT}(X, [rep])
+    CompletelyReducibleBundle{$MDT}(X, IrrepLevi{$MDT}[rep])
   end
 end
 
@@ -274,12 +263,8 @@ julia> rank_bundle(L)
   central_expr = :(SVector{$K,Int}($(central_comps...)))
 
   # ss = 0: all marked fundamental weights have zero unmarked coords
-  if LT === nothing
-    zero_ss_expr = :(WeightLatticeElem($(TypeA{1}), SVector{1,Int}(0)))
-  else
-    LR = rank(LT)
-    zero_ss_expr = :(WeightLatticeElem($LT, SVector{$LR,Int}($(ntuple(_ -> 0, LR)))))
-  end
+  LT_expr = LT === nothing ? TypeA{1} : LT
+  LR = LT === nothing ? 1 : rank(LT)
 
   return quote
     length(degrees) == $K || throw(ArgumentError(
@@ -288,9 +273,9 @@ julia> rank_bundle(L)
     dd = Int.(degrees)
     λ = $λ_expr
     central = $central_expr
-    ss = $zero_ss_expr
+    ss = zero(WeightLatticeElem{$LT_expr,$LR})
     rep = IrrepLevi{$MDT,$K}(λ, central, ss)
-    CompletelyReducibleBundle{$MDT}(X, [rep])
+    CompletelyReducibleBundle{$MDT}(X, IrrepLevi{$MDT}[rep])
   end
 end
 
