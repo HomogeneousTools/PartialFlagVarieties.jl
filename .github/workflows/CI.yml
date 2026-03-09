@@ -50,3 +50,42 @@ jobs:
           julia --project=docs -e 'using Pkg; Pkg.add(["Documenter", "StaticArrays"]); Pkg.develop(PackageSpec(path=".")); Pkg.instantiate()'
       - name: Run doctests
         run: julia --project=docs -e 'using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties; manual="docs/src")'
+
+  examples:
+    name: Example — ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - BottVanishing.jl
+          - CICY3-1606.04076.jl
+          - CICY3-1607.07821.jl
+          - FanoFourfoldQuiverFlags.jl
+          - FanoFourfolds.jl
+          - FanoFourfoldsK3.jl
+          - FanoThreefolds.jl
+          - HochschildAffine.jl
+          - Hyperkaehler.jl
+          - Kuechle.jl
+          - LinearSections.jl
+          - QuiverZeroLoci.jl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Install Lie.jl from GitHub
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")'
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Run example
+        run: |
+          mkdir -p examples-output
+          julia --project=. examples/${{ matrix.example }} > examples-output/${{ matrix.example }}.log 2>&1
+      - name: Upload example output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-${{ matrix.example }}
+          path: examples-output/${{ matrix.example }}.log

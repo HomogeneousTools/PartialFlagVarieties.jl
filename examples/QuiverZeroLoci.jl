@@ -1038,7 +1038,7 @@ function main(;
 
   t_total = time_ns()
   entries_to_process = [final_entries[id] for id in all_ids]
-  
+
   results = []
   p = Progress(length(entries_to_process);
     desc="Computing entries: ",
@@ -1049,7 +1049,7 @@ function main(;
     push!(results, r)
     next!(p; showvalues=[(:entry, "$i/$(length(entries_to_process))")])
   end
-  
+
   elapsed_total = (time_ns() - t_total) / 1.0e9
 
   # ─── Build and display results table ────────────────────────────────
