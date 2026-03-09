@@ -157,7 +157,8 @@ structure_sheaf(X::PartialFlagVariety) = O(X)
 
 The zero bundle on `X` (the empty direct sum).
 """
-function zero_bundle(X::PartialFlagVariety{MDT}) where {MDT}
+function zero_bundle(X::PartialFlagVariety)
+  MDT = typeof(marked_dynkin_type(X))
   return CompletelyReducibleBundle{MDT}(X, IrrepLevi{MDT}[])
 end
 
@@ -521,7 +522,14 @@ julia> rank_bundle(tensor_product(E, S)) == rank_bundle(E)
 true
 ```
 """
-function tensor_product(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
+function tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+  X = variety(E)
+  Y = variety(F)
+  MDT = typeof(marked_dynkin_type(X))
+  typeof(marked_dynkin_type(Y)) === MDT || throw(ArgumentError(
+    "tensor_product requires bundles on the same partial flag variety type."
+  ))
+
   # Deduplicate components to avoid redundant tensor product calls.
   # E.g., O(1)⁶ has 6 identical components → compute ⊗ once, replicate.
   e_counts = Dict{IrrepLevi{MDT},Int}()
@@ -543,16 +551,7 @@ function tensor_product(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibl
       end
     end
   end
-  return CompletelyReducibleBundle{MDT}(E.variety, result)
-end
-
-"""
-    direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
-
-The direct sum ``E \\oplus F``.
-"""
-function direct_sum(E::CompletelyReducibleBundle{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
-  return CompletelyReducibleBundle{MDT}(E.variety, vcat(E.components, F.components))
+  return CompletelyReducibleBundle{MDT}(X, result)
 end
 
 """
@@ -683,6 +682,21 @@ function symmetric_power(E::CompletelyReducibleBundle{MDT}, k::Integer) where {M
   end
 
   return CompletelyReducibleBundle{MDT}(E.variety, result)
+end
+
+"""
+    direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+
+The direct sum ``E \\oplus F``.
+"""
+function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+  X = variety(E)
+  Y = variety(F)
+  MDT = typeof(marked_dynkin_type(X))
+  typeof(marked_dynkin_type(Y)) === MDT || throw(ArgumentError(
+    "direct_sum requires bundles on the same partial flag variety type."
+  ))
+  return CompletelyReducibleBundle{MDT}(X, vcat(E.components, F.components))
 end
 
 # ─── Twist ───────────────────────────────────────────────────────────────────

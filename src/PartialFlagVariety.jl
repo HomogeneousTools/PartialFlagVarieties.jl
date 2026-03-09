@@ -1,10 +1,12 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PartialFlagVariety — the main user-facing type for partial flag varieties
 #
-#  A PartialFlagVariety{MDT} is a thin wrapper around a MarkedDynkinType,
-#  providing the primary API for dimension, Picard rank, Betti numbers, etc.
-#  Mathematical computations are implemented at the type level via @generated
-#  functions, leveraging the compile-time type parameters of MDT.
+#  A PartialFlagVariety{MDT} stores the user-facing object together with
+#  structural data extracted from the corresponding MarkedDynkinType at
+#  construction time, so instance-level access does not need to recompute or
+#  re-specialize on those values.
+#  Mathematical computations are still implemented at the type level where that
+#  is advantageous.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export PartialFlagVariety
@@ -13,7 +15,7 @@ export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule
 export is_adjoint, is_coadjoint, is_full_flag
-export marked_type, marked_nodes
+export marked_type, marked_dynkin_type, marked_nodes
 
 """
     PartialFlagVariety{MDT}
@@ -42,9 +44,28 @@ julia> betti_numbers(X)
 """
 struct PartialFlagVariety{MDT<:MarkedDynkinType}
   name::String
+  dynkin::DataType
+  marked::Tuple{Vararg{Int}}
+  unmarked::Tuple{Vararg{Int}}
+  levi::Union{Nothing,DataType}
+  levi_rank::Int
+  central_rank::Int
 end
 
-PartialFlagVariety{MDT}() where {MDT} = PartialFlagVariety{MDT}("")
+function _partial_flag_variety_data(::Type{MDT}) where {MDT<:MarkedDynkinType}
+  DT = _ambient_type(MDT)
+  marked = marked_nodes(MDT)
+  unmarked = unmarked_nodes(MDT)
+  LT = levi_type(MDT)
+  return (DT, marked, unmarked, LT, LT === nothing ? 0 : rank(LT), central_rank(MDT))
+end
+
+function PartialFlagVariety{MDT}(name::String) where {MDT<:MarkedDynkinType}
+  DT, marked, unmarked, LT, LR, CR = _partial_flag_variety_data(MDT)
+  return PartialFlagVariety{MDT}(name, DT, marked, unmarked, LT, LR, CR)
+end
+
+PartialFlagVariety{MDT}() where {MDT<:MarkedDynkinType} = PartialFlagVariety{MDT}("")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Constructors
@@ -184,10 +205,17 @@ Return the `MarkedDynkinType` type parameter.
 """
 marked_type(::PartialFlagVariety{MDT}) where {MDT} = MDT
 
-dynkin_type(::PartialFlagVariety{MDT}) where {MDT} = _ambient_type(MDT)
-marked_nodes(X::PartialFlagVariety) = marked_nodes(marked_type(X))
-unmarked_nodes(X::PartialFlagVariety) = unmarked_nodes(marked_type(X))
-Lie.rank(X::PartialFlagVariety) = rank(marked_type(X))
+"""
+  marked_dynkin_type(X::PartialFlagVariety) -> MarkedDynkinType
+
+Return the marked Dynkin type attached to `X` as a value.
+"""
+marked_dynkin_type(X::PartialFlagVariety) = MarkedDynkinType(dynkin_type(X), marked_nodes(X))
+
+dynkin_type(X::PartialFlagVariety) = X.dynkin
+marked_nodes(X::PartialFlagVariety) = X.marked
+unmarked_nodes(X::PartialFlagVariety) = X.unmarked
+Lie.rank(X::PartialFlagVariety) = rank(X.dynkin)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Dimension and topological invariants (primary methods)
@@ -248,7 +276,7 @@ julia> picard_rank(partial_flag_variety(TypeA{3}, (1, 3)))
 2
 ```
 """
-picard_rank(X::PartialFlagVariety) = central_rank(marked_type(X))
+picard_rank(X::PartialFlagVariety) = X.central_rank
 
 """
     euler_characteristic(::PartialFlagVariety) -> BigInt
@@ -378,9 +406,9 @@ end
 #  Levi and structural queries
 # ═══════════════════════════════════════════════════════════════════════════════
 
-levi_type(X::PartialFlagVariety) = levi_type(marked_type(X))
-levi_rank(X::PartialFlagVariety) = levi_rank(marked_type(X))
-central_rank(X::PartialFlagVariety) = central_rank(marked_type(X))
+levi_type(X::PartialFlagVariety) = X.levi
+levi_rank(X::PartialFlagVariety) = X.levi_rank
+central_rank(X::PartialFlagVariety) = X.central_rank
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Classification predicates
