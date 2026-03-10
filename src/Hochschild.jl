@@ -91,10 +91,8 @@ julia> H[1, 1]  # h^0(ℙ³, 𝒪)
 1
 ```
 """
-function twisted_hodge_numbers(X::PartialFlagVariety{MDT}, j::Integer) where {
-  MDT<:MarkedDynkinType{DT,Marked}
-} where {DT,Marked}
-  length(Marked) == 1 || throw(ArgumentError(
+function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
+  length(marked_nodes(X)) == 1 || throw(ArgumentError(
     "twisted_hodge_numbers requires Picard rank 1"
   ))
 
@@ -246,7 +244,7 @@ julia> P[2, 0]  # h⁰(∧²T) = h⁰(𝒪(3)) for ℙ²
 10
 ```
 """
-function hochschild_cohomology(X::PartialFlagVariety{MDT}) where {MDT}
+function hochschild_cohomology(X::PartialFlagVariety)
   d = dimension(X)
   data = zeros(BigInt, d + 1, d + 1)
 

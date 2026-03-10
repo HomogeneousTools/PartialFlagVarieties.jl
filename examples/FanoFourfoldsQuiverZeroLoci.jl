@@ -982,8 +982,20 @@ function download_file(url::AbstractString, name::AbstractString)
   tmpdir = mktempdir()
   tmpfile = joinpath(tmpdir, name)
   println("  Downloading $name from Zenodo...")
-  Downloads.download(url, tmpfile)
-  read(tmpfile, String)
+  last_err = nothing
+  for (attempt, timeout) in enumerate((300.0, 600.0, 900.0))
+    try
+      Downloads.download(url, tmpfile; timeout=timeout)
+      return read(tmpfile, String)
+    catch err
+      last_err = err
+      attempt == 3 && break
+      println("    download attempt $attempt failed: $(sprint(showerror, err))")
+      println("    retrying with a longer timeout...")
+      sleep(attempt)
+    end
+  end
+  throw(last_err)
 end
 
 

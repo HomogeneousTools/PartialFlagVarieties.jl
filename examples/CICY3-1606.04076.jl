@@ -40,12 +40,12 @@ and `target_det` (determinant central character), using summands from
 Returns a Vector of CompletelyReducibleBundle.
 """
 function enumerate_cr_bundles(
-  X::PartialFlagVariety{MDT},
+  X::PartialFlagVariety,
   candidates::Vector{<:Tuple},
   target_rank::Int,
   target_det::Vector{Int},
-) where {MDT}
-  results = CompletelyReducibleBundle{MDT}[]
+)
+  results = CompletelyReducibleBundle[]
 
   function backtrack(idx, remaining_rank, remaining_det, summands)
     if remaining_rank == 0 && all(remaining_det .== 0)
@@ -76,7 +76,7 @@ function enumerate_cr_bundles(
     end
   end
 
-  backtrack(1, target_rank, target_det, CompletelyReducibleBundle{MDT}[])
+  backtrack(1, target_rank, target_det, CompletelyReducibleBundle[])
   results
 end
 
@@ -88,12 +88,13 @@ end
 Get candidate irreducible equivariant bundles to use as summands,
 together with their rank and determinant central character.
 """
-function get_candidate_bundles(X::PartialFlagVariety{MDT}; max_rank::Int=0) where {MDT}
-  DT = PartialFlagVarieties._ambient_type(MDT)
+function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
+  mdt = marked_dynkin_type(X)
+  DT = PartialFlagVarieties._ambient_type(mdt)
   R = Lie.rank(DT)
-  Marked = marked_nodes(MDT)
+  Marked = marked_nodes(mdt)
 
-  candidates = Tuple{CompletelyReducibleBundle{MDT},BigInt,Vector{Int}}[]
+  candidates = Tuple{CompletelyReducibleBundle,BigInt,Vector{Int}}[]
 
   # d_max controls the maximum degree of line bundles O(d) we try.
   d_max = max_rank > 0 ? max(max_rank, 8) : 8
@@ -120,8 +121,8 @@ function get_candidate_bundles(X::PartialFlagVariety{MDT}; max_rank::Int=0) wher
         omega = zeros(Int, R)
         omega[i] = 1
         λ = WeightLatticeElem(DT, omega)
-        irr = IrrepLevi(MDT, λ)
-        bundle = CompletelyReducibleBundle{MDT}(X, [irr])
+        irr = IrrepLevi(mdt, λ)
+        bundle = CompletelyReducibleBundle(X, [irr])
 
         rk = rank_bundle(bundle)
         det_c = collect(PartialFlagVarieties._determinant_central(bundle))
@@ -160,8 +161,8 @@ end
 #  Search on a given variety
 # ═══════════════════════════════════════════════════════════════════════════════
 
-function search_cy3(X::PartialFlagVariety{MDT}, name::String, results::Vector{CY3Result};
-  max_summand_rank::Int=0) where {MDT}
+function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Result};
+  max_summand_rank::Int=0)
   d = dimension(X)
   codim = d - 3
   codim >= 1 || return
@@ -172,7 +173,7 @@ function search_cy3(X::PartialFlagVariety{MDT}, name::String, results::Vector{CY
   target_rank = Int(codim)
 
   # Compute anticanonical central character = target determinant
-  antican = collect(PartialFlagVarieties._anticanonical_central(MDT))
+  antican = collect(PartialFlagVarieties._anticanonical_central(marked_dynkin_type(X)))
 
   # Get candidate irreps
   candidates = get_candidate_bundles(X; max_rank=max_summand_rank > 0 ? max_summand_rank : target_rank)

@@ -53,12 +53,13 @@ julia> rank_bundle(U)
 3
 ```
 """
-function universal_subbundle(X::PartialFlagVariety{MDT}) where {
-  MDT<:MarkedDynkinType{DT,Marked}
-} where {DT,Marked}
+function universal_subbundle(X::PartialFlagVariety)
   is_generalized_grassmannian(X) || throw(ArgumentError(
     "universal_subbundle requires a generalized Grassmannian (1 marked node)"
   ))
+
+  mdt = marked_dynkin_type(X)
+  DT = dynkin_type(mdt)
 
   # The universal subbundle on G/P_k corresponds to the first fundamental
   # weight ω₁ of the ambient group G.  On Gr(k,n) = A_{n-1}/P_k, this gives
@@ -66,8 +67,8 @@ function universal_subbundle(X::PartialFlagVariety{MDT}) where {
   # restricted to the parabolic).  The Levi decomposition then produces a
   # bundle of fiber dimension k (from the standard rep of the GL_k factor).
   ω = fundamental_weight(DT, 1)
-  rep = IrrepLevi(MDT, ω)
-  CompletelyReducibleBundle{MDT}(X, [rep])
+  rep = IrrepLevi(mdt, ω)
+  CompletelyReducibleBundle(X, [rep])
 end
 
 """
@@ -100,12 +101,13 @@ julia> rank_bundle(universal_subbundle(X)) + rank_bundle(universal_quotient_bund
 5
 ```
 """
-function universal_quotient_bundle(X::PartialFlagVariety{MDT}) where {
-  MDT<:MarkedDynkinType{DT,Marked}
-} where {DT,Marked}
+function universal_quotient_bundle(X::PartialFlagVariety)
   is_generalized_grassmannian(X) || throw(ArgumentError(
     "universal_quotient_bundle requires a generalized Grassmannian (1 marked node)"
   ))
+
+  mdt = marked_dynkin_type(X)
+  DT = dynkin_type(mdt)
 
   R = rank(DT)
 
@@ -114,8 +116,8 @@ function universal_quotient_bundle(X::PartialFlagVariety{MDT}) where {
     # to the last fundamental weight ω_{n-1} of the ambient A_{n-1}.
     # Under the Levi A_{k-1} × A_{n-k-1}, this has fiber dimension n-k.
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(MDT, ω)
-    return CompletelyReducibleBundle{MDT}(X, [rep])
+    rep = IrrepLevi(mdt, ω)
+    return CompletelyReducibleBundle(X, [rep])
   end
 
   # For non-type-A: fall back to dual of subbundle
@@ -166,10 +168,11 @@ julia> rank_bundle(Sp)
 2
 ```
 """
-function spinor_bundle(X::PartialFlagVariety{MDT}) where {
-  MDT<:MarkedDynkinType{DT,Marked}
-} where {DT,Marked}
-  _is_quadric(DT, Marked) || throw(ArgumentError(
+function spinor_bundle(X::PartialFlagVariety)
+  mdt = marked_dynkin_type(X)
+  DT = dynkin_type(mdt)
+  marked = marked_nodes(mdt)
+  _is_quadric(DT, marked) || throw(ArgumentError(
     "spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"
   ))
 
@@ -177,24 +180,25 @@ function spinor_bundle(X::PartialFlagVariety{MDT}) where {
   if DT <: TypeB
     # Odd quadric Q^{2m-1}: single spinor bundle at ω_m
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(MDT, ω)
-    CompletelyReducibleBundle{MDT}(X, [rep])
+    rep = IrrepLevi(mdt, ω)
+    CompletelyReducibleBundle(X, [rep])
   elseif DT <: TypeD
     # Even quadric Q^{2m-2}: direct sum of both half-spinors
     ω_plus = fundamental_weight(DT, R - 1)
     ω_minus = fundamental_weight(DT, R)
-    rep_plus = IrrepLevi(MDT, ω_plus)
-    rep_minus = IrrepLevi(MDT, ω_minus)
-    CompletelyReducibleBundle{MDT}(X, [rep_plus, rep_minus])
+    rep_plus = IrrepLevi(mdt, ω_plus)
+    rep_minus = IrrepLevi(mdt, ω_minus)
+    CompletelyReducibleBundle(X, [rep_plus, rep_minus])
   else
     throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
   end
 end
 
-function spinor_bundle(X::PartialFlagVariety{MDT}, half::Symbol) where {
-  MDT<:MarkedDynkinType{DT,Marked}
-} where {DT,Marked}
-  _is_quadric(DT, Marked) || throw(ArgumentError(
+function spinor_bundle(X::PartialFlagVariety, half::Symbol)
+  mdt = marked_dynkin_type(X)
+  DT = dynkin_type(mdt)
+  marked = marked_nodes(mdt)
+  _is_quadric(DT, marked) || throw(ArgumentError(
     "spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"
   ))
 
@@ -203,8 +207,8 @@ function spinor_bundle(X::PartialFlagVariety{MDT}, half::Symbol) where {
   if DT <: TypeB
     half in (:plus, :minus) && @warn "Odd quadric has a single spinor bundle; ignoring half=$half"
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(MDT, ω)
-    return CompletelyReducibleBundle{MDT}(X, [rep])
+    rep = IrrepLevi(mdt, ω)
+    return CompletelyReducibleBundle(X, [rep])
   end
 
   if DT <: TypeD
@@ -215,8 +219,8 @@ function spinor_bundle(X::PartialFlagVariety{MDT}, half::Symbol) where {
     else
       throw(ArgumentError("half must be :plus or :minus, got :$half"))
     end
-    rep = IrrepLevi(MDT, ω)
-    return CompletelyReducibleBundle{MDT}(X, [rep])
+    rep = IrrepLevi(mdt, ω)
+    return CompletelyReducibleBundle(X, [rep])
   end
 
   throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
@@ -270,18 +274,18 @@ julia> rank_bundle(Us[2])
     equivariant bundles ``E_{\\omega_m}`` are **not** the geometric tautological
     subbundles (which are filtered extensions, not completely reducible).
 """
-function tautological_bundles(X::PartialFlagVariety{MDT}) where {
-  MDT<:MarkedDynkinType{DT,Marked}
-} where {DT,Marked}
+function tautological_bundles(X::PartialFlagVariety)
   # For type A flags Fl(d₁,...,dₖ; n) = A_{n-1}/P_{d₁,...,dₖ},
   # the tautological subbundles 𝒰_i have weights corresponding to
   # ω_{d_i} (the d_i-th fundamental weight of the ambient A_{n-1}).
   # Each gives 𝒰_i of rank d_i.
-  result = CompletelyReducibleBundle{MDT}[]
-  for m in Marked
+  mdt = marked_dynkin_type(X)
+  DT = dynkin_type(mdt)
+  result = CompletelyReducibleBundle[]
+  for m in marked_nodes(mdt)
     ω = fundamental_weight(DT, m)
-    rep = IrrepLevi(MDT, ω)
-    push!(result, CompletelyReducibleBundle{MDT}(X, [rep]))
+    rep = IrrepLevi(mdt, ω)
+    push!(result, CompletelyReducibleBundle(X, [rep]))
   end
   result
 end
@@ -309,7 +313,7 @@ julia> rank_bundle(Qs[1])
 1
 ```
 """
-function quotient_bundles(X::PartialFlagVariety{MDT}) where {MDT}
+function quotient_bundles(X::PartialFlagVariety)
   [dual(U) for U in tautological_bundles(X)]
 end
 

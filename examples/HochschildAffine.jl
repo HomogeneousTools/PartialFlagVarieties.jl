@@ -154,7 +154,7 @@ end
 
 function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
   X = partial_flag_variety(DT, k)
-  MDT = marked_type(X)
+  mdt = marked_dynkin_type(X)
   d = dimension(X)
   T = tangent_bundle(X)
   n_bun = n_components(T)
@@ -183,7 +183,7 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
     chi_contributions = String[]
 
     for comp in components(Ep)
-      λ = to_ambient_weight(MDT, comp)
+      λ = to_ambient_weight(mdt, comp)
       r = fiber_dimension(comp)
 
       push!(weights, _format_weight(λ))

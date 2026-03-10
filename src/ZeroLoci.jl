@@ -47,12 +47,12 @@ julia> euler_characteristic(Z)
 0
 ```
 """
-mutable struct ZeroLocus{MDT<:MarkedDynkinType}
-  const ambient::PartialFlagVariety{MDT}
-  const defining_bundle::CompletelyReducibleBundle{MDT}
+mutable struct ZeroLocus
+  const ambient::PartialFlagVariety
+  const defining_bundle::CompletelyReducibleBundle
   # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧˾i E*.
   # Populated lazily on the first call that needs them; reused thereafter.
-  koszul_wedges::Union{Nothing, Vector{CompletelyReducibleBundle{MDT}}}
+  koszul_wedges::Union{Nothing, Vector{CompletelyReducibleBundle}}
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -77,14 +77,14 @@ julia> dimension(Z)
 3
 ```
 """
-function zero_locus(E::CompletelyReducibleBundle{MDT}) where {MDT}
+function zero_locus(E::CompletelyReducibleBundle)
   X = E.variety
   r = Int(rank_bundle(E))
   d = dimension(X)
   r <= d || throw(ArgumentError(
     "Bundle rank $r exceeds ambient dimension $d."
   ))
-  ZeroLocus{MDT}(X, E, nothing)
+  ZeroLocus(X, E, nothing)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -97,11 +97,11 @@ All Koszul computations go through this accessor so the exterior powers
 are computed at most once per `ZeroLocus`, regardless of how many times
 different twists are requested.
 """
-function _koszul_wedges!(Z::ZeroLocus{MDT}) where {MDT}
+function _koszul_wedges!(Z::ZeroLocus)
   if Z.koszul_wedges === nothing
     r = Int(rank_bundle(Z.defining_bundle))
     E_dual = dual(Z.defining_bundle)
-    Z.koszul_wedges = CompletelyReducibleBundle{MDT}[exterior_power(E_dual, i) for i in 0:r]
+    Z.koszul_wedges = CompletelyReducibleBundle[exterior_power(E_dual, i) for i in 0:r]
   end
   Z.koszul_wedges
 end
@@ -161,8 +161,11 @@ Return the terms of the twisted Koszul complex:
    F \\otimes \\wedge^r E^*]``
 where ``E`` is the defining bundle and ``r = \\mathrm{rank}(E)``.
 """
-function koszul_terms(Z::ZeroLocus{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
-  CompletelyReducibleBundle{MDT}[tensor_product(F, w) for w in _koszul_wedges!(Z)]
+function koszul_terms(Z::ZeroLocus, F::CompletelyReducibleBundle)
+  marked_type(variety(F)) == marked_type(Z.ambient) || throw(ArgumentError(
+    "koszul_terms requires a bundle on the ambient variety of the zero locus."
+  ))
+  CompletelyReducibleBundle[tensor_product(F, w) for w in _koszul_wedges!(Z)]
 end
 
 """
@@ -170,7 +173,7 @@ end
 
 Return the terms of the (untwisted) Koszul complex for ``\\mathcal{O}_Z``.
 """
-function koszul_terms(Z::ZeroLocus{MDT}) where {MDT}
+function koszul_terms(Z::ZeroLocus)
   koszul_terms(Z, structure_sheaf(Z.ambient))
 end
 
@@ -196,7 +199,7 @@ julia> euler_characteristic(Z)
 0
 ```
 """
-function euler_characteristic(Z::ZeroLocus{MDT}, F::CompletelyReducibleBundle{MDT}) where {MDT}
+function euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle)
   terms = koszul_terms(Z, F)
   result = BigInt(0)
   for (i, K) in enumerate(terms)
@@ -211,7 +214,7 @@ end
 
 Compute ``\\chi(Z, \\mathcal{O}_Z)``.
 """
-function euler_characteristic(Z::ZeroLocus{MDT}) where {MDT}
+function euler_characteristic(Z::ZeroLocus)
   euler_characteristic(Z, structure_sheaf(Z.ambient))
 end
 
@@ -326,10 +329,10 @@ Symbolic version of `cohomology_on_restriction`.  Introduces fresh
 symbolic variables for undetermined connecting-map ranks.
 """
 function cohomology_on_restriction_symbolic(
-  Z::ZeroLocus{MDT},
-  F::CompletelyReducibleBundle{MDT},
+  Z::ZeroLocus,
+  F::CompletelyReducibleBundle,
   var_counter::Ref{Int},
-) where {MDT}
+)
   d_Z = dimension(Z)
 
   # First try the numeric path (which includes Serre duality fallback).
@@ -409,9 +412,9 @@ end
 Symbolic ``H^*(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
 """
 function cohomology_on_restriction_symbolic(
-  Z::ZeroLocus{MDT},
+  Z::ZeroLocus,
   var_counter::Ref{Int},
-) where {MDT}
+)
   cohomology_on_restriction_symbolic(Z, structure_sheaf(Z.ambient), var_counter)
 end
 
@@ -440,15 +443,16 @@ julia> is_calabi_yau_candidate(line_bundle(X, 3))
 false
 ```
 """
-function is_calabi_yau_candidate(E::CompletelyReducibleBundle{MDT}) where {MDT}
+function is_calabi_yau_candidate(E::CompletelyReducibleBundle)
+  mdt = marked_dynkin_type(variety(E))
   det_c1 = _determinant_central(E)
-  antican_c1 = _anticanonical_central(MDT)
+  antican_c1 = _anticanonical_central(mdt)
   det_c1 == antican_c1
 end
 
 """Compute c₁(E) as scaled central character coordinates at the marked nodes."""
-function _determinant_central(E::CompletelyReducibleBundle{MDT}) where {MDT}
-  Marked = marked_nodes(MDT)
+function _determinant_central(E::CompletelyReducibleBundle)
+  Marked = marked_nodes(variety(E))
   c1 = zeros(Int, length(Marked))
   for comp in components(E)
     r = Int(fiber_dimension(comp))
@@ -465,13 +469,13 @@ Uses `anticanonical_degrees` to obtain the anticanonical ω-coordinates
 at the marked nodes, then converts to the scaled central character used
 internally by `IrrepLevi` (coordinates multiplied by `central_scaling_factor`).
 """
-function _anticanonical_central(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  Marked = marked_nodes(MDT)
+function _anticanonical_central(mdt::MarkedDynkinType)
+  Marked = marked_nodes(mdt)
   K = length(Marked)
-  sf = central_scaling_factor(MDT)
-  DT = _ambient_type(MDT)
+  sf = central_scaling_factor(mdt)
+  DT = _ambient_type(mdt)
   Cinv = Lie.cartan_matrix_inverse(DT)
-  degs = anticanonical_degrees(PartialFlagVariety{MDT}())
+  degs = anticanonical_degrees(PartialFlagVariety(mdt))
 
   # central[i] = Σ_{j=1}^K  round(Int, Cinv[Marked[i], Marked[j]] * sf) * degs[j]
   # (same formula as _apply_central_ext applied to the anticanonical weight vector)
@@ -643,7 +647,7 @@ julia> H[3, 3].constant  # h^{2,2}
 8
 ```
 """
-function hodge_numbers_symbolic(Z::ZeroLocus{MDT}) where {MDT}
+function hodge_numbers_symbolic(Z::ZeroLocus)
   d = dimension(Z)
   X = Z.ambient
   E = Z.defining_bundle
@@ -657,8 +661,8 @@ function hodge_numbers_symbolic(Z::ZeroLocus{MDT}) where {MDT}
 
   # ── Precompute Sym^k(E*) and Ω^k_X for k = 0..⌊d/2⌋ ─────────────────
   half = d ÷ 2
-  syms = CompletelyReducibleBundle{MDT}[symmetric_power(E_dual, k) for k in 0:half]
-  omegas = CompletelyReducibleBundle{MDT}[exterior_power(cotangent_bundle(X), k) for k in 0:half]
+  syms = CompletelyReducibleBundle[symmetric_power(E_dual, k) for k in 0:half]
+  omegas = CompletelyReducibleBundle[exterior_power(cotangent_bundle(X), k) for k in 0:half]
 
   # ── Compute rows p = 0..⌊d/2⌋ via the conormal filtration ────────────
   for p in 0:half
@@ -785,7 +789,7 @@ the K-theory relation ``[\\wedge^p \\Omega_X|_Z] = \\sum_i [\\wedge^i E^*|_Z \\o
 \\Omega^{p-i}_Z]`` gives a recursion for ``\\chi(\\Omega^p_Z)`` in terms of
 Koszul-computable Euler characteristics on ``X``.
 """
-function _chi_omega_p_conormal(Z::ZeroLocus{MDT}, p::Int) where {MDT}
+function _chi_omega_p_conormal(Z::ZeroLocus, p::Int)
   _chi_omega_tensor(Z, p, structure_sheaf(Z.ambient))
 end
 
@@ -800,8 +804,8 @@ Recursion: ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z) =
             \\wedge^i E^* \\otimes G|_Z)``
 """
 function _chi_omega_tensor(
-  Z::ZeroLocus{MDT}, j::Int, G::CompletelyReducibleBundle{MDT},
-) where {MDT}
+  Z::ZeroLocus, j::Int, G::CompletelyReducibleBundle,
+)
   X = Z.ambient
 
   if j == 0

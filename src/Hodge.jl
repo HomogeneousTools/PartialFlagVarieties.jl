@@ -42,7 +42,7 @@ julia> h[3, 2]  # h^{2,1}
 101
 ```
 """
-function hodge_numbers(Z::ZeroLocus{MDT}) where {MDT}
+function hodge_numbers(Z::ZeroLocus)
   d = dimension(Z)
   H_sym = hodge_numbers_symbolic(Z)
 

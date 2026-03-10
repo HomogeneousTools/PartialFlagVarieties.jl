@@ -93,8 +93,8 @@ end
 Build a `CompletelyReducibleBundle` from the `bundle` field and `ambient` factors.
 """
 function build_bundle(X, factors::Vector, bundle_data::Vector)
-  MDT = marked_type(X)
-  DT = PartialFlagVarieties._ambient_type(MDT)
+  mdt = marked_dynkin_type(X)
+  DT = PartialFlagVarieties._ambient_type(mdt)
 
   factor_ks = Vector{Int}[]
   factor_ns = Int[]
@@ -104,10 +104,10 @@ function build_bundle(X, factors::Vector, bundle_data::Vector)
     push!(factor_ns, fv[end])
   end
 
-  summands = IrrepLevi{MDT}[]
-  isempty(bundle_data) && return CompletelyReducibleBundle{MDT}(X, summands)
+  summands = IrrepLevi[]
+  isempty(bundle_data) && return CompletelyReducibleBundle(X, summands)
   ds = bundle_data[1]
-  (ds isa Vector && isempty(ds)) && return CompletelyReducibleBundle{MDT}(X, summands)
+  (ds isa Vector && isempty(ds)) && return CompletelyReducibleBundle(X, summands)
 
   for summand in ds
     omega_coords = Int[]
@@ -117,10 +117,10 @@ function build_bundle(X, factors::Vector, bundle_data::Vector)
       append!(omega_coords, omega)
     end
     lam = WeightLatticeElem(DT, omega_coords)
-    push!(summands, IrrepLevi(MDT, lam))
+    push!(summands, IrrepLevi(mdt, lam))
   end
 
-  CompletelyReducibleBundle{MDT}(X, summands)
+  CompletelyReducibleBundle(X, summands)
 end
 
 # =============================================================================

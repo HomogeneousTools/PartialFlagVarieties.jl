@@ -47,23 +47,16 @@ julia> n_filtration_steps(F)
 1
 ```
 """
-struct FilteredBundle{MDT<:MarkedDynkinType} <: Bundle{MDT}
-  variety::PartialFlagVariety{MDT}
-  pieces::Vector{CompletelyReducibleBundle{MDT}}
+struct FilteredBundle <: Bundle
+  variety::PartialFlagVariety
+  pieces::Vector{CompletelyReducibleBundle}
 
-  function FilteredBundle{MDT}(
-    variety::PartialFlagVariety{MDT},
-    pieces::Vector{CompletelyReducibleBundle{MDT}}
-  ) where {MDT}
-    new{MDT}(variety, pieces)
+  function FilteredBundle(
+    variety::PartialFlagVariety,
+    pieces::Vector{CompletelyReducibleBundle}
+  )
+    new(variety, pieces)
   end
-end
-
-function FilteredBundle(
-  variety::PartialFlagVariety{MDT},
-  pieces::Vector{CompletelyReducibleBundle{MDT}}
-) where {MDT}
-  FilteredBundle{MDT}(variety, pieces)
 end
 
 # ─── Accessors ───────────────────────────────────────────────────────────────
@@ -108,12 +101,12 @@ julia> rank_bundle(total_bundle(F)) == dimension(X)
 true
 ```
 """
-function total_bundle(F::FilteredBundle{MDT}) where {MDT}
-  all_comps = IrrepLevi{MDT}[]
+function total_bundle(F::FilteredBundle)
+  all_comps = IrrepLevi[]
   for piece in F.pieces
     append!(all_comps, components(piece))
   end
-  CompletelyReducibleBundle{MDT}(F.variety, all_comps)
+  CompletelyReducibleBundle(F.variety, all_comps)
 end
 
 """
@@ -159,14 +152,14 @@ The nonparabolic height of a positive root ``\\alpha = \\sum_i a_i \\alpha_i``
 is ``\\sum_{j \\in I} a_j`` where ``I`` is the set of marked (crossed-out)
 nodes.
 """
-function _root_heights(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  DT = _ambient_type(MDT)
+function _root_heights(mdt::MarkedDynkinType)
+  DT = _ambient_type(mdt)
   R = rank(DT)
   RS = RootSystem(DT)
-  Marked = marked_nodes(MDT)
-  unmarked = unmarked_nodes(MDT)
+  Marked = marked_nodes(mdt)
+  unmarked = unmarked_nodes(mdt)
 
-  nonpar_roots = positive_nonparabolic_roots(MDT)
+  nonpar_roots = positive_nonparabolic_roots(mdt)
 
   # Group roots by nonparabolic height
   height_groups = Dict{Int,Vector{typeof(first(nonpar_roots))}}()
@@ -239,13 +232,14 @@ julia> n_filtration_steps(F)
 1
 ```
 """
-function filtered_tangent_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  height_data = _root_heights(MDT)
+function filtered_tangent_bundle(X::PartialFlagVariety)
+  mdt = marked_dynkin_type(X)
+  height_data = _root_heights(mdt)
 
-  pieces = CompletelyReducibleBundle{MDT}[]
+  pieces = CompletelyReducibleBundle[]
   for (h, ws) in height_data
-    reps = [IrrepLevi(MDT, w) for w in ws]
-    push!(pieces, CompletelyReducibleBundle{MDT}(X, reps))
+    reps = [IrrepLevi(mdt, w) for w in ws]
+    push!(pieces, CompletelyReducibleBundle(X, reps))
   end
 
   FilteredBundle(X, pieces)
@@ -295,10 +289,10 @@ julia> rank_bundle(exterior_power(F, 2)) == binomial(dimension(X), 2)
 true
 ```
 """
-function exterior_power(F::FilteredBundle{MDT}, k::Integer) where {MDT}
+function exterior_power(F::FilteredBundle, k::Integer)
   k = Int(k)
   s = n_filtration_steps(F)
-  k < 0 && return FilteredBundle(F.variety, CompletelyReducibleBundle{MDT}[])
+  k < 0 && return FilteredBundle(F.variety, CompletelyReducibleBundle[])
   k == 0 && return FilteredBundle(F.variety, [structure_sheaf(F.variety)])
   k == 1 && return F
 
@@ -306,14 +300,14 @@ function exterior_power(F::FilteredBundle{MDT}, k::Integer) where {MDT}
   ranks = [Int(rank_bundle(p)) for p in pieces]
 
   # Collect terms by filtration weight
-  weight_terms = Dict{Int,Vector{CompletelyReducibleBundle{MDT}}}()
+  weight_terms = Dict{Int,Vector{CompletelyReducibleBundle}}()
 
   for α in multiexponents(s, k)
     # Skip if any α_i exceeds the rank of gr_i
     any(α[i] > ranks[i] for i in 1:s) && continue
 
     # Compute ∧^{α_1} gr_1 ⊗ ⋯ ⊗ ∧^{α_s} gr_s
-    factors = CompletelyReducibleBundle{MDT}[]
+    factors = CompletelyReducibleBundle[]
     skip = false
     for i in 1:s
       w_i = exterior_power(pieces[i], α[i])
@@ -334,20 +328,20 @@ function exterior_power(F::FilteredBundle{MDT}, k::Integer) where {MDT}
     # Filtration weight = Σ i * α_i (1-indexed)
     fw = sum(i * α[i] for i in 1:s)
     if !haskey(weight_terms, fw)
-      weight_terms[fw] = CompletelyReducibleBundle{MDT}[]
+      weight_terms[fw] = CompletelyReducibleBundle[]
     end
     push!(weight_terms[fw], term)
   end
 
   # Assemble graded pieces ordered by filtration weight
-  result_pieces = CompletelyReducibleBundle{MDT}[]
+  result_pieces = CompletelyReducibleBundle[]
   for fw in sort(collect(keys(weight_terms)))
     # Direct sum of all terms at this filtration weight
-    all_comps = IrrepLevi{MDT}[]
+    all_comps = IrrepLevi[]
     for t in weight_terms[fw]
       append!(all_comps, components(t))
     end
-    push!(result_pieces, CompletelyReducibleBundle{MDT}(F.variety, all_comps))
+    push!(result_pieces, CompletelyReducibleBundle(F.variety, all_comps))
   end
 
   FilteredBundle(F.variety, result_pieces)
@@ -376,21 +370,21 @@ julia> rank_bundle(symmetric_power(F, 2)) == binomial(dimension(X) + 1, 2)
 true
 ```
 """
-function symmetric_power(F::FilteredBundle{MDT}, k::Integer) where {MDT}
+function symmetric_power(F::FilteredBundle, k::Integer)
   k = Int(k)
   s = n_filtration_steps(F)
-  k < 0 && return FilteredBundle(F.variety, CompletelyReducibleBundle{MDT}[])
+  k < 0 && return FilteredBundle(F.variety, CompletelyReducibleBundle[])
   k == 0 && return FilteredBundle(F.variety, [structure_sheaf(F.variety)])
   k == 1 && return F
 
   pieces = graded_pieces(F)
 
   # Collect terms by filtration weight
-  weight_terms = Dict{Int,Vector{CompletelyReducibleBundle{MDT}}}()
+  weight_terms = Dict{Int,Vector{CompletelyReducibleBundle}}()
 
   for α in multiexponents(s, k)
     # Compute Sym^{α_1} gr_1 ⊗ ⋯ ⊗ Sym^{α_s} gr_s
-    factors = CompletelyReducibleBundle{MDT}[]
+    factors = CompletelyReducibleBundle[]
     skip = false
     for i in 1:s
       s_i = symmetric_power(pieces[i], α[i])
@@ -409,18 +403,18 @@ function symmetric_power(F::FilteredBundle{MDT}, k::Integer) where {MDT}
 
     fw = sum(i * α[i] for i in 1:s)
     if !haskey(weight_terms, fw)
-      weight_terms[fw] = CompletelyReducibleBundle{MDT}[]
+      weight_terms[fw] = CompletelyReducibleBundle[]
     end
     push!(weight_terms[fw], term)
   end
 
-  result_pieces = CompletelyReducibleBundle{MDT}[]
+  result_pieces = CompletelyReducibleBundle[]
   for fw in sort(collect(keys(weight_terms)))
-    all_comps = IrrepLevi{MDT}[]
+    all_comps = IrrepLevi[]
     for t in weight_terms[fw]
       append!(all_comps, components(t))
     end
-    push!(result_pieces, CompletelyReducibleBundle{MDT}(F.variety, all_comps))
+    push!(result_pieces, CompletelyReducibleBundle(F.variety, all_comps))
   end
 
   FilteredBundle(F.variety, result_pieces)
@@ -434,13 +428,13 @@ pieces ``\\mathrm{gr}_1, \\ldots, \\mathrm{gr}_s`` (bottom to top), then
 ``F^\\vee`` has pieces ``\\mathrm{gr}_s^\\vee, \\ldots, \\mathrm{gr}_1^\\vee``
 (the dual reverses the filtration order).
 """
-function dual(F::FilteredBundle{MDT}) where {MDT}
+function dual(F::FilteredBundle)
   FilteredBundle(F.variety, [dual(p) for p in reverse(F.pieces)])
 end
 
 # ─── Display ─────────────────────────────────────────────────────────────────
 
-function Base.show(io::IO, F::FilteredBundle{MDT}) where {MDT}
+function Base.show(io::IO, F::FilteredBundle)
   n = n_filtration_steps(F)
   r = rank_bundle(F)
   print(io, "FilteredBundle(rank $r, $n layer(s))")

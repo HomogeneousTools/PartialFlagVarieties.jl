@@ -144,9 +144,10 @@ julia> degree(H[0])  # H⁰(ℙ⁴, 𝒪(1)) = V(ω₁) of dim 5
 5
 ```
 """
-function cohomology(E::CompletelyReducibleBundle{MDT}) where {
-  MDT<:MarkedDynkinType{DT,Marked}
-} where {DT,Marked}
+function cohomology(E::CompletelyReducibleBundle)
+  mdt = marked_dynkin_type(variety(E))
+  DT = dynkin_type(mdt)
+  R = rank(DT)
   R = rank(DT)
   d = dimension(E.variety)
 
@@ -155,7 +156,7 @@ function cohomology(E::CompletelyReducibleBundle{MDT}) where {
 
   for comp in components(E)
     # Convert to ambient weight
-    λ = to_ambient_weight(MDT, comp)
+    λ = to_ambient_weight(mdt, comp)
 
     # Apply Borel–Weil–Bott
     result = borel_weil_bott(λ)
@@ -298,13 +299,12 @@ julia> euler_characteristic(structure_sheaf(X))
 1
 ```
 """
-function euler_characteristic(E::CompletelyReducibleBundle{MDT}) where {
-  MDT<:MarkedDynkinType
-}
+function euler_characteristic(E::CompletelyReducibleBundle)
+  mdt = marked_dynkin_type(variety(E))
   # Deduplicate: count multiplicities of identical ambient weights
   weight_counts = Dict{WeightLatticeElem,Int}()
   for comp in components(E)
-    λ = to_ambient_weight(MDT, comp)
+    λ = to_ambient_weight(mdt, comp)
     weight_counts[λ] = get(weight_counts, λ, 0) + 1
   end
   result = BigInt(0)
@@ -353,10 +353,11 @@ julia> length(coeffs) > 0
 true
 ```
 """
-function hilbert_polynomial(E::CompletelyReducibleBundle{MDT};
+function hilbert_polynomial(E::CompletelyReducibleBundle;
   max_degree::Int=20
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  length(Marked) == 1 || throw(ArgumentError(
+)
+  marked = marked_nodes(variety(E))
+  length(marked) == 1 || throw(ArgumentError(
     "Hilbert polynomial requires a generalized Grassmannian (1 marked node)"
   ))
 

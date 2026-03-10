@@ -69,13 +69,13 @@ end
 #  GL weight vectors (one entry per element of `factors`).
 
 function build_m2_bundle(X, factors, bundle_weights)
-  MDT = marked_type(X)
-  DT = PartialFlagVarieties._ambient_type(MDT)
+  mdt = marked_dynkin_type(X)
+  DT = PartialFlagVarieties._ambient_type(mdt)
 
   factor_ks = [f[1:end-1] for f in factors]
   factor_ns = [f[end] for f in factors]
 
-  summands = IrrepLevi{MDT}[]
+  summands = IrrepLevi[]
   for summand in bundle_weights
     omega_coords = Int[]
     for (j, w) in enumerate(summand)
@@ -83,9 +83,9 @@ function build_m2_bundle(X, factors, bundle_weights)
       append!(omega_coords, omega)
     end
     lam = WeightLatticeElem(DT, omega_coords)
-    push!(summands, IrrepLevi(MDT, lam))
+    push!(summands, IrrepLevi(mdt, lam))
   end
-  CompletelyReducibleBundle{MDT}(X, summands)
+  CompletelyReducibleBundle(X, summands)
 end
 
 # ─── M2 variety data ─────────────────────────────────────────────────────────

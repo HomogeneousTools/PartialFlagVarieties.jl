@@ -1,297 +1,110 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-#  IrrepLevi — irreducible representation of the Levi subgroup
-#
-#  An irreducible representation of the Levi subgroup L of a parabolic P
-#  is encoded by a P-dominant weight λ in the weight lattice of G.  It
-#  can also be described as a character of the center Z(L) (the "central
-#  part") tensored with an irreducible representation of the semisimple
-#  part [L,L] (the "semisimple part").
-#
-#  The decomposition uses the decomposition_matrix change-of-basis from
-#  MarkedDynkinType.jl.
-# ═══════════════════════════════════════════════════════════════════════════════
-
 export IrrepLevi
 export central_part, semisimple_part
 export to_ambient_weight, fiber_dimension, p_dominant_weight
 
-# Names from Lie and StaticArrays are available via the parent module's
-# `using Lie` and `using StaticArrays`.
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Type definition
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    _central_length(::Type{MDT}) -> Int
-
-Return the number of marked (non-parabolic) nodes, i.e. the compile-time
-length `K` of the `central::SVector{K,Int}` field in `IrrepLevi{MDT,K}`.
-"""
-@generated function _central_length(
-  ::Type{MDT},
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  K = length(Marked)
-  return :($K)
+struct IrrepLevi
+  mdt::MarkedDynkinType
+  λ::WeightLatticeElem
+  central::Vector{Int}
+  semisimple::WeightLatticeElem
 end
 
-"""
-    IrrepLevi{MDT}
-
-An irreducible representation of the Levi subgroup associated to the
-marked Dynkin type `MDT`, encoded by its P-dominant weight `λ` in the
-weight lattice of the ambient group ``G``.
-
-Internally the weight also stores the decomposition into:
-- `central::SVector{K,Int}`: scaled coordinates of the central character,
-  indexed by the marked (nonparabolic) nodes. Stored as integers
-  multiplied by `central_scaling_factor` for efficiency.
-- `semisimple::WeightLatticeElem`: highest weight of the semisimple part,
-  as a weight in the Levi's weight lattice
-
-The decomposition is via the [`decomposition_matrix`](@ref) change of basis.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
-
-julia> ω₁ = fundamental_weight(TypeA{3}, 1);
-
-julia> rep = IrrepLevi(MDT, ω₁);
-
-julia> central_part(rep)
-1-element Vector{Rational{Int64}}:
- 1//2
-
-julia> semisimple_part(rep)
-ω1
-```
-"""
-struct IrrepLevi{MDT<:MarkedDynkinType, K}
-  λ::WeightLatticeElem             # the P-dominant weight (ambient weight lattice)
-  central::SVector{K,Int}          # scaled central character (×central_scaling_factor)
-  semisimple::WeightLatticeElem    # highest weight of semisimple part (Levi lattice)
-end
-
-# Convenience outer constructor: infers K from the SVector.
-IrrepLevi{MDT}(λ, c::SVector{K,Int}, ss) where {MDT,K} = IrrepLevi{MDT,K}(λ, c, ss)
-
-# ─── Core accessors ──────────────────────────────────────────────────────────
-
-"""
-    marked_dynkin_type(rep::IrrepLevi{MDT}) -> MDT
-
-Return the singleton instance of the marked Dynkin type `MDT` for the
-representation `rep`.
-
-This accessor allows generic code (e.g. [`dual`](@ref)) to recover the
-MarkedDynkinType value via instance dispatch, rather than extracting `MDT`
-directly as a type parameter.  In particular it enables writing
-`levi_type(marked_dynkin_type(rep))` instead of `levi_type(MDT)`, so the
-body of the calling function does not need to be specialised purely to name
-the `MDT` type parameter.
-"""
-marked_dynkin_type(rep::IrrepLevi{MDT}) where {MDT} = MDT()
-
-"""
-    p_dominant_weight(rep::IrrepLevi) -> WeightLatticeElem
-
-Return the P-dominant weight ``\\lambda`` that defines this Levi representation.
-"""
+marked_dynkin_type(rep::IrrepLevi) = rep.mdt
 p_dominant_weight(rep::IrrepLevi) = rep.λ
-
-"""
-    _apply_central_ext(::Type{MDT}, λ_ivec::SVector{R,Int}) -> SVector{K,Int}
-
-Apply the central-extraction map inline: emits
-`result[i] = Σ_k (sf * C⁻¹[Marked[i],k]) * λ_ivec[k]`
-as direct scalar arithmetic baked into the generated code,
-so no `SMatrix` or `Rational` type appears at runtime.
-"""
-@generated function _apply_central_ext(
-  ::Type{MDT},
-  λ_ivec::SVector{R0,Int},
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked,R0}
-  R = rank(DT)
-  K = length(Marked)
-  M = decomposition_matrix(MDT)
-  sf = Int(central_scaling_factor(MDT))
-  row_exprs = map(1:K) do i
-    terms = [:($(round(Int, M[Marked[i], k] * sf)) * λ_ivec[$k]) for k in 1:R]
-    length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
-  end
-  return :(SVector{$K,Int}($(row_exprs...)))
-end
-
-"""
-    _amb_scalars(::Type{MDT}) -> (sf_total, ratio)
-
-At code-generation time, compute the two integer scaling factors needed by
-`IrrepLevi(MDT, central, semisimple)` to reconstruct the ambient weight:
-- `sf_total`: lcm of `sf_central` and all denominators of `Minv`
-- `ratio = sf_total ÷ sf_central`
-
-Returns only plain integers (no `SMatrix`), so no StaticArrays specialization
-is triggered by the return type.
-"""
-@generated function _amb_scalars(
-  ::Type{MDT},
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  R = rank(DT)
-  sf = Int(central_scaling_factor(MDT))
-  Minv = decomposition_matrix_inv(MDT)
-  sf_total = sf
-  for j in 1:R, k in 1:R
-    sf_total = lcm(sf_total, denominator(Minv[j, k]))
-  end
-  ratio = sf_total ÷ sf
-  return :(($(sf_total), $(ratio)))
-end
-
-"""
-    _apply_Minv_int(::Type{MDT}, x::SVector{R,Int}) -> SVector{R,Int}
-
-Apply `sf_total * Minv` inline: emits
-`result[i] = Σ_j (sf_total * Minv[i,j]) * x[j]`
-as direct scalar arithmetic baked into the generated code.
-No `SMatrix` type is constructed or dispatched at runtime, avoiding
-the StaticArrays `gen_by_access` / `mul_parent` specialization cost.
-"""
-@generated function _apply_Minv_int(
-  ::Type{MDT},
-  x::SVector{R0,Int},
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked,R0}
-  R = rank(DT)
-  sf = Int(central_scaling_factor(MDT))
-  Minv = decomposition_matrix_inv(MDT)
-  sf_total = sf
-  for j in 1:R, k in 1:R
-    sf_total = lcm(sf_total, denominator(Minv[j, k]))
-  end
-  row_exprs = map(1:R) do i
-    terms = [:($(round(Int, Minv[i, j] * sf_total)) * x[$j]) for j in 1:R]
-    length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
-  end
-  return :(SVector{$R,Int}($(row_exprs...)))
-end
-
-"""
-    central_part(rep::IrrepLevi) -> Vector{Rational{Int}}
-
-Return the central character part of the Levi representation.
-
-Internally the central character is stored as scaled integers
-(multiplied by `central_scaling_factor`).  This accessor
-unscales and returns the original `Rational{Int}` values.
-"""
-function central_part(rep::IrrepLevi)
-  sf = central_scaling_factor(marked_dynkin_type(rep))
-  return Vector{Rational{Int}}(Rational{Int}[c // sf for c in rep.central])
-end
-
-"""
-    semisimple_part(rep::IrrepLevi) -> WeightLatticeElem
-
-Return the highest weight of the semisimple part.
-"""
 semisimple_part(rep::IrrepLevi) = rep.semisimple
 
-# ─── Construction from ambient weight ───────────────────────────────────────
+_central_length(mdt::MarkedDynkinType) = central_rank(mdt)
 
-"""
-    IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) -> IrrepLevi{MDT}
+function _apply_central_ext(mdt::MarkedDynkinType, λ_ivec::AbstractVector{Int})
+  marked = marked_nodes(mdt)
+  M = decomposition_matrix(mdt)
+  sf = Int(central_scaling_factor(mdt))
+  central = Vector{Int}(undef, length(marked))
+  for (idx, m) in enumerate(marked)
+    total = 0
+    for k in eachindex(λ_ivec)
+      total += round(Int, M[m, k] * sf) * λ_ivec[k]
+    end
+    central[idx] = total
+  end
+  central
+end
 
-Construct an irreducible Levi representation from a weight ``\\lambda``
-of the ambient group ``G``, by applying the [`decomposition_matrix`](@ref)
-change of basis to decompose into central + semisimple parts.
+function _amb_scalars(mdt::MarkedDynkinType)
+  sf = Int(central_scaling_factor(mdt))
+  Minv = decomposition_matrix_inv(mdt)
+  sf_total = sf
+  for j in axes(Minv, 1), k in axes(Minv, 2)
+    sf_total = lcm(sf_total, denominator(Minv[j, k]))
+  end
+  (sf_total, sf_total ÷ sf)
+end
 
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
+function _apply_Minv_int(mdt::MarkedDynkinType, x::AbstractVector{Int})
+  Minv = decomposition_matrix_inv(mdt)
+  sf_total, _ = _amb_scalars(mdt)
+  result = Vector{Int}(undef, length(x))
+  for i in eachindex(result)
+    total = 0
+    for j in eachindex(x)
+      total += round(Int, Minv[i, j] * sf_total) * x[j]
+    end
+    result[i] = total
+  end
+  result
+end
 
-julia> MDT = MarkedDynkinType{TypeA{4}, (2,)};
+function central_part(rep::IrrepLevi)
+  sf = central_scaling_factor(marked_dynkin_type(rep))
+  Vector{Rational{Int}}(Rational{Int}[c // sf for c in rep.central])
+end
 
-julia> ω₁ = fundamental_weight(TypeA{4}, 1);
+function _trivial_semisimple_weight(mdt::MarkedDynkinType)
+  LT = levi_type(mdt)
+  trivial_type = LT === nothing ? TypeA{1} : LT
+  WeightLatticeElem(trivial_type, zeros(Int, rank(trivial_type)))
+end
 
-julia> rep = IrrepLevi(MDT, ω₁);
+function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
+  LT = levi_type(mdt)
+  unmarked = unmarked_nodes(mdt)
+  λ_ivec = Int[c for c in coefficients(λ)]
+  central = _apply_central_ext(mdt, λ_ivec)
 
-julia> fiber_dimension(rep)
-2
-```
-"""
-function IrrepLevi(::Type{MDT}, λ::WeightLatticeElem) where {
-  MDT<:MarkedDynkinType
-}
-  LT = levi_type(MDT)
-  unmarked = unmarked_nodes(MDT)
-
-  # Use integer arithmetic throughout: the unmarked rows of the decomposition
-  # matrix are identity rows, so new_coords[u] == λ[u] for every unmarked u.
-  # The marked rows are sf-scaled integer multiples of C⁻¹; _apply_central_ext
-  # bakes them in at compile time and emits the multiply as inline scalar
-  # arithmetic — no SMatrix type appears at runtime.
-  R = rank(_ambient_type(MDT))
-  λ_ivec = SVector{R,Int}(Tuple(coefficients(λ)))
-  central = _apply_central_ext(MDT, λ_ivec)  # SVector{K,Int} — no conversion needed
-
-  # Semisimple part: read off unmarked coordinates directly from λ.
-  # Build as SVector{LR,Int} to hit the SVector overload of WeightLatticeElem
-  # and avoid constructing a heap-allocated Array.
   if LT === nothing
-    semisimple = WeightLatticeElem(TypeA{1}, SVector{1,Int}(0))
+    semisimple = _trivial_semisimple_weight(mdt)
   else
     LR = rank(LT)
-    perm = levi_permutation(MDT)
-    ss_coords = SVector{LR,Int}(ntuple(j -> λ_ivec[unmarked[perm[j]]], LR))
+    perm = levi_permutation(mdt)
+    ss_coords = [λ_ivec[unmarked[perm[j]]] for j in 1:LR]
     semisimple = WeightLatticeElem(LT, ss_coords)
   end
 
-  return IrrepLevi{MDT}(λ, central, semisimple)
+  IrrepLevi(mdt, λ, central, semisimple)
 end
 
-"""
-    IrrepLevi(::Type{MDT}, central::AbstractVector{Int}, semisimple) -> IrrepLevi{MDT}
+function IrrepLevi(mdt::MarkedDynkinType, central::AbstractVector{Int}, semisimple::WeightLatticeElem)
+  length(central) == _central_length(mdt) || throw(ArgumentError(
+    "Expected $(_central_length(mdt)) central coordinates, got $(length(central))."
+  ))
 
-Construct an `IrrepLevi` from its **scaled** central character `central`
-(pre-multiplied by `central_scaling_factor`) and the highest weight
-`semisimple` of its semisimple part.  Any `AbstractVector{Int}` is accepted
-and converted to the internal `SVector{K,Int}` representation.
-The ambient P-dominant weight ``\\lambda`` is recovered automatically.
-"""
-function IrrepLevi(::Type{MDT}, central::AbstractVector{Int}, semisimple::WeightLatticeElem) where {
-  MDT<:MarkedDynkinType
-}
-  K = _central_length(MDT)
-  IrrepLevi(MDT, SVector{K,Int}(central), semisimple)
-end
-
-function IrrepLevi(::Type{MDT}, central::SVector{K,Int}, semisimple::WeightLatticeElem) where {
-  MDT<:MarkedDynkinType,K
-}
-  DT = _ambient_type(MDT)
-  Marked = marked_nodes(MDT)
-  unmarked = unmarked_nodes(MDT)
-  LT = levi_type(MDT)
+  DT = dynkin_type(mdt)
+  marked = marked_nodes(mdt)
+  unmarked = unmarked_nodes(mdt)
   R = rank(DT)
 
-  sf_total, ratio = _amb_scalars(MDT)
-
-  # Build integer coordinate vector: scaled by sf_total.
-  # Use plain Vector{Int} — no SizedArray wrapper, no abstract-iteration inference.
-  #   coords_full[m] = central[idx] * ratio  (= sf_total/sf_central * central)
-  #   coords_full[u] = ss_nat[u]    * sf_total
+  sf_total, ratio = _amb_scalars(mdt)
   coords_full = Vector{Int}(undef, R)
-  for (idx, m) in enumerate(Marked)
-    coords_full[m] = central[idx] * ratio
+
+  for (idx, m) in enumerate(marked)
+    coords_full[m] = Int(central[idx]) * ratio
   end
 
-  if length(unmarked) > 0
+  if !isempty(unmarked)
     ss_vec = Lie.coefficients(semisimple)
     LR = length(ss_vec)
     if LR > 0
-      perm = levi_permutation(MDT)
+      perm = levi_permutation(mdt)
       inv_perm = Vector{Int}(undef, LR)
       for j in 1:LR
         inv_perm[perm[j]] = j
@@ -306,88 +119,28 @@ function IrrepLevi(::Type{MDT}, central::SVector{K,Int}, semisimple::WeightLatti
     end
   end
 
-  # _apply_Minv_int emits sf_total*Minv inline; result = sf_total² * λ.
-  # map over SVector returns SVector, so WeightLatticeElem hits its SVector overload.
-  ambient_scaled = _apply_Minv_int(MDT, SVector{R,Int}(coords_full))
+  ambient_scaled = _apply_Minv_int(mdt, coords_full)
   sf_sq = sf_total * sf_total
-  λ = WeightLatticeElem(DT, map(c -> div(c, sf_sq), ambient_scaled))
+  λ = WeightLatticeElem(DT, [div(c, sf_sq) for c in ambient_scaled])
 
-  return IrrepLevi{MDT}(λ, central, semisimple)
+  IrrepLevi(mdt, λ, Vector{Int}(central), semisimple)
 end
 
-"""
-    IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple) -> IrrepLevi{MDT}
-
-Construct an `IrrepLevi` from its central character `central` (a
-`Vector{Rational{Int}}` indexed by marked nodes) and the highest weight
-`semisimple` of its semisimple part.  The rational values are converted
-to scaled integers internally.
-"""
-function IrrepLevi(::Type{MDT}, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem) where {
-  MDT<:MarkedDynkinType
-}
-  sf = central_scaling_factor(MDT)
+function IrrepLevi(mdt::MarkedDynkinType, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem)
+  sf = central_scaling_factor(mdt)
   central_scaled = Int[Int(c * sf) for c in central]
-  IrrepLevi(MDT, central_scaled, semisimple)
+  IrrepLevi(mdt, central_scaled, semisimple)
 end
 
-# ─── Back-conversion to ambient weight ───────────────────────────────────────
+to_ambient_weight(rep::IrrepLevi) = p_dominant_weight(rep)
 
-"""
-    to_ambient_weight(::Type{MDT}, rep::IrrepLevi{MDT}) -> WeightLatticeElem
-
-Convert an `IrrepLevi` back to a weight in the ambient group's weight lattice.
-
-Since the `IrrepLevi` already stores the ambient P-dominant weight ``\\lambda``,
-this simply returns it via `p_dominant_weight`.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
-
-julia> ω₁ = fundamental_weight(TypeA{3}, 1);
-
-julia> rep = IrrepLevi(MDT, ω₁);
-
-julia> to_ambient_weight(MDT, rep) == ω₁
-true
-```
-"""
-function to_ambient_weight(::Type{MDT}, rep::IrrepLevi{MDT}) where {
-  MDT<:MarkedDynkinType
-}
+function to_ambient_weight(mdt::MarkedDynkinType, rep::IrrepLevi)
+  marked_dynkin_type(rep) == mdt || throw(ArgumentError("Representation belongs to a different marked Dynkin type."))
   p_dominant_weight(rep)
 end
 
-# ─── Fiber dimension ─────────────────────────────────────────────────────────
-
-"""
-    fiber_dimension(rep::IrrepLevi{MDT}) -> BigInt
-
-Return the dimension of the fiber (= dimension of the irreducible
-representation of the semisimple part of the Levi).
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
-
-julia> ω₁ = fundamental_weight(TypeA{3}, 1);
-
-julia> fiber_dimension(IrrepLevi(MDT, ω₁))
-2
-
-julia> ω₂ = fundamental_weight(TypeA{3}, 2);
-
-julia> fiber_dimension(IrrepLevi(MDT, ω₂))
-1
-```
-"""
-function fiber_dimension(rep::IrrepLevi{MDT}) where {MDT}
-  LT = levi_type(MDT)
+function fiber_dimension(rep::IrrepLevi)
+  LT = levi_type(marked_dynkin_type(rep))
   LT === nothing && return BigInt(1)
   ss = semisimple_part(rep)
   iszero(ss) && return BigInt(1)
@@ -395,224 +148,107 @@ function fiber_dimension(rep::IrrepLevi{MDT}) where {MDT}
   degree(ss)
 end
 
-# ─── Display ─────────────────────────────────────────────────────────────────
-
-function Base.show(io::IO, rep::IrrepLevi{MDT}) where {MDT}
-  # Print the P-dominant weight directly
+function Base.show(io::IO, rep::IrrepLevi)
   print(io, "(", sprint(show, p_dominant_weight(rep)), ")")
 end
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Monoidal operations
-# ═══════════════════════════════════════════════════════════════════════════════
+function tensor_product(a::IrrepLevi, b::IrrepLevi)
+  marked_dynkin_type(a) == marked_dynkin_type(b) || throw(ArgumentError(
+    "tensor_product requires Levi representations with the same marked Dynkin type."
+  ))
 
-"""
-    tensor_product(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) -> Vector{IrrepLevi{MDT}}
-
-Compute the tensor product of two irreducible Levi representations.
-
-The central parts add, and the semisimple parts tensor (decomposing into
-irreducibles via the Weyl character ring).
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
-
-julia> ω₁ = fundamental_weight(TypeA{3}, 1);
-
-julia> ω₃ = fundamental_weight(TypeA{3}, 3);
-
-julia> reps_a = IrrepLevi(MDT, ω₁);
-
-julia> reps_b = IrrepLevi(MDT, ω₃);
-
-julia> result = tensor_product(reps_a, reps_b);
-
-julia> length(result)
-1
-```
-"""
-tensor_product(a::IrrepLevi, b::IrrepLevi) = _tensor_product_impl(a, b)
-
-function _tensor_product_impl(a::IrrepLevi{MDT,K}, b::IrrepLevi{MDT,K}) where {MDT,K}
-  LT = levi_type(MDT)
-
-  # Central parts add (in scaled representation); SVector addition is type-stable.
+  mdt = marked_dynkin_type(a)
+  LT = levi_type(mdt)
   new_central = a.central + b.central
 
-  # Semisimple parts: tensor product decomposition
   ss_a = semisimple_part(a)
   ss_b = semisimple_part(b)
   if LT === nothing || (iszero(ss_a) && iszero(ss_b))
-    return [IrrepLevi(MDT, new_central, ss_a)]
+    return [IrrepLevi(mdt, new_central, ss_a)]
   end
-
   if iszero(ss_a)
-    return [IrrepLevi(MDT, new_central, ss_b)]
+    return [IrrepLevi(mdt, new_central, ss_b)]
   end
   if iszero(ss_b)
-    return [IrrepLevi(MDT, new_central, ss_a)]
+    return [IrrepLevi(mdt, new_central, ss_a)]
   end
 
-  # Tensor product via Lie.jl's Weyl character ring
   χ = Lie.tensor_product(ss_a, ss_b)
-
-  result = Vector{IrrepLevi{MDT,K}}()
+  result = IrrepLevi[]
   for (hw, mult) in χ
     for _ in 1:mult
-      push!(result, IrrepLevi(MDT, new_central, hw))
+      push!(result, IrrepLevi(mdt, new_central, hw))
     end
   end
-  return result
+  result
 end
 
-"""
-    dual(rep::IrrepLevi{MDT}) -> IrrepLevi{MDT}
-
-Compute the dual of an irreducible Levi representation.
-The central part is negated, and the semisimple part is dualized
-(via the action of the longest Weyl group element).
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
-
-julia> ω₁ = fundamental_weight(TypeA{3}, 1);
-
-julia> rep = IrrepLevi(MDT, ω₁);
-
-julia> d = dual(rep);
-
-julia> central_part(d) == -central_part(rep)
-true
-```
-"""
 function dual(rep::IrrepLevi)
-  LT = levi_type(marked_dynkin_type(rep))
+  mdt = marked_dynkin_type(rep)
+  LT = levi_type(mdt)
   new_central = -rep.central
   ss = semisimple_part(rep)
-
-  # Two cases where Lie.dual is not needed and we can return immediately:
-  #   LT === nothing — the Levi factor is a pure torus
-  #   iszero(ss)     — dual(0) = 0 in every Lie type
   if LT === nothing || iszero(ss)
-    return IrrepLevi(typeof(marked_dynkin_type(rep)), new_central, ss)
+    return IrrepLevi(mdt, new_central, ss)
   end
-
-  new_ss = Lie.dual(ss)
-  return IrrepLevi(typeof(marked_dynkin_type(rep)), new_central, new_ss)
+  IrrepLevi(mdt, new_central, Lie.dual(ss))
 end
 
-"""
-    exterior_power(rep::IrrepLevi{MDT}, k::Int) -> Vector{IrrepLevi{MDT}}
-
-Compute the k-th exterior power of an irreducible Levi representation.
-The central part scales by k, and the semisimple part uses ⋀ᵏ.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> MDT = MarkedDynkinType{TypeA{4}, (3,)};
-
-julia> ω₁ = fundamental_weight(TypeA{4}, 1);
-
-julia> rep = IrrepLevi(MDT, ω₁);
-
-julia> result = exterior_power(rep, 0);
-
-julia> length(result)
-1
-```
-"""
-function exterior_power(rep::IrrepLevi{MDT,K}, k::Integer) where {MDT,K}
+function exterior_power(rep::IrrepLevi, k::Integer)
   k = Int(k)
-  LT = levi_type(MDT)
+  mdt = marked_dynkin_type(rep)
+  LT = levi_type(mdt)
 
-  k < 0 && return Vector{IrrepLevi{MDT,K}}()
-  k == 0 && return [IrrepLevi(MDT, zero(rep.central),
-                              WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
-                                               zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
+  k < 0 && return IrrepLevi[]
+  k == 0 && return [IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))]
   k == 1 && return [rep]
 
-  new_central = k * rep.central
+  new_central = k .* rep.central
   ss = semisimple_part(rep)
 
   if LT === nothing || iszero(ss)
-    return Vector{IrrepLevi{MDT,K}}()  # ⋀^k of a 1-dim rep for k > 1 is 0
+    return IrrepLevi[]
   end
 
   dim_ss = Int(degree(ss))
-  k > dim_ss && return Vector{IrrepLevi{MDT,K}}()
+  k > dim_ss && return IrrepLevi[]
 
   χ = Lie.exterior_power(ss, k)
-
-  result = Vector{IrrepLevi{MDT,K}}()
+  result = IrrepLevi[]
   for (hw, mult) in χ
     for _ in 1:mult
-      push!(result, IrrepLevi(MDT, new_central, hw))
+      push!(result, IrrepLevi(mdt, new_central, hw))
     end
   end
-  return result
+  result
 end
 
-"""
-    symmetric_power(rep::IrrepLevi{MDT}, k::Int) -> Vector{IrrepLevi{MDT}}
-
-Compute the k-th symmetric power of an irreducible Levi representation.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> MDT = MarkedDynkinType{TypeA{3}, (2,)};
-
-julia> ω₁ = fundamental_weight(TypeA{3}, 1);
-
-julia> rep = IrrepLevi(MDT, ω₁);
-
-julia> result = symmetric_power(rep, 2);
-
-julia> length(result) >= 1
-true
-```
-"""
-function symmetric_power(rep::IrrepLevi{MDT,K}, k::Integer) where {MDT,K}
+function symmetric_power(rep::IrrepLevi, k::Integer)
   k = Int(k)
-  LT = levi_type(MDT)
+  mdt = marked_dynkin_type(rep)
+  LT = levi_type(mdt)
 
-  k < 0 && return Vector{IrrepLevi{MDT,K}}()
-  k == 0 && return [IrrepLevi(MDT, zero(rep.central),
-                              WeightLatticeElem(LT === nothing ? TypeA{1} : LT,
-                                               zeros(Int, rank(LT === nothing ? TypeA{1} : LT))))]
+  k < 0 && return IrrepLevi[]
+  k == 0 && return [IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))]
   k == 1 && return [rep]
 
-  new_central = k * rep.central
+  new_central = k .* rep.central
   ss = semisimple_part(rep)
-
   if LT === nothing || iszero(ss)
-    return [IrrepLevi(MDT, new_central, ss)]
+    return [IrrepLevi(mdt, new_central, ss)]
   end
 
   χ = Lie.symmetric_power(ss, k)
-
-  result = Vector{IrrepLevi{MDT,K}}()
+  result = IrrepLevi[]
   for (hw, mult) in χ
     for _ in 1:mult
-      push!(result, IrrepLevi(MDT, new_central, hw))
+      push!(result, IrrepLevi(mdt, new_central, hw))
     end
   end
-  return result
+  result
 end
 
-# ─── Equality ────────────────────────────────────────────────────────────────
+Base.:(==)(a::IrrepLevi, b::IrrepLevi) =
+  marked_dynkin_type(a) == marked_dynkin_type(b) && p_dominant_weight(a) == p_dominant_weight(b)
 
-function Base.:(==)(a::IrrepLevi{MDT}, b::IrrepLevi{MDT}) where {MDT}
-  p_dominant_weight(a) == p_dominant_weight(b)
-end
-
-Base.hash(a::IrrepLevi, h::UInt) = hash(a.λ, h)
+Base.hash(a::IrrepLevi, h::UInt) = hash((a.mdt, a.λ), h)

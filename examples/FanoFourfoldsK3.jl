@@ -352,8 +352,8 @@ function build_ambient(factors::Vector)
 end
 
 function build_bundle(X, factors::Vector, bundle_data::Vector)
-  MDT = marked_type(X)
-  DT = PartialFlagVarieties._ambient_type(MDT)
+  mdt = marked_dynkin_type(X)
+  DT = PartialFlagVarieties._ambient_type(mdt)
 
   factor_ks = Vector{Int}[]
   factor_ns = Int[]
@@ -363,10 +363,10 @@ function build_bundle(X, factors::Vector, bundle_data::Vector)
     push!(factor_ns, fv[end])
   end
 
-  summands = IrrepLevi{MDT}[]
-  isempty(bundle_data) && return CompletelyReducibleBundle{MDT}(X, summands)
+  summands = IrrepLevi[]
+  isempty(bundle_data) && return CompletelyReducibleBundle(X, summands)
   ds = bundle_data[1]
-  (ds isa Vector && isempty(ds)) && return CompletelyReducibleBundle{MDT}(X, summands)
+  (ds isa Vector && isempty(ds)) && return CompletelyReducibleBundle(X, summands)
 
   for summand in ds
     omega_coords = Int[]
@@ -376,15 +376,15 @@ function build_bundle(X, factors::Vector, bundle_data::Vector)
       append!(omega_coords, omega)
     end
     lam = WeightLatticeElem(DT, omega_coords)
-    push!(summands, IrrepLevi(MDT, lam))
+    push!(summands, IrrepLevi(mdt, lam))
   end
 
-  CompletelyReducibleBundle{MDT}(X, summands)
+  CompletelyReducibleBundle(X, summands)
 end
 
 function build_bundle_from_factor_weights(X, factors::Vector, summands_weights)
-  MDT = marked_type(X)
-  DT = PartialFlagVarieties._ambient_type(MDT)
+  mdt = marked_dynkin_type(X)
+  DT = PartialFlagVarieties._ambient_type(mdt)
 
   factor_ks = Vector{Int}[]
   factor_ns = Int[]
@@ -394,7 +394,7 @@ function build_bundle_from_factor_weights(X, factors::Vector, summands_weights)
     push!(factor_ns, fv[end])
   end
 
-  summands = IrrepLevi{MDT}[]
+  summands = IrrepLevi[]
   for summand in summands_weights
     omega_coords = Int[]
     for (j, w_any) in enumerate(summand)
@@ -403,10 +403,10 @@ function build_bundle_from_factor_weights(X, factors::Vector, summands_weights)
       append!(omega_coords, omega)
     end
     lam = WeightLatticeElem(DT, omega_coords)
-    push!(summands, IrrepLevi(MDT, lam))
+    push!(summands, IrrepLevi(mdt, lam))
   end
 
-  CompletelyReducibleBundle{MDT}(X, summands)
+  CompletelyReducibleBundle(X, summands)
 end
 
 projective_O_weight(dim::Int, degree::Int) = vcat(zeros(Int, dim), [degree])
