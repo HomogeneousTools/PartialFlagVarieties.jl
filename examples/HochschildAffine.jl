@@ -34,11 +34,13 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 using PartialFlagVarieties
-using PartialFlagVarieties: fiber_dimension, IrrepLevi, components, n_components,
+using PartialFlagVarieties:
+  fiber_dimension, IrrepLevi, components, n_components,
   to_ambient_weight, marked_type
 using Lie
 using PrettyTables
 using ProgressMeter
+using Combinatorics: multiexponents
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
@@ -73,6 +75,57 @@ function _format_weight(λ::WeightLatticeElem)
   s = join(parts, " + ")
   s = replace(s, "+ -" => "- ")
   s
+end
+
+function _rep_counts(reps::Vector{IrrepLevi})
+  counts = Dict{IrrepLevi,Int}()
+  for rep in reps
+    counts[rep] = get(counts, rep, 0) + 1
+  end
+  counts
+end
+
+function _tensor_count_maps(left::Dict{IrrepLevi,Int}, right::Dict{IrrepLevi,Int})
+  result = Dict{IrrepLevi,Int}()
+  for (a, ma) in left, (b, mb) in right
+    for rep in tensor_product(a, b)
+      result[rep] = get(result, rep, 0) + ma * mb
+    end
+  end
+  result
+end
+
+function _exterior_power_counts(E::CompletelyReducibleBundle, k::Int)
+  k < 0 && return Dict{IrrepLevi,Int}()
+  k == 0 && return _rep_counts(components(structure_sheaf(variety(E))))
+  k == 1 && return _rep_counts(components(E))
+
+  n = n_components(E)
+  ranks = [Int(fiber_dimension(comp)) for comp in components(E)]
+  result = Dict{IrrepLevi,Int}()
+
+  for α in multiexponents(n, k)
+    any(α[i] > ranks[i] for i in 1:n) && continue
+
+    current = nothing
+    skip = false
+    for i in 1:n
+      wedge_i = exterior_power(components(E)[i], α[i])
+      isempty(wedge_i) && begin
+        skip = true
+        break
+      end
+      counts_i = _rep_counts(wedge_i)
+      current = current === nothing ? counts_i : _tensor_count_maps(current, counts_i)
+    end
+    skip && continue
+
+    for (rep, mult) in current
+      result[rep] = get(result, rep, 0) + mult
+    end
+  end
+
+  result
 end
 
 # ─── Cache management ────────────────────────────────────────────────────────
@@ -170,23 +223,28 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
   has_negative_euler = false      # any p with χ(∧ᵖT) < 0
 
   for p in 0:d
-    Ep = exterior_power(T, p)
-    rk = rank_bundle(Ep)
+    Ep_counts = _exterior_power_counts(T, p)
+    rk = sum(mult * fiber_dimension(rep) for (rep, mult) in Ep_counts; init=BigInt(0))
     println(io, "∧$(_superscript(p)) T  (rank = $rk, expected = $(binomial(d, p)))")
 
-    # Collect table rows
+    # Collect table rows, aggregating repeated irreducible summands.
     weights = String[]
+    mults = String[]
     ranks = String[]
     bwb_degrees = String[]
     dominants = String[]
     dims = String[]
     chi_contributions = String[]
 
-    for comp in components(Ep)
-      λ = to_ambient_weight(mdt, comp)
-      r = fiber_dimension(comp)
+    H_entries = zeros(BigInt, d + 1)
+    χ_p = BigInt(0)
+
+    for (rep, mult) in Ep_counts
+      λ = to_ambient_weight(mdt, rep)
+      r = fiber_dimension(rep)
 
       push!(weights, _format_weight(λ))
+      push!(mults, string(mult))
       push!(ranks, string(r))
 
       bwb = borel_weil_bott(λ)
@@ -198,11 +256,13 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
       else
         deg, μ = bwb
         dim_μ = degree(μ)
-        chi_val = (-1)^deg * dim_μ
+        chi_val = mult * (-1)^deg * dim_μ
         push!(bwb_degrees, string(deg))
         push!(dominants, _format_weight(μ))
         push!(dims, string(dim_μ))
         push!(chi_contributions, string(chi_val))
+        H_entries[deg + 1] += mult * dim_μ
+        χ_p += chi_val
         if deg > 0
           has_higher_cohomology = true
         end
@@ -210,19 +270,16 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
     end
 
     if !isempty(weights)
-      data = hcat(weights, ranks, bwb_degrees, dominants, dims, chi_contributions)
+      data = hcat(weights, mults, ranks, bwb_degrees, dominants, dims, chi_contributions)
       pretty_table(io, data;
-        column_labels=["weight", "rank", "deg", "dominant wt", "dim V_μ", "χ"],
-        alignment=[:l, :r, :c, :l, :r, :r],
+        column_labels=["weight", "mult", "rank", "deg", "dominant wt", "dim V_μ", "χ"],
+        alignment=[:l, :r, :r, :c, :l, :r, :r],
         fit_table_in_display_horizontally=false,
         maximum_number_of_columns=-1,
         maximum_number_of_rows=-1,
       )
     end
 
-    # Cohomology and Euler characteristic of this exterior power
-    H = dimensions(Ep)
-    χ_p = euler_characteristic(H)
     total_euler += (-1)^p * χ_p
 
     if χ_p < 0
@@ -231,7 +288,7 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
 
     # Show nonzero cohomology groups
     for q in 0:d
-      h = H[q]
+      h = H_entries[q + 1]
       h == 0 && continue
       println(io, "  H$(_superscript(q))(∧$(_superscript(p)) T) = $h")
     end
@@ -258,7 +315,9 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
   elseif has_higher_cohomology
     println(io, "  ⓘ Some isotypical components land in degree > 0.")
     println(io, "    Higher cohomology exists, but Euler characteristics are non-negative.")
-    println(io, "    The Hochschild-affine property cannot be determined from this data alone.")
+    println(
+      io, "    The Hochschild-affine property cannot be determined from this data alone."
+    )
   else
     println(io, "  ✓ All cohomology concentrated in degree 0.")
     println(io, "    The polyvector field dimensions are exact (no cancellations).")
@@ -281,9 +340,13 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
   println("║  Euler characteristics of polyvector fields ∧ᵖ T on G/P            ║")
   println("╟──────────────────────────────────────────────────────────────────────╢")
   println("║  Varieties: $(lpad(n, 3))                                                  ║")
-  println("║  Rank:      ≤ $(max_rank)$(include_e8 ? " (including E₈)" : "              ")                                  ║")
+  println(
+    "║  Rank:      ≤ $(max_rank)$(include_e8 ? " (including E₈)" : "              ")                                  ║",
+  )
   println("║  Output:    $(rpad(relpath(OUTPUT_DIR), 52))║")
-  println("║  Threads:   $(lpad(nthreads, 3))                                                  ║")
+  println(
+    "║  Threads:   $(lpad(nthreads, 3))                                                  ║"
+  )
   println("╚══════════════════════════════════════════════════════════════════════╝")
   println()
 
@@ -329,11 +392,14 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
       Lie.clear_all_caches!()
     end
 
-    next!(prog; showvalues=[
-      (:variety, "$label/P$k"),
-      (:elapsed, "$(round(elapsed; digits=1))s"),
-      (:passed, "$(n_passed[])/$idx"),
-    ])
+    next!(
+      prog;
+      showvalues=[
+        (:variety, "$label/P$k"),
+        (:elapsed, "$(round(elapsed; digits=1))s"),
+        (:passed, "$(n_passed[])/$idx"),
+      ],
+    )
   end
 
   finish!(prog)
@@ -368,7 +434,7 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
   include_e8 = "--include-e8" in ARGS
-  mr = 8
+  local mr = 8
   for arg in ARGS
     m = match(r"--max-rank=(\d+)", arg)
     if m !== nothing
