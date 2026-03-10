@@ -43,7 +43,8 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies
         run: |
-          julia --project=docs -e 'using Pkg; Pkg.develop(url="https://github.com/HomogeneousTools/Lie.jl"); Pkg.develop(PackageSpec(path=".")); Pkg.add(["Documenter", "StaticArrays"]); Pkg.instantiate()'
+          rm -f docs/Manifest.toml
+          julia --project=docs -e 'using Pkg; Pkg.develop([PackageSpec(path="."), PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl")]); Pkg.add(["Documenter", "StaticArrays"]); Pkg.instantiate()'
       - name: Run doctests
         run: julia --project=docs -e 'using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties; manual="docs/src")'
 
