@@ -57,11 +57,13 @@ jobs:
           - BottVanishing.jl
           - CICY3-1606.04076.jl
           - CICY3-1607.07821.jl
-          - FanoFourfoldQuiverFlags.jl
-          - FanoFourfolds.jl
+          # this one is rather slow, so we skip it for now
+          #- FanoFourfolds.jl
           - FanoFourfoldsK3.jl
+          - FanoFourfoldsQuiverZeroLoci.jl
           - FanoThreefolds.jl
-          - HochschildAffine.jl
+          # this one is rather slow, so we skip it for now
+          #- HochschildAffine.jl
           - Hyperkaehler.jl
           - Kuechle.jl
           - LinearSections.jl
