@@ -54,7 +54,7 @@ struct SectionRecord
   d::Int
   χ::BigInt
   fano_idx::Int          # -999 = not defined (d==0) or not computed
-  hodge::Union{Nothing, Matrix{BigInt}}
+  hodge::Union{Nothing,Matrix{BigInt}}
   note::String
 end
 
@@ -129,8 +129,9 @@ function gr26_sections()
   # ── Summary table ───────────────────────────────────────────────────
   rows = []
   for r in records
-    fi_str = r.fano_idx >= 0 ? string(r.fano_idx) :
-             (r.fano_idx == -999 ? "—" : string(r.fano_idx))
+    fi_str =
+      r.fano_idx >= 0 ? string(r.fano_idx) :
+      (r.fano_idx == -999 ? "—" : string(r.fano_idx))
     push!(rows, [r.label, r.d, r.χ, fi_str, hodge_desc(r), r.note])
   end
   data = hcat(
@@ -181,7 +182,9 @@ function gr26_sections()
   println()
   println("  h^{2,0}=1 (K3 surface: always), h^{1,1}=20 (K3 surface: always),")
   println("  h^{0,2}=1.  Euler characteristic χ(O) = 1 - 0 + 1 = 2 ✓")
-  println("  Topological χ = 2 + (h^{2,0}+h^{1,1}+h^{0,2}) = 2 + 22 = 24 ✓ (standard for K3).")
+  println(
+    "  Topological χ = 2 + (h^{2,0}+h^{1,1}+h^{0,2}) = 2 + 22 = 24 ✓ (standard for K3)."
+  )
   println("  The degree-14 polarisation corresponds to ω₂ restricted from Gr(2,6).")
   println()
 
@@ -237,8 +240,9 @@ function gr27_sections()
   # ── Summary table ───────────────────────────────────────────────────
   rows = []
   for r in records
-    fi_str = r.fano_idx >= 0 ? string(r.fano_idx) :
-             (r.fano_idx == -999 ? "—" : string(r.fano_idx))
+    fi_str =
+      r.fano_idx >= 0 ? string(r.fano_idx) :
+      (r.fano_idx == -999 ? "—" : string(r.fano_idx))
     push!(rows, [r.label, r.d, r.χ, fi_str, hodge_desc(r), r.note])
   end
   data = hcat(
@@ -311,8 +315,12 @@ function gr27_sections()
   println("  K_Z = (K_Gr + 8H)|_Z = (-7H + 8H)|_Z = H|_Z.")
   println("  So the Plücker embedding is the canonical embedding (K_Z = O(1)|_Z).")
   println("  The degree of K_Z = deg H = deg Gr(2,7) = 42 is the canonical degree K².")
-  println("  By Noether's formula: χ(O) = (K²+χ_top)/12, with K²=42: χ_top = 12·14 - 42 = 126.")
-  println("  HPD: Db(Y_L) = ⟨B₁₃(-1), Db(X_L)⟩ where Y_L is a Fano 4-fold on the Pfaffian side.")
+  println(
+    "  By Noether's formula: χ(O) = (K²+χ_top)/12, with K²=42: χ_top = 12·14 - 42 = 126."
+  )
+  println(
+    "  HPD: Db(Y_L) = ⟨B₁₃(-1), Db(X_L)⟩ where Y_L is a Fano 4-fold on the Pfaffian side."
+  )
   println()
   r8 = records[5]
   if r8.hodge !== nothing

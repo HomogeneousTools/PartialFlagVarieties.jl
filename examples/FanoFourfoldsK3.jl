@@ -60,9 +60,9 @@ Base.@kwdef struct FamilyResult
   label::String
   description::String
   ambient::String
-  computed_h11
-  computed_h21
-  computed_h22
+  computed_h11::Any
+  computed_h21::Any
+  computed_h22::Any
   expected_h11::Int
   expected_h21::Int
   expected_h22::Int
@@ -140,14 +140,14 @@ const FAMILY_SPECS = let
 
   map(filter(line -> !isempty(strip(line)), split(strip(raw), '\n'))) do line
     fields = split(strip(line), '|')
-    FamilySpec(
-      label = fields[1],
-      h11 = parse(Int, fields[2]),
-      h21 = parse(Int, fields[3]),
-      h22 = parse(Int, fields[4]),
-      h0antiK = parse(Int, fields[5]),
-      volume = parse(Int, fields[6]),
-      minus_chiT = parse(Int, fields[7]),
+    FamilySpec(;
+      label=fields[1],
+      h11=parse(Int, fields[2]),
+      h21=parse(Int, fields[3]),
+      h22=parse(Int, fields[4]),
+      h0antiK=parse(Int, fields[5]),
+      volume=parse(Int, fields[6]),
+      minus_chiT=parse(Int, fields[7]),
     )
   end
 end
@@ -164,7 +164,7 @@ function normalize_factor_text(s::AbstractString)
     '₀' => '0', '₁' => '1', '₂' => '2', '₃' => '3', '₄' => '4',
     '₅' => '5', '₆' => '6', '₇' => '7', '₈' => '8', '₉' => '9',
     '⁰' => '0', '¹' => '1', '²' => '2', '³' => '3', '⁴' => '4',
-    '⁵' => '5', '⁶' => '6', '⁷' => '7', '⁸' => '8', '⁹' => '9'
+    '⁵' => '5', '⁶' => '6', '⁷' => '7', '⁸' => '8', '⁹' => '9',
   )
   t = remove_invisibles(strip(s))
   t = join(get(sub_map, c, c) for c in t)
@@ -196,12 +196,15 @@ function extract_formula_line(block::AbstractString)
   start = findfirst('𝒵', block)
   start === nothing && return ""
   stop = findnext('.', block, start)
-  formula = stop === nothing ? strip(block[start:end]) : strip(block[start:prevind(block, stop)])
+  formula =
+    stop === nothing ? strip(block[start:end]) : strip(block[start:prevind(block, stop)])
   second_z = findnext('𝒵', formula, nextind(formula, firstindex(formula)))
-  second_z === nothing || (formula = strip(formula[firstindex(formula):prevind(formula, second_z)]))
+  second_z === nothing ||
+    (formula = strip(formula[firstindex(formula):prevind(formula, second_z)]))
   for marker in (" \\math", " script_", " \\mathscr", " \\displaystyle")
     pos = findfirst(marker, formula)
-    pos === nothing || (formula = strip(formula[firstindex(formula):prevind(formula, first(pos))]))
+    pos === nothing ||
+      (formula = strip(formula[firstindex(formula):prevind(formula, first(pos))]))
   end
   formula = replace(formula, r"\s+" => " ")
   formula = replace(formula, r"\s*\(\s*" => "(")
@@ -313,12 +316,12 @@ end
 
 function gl_weight_to_omega_flag(ks::Vector{Int}, n::Int, w::Vector{Int})
   eps = Int[]
-  append!(eps, w[n - ks[1] + 1:n])
+  append!(eps, w[(n - ks[1] + 1):n])
   for i in 2:length(ks)
-    append!(eps, w[n - ks[i] + 1:n - ks[i - 1]])
+    append!(eps, w[(n - ks[i] + 1):(n - ks[i - 1])])
   end
-  append!(eps, w[1:n - ks[end]])
-  [eps[i] - eps[i + 1] for i in 1:n - 1]
+  append!(eps, w[1:(n - ks[end])])
+  [eps[i] - eps[i + 1] for i in 1:(n - 1)]
 end
 
 function build_ambient(factors::Vector)
@@ -327,7 +330,7 @@ function build_ambient(factors::Vector)
   for f in factors
     fv = Int.(f)
     n = fv[end]
-    ks = fv[1:end - 1]
+    ks = fv[1:(end - 1)]
     push!(factor_types, TypeA{n - 1})
     push!(factor_marks, ks)
   end
@@ -358,7 +361,7 @@ function build_bundle(X, factors::Vector, bundle_data::Vector)
   factor_ns = Int[]
   for f in factors
     fv = Int.(f)
-    push!(factor_ks, fv[1:end - 1])
+    push!(factor_ks, fv[1:(end - 1)])
     push!(factor_ns, fv[end])
   end
 
@@ -388,7 +391,7 @@ function build_bundle_from_factor_weights(X, factors::Vector, summands_weights)
   factor_ns = Int[]
   for f in factors
     fv = Int.(f)
-    push!(factor_ks, fv[1:end - 1])
+    push!(factor_ks, fv[1:(end - 1)])
     push!(factor_ns, fv[end])
   end
 
@@ -418,98 +421,112 @@ grassmannian_O1_weight(k::Int, n::Int) = vcat(zeros(Int, n - k), ones(Int, k))
 
 const MANUAL_OVERRIDES = Dict{String,NamedTuple}(
   "C-5" => (
-    ambient = Any[[1, 6], [2, 8]],
-    summands = Any[
+    ambient=Any[[1, 6], [2, 8]],
+    summands=Any[
       Any[projective_O_weight(5, 1), grassmannian_Udual_weight(2, 8)],
       Any[projective_O_weight(5, 1), grassmannian_O1_weight(2, 8)],
       Any[projective_Q_weight(5), grassmannian_Udual_weight(2, 8)],
     ],
   ),
   "C-10" => (
-    ambient = Any[[1, 2], [1, 2], [1, 6]],
-    summands = Any[
+    ambient=Any[[1, 2], [1, 2], [1, 6]],
+    summands=Any[
       Any[projective_O_weight(1, 0), projective_O_weight(1, 0), projective_O_weight(5, 3)],
       Any[projective_O_weight(1, 0), projective_O_weight(1, 1), projective_O_weight(5, 1)],
       Any[projective_O_weight(1, 1), projective_O_weight(1, 0), projective_O_weight(5, 1)],
     ],
   ),
   "C-15" => (
-    ambient = Any[[1, 3], [1, 3], [1, 6]],
-    summands = Any[
+    ambient=Any[[1, 3], [1, 3], [1, 6]],
+    summands=Any[
       Any[projective_Q_weight(2), projective_O_weight(2, 0), projective_O_weight(5, 1)],
       Any[projective_O_weight(2, 0), projective_Q_weight(2), projective_O_weight(5, 1)],
       Any[projective_O_weight(2, 1), projective_O_weight(2, 1), projective_O_weight(5, 1)],
     ],
   ),
   "K3-37" => (
-    ambient = Any[[1, 2], [1, 2], [1, 6]],
-    summands = Any[
+    ambient=Any[[1, 2], [1, 2], [1, 6]],
+    summands=Any[
       Any[projective_O_weight(1, 0), projective_O_weight(1, 0), projective_O_weight(5, 2)],
       Any[projective_O_weight(1, 0), projective_O_weight(1, 0), projective_O_weight(5, 2)],
       Any[projective_O_weight(1, 1), projective_O_weight(1, 1), projective_O_weight(5, 1)],
     ],
   ),
   "K3-40" => (
-    ambient = Any[[1, 2], [1, 2], [1, 6]],
-    summands = Any[
+    ambient=Any[[1, 2], [1, 2], [1, 6]],
+    summands=Any[
       Any[projective_O_weight(1, 0), projective_O_weight(1, 0), projective_O_weight(5, 2)],
       Any[projective_O_weight(1, 0), projective_O_weight(1, 1), projective_O_weight(5, 1)],
       Any[projective_O_weight(1, 1), projective_O_weight(1, 0), projective_O_weight(5, 2)],
     ],
   ),
   "K3-43" => (
-    ambient = Any[[1, 3], [1, 3], [1, 5]],
-    summands = Any[
+    ambient=Any[[1, 3], [1, 3], [1, 5]],
+    summands=Any[
       Any[projective_O_weight(2, 1), projective_O_weight(2, 0), projective_O_weight(4, 1)],
       Any[projective_O_weight(2, 1), projective_O_weight(2, 1), projective_O_weight(4, 1)],
       Any[projective_O_weight(2, 0), projective_Q_weight(2), projective_O_weight(4, 1)],
     ],
   ),
   "K3-45" => (
-    ambient = Any[[1, 3], [1, 3], [1, 5]],
-    summands = Any[
+    ambient=Any[[1, 3], [1, 3], [1, 5]],
+    summands=Any[
       Any[projective_O_weight(2, 0), projective_O_weight(2, 1), projective_O_weight(4, 2)],
       Any[projective_O_weight(2, 1), projective_O_weight(2, 1), projective_O_weight(4, 0)],
       Any[projective_Q_weight(2), projective_O_weight(2, 0), projective_O_weight(4, 1)],
     ],
   ),
   "K3-50" => (
-    ambient = Any[[1, 4], [1, 5], [1, 5]],
-    summands = Any[
+    ambient=Any[[1, 4], [1, 5], [1, 5]],
+    summands=Any[
       Any[projective_O_weight(3, 1), projective_O_weight(4, 1), projective_O_weight(4, 1)],
       Any[projective_Q_weight(3), projective_O_weight(4, 1), projective_O_weight(4, 0)],
       Any[projective_Q_weight(3), projective_O_weight(4, 0), projective_O_weight(4, 1)],
     ],
   ),
   "K3-58" => (
-    ambient = Any[[1, 2], [1, 2], [1, 2], [1, 4]],
-    summands = Any[
-      Any[projective_O_weight(1, 0), projective_O_weight(1, 0), projective_O_weight(1, 1), projective_O_weight(3, 1)],
-      Any[projective_O_weight(1, 1), projective_O_weight(1, 1), projective_O_weight(1, 0), projective_O_weight(3, 2)],
+    ambient=Any[[1, 2], [1, 2], [1, 2], [1, 4]],
+    summands=Any[
+      Any[
+        projective_O_weight(1, 0),
+        projective_O_weight(1, 0),
+        projective_O_weight(1, 1),
+        projective_O_weight(3, 1),
+      ],
+      Any[
+        projective_O_weight(1, 1),
+        projective_O_weight(1, 1),
+        projective_O_weight(1, 0),
+        projective_O_weight(3, 2),
+      ],
     ],
   ),
   "K3-59" => (
-    ambient = Any[[1, 2], [1, 2], [1, 3], [1, 3]],
-    summands = Any[
-      Any[projective_O_weight(1, 0), projective_O_weight(1, 0), projective_O_weight(2, 1), projective_O_weight(2, 1)],
-      Any[projective_O_weight(1, 1), projective_O_weight(1, 1), projective_O_weight(2, 1), projective_O_weight(2, 1)],
+    ambient=Any[[1, 2], [1, 2], [1, 3], [1, 3]],
+    summands=Any[
+      Any[
+        projective_O_weight(1, 0),
+        projective_O_weight(1, 0),
+        projective_O_weight(2, 1),
+        projective_O_weight(2, 1),
+      ],
+      Any[
+        projective_O_weight(1, 1),
+        projective_O_weight(1, 1),
+        projective_O_weight(2, 1),
+        projective_O_weight(2, 1),
+      ],
     ],
   ),
 )
 
 const PROBLEMATIC_FAMILY_SUMMARIES = Dict(
-  "C-2" =>
-    "Symbolic case: the ambient/model match is clear, but `hodge_numbers_symbolic` leaves h21 = x_12 and h22 = 21 + 2*x_12 unresolved.",
-  "C-11" =>
-    "Symbolic case: the long-exact-sequence stage does not eliminate all affine variables, so both h21 and h22 remain undetermined.",
-  "K3-37" =>
-    "Determined discrepancy: this family is modeled manually as 𝒵(ℙ1×ℙ1×ℙ5, 𝒪(0,0,2) ⊕ 𝒪(0,0,2) ⊕ 𝒪(1,1,1)), and the code consistently returns (3,2,22), not the Appendix C value (3,2,33).",
-  "R-61" =>
-    "Symbolic case: even h11 is not forced numerically; the output depends on the free combination x_13 - x_9.",
-  "R-63" =>
-    "Symbolic case: the unresolved affine parameters affect all three reported entries, so the expected Picard-rank jump cannot be confirmed inside the current code.",
-  "R-64" =>
-    "Symbolic case: same pattern as R-63, with free variables surviving in h11, h21, and h22.",
+  "C-2" => "Symbolic case: the ambient/model match is clear, but `hodge_numbers_symbolic` leaves h21 = x_12 and h22 = 21 + 2*x_12 unresolved.",
+  "C-11" => "Symbolic case: the long-exact-sequence stage does not eliminate all affine variables, so both h21 and h22 remain undetermined.",
+  "K3-37" => "Determined discrepancy: this family is modeled manually as 𝒵(ℙ1×ℙ1×ℙ5, 𝒪(0,0,2) ⊕ 𝒪(0,0,2) ⊕ 𝒪(1,1,1)), and the code consistently returns (3,2,22), not the Appendix C value (3,2,33).",
+  "R-61" => "Symbolic case: even h11 is not forced numerically; the output depends on the free combination x_13 - x_9.",
+  "R-63" => "Symbolic case: the unresolved affine parameters affect all three reported entries, so the expected Picard-rank jump cannot be confirmed inside the current code.",
+  "R-64" => "Symbolic case: same pattern as R-63, with free variables surviving in h11, h21, and h22.",
 )
 
 function maybe_int(x)
@@ -527,15 +544,15 @@ entry_minus_chiT(entry) = -Int(entry["tangent"])
 
 function ambient_to_string(ambient)
   join(map(ambient) do factor
-    fv = Int.(factor)
-    if length(fv) == 2 && fv[1] == 1
-      "P$(fv[2] - 1)"
-    elseif length(fv) == 2
-      "Gr($(fv[1]),$(fv[2]))"
-    else
-      "Fl(" * join(string.(fv), ",") * ")"
-    end
-  end, " × ")
+      fv = Int.(factor)
+      if length(fv) == 2 && fv[1] == 1
+        "P$(fv[2] - 1)"
+      elseif length(fv) == 2
+        "Gr($(fv[1]),$(fv[2]))"
+      else
+        "Fl(" * join(string.(fv), ",") * ")"
+      end
+    end, " × ")
 end
 
 function affine_expr_string(e::AffineExpr)
@@ -544,9 +561,9 @@ end
 
 function matrix_entry_exprs(H::AbstractMatrix{AffineExpr})
   (
-    h11 = H[2, 2],
-    h21 = H[3, 2],
-    h22 = H[3, 3],
+    h11=H[2, 2],
+    h21=H[3, 2],
+    h22=H[3, 3],
   )
 end
 
@@ -571,7 +588,8 @@ end
 
 function find_candidates(spec::FamilySpec, description::String, db)
   ambient = parse_ambient(description)
-  strict = [entry for entry in db if
+  strict = [
+    entry for entry in db if
     entry["ambient"] == ambient &&
     Int(entry["anticanonical"]) == spec.h0antiK &&
     Int(entry["volume"]) == spec.volume &&
@@ -582,11 +600,12 @@ function find_candidates(spec::FamilySpec, description::String, db)
   ]
   !isempty(strict) && return strict
 
-  [entry for entry in db if
+  [
+    entry for entry in db if
     entry["ambient"] == ambient &&
-    Int(entry["anticanonical"]) == spec.h0antiK &&
-    Int(entry["volume"]) == spec.volume &&
-    entry_minus_chiT(entry) == spec.minus_chiT
+      Int(entry["anticanonical"]) == spec.h0antiK &&
+      Int(entry["volume"]) == spec.volume &&
+      entry_minus_chiT(entry) == spec.minus_chiT
   ]
 end
 
@@ -601,32 +620,32 @@ function compute_family(spec::FamilySpec, description::String, db)
     ambient_str = ambient_to_string(override.ambient)
     note_prefix = "manual override"
   elseif isempty(candidates)
-    return FamilyResult(
-      label = spec.label,
-      description = description,
-      ambient = ambient_str,
-      computed_h11 = "—",
-      computed_h21 = "—",
-      computed_h22 = "—",
-      expected_h11 = spec.h11,
-      expected_h21 = spec.h21,
-      expected_h22 = spec.h22,
-      status = :unmatched,
-      note = "No matching entry found in examples/FanoFourfolds.json",
+    return FamilyResult(;
+      label=spec.label,
+      description=description,
+      ambient=ambient_str,
+      computed_h11="—",
+      computed_h21="—",
+      computed_h22="—",
+      expected_h11=spec.h11,
+      expected_h21=spec.h21,
+      expected_h22=spec.h22,
+      status=:unmatched,
+      note="No matching entry found in examples/FanoFourfolds.json",
     )
   elseif length(candidates) > 1
-    return FamilyResult(
-      label = spec.label,
-      description = description,
-      ambient = ambient_str,
-      computed_h11 = "—",
-      computed_h21 = "—",
-      computed_h22 = "—",
-      expected_h11 = spec.h11,
-      expected_h21 = spec.h21,
-      expected_h22 = spec.h22,
-      status = :ambiguous,
-      note = "Matched $(length(candidates)) database entries with the same invariants",
+    return FamilyResult(;
+      label=spec.label,
+      description=description,
+      ambient=ambient_str,
+      computed_h11="—",
+      computed_h21="—",
+      computed_h22="—",
+      expected_h11=spec.h11,
+      expected_h21=spec.h21,
+      expected_h22=spec.h22,
+      status=:ambiguous,
+      note="Matched $(length(candidates)) database entries with the same invariants",
     )
   else
     entry = only(candidates)
@@ -644,33 +663,37 @@ function compute_family(spec::FamilySpec, description::String, db)
     got_h21 = Int(exprs.h21.constant)
     got_h22 = Int(exprs.h22.constant)
     ok = got_h11 == spec.h11 && got_h21 == spec.h21 && got_h22 == spec.h22
-    return FamilyResult(
-      label = spec.label,
-      description = description,
-      ambient = ambient_str,
-      computed_h11 = got_h11,
-      computed_h21 = got_h21,
-      computed_h22 = got_h22,
-      expected_h11 = spec.h11,
-      expected_h21 = spec.h21,
-      expected_h22 = spec.h22,
-      status = ok ? :match : :discrepancy,
-      note = ok ? note_prefix : "Computed values disagree with Appendix C",
+    return FamilyResult(;
+      label=spec.label,
+      description=description,
+      ambient=ambient_str,
+      computed_h11=got_h11,
+      computed_h21=got_h21,
+      computed_h22=got_h22,
+      expected_h11=spec.h11,
+      expected_h21=spec.h21,
+      expected_h22=spec.h22,
+      status=ok ? :match : :discrepancy,
+      note=ok ? note_prefix : "Computed values disagree with Appendix C",
     )
   end
 
-  FamilyResult(
-    label = spec.label,
-    description = description,
-    ambient = ambient_str,
-    computed_h11 = format_expr(exprs.h11),
-    computed_h21 = format_expr(exprs.h21),
-    computed_h22 = format_expr(exprs.h22),
-    expected_h11 = spec.h11,
-    expected_h21 = spec.h21,
-    expected_h22 = spec.h22,
-    status = :indeterminate,
-    note = isempty(note_prefix) ? "Symbolic ambiguity in hodge_numbers_symbolic" : note_prefix * "; symbolic ambiguity in hodge_numbers_symbolic",
+  FamilyResult(;
+    label=spec.label,
+    description=description,
+    ambient=ambient_str,
+    computed_h11=format_expr(exprs.h11),
+    computed_h21=format_expr(exprs.h21),
+    computed_h22=format_expr(exprs.h22),
+    expected_h11=spec.h11,
+    expected_h21=spec.h21,
+    expected_h22=spec.h22,
+    status=:indeterminate,
+    note=if isempty(note_prefix)
+      "Symbolic ambiguity in hodge_numbers_symbolic"
+    else
+      note_prefix * "; symbolic ambiguity in hodge_numbers_symbolic"
+    end,
   )
 end
 
@@ -692,10 +715,21 @@ function show_table(results)
   data = permutedims(hcat(rows...), (2, 1))
   pretty_table(
     data;
-    column_labels = ["label", "ambient", "h11", "exp h11", "h21", "exp h21", "h22", "exp h22", "status", "note"],
-    alignment = [:l, :l, :r, :r, :r, :r, :r, :r, :l, :l],
-    fit_table_in_display_horizontally = false,
-    fit_table_in_display_vertically = false,
+    column_labels=[
+      "label",
+      "ambient",
+      "h11",
+      "exp h11",
+      "h21",
+      "exp h21",
+      "h22",
+      "exp h22",
+      "status",
+      "note",
+    ],
+    alignment=[:l, :l, :r, :r, :r, :r, :r, :r, :l, :l],
+    fit_table_in_display_horizontally=false,
+    fit_table_in_display_vertically=false,
   )
 end
 
@@ -704,15 +738,19 @@ function show_issues(results)
   println()
   if isempty(bad)
     println("No discrepancies or indeterminacies found.")
-    return
+    return nothing
   end
 
   println("Discrepancies / indeterminacies:")
   for r in bad
     println("- $(r.label): $(isempty(r.note) ? String(r.status) : r.note)")
     println("  $(r.description)")
-    println("  computed = (h11=$(r.computed_h11), h21=$(r.computed_h21), h22=$(r.computed_h22))")
-    println("  expected = (h11=$(r.expected_h11), h21=$(r.expected_h21), h22=$(r.expected_h22))")
+    println(
+      "  computed = (h11=$(r.computed_h11), h21=$(r.computed_h21), h22=$(r.computed_h22))"
+    )
+    println(
+      "  expected = (h11=$(r.expected_h11), h21=$(r.expected_h21), h22=$(r.expected_h22))"
+    )
     if haskey(PROBLEMATIC_FAMILY_SUMMARIES, r.label)
       println("  summary  = $(PROBLEMATIC_FAMILY_SUMMARIES[r.label])")
     end

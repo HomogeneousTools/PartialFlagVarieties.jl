@@ -51,10 +51,10 @@ function enumerate_cr_bundles(
     if remaining_rank == 0 && all(remaining_det .== 0)
       E = reduce(direct_sum, summands)
       push!(results, E)
-      return
+      return nothing
     end
     if remaining_rank <= 0 || idx > length(candidates)
-      return
+      return nothing
     end
 
     bundle, rk, det_c = candidates[idx]
@@ -165,7 +165,7 @@ function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Resu
   max_summand_rank::Int=0)
   d = dimension(X)
   codim = d - 3
-  codim >= 1 || return
+  codim >= 1 || return nothing
 
   print("  Searching $name (dim=$d, codim=$codim)... ")
   flush(stdout)
@@ -176,7 +176,9 @@ function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Resu
   antican = collect(PartialFlagVarieties._anticanonical_central(marked_dynkin_type(X)))
 
   # Get candidate irreps
-  candidates = get_candidate_bundles(X; max_rank=max_summand_rank > 0 ? max_summand_rank : target_rank)
+  candidates = get_candidate_bundles(
+    X; max_rank=max_summand_rank > 0 ? max_summand_rank : target_rank
+  )
 
   # Enumerate bundles with correct rank and CY determinant condition
   bundles = enumerate_cr_bundles(X, candidates, target_rank, antican)
@@ -274,7 +276,7 @@ function main()
 
   if isempty(results)
     println("  No CY3 candidates found.")
-    return
+    return nothing
   end
 
   ambients = [r.ambient for r in results]

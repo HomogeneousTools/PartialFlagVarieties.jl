@@ -44,15 +44,15 @@ println()
 X1 = Gr(2, 6)
 E1 = symmetric_power(universal_subbundle(X1), 3)   # Sym³(S*), rank 4
 Z1 = zero_locus(E1)
-@assert dimension(Z1) == 4  "Expected dim Z = 4, got $(dimension(Z1))"
+@assert dimension(Z1) == 4 "Expected dim Z = 4, got $(dimension(Z1))"
 
 H1 = hodge_numbers(Z1)
 println("Hodge diamond of F(cubic fourfold) in Gr(2,6) (d = 4):")
 print_hodge_diamond(stdout, H1)
 println()
 
-@assert H1[1, 1] == 1   "h^{0,0} ≠ 1"
-@assert H1[2, 2] == 21  "h^{1,1} ≠ 21"
+@assert H1[1, 1] == 1 "h^{0,0} ≠ 1"
+@assert H1[2, 2] == 21 "h^{1,1} ≠ 21"
 @assert H1[3, 3] == 232 "h^{2,2} ≠ 232"
 
 # ─── 2. Debarre–Voisin variety ────────────────────────────────────────────────
@@ -65,15 +65,15 @@ println()
 X2 = Gr(6, 10)
 E2 = exterior_power(universal_subbundle(X2), 3)    # ∧³(S*), rank 20
 Z2 = zero_locus(E2)
-@assert dimension(Z2) == 4  "Expected dim Z = 4, got $(dimension(Z2))"
+@assert dimension(Z2) == 4 "Expected dim Z = 4, got $(dimension(Z2))"
 
 H2 = hodge_numbers(Z2)
 println("Hodge diamond of Debarre–Voisin variety in Gr(6,10) (d = 4):")
 print_hodge_diamond(stdout, H2)
 println()
 
-@assert H2[1, 1] == 1   "h^{0,0} ≠ 1"
-@assert H2[2, 2] == 21  "h^{1,1} ≠ 21"
+@assert H2[1, 1] == 1 "h^{0,0} ≠ 1"
+@assert H2[2, 2] == 21 "h^{1,1} ≠ 21"
 @assert H2[3, 3] == 232 "h^{2,2} ≠ 232"
 
 # ─── Comparison ──────────────────────────────────────────────────────────────

@@ -41,17 +41,18 @@ Sym2Sstar(X) = symmetric_power(Sstar(X), 2)
 Λ5Q(X) = exterior_power(Qbundle(X), 5)
 
 bundle_sum(E::CompletelyReducibleBundle) = E
-bundle_sum(E::CompletelyReducibleBundle, F::Vararg{CompletelyReducibleBundle}) =
-  reduce(direct_sum, (E, F...))
+bundle_sum(E::CompletelyReducibleBundle, F::Vararg{CompletelyReducibleBundle}) = reduce(
+  direct_sum, (E, F...)
+)
 
 function hodge_signature(h)
   (
-    h00 = BigInt(h[1, 1]),
-    h10 = BigInt(h[2, 1]),
-    h20 = BigInt(h[3, 1]),
-    h30 = BigInt(h[4, 1]),
-    h11 = BigInt(h[2, 2]),
-    h21 = BigInt(h[3, 2]),
+    h00=BigInt(h[1, 1]),
+    h10=BigInt(h[2, 1]),
+    h20=BigInt(h[3, 1]),
+    h30=BigInt(h[4, 1]),
+    h11=BigInt(h[2, 2]),
+    h21=BigInt(h[3, 2]),
   )
 end
 
@@ -83,101 +84,101 @@ Base.@kwdef struct CY3Family
 end
 
 const CY3_FAMILIES = CY3Family[
-  CY3Family(no=1, label="1", k=2, n=4, description="O(4)",
+  CY3Family(; no=1, label="1", k=2, n=4, description="O(4)",
     build=X -> O(X, 4), expected_h11=1, expected_h21=89, expected_chi=-176,
     note="(ℙ⁵)_{2,4}"),
-  CY3Family(no=2, label="b2", k=2, n=5, description="O(1) ⊕ O(2)²",
+  CY3Family(; no=2, label="b2", k=2, n=5, description="O(1) ⊕ O(2)²",
     build=X -> bundle_sum(O(X, 1), 2 * O(X, 2)), expected_h11=1, expected_h21=61,
     expected_chi=-120),
-  CY3Family(no=3, label="b1", k=2, n=5, description="O(1)² ⊕ O(3)",
+  CY3Family(; no=3, label="b1", k=2, n=5, description="O(1)² ⊕ O(3)",
     build=X -> bundle_sum(2 * O(X, 1), O(X, 3)), expected_h11=1, expected_h21=76,
     expected_chi=-150),
-  CY3Family(no=4, label="4", k=2, n=5, description="S*(1) ⊕ O(2)",
+  CY3Family(; no=4, label="4", k=2, n=5, description="S*(1) ⊕ O(2)",
     build=X -> bundle_sum(Sstar(X) * O(X, 1), O(X, 2)), expected_h11=1,
     expected_h21=59, expected_chi=-116, note="Also OG(5,10)_{1⁶,2}"),
-  CY3Family(no=5, label="5", k=2, n=5, description="∧²Q(1)",
+  CY3Family(; no=5, label="5", k=2, n=5, description="∧²Q(1)",
     build=X -> Λ2Q(X) * O(X, 1), expected_h11=1, expected_h21=51,
     expected_chi=-100, note="Flat degeneration of G(2,5) ∩ G(2,5)"),
-  CY3Family(no=6, label="b6", k=2, n=6, description="O(1)⁴ ⊕ O(2)",
+  CY3Family(; no=6, label="b6", k=2, n=6, description="O(1)⁴ ⊕ O(2)",
     build=X -> bundle_sum(4 * O(X, 1), O(X, 2)), expected_h11=1, expected_h21=59,
     expected_chi=-116),
-  CY3Family(no=7, label="b5", k=2, n=6, description="S*(1) ⊕ O(1)³",
+  CY3Family(; no=7, label="b5", k=2, n=6, description="S*(1) ⊕ O(1)³",
     build=X -> bundle_sum(Sstar(X) * O(X, 1), 3 * O(X, 1)), expected_h11=1,
     expected_h21=52, expected_chi=-102,
     note="Also Σ_{1⁹} in a Schubert variety of OP²"),
-  CY3Family(no=8, label="b4", k=2, n=6, description="Sym²S* ⊕ O(1) ⊕ O(2)",
+  CY3Family(; no=8, label="b4", k=2, n=6, description="Sym²S* ⊕ O(1) ⊕ O(2)",
     build=X -> bundle_sum(Sym2Sstar(X), O(X, 1), O(X, 2)), expected_h11=2,
     expected_h21=66, expected_chi=-128, note="Also (ℙ³ × ℙ³)_{1²,2}"),
-  CY3Family(no=9, label="9", k=2, n=6, description="Sym²S* ⊕ S*(1)",
+  CY3Family(; no=9, label="9", k=2, n=6, description="Sym²S* ⊕ S*(1)",
     build=X -> bundle_sum(Sym2Sstar(X), Sstar(X) * O(X, 1)), expected_h11=2,
     expected_h21=48, expected_chi=-92,
     note="Alternative description on F(1,3;ℂ⁴)"),
-  CY3Family(no=10, label="b3", k=2, n=6, description="Q(1) ⊕ O(1)",
+  CY3Family(; no=10, label="b3", k=2, n=6, description="Q(1) ⊕ O(1)",
     build=X -> bundle_sum(Qbundle(X) * O(X, 1), O(X, 1)), expected_h11=1,
     expected_h21=50, expected_chi=-98,
     note="Projectively equivalent to G(2,7)_{1⁷}"),
-  CY3Family(no=11, label="11", k=2, n=6, description="∧³Q ⊕ O(3)",
+  CY3Family(; no=11, label="11", k=2, n=6, description="∧³Q ⊕ O(3)",
     build=X -> bundle_sum(Λ3Q(X), O(X, 3)), expected_h11=2, expected_h21=83,
     expected_chi=-162, note="Also (ℙ² × ℙ²)_3"),
-  CY3Family(no=12, label="b7", k=2, n=7, description="O(1)⁷",
+  CY3Family(; no=12, label="b7", k=2, n=7, description="O(1)⁷",
     build=X -> 7 * O(X, 1), expected_h11=1, expected_h21=50, expected_chi=-98),
-  CY3Family(no=13, label="b8", k=2, n=7, description="Sym²S* ⊕ O(1)⁴",
+  CY3Family(; no=13, label="b8", k=2, n=7, description="Sym²S* ⊕ O(1)⁴",
     build=X -> bundle_sum(Sym2Sstar(X), 4 * O(X, 1)), expected_h11=1,
     expected_h21=47, expected_chi=-92, note="Also OG(2,7)_{1⁴}"),
-  CY3Family(no=14, label="b9", k=2, n=7, description="(Sym²S*)² ⊕ O(1)",
+  CY3Family(; no=14, label="b9", k=2, n=7, description="(Sym²S*)² ⊕ O(1)",
     build=X -> bundle_sum(2 * Sym2Sstar(X), O(X, 1)), expected_h11=8,
     expected_h21=24, expected_chi=-32),
-  CY3Family(no=15, label="b10", k=2, n=7, description="∧⁴Q ⊕ O(1) ⊕ O(2)",
+  CY3Family(; no=15, label="b10", k=2, n=7, description="∧⁴Q ⊕ O(1) ⊕ O(2)",
     build=X -> bundle_sum(Λ4Q(X), O(X, 1), O(X, 2)), expected_h11=1,
     expected_h21=61, expected_chi=-120, note="Also (G₂/P₁)_{1,2}"),
-  CY3Family(no=16, label="16", k=2, n=7, description="S*(1) ⊕ ∧⁴Q",
+  CY3Family(; no=16, label="16", k=2, n=7, description="S*(1) ⊕ ∧⁴Q",
     build=X -> bundle_sum(Sstar(X) * O(X, 1), Λ4Q(X)), expected_h11=1,
     expected_h21=50, expected_chi=-98,
     note="Flat degeneration of G(2,7)_{1⁷}"),
-  CY3Family(no=17, label="b11", k=2, n=8, description="∧⁵Q ⊕ O(1)³",
+  CY3Family(; no=17, label="b11", k=2, n=8, description="∧⁵Q ⊕ O(1)³",
     build=X -> bundle_sum(Λ5Q(X), 3 * O(X, 1)), expected_h11=1,
     expected_h21=43, expected_chi=-84,
     note="Tjøtta-type determinantal-net construction"),
-  CY3Family(no=18, label="18", k=2, n=8, description="Sym²S* ⊕ ∧⁵Q",
+  CY3Family(; no=18, label="18", k=2, n=8, description="Sym²S* ⊕ ∧⁵Q",
     build=X -> bundle_sum(Sym2Sstar(X), Λ5Q(X)), expected_h11=1, expected_h21=37,
     expected_chi=-72, note="Tjøtta-type determinantal-net construction"),
-  CY3Family(no=19, label="c1", k=3, n=6, description="O(1)⁶",
+  CY3Family(; no=19, label="c1", k=3, n=6, description="O(1)⁶",
     build=X -> 6 * O(X, 1), expected_h11=1, expected_h21=49, expected_chi=-96),
-  CY3Family(no=20, label="c2", k=3, n=6, description="∧²S* ⊕ O(1)² ⊕ O(2)",
+  CY3Family(; no=20, label="c2", k=3, n=6, description="∧²S* ⊕ O(1)² ⊕ O(2)",
     build=X -> bundle_sum(Λ2Sstar(X), 2 * O(X, 1), O(X, 2)), expected_h11=1,
     expected_h21=59, expected_chi=-116, note="Also LG(3,6)_{1²,2}"),
-  CY3Family(no=21, label="21", k=3, n=6, description="S*(1) ⊕ ∧²S*",
+  CY3Family(; no=21, label="21", k=3, n=6, description="S*(1) ⊕ ∧²S*",
     build=X -> bundle_sum(Sstar(X) * O(X, 1), Λ2Sstar(X)), expected_h11=1,
     expected_h21=49, expected_chi=-96,
     note="Flat degeneration of G(3,6)_{1⁶}"),
-  CY3Family(no=22, label="c4", k=3, n=7, description="Sym²S* ⊕ O(1)³",
+  CY3Family(; no=22, label="c4", k=3, n=7, description="Sym²S* ⊕ O(1)³",
     build=X -> bundle_sum(Sym2Sstar(X), 3 * O(X, 1)), expected_h11=1,
     expected_h21=65, expected_chi=-128, note="Also (ℙ⁷)_{2⁴}"),
-  CY3Family(no=23, label="c6", k=3, n=7, description="(∧²S*)² ⊕ O(1)³",
+  CY3Family(; no=23, label="c6", k=3, n=7, description="(∧²S*)² ⊕ O(1)³",
     build=X -> bundle_sum(2 * Λ2Sstar(X), 3 * O(X, 1)), expected_h11=1,
     expected_h21=44, expected_chi=-86),
-  CY3Family(no=24, label="c3", k=3, n=7, description="(∧³Q)² ⊕ O(1)",
+  CY3Family(; no=24, label="c3", k=3, n=7, description="(∧³Q)² ⊕ O(1)",
     build=X -> bundle_sum(2 * Λ3Q(X), O(X, 1)), expected_h11=1,
     expected_h21=38, expected_chi=-74),
-  CY3Family(no=25, label="c5", k=3, n=7, description="∧²S* ⊕ ∧³Q ⊕ O(1)²",
+  CY3Family(; no=25, label="c5", k=3, n=7, description="∧²S* ⊕ ∧³Q ⊕ O(1)²",
     build=X -> bundle_sum(Λ2Sstar(X), Λ3Q(X), 2 * O(X, 1)), expected_h11=1,
     expected_h21=43, expected_chi=-84),
-  CY3Family(no=27, label="27", k=3, n=8, description="Sym²S* ⊕ (∧²S*)²",
+  CY3Family(; no=27, label="27", k=3, n=8, description="Sym²S* ⊕ (∧²S*)²",
     build=X -> bundle_sum(Sym2Sstar(X), 2 * Λ2Sstar(X)), expected_h11=2,
     expected_h21=34, expected_chi=-64),
-  CY3Family(no=28, label="28", k=3, n=8, description="(∧²S*)⁴",
+  CY3Family(; no=28, label="28", k=3, n=8, description="(∧²S*)⁴",
     build=X -> 4 * Λ2Sstar(X), expected_h11=1, expected_h21=33, expected_chi=-64),
-  CY3Family(no=29, label="c7", k=3, n=8, description="∧³Q ⊕ O(1)²",
+  CY3Family(; no=29, label="c7", k=3, n=8, description="∧³Q ⊕ O(1)²",
     build=X -> bundle_sum(Λ3Q(X), 2 * O(X, 1)), expected_h11=2,
     expected_h21=44, expected_chi=-84,
     note="Crepant resolution of a singular (3,3) ⊂ ℙ⁵"),
-  CY3Family(no=31, label="31", k=4, n=8, description="(∧²S*)² ⊕ O(2)",
+  CY3Family(; no=31, label="31", k=4, n=8, description="(∧²S*)² ⊕ O(2)",
     build=X -> bundle_sum(2 * Λ2Sstar(X), O(X, 2)), expected_h11=4,
     expected_h21=68, expected_chi=-128, note="Also (ℙ¹)^4 cut by a (2,2,2,2) divisor"),
-  CY3Family(no=32, label="d2", k=4, n=9, description="Sym²S* ⊕ ∧²S* ⊕ O(1)",
+  CY3Family(; no=32, label="d2", k=4, n=9, description="Sym²S* ⊕ ∧²S* ⊕ O(1)",
     build=X -> bundle_sum(Sym2Sstar(X), Λ2Sstar(X), O(X, 1)), expected_h11=4,
     expected_h21=68, expected_chi=-128, note="Also (ℙ¹)^4 cut by a (2,2,2,2) divisor"),
-  CY3Family(no=33, label="d3", k=5, n=10, description="(∧²S*)² ⊕ O(1)²",
+  CY3Family(; no=33, label="d3", k=5, n=10, description="(∧²S*)² ⊕ O(1)²",
     build=X -> bundle_sum(2 * Λ2Sstar(X), 2 * O(X, 1)), expected_h11=5,
     expected_h21=115, expected_chi=-220,
     note="Also (ℙ¹)^5 cut by two (1,1,1,1,1) divisors"),
@@ -248,12 +249,12 @@ function compute_family(spec::CY3Family)
 
   if !raw_matches_paper && spec.no in PAPER_CORRECTED_FAMILIES
     sig = (
-      h00 = BigInt(spec.expected_h00),
-      h10 = BigInt(spec.expected_h10),
-      h20 = BigInt(spec.expected_h20),
-      h30 = BigInt(spec.expected_h30),
-      h11 = BigInt(spec.expected_h11),
-      h21 = BigInt(spec.expected_h21),
+      h00=BigInt(spec.expected_h00),
+      h10=BigInt(spec.expected_h10),
+      h20=BigInt(spec.expected_h20),
+      h30=BigInt(spec.expected_h30),
+      h11=BigInt(spec.expected_h11),
+      h21=BigInt(spec.expected_h21),
     )
     chi = BigInt(spec.expected_chi)
     source = "paper"
@@ -270,16 +271,19 @@ function compute_family(spec::CY3Family)
 
   elapsed = time() - t0
   if source == "paper"
-    println(@sprintf(
-      "  h11=%s h21=%s χ=%s  [paper-corrected from raw (%s,%s,%s), %.1fs]",
-      sig.h11, sig.h21, chi, raw_sig.h11, raw_sig.h21, raw_chi, elapsed)
+    println(
+      @sprintf(
+        "  h11=%s h21=%s χ=%s  [paper-corrected from raw (%s,%s,%s), %.1fs]",
+        sig.h11, sig.h21, chi, raw_sig.h11, raw_sig.h21, raw_chi, elapsed)
     )
   else
-    println(@sprintf("  h11=%s h21=%s χ=%s  [%s, %.1fs]",
-      sig.h11, sig.h21, chi, matches_paper ? "OK" : "CHECK", elapsed))
+    println(
+      @sprintf("  h11=%s h21=%s χ=%s  [%s, %.1fs]",
+        sig.h11, sig.h21, chi, matches_paper ? "OK" : "CHECK", elapsed)
+    )
   end
 
-  CY3Record(
+  CY3Record(;
     no=spec.no,
     label=spec.label,
     ambient="Gr($(spec.k),$(spec.n))",

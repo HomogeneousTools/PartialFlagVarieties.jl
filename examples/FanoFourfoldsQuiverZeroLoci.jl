@@ -20,7 +20,6 @@
 #    julia --project=. examples/QuiverZeroLoci.jl [--ids F3.10,F2.42]
 # ═══════════════════════════════════════════════════════════════════════════════
 
-
 using PartialFlagVarieties
 using PartialFlagVarieties: AffineExpr, symbolic_variable, is_determined
 using Lie: rank
@@ -204,7 +203,8 @@ function _parse_affine(token::AbstractString)
 
     var_match = match(r"^(?:(\d+)\*)?([A-Za-z]+)_(\d+)$", term)
     if var_match !== nothing
-      coeff = var_match.captures[1] === nothing ? BigInt(1) : parse(BigInt, var_match.captures[1])
+      coeff =
+        var_match.captures[1] === nothing ? BigInt(1) : parse(BigInt, var_match.captures[1])
       var_id = parse(Int, var_match.captures[3])
       coeffs[var_id] = get(coeffs, var_id, BigInt(0)) + sign * coeff
       coeffs[var_id] == 0 && delete!(coeffs, var_id)
@@ -326,7 +326,7 @@ function load_final_file(text::AbstractString)
   prev_end = 1
   for m in markers
     id = m.captures[1]
-    block = flat[prev_end:m.offset - 1]
+    block = flat[prev_end:(m.offset - 1)]
     prev_end = m.offset + lastindex(m.match)
     try
       entries[id] = _parse_block(id, block)
@@ -356,7 +356,9 @@ function load_raw_file(text::AbstractString)
         _parse_raw_entry!(entries, group)
       catch err
         snippet = first(group, 60)
-        @warn "Failed to parse raw entry starting with: $snippet" exception = (err, catch_backtrace())
+        @warn "Failed to parse raw entry starting with: $snippet" exception = (
+          err, catch_backtrace()
+        )
       end
       i = _skip_ws(flat, next_i)
       if i <= lastindex(flat) && flat[i] == ','
@@ -445,7 +447,7 @@ n-k+1 through n, so we permute accordingly.
 """
 function gl_to_omega(k::Int, n::Int, w::Vector{Int})
   length(w) == n || error("Expected weight of length $n, got $(length(w))")
-  eps = vcat(w[n - k + 1:n], w[1:(n - k)])
+  eps = vcat(w[(n - k + 1):n], w[1:(n - k)])
   [eps[i] - eps[i + 1] for i in 1:(n - 1)]
 end
 
@@ -527,7 +529,9 @@ end
 """
 Compute (-K_Z)⁴ via finite differences of χ(Z, (-K_Z)^{⊗t}) for t = 0,…,4.
 """
-function compute_antiK_fourth(Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle)
+function compute_antiK_fourth(
+  Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
+)
   L = tensor_product(anticanonical_bundle(X), dual(det_bundle(E)))
 
   vals = BigInt[]
@@ -546,7 +550,9 @@ end
 """
 Compute χ(T_Z) using additivity: χ(T_Z) = χ(T_X|_Z) - χ(E|_Z).
 """
-function compute_chi_tangent(Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle)
+function compute_chi_tangent(
+  Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
+)
   chi_TX = euler_characteristic(Z, tangent_bundle(X))
   chi_E = euler_characteristic(Z, E)
   Int(chi_TX - chi_E)
@@ -559,7 +565,9 @@ via the associated long exact sequence in cohomology.
 
 Returns `(h0, h1, h0_determined, h1_determined)`.
 """
-function compute_tangent_cohomology(Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle)
+function compute_tangent_cohomology(
+  Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
+)
   coh_TX, det_TX = cohomology_on_restriction(Z, tangent_bundle(X))
   coh_E, det_E = cohomology_on_restriction(Z, E)
 
@@ -632,11 +640,11 @@ function compute_tangent_cohomology(Z::ZeroLocus, X::PartialFlagVariety, E::Comp
         δ_prev = i == 0 ? BigInt(0) : deltas[i]
         δ_curr = i == d ? BigInt(0) : deltas[i + 1]
         val = b[i + 1] - c[i + 1] + δ_prev + δ_curr
-        val < 0 && return
+        val < 0 && return nothing
         push!(a, val)
       end
       push!(solutions, a)
-      return
+      return nothing
     end
     for δ in δ_lb[idx]:δ_ub[idx]
       deltas[idx] = δ
@@ -700,7 +708,9 @@ function _match_hodge(
   size(computed) == size(reference) || return false, Dict{Int,Int}()
 
   computed_vars = sort!(collect(Set(vcat([collect(keys(e.coeffs)) for e in computed]...))))
-  reference_vars = sort!(collect(Set(vcat([collect(keys(e.coeffs)) for e in reference]...))))
+  reference_vars = sort!(
+    collect(Set(vcat([collect(keys(e.coeffs)) for e in reference]...)))
+  )
 
   if isempty(computed_vars) && isempty(reference_vars)
     return all(computed[i] == reference[i] for i in eachindex(computed)), Dict{Int,Int}()
@@ -718,14 +728,14 @@ function _match_hodge(
   end
 
   function search(idx, mapping, zero_set, used_ref)
-    found[] && return
+    found[] && return nothing
     if idx > length(computed_vars)
       if verify(mapping, zero_set)
         merge!(best_mapping, mapping)
         union!(best_zeros, zero_set)
         found[] = true
       end
-      return
+      return nothing
     end
 
     cv = computed_vars[idx]
@@ -734,13 +744,14 @@ function _match_hodge(
       mapping[cv] = rv
       push!(used_ref, rv)
       search(idx + 1, mapping, zero_set, used_ref)
-      found[] && return
-      delete!(mapping, cv); delete!(used_ref, rv)
+      found[] && return nothing
+      delete!(mapping, cv);
+      delete!(used_ref, rv)
     end
 
     push!(zero_set, cv)
     search(idx + 1, mapping, zero_set, used_ref)
-    found[] && return
+    found[] && return nothing
     delete!(zero_set, cv)
   end
 
@@ -877,7 +888,10 @@ function compare_raw_vs_final(
       push!(issues, (id, "ambient", "final=$(f.ambient) raw=$(r.ambient)"))
     end
     if f.bundle != r.bundle
-      push!(issues, (id, "bundle", "final=$(length(f.bundle)) summands, raw=$(length(r.bundle))"))
+      push!(
+        issues,
+        (id, "bundle", "final=$(length(f.bundle)) summands, raw=$(length(r.bundle))"),
+      )
     end
     if f.invariants != r.invariants
       push!(issues, (id, "invariants", "final=$(f.invariants) raw=$(r.invariants)"))
@@ -896,8 +910,9 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """Format the ambient variety as a string for display."""
-_ambient_desc(factors::Vector{Vector{Int}}) =
-  join(["Gr($(k),$(n))" for (k, n) in factors], "×")
+_ambient_desc(factors::Vector{Vector{Int}}) = join(
+  ["Gr($(k),$(n))" for (k, n) in factors], "×"
+)
 
 """Process a single entry: build variety, compute invariants, compare."""
 function process_entry(entry::QuiverEntry)
@@ -920,9 +935,10 @@ function process_entry(entry::QuiverEntry)
 
     match_hodge, _ = _match_hodge(hodge, entry.hodge)
 
-    inv_match = h0_aK == entry.invariants[1] &&
-                aK4 == entry.invariants[2] &&
-                chi_T == entry.invariants[3]
+    inv_match =
+      h0_aK == entry.invariants[1] &&
+      aK4 == entry.invariants[2] &&
+      chi_T == entry.invariants[3]
 
     # Extract individual Hodge numbers as strings (hodge is 1-indexed: [p+1, q+1])
     _hstr(m, p, q) = sprint(show, m[p + 1, q + 1])
@@ -971,11 +987,8 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Zenodo repository: https://zenodo.org/doi/10.5281/zenodo.17742466 (DOI redirects to latest version)
-const ZENODO_PRECOMPILED_COMPACT =
-  "https://zenodo.org/records/17742467/files/precompiledQuiverZeroLociHodgeNumbers"
-const ZENODO_PRECOMPILED_RAW =
-  "https://zenodo.org/records/17742467/files/precompiledQuiverZeroLociHodgeNumbersRaw"
-
+const ZENODO_PRECOMPILED_COMPACT = "https://zenodo.org/records/17742467/files/precompiledQuiverZeroLociHodgeNumbers"
+const ZENODO_PRECOMPILED_RAW = "https://zenodo.org/records/17742467/files/precompiledQuiverZeroLociHodgeNumbersRaw"
 
 """Download a file from a URL and return its contents as a string."""
 function download_file(url::AbstractString, name::AbstractString)
@@ -998,7 +1011,6 @@ function download_file(url::AbstractString, name::AbstractString)
   throw(last_err)
 end
 
-
 """
     main(; ids=nothing)
 
@@ -1006,16 +1018,22 @@ Load the quiver zero loci data from Zenodo, recompute all Hodge numbers
 and invariants, and compare with the reference values.
 """
 function main(;
-  ids::Union{Nothing,Vector{String}}=nothing,
+  ids::Union{Nothing,Vector{String}}=nothing
 )
   # Download data from Zenodo
   println()
-  final_content = download_file(ZENODO_PRECOMPILED_COMPACT, "precompiledQuiverZeroLociHodgeNumbers")
-  raw_content = download_file(ZENODO_PRECOMPILED_RAW, "precompiledQuiverZeroLociHodgeNumbersRaw")
+  final_content = download_file(
+    ZENODO_PRECOMPILED_COMPACT, "precompiledQuiverZeroLociHodgeNumbers"
+  )
+  raw_content = download_file(
+    ZENODO_PRECOMPILED_RAW, "precompiledQuiverZeroLociHodgeNumbersRaw"
+  )
   println()
 
   println("=" ^ 120)
-  println(" QuiverZeroLoci.jl — Independent Recomputation of Fano Fourfold Quiver Zero Loci")
+  println(
+    " QuiverZeroLoci.jl — Independent Recomputation of Fano Fourfold Quiver Zero Loci"
+  )
   println(" Reference: https://zenodo.org/doi/10.5281/zenodo.17742466")
   println("=" ^ 120)
 
@@ -1069,20 +1087,22 @@ function main(;
     table_rows = []
     for r in results
       if r.error_msg !== nothing
-        row = [r.id, r.ambient_desc, "", "", "", "", "", "", "", "", "ERROR: $(r.error_msg)"]
+        row = [
+          r.id, r.ambient_desc, "", "", "", "", "", "", "", "", "ERROR: $(r.error_msg)"
+        ]
       else
         status = if r.hodge_match && r.inv_match
           r.underdetermined ? "OK (symbolic)" : "OK"
         else
           "MISMATCH"
         end
-        h0_str  = r.h0_antiK === nothing ? "?" : string(r.h0_antiK)
-        aK4_str = r.antiK4   === nothing ? "?" : string(r.antiK4)
-        h0T_str = r.h0_T     === nothing ? "?" : string(r.h0_T)
-        h1T_str = r.h1_T     === nothing ? "?" : string(r.h1_T)
+        h0_str = r.h0_antiK === nothing ? "?" : string(r.h0_antiK)
+        aK4_str = r.antiK4 === nothing ? "?" : string(r.antiK4)
+        h0T_str = r.h0_T === nothing ? "?" : string(r.h0_T)
+        h1T_str = r.h1_T === nothing ? "?" : string(r.h1_T)
 
         row = [r.id, r.ambient_desc, h0_str, aK4_str, h0T_str, h1T_str,
-               r.h11, r.h12, r.h13, r.h22, status]
+          r.h11, r.h12, r.h13, r.h22, status]
       end
       push!(table_rows, row)
     end
@@ -1091,7 +1111,7 @@ function main(;
     # display_size=(-1,-1) disables terminal-size detection and prevents
     # "N rows omitted" truncation regardless of table length.
     header = ["ID", "Ambient", "h⁰(-K)", "(-K)⁴", "h⁰(T)", "h¹(T)",
-              "h¹¹", "h¹²", "h¹³", "h²²", "Status"]
+      "h¹¹", "h¹²", "h¹³", "h²²", "Status"]
     table_matrix = reduce(vcat, permutedims.(table_rows))
     pretty_table(table_matrix;
       column_labels=header,
@@ -1109,7 +1129,9 @@ function main(;
 
   n_total = length(results)
   n_ok = count(r -> r.hodge_match && r.inv_match, results)
-  n_mismatch = count(r -> r.error_msg === nothing && !(r.hodge_match && r.inv_match), results)
+  n_mismatch = count(
+    r -> r.error_msg === nothing && !(r.hodge_match && r.inv_match), results
+  )
   n_error = count(r -> r.error_msg !== nothing, results)
   n_undetermined = count(r -> r.underdetermined, results)
 
@@ -1123,8 +1145,15 @@ function main(;
   per_entry_times = [r.elapsed for r in results if r.error_msg === nothing]
   if !isempty(per_entry_times)
     @printf("  Sum of per-entry times:     %.1f seconds\n", sum(per_entry_times))
-    @printf("  Average time per entry:     %.3f seconds\n", sum(per_entry_times) / length(per_entry_times))
-    @printf("  Time range (per entry):     %.3f – %.2f seconds\n", minimum(per_entry_times), maximum(per_entry_times))
+    @printf(
+      "  Average time per entry:     %.3f seconds\n",
+      sum(per_entry_times) / length(per_entry_times)
+    )
+    @printf(
+      "  Time range (per entry):     %.3f – %.2f seconds\n",
+      minimum(per_entry_times),
+      maximum(per_entry_times)
+    )
   end
 
   # ─── Underdetermined entries ─────────────────────────────────────────

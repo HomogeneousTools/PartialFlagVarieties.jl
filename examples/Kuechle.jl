@@ -37,16 +37,16 @@ end
 
 "Build CompletelyReducibleBundle on Gr(k,n) from a list of GL(n) weight vectors."
 function bundle_from_gl_weights(
-  X::PartialFlagVariety{MDT}, k::Int, n::Int, weights::Vector{Vector{Int}}
-) where {MDT}
-  DT = dynkin_type(X)
-  summands = IrrepLevi{MDT}[]
+  X::PartialFlagVariety, k::Int, n::Int, weights::Vector{Vector{Int}}
+)
+  mdt = marked_dynkin_type(X)
+  summands = IrrepLevi[]
   for w in weights
     omega = gl_weight_to_omega(k, n, w)
-    lam = WeightLatticeElem(DT, omega)
-    push!(summands, IrrepLevi(MDT, lam))
+    lam = WeightLatticeElem(dynkin_type(X), omega)
+    push!(summands, IrrepLevi(mdt, lam))
   end
-  CompletelyReducibleBundle{MDT}(X, summands)
+  CompletelyReducibleBundle(X, summands)
 end
 
 # =============================================================================
@@ -92,7 +92,12 @@ const KUECHLE_FAMILIES = [
       [0, 0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 1, 1]],
     "O(1)⁶ on Gr(2,7)"),
   ("b8", 2, 7,
-    [[0, 0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 2, 0]],
+    [
+      [0, 0, 0, 0, 0, 1, 1],
+      [0, 0, 0, 0, 0, 1, 1],
+      [0, 0, 0, 0, 0, 1, 1],
+      [0, 0, 0, 0, 0, 2, 0],
+    ],
     "O(1)³ + Sym²S* on Gr(2,7)"),
   ("b9", 2, 7, [[0, 0, 0, 0, 0, 2, 0], [0, 0, 0, 0, 0, 2, 0]], "(Sym²S*)² on Gr(2,7)"),
   ("b10", 2, 7, [[0, 0, 0, 0, 0, 2, 2], [1, 0, 0, 0, 0, 1, 1]], "O(2) + Q*(1) on Gr(2,7)"),
@@ -117,7 +122,12 @@ const KUECHLE_FAMILIES = [
     [[0, 0, 0, 0, 1, 1, 0], [0, 0, 0, 0, 1, 1, 1], [1, 0, 0, 0, 1, 1, 1]],
     "∧²S* + O(1) + Q*(1) on Gr(3,7)"),
   ("c6", 3, 7,
-    [[0, 0, 0, 0, 1, 1, 0], [0, 0, 0, 0, 1, 1, 0], [0, 0, 0, 0, 1, 1, 1], [0, 0, 0, 0, 1, 1, 1]],
+    [
+      [0, 0, 0, 0, 1, 1, 0],
+      [0, 0, 0, 0, 1, 1, 0],
+      [0, 0, 0, 0, 1, 1, 1],
+      [0, 0, 0, 0, 1, 1, 1],
+    ],
     "(∧²S*)² + O(1)² on Gr(3,7)"),
 
   # ── Gr(3,8): c7 ────────────────────────────────────────────────────
@@ -140,7 +150,11 @@ const FM_FAMILIES = [
     [[0, 0, 0, 0, 1, 1, 0, 0], [1, 1, 0, 0, 1, 1, 1, 1]],
     "∧²S* + (∧²Q* ⊗ O(1)) on Gr(4,8)"),
   ("FM-iii", 5, 10,
-    [[0, 0, 0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1, 1, 1, 1, 1], [1, 1, 1, 0, 0, 1, 1, 1, 1, 1]],
+    [
+      [0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+      [1, 1, 1, 0, 0, 1, 1, 1, 1, 1],
+    ],
     "∧²S* + O(1) + (∧³Q* ⊗ O(1)) on Gr(5,10)"),
 ]
 
@@ -153,14 +167,13 @@ struct FanoResult
   description::String
   k::Int
   n::Int
-  fano_index::Int
-  h0_antiK::Union{BigInt, Nothing}
-  chi_top::Union{BigInt, Nothing}
-  b2::Union{BigInt, Nothing}
-  b3::Union{BigInt, Nothing}
-  h11::Union{BigInt, Nothing}
-  h22::Union{BigInt, Nothing}
-  h13::Union{BigInt, Nothing}
+  h0_antiK::Union{BigInt,Nothing}
+  chi_top::Union{BigInt,Nothing}
+  b2::Union{BigInt,Nothing}
+  b3::Union{BigInt,Nothing}
+  h11::Union{BigInt,Nothing}
+  h22::Union{BigInt,Nothing}
+  h13::Union{BigInt,Nothing}
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -168,9 +181,9 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 function compute_family(label, k, n, weights, desc)
-  X = Gr(k, n)
+  @time X = Gr(k, n)
   d = dimension(X)
-  E = bundle_from_gl_weights(X, k, n, weights)
+  @time E = bundle_from_gl_weights(X, k, n, weights)
   r = Int(rank_bundle(E))
 
   if d - r != 4
@@ -180,15 +193,17 @@ function compute_family(label, k, n, weights, desc)
 
   t_start = time()
 
-  @time Z = zero_locus(E)
-  idx = _fano_index_zl(Z)
+  Z = zero_locus(E)
 
   # h^0(-K_Z) via sheaf cohomology: by adjunction ω_Z ≅ (ω_X ⊗ det(E))|_Z,
   # so H^0(Z, ω_Z^{-1}) = H^0(Z, F_antiK|_Z) where
   #   F_antiK = anticanonical_bundle(X) ⊗ dual(det_bundle(E)).
   h0aK = nothing
   try
-    F_antiK = anticanonical_bundle(X) ⊗ dual(det_bundle(E))
+    @time anticanonical_bundle(X)
+    @time det_bundle(E)
+    @time dual(det_bundle(E))
+    @time F_antiK = anticanonical_bundle(X) ⊗ dual(det_bundle(E))
     @time (H_antiK, _) = cohomology_on_restriction(Z, F_antiK)
     h0aK = H_antiK[0]
   catch e
@@ -216,7 +231,7 @@ function compute_family(label, k, n, weights, desc)
   end
 
   elapsed = time() - t_start
-  FanoResult(label, desc, k, n, idx, h0aK, chi, β2, β3, h11, h22, h13), elapsed
+  FanoResult(label, desc, k, n, h0aK, chi, β2, β3, h11, h22, h13), elapsed
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -235,9 +250,11 @@ function show_kuechle_table(results)
   data = permutedims(hcat(rows...), (2, 1))
   pretty_table(
     data;
-    column_labels = ["#", "G/P", "Bundle E", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"],
-    alignment = [:l, :c, :l, :r, :r, :r, :r, :r, :r, :r],
-    display_size = (-1, -1),
+    column_labels=[
+      "#", "G/P", "Bundle E", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"
+    ],
+    alignment=[:l, :c, :l, :r, :r, :r, :r, :r, :r, :r],
+    display_size=(-1, -1),
   )
 end
 
@@ -251,9 +268,11 @@ function show_fm_table(results)
   data = permutedims(hcat(rows...), (2, 1))
   pretty_table(
     data;
-    column_labels = ["#", "G/P", "Bundle E", "idx", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"],
-    alignment = [:l, :c, :l, :r, :r, :r, :r, :r, :r, :r, :r],
-    display_size = (-1, -1),
+    column_labels=[
+      "#", "G/P", "Bundle E", "h⁰(-K)", "χ_top", "b₂", "b₃", "h¹¹", "h²²", "h¹³"
+    ],
+    alignment=[:l, :c, :l, :r, :r, :r, :r, :r, :r, :r, :r],
+    display_size=(-1, -1),
   )
 end
 
@@ -291,7 +310,7 @@ function main()
   #end
 
   println()
-   show_kuechle_table(kuechle_results)
+  show_kuechle_table(kuechle_results)
   #show_fm_table(fm_results)
 end
 
