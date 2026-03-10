@@ -324,9 +324,9 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
       Threads.atomic_add!(n_failed, 1)
     end
 
-    # Cache management
+    # Cache management: always clear after each variety to prevent memory bloat
     lock(LOCK) do
-      _maybe_clear_caches!()
+      Lie.clear_all_caches!()
     end
 
     next!(prog; showvalues=[
