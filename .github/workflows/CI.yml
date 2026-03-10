@@ -41,11 +41,9 @@ jobs:
         with:
           version: '1'
       - uses: julia-actions/cache@v2
-      - name: Install Lie.jl from GitHub
-        run: julia --project=docs -e 'using Pkg; Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")'
       - name: Install dependencies
         run: |
-          julia --project=docs -e 'using Pkg; Pkg.add(["Documenter", "StaticArrays"]); Pkg.develop(PackageSpec(path=".")); Pkg.instantiate()'
+          julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=".")); Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl"); Pkg.add(["Documenter", "StaticArrays"]); Pkg.instantiate()'
       - name: Run doctests
         run: julia --project=docs -e 'using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties; manual="docs/src")'
 
