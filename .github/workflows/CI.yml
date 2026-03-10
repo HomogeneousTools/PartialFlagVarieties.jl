@@ -67,7 +67,6 @@ jobs:
           - Hyperkaehler.jl
           - Kuechle.jl
           - LinearSections.jl
-          - QuiverZeroLoci.jl
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
