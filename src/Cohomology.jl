@@ -117,6 +117,56 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
+    _cohomology_typed(comps, d, sentinel::WeightLatticeElem{DT,R}) where {DT,R}
+
+**Function barrier** for type stability.
+
+`MarkedDynkinType` stores the ambient Dynkin type as a plain `DataType` field
+(`mdt.dynkin::DataType`), so `dynkin_type(mdt)` returns an abstractly-typed
+value.  Any call that constructs `WeightLatticeElem{DT,R}` or dispatches on it
+from the outer entry point is therefore type-unstable, causing Julia to emit
+runtime dispatch stubs that trigger fresh type-inference on every new `{DT,R}`
+pair encountered.
+
+By routing the work through this inner method, Julia specialises the entire
+body on the concrete `DT` and `R` inferred from the `sentinel` argument.  This
+makes the `Dict` key type, `borel_weil_bott`, and `degree` calls in the hot
+loop all statically dispatched.
+
+The `sentinel` is never read inside this function — its sole purpose is to
+carry `{DT,R}` into Julia's type-parameter slots.  The outer entry points
+obtain the sentinel as `p_dominant_weight(first(comps))`, which is a
+zero-allocation field read that already holds the correct concrete type at
+runtime.  `mdt` is not passed here because Borel–Weil–Bott only needs the
+ambient weight (already stored in each `IrrepLevi` as `p_dominant_weight`).
+
+See also: [`_dimensions_typed`](@ref), [`_euler_characteristic_typed`](@ref).
+"""
+function _cohomology_typed(
+  comps::Vector{IrrepLevi}, d::Int, ::WeightLatticeElem{DT,R}
+) where {DT,R}
+  entries = [WeylCharacter(DT) for _ in 0:d]
+  weight_counts = Dict{WeightLatticeElem{DT,R},Int}()
+  for comp in comps
+    λ = p_dominant_weight(comp)::WeightLatticeElem{DT,R}
+    weight_counts[λ] = get(weight_counts, λ, 0) + 1
+  end
+  for (λ, mult) in weight_counts
+    result = borel_weil_bott(λ)
+    if result !== nothing
+      (deg, μ) = result
+      if 0 <= deg <= d
+        χμ = WeylCharacter(μ)
+        for _ in 1:mult
+          add!(entries[deg + 1], χμ)
+        end
+      end
+    end
+  end
+  Cohomology{WeylCharacter{DT,R}}(entries, d)
+end
+
+"""
     cohomology(E::CompletelyReducibleBundle) -> Cohomology{WeylCharacter}
 
 Compute the sheaf cohomology ``H^*(G/P, E)`` using the Borel–Weil–Bott theorem.
@@ -145,35 +195,18 @@ julia> degree(H[0])  # H⁰(ℙ⁴, 𝒪(1)) = V(ω₁) of dim 5
 ```
 """
 function cohomology(E::CompletelyReducibleBundle)
-  mdt = marked_dynkin_type(variety(E))
-  DT = dynkin_type(mdt)
-  R = rank(DT)
   d = dimension(E.variety)
-
-  # Initialize cohomology entries as zero characters
-  entries = [WeylCharacter(DT) for _ in 0:d]
-
-  weight_counts = Dict{WeightLatticeElem,Int}()
-  for comp in components(E)
-    λ = to_ambient_weight(mdt, comp)
-    weight_counts[λ] = get(weight_counts, λ, 0) + 1
+  comps = components(E)
+  # Hot path: use the first component's existing weight as the sentinel so that
+  # _cohomology_typed specialises on {DT,R} via a zero-allocation field read.
+  # Empty bundles (only zero_bundle) fall back to the type-unstable path; mdt
+  # is only looked up in that rare case.
+  sentinel = if isempty(comps)
+    WeightLatticeElem(dynkin_type(marked_dynkin_type(variety(E))))
+  else
+    p_dominant_weight(first(comps))
   end
-
-  for (λ, mult) in weight_counts
-    result = borel_weil_bott(λ)
-
-    if result !== nothing
-      (deg, μ) = result
-      if 0 <= deg <= d
-        χμ = WeylCharacter(μ)
-        for _ in 1:mult
-          add!(entries[deg + 1], χμ)
-        end
-      end
-    end
-  end
-
-  return Cohomology{WeylCharacter{DT,R}}(entries, d)
+  _cohomology_typed(comps, d, sentinel)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -216,21 +249,24 @@ function dimensions(H::Cohomology{<:WeylCharacter{DT,R}}) where {DT,R}
 end
 
 """
-    dimensions(E::CompletelyReducibleBundle) -> Cohomology{BigInt}
+    _dimensions_typed(comps, d, sentinel::WeightLatticeElem{DT,R}) where {DT,R}
 
-Compute dimension-valued cohomology directly.
+**Function barrier** — see [`_cohomology_typed`](@ref) for a full explanation.
+
+Specialises the dimension-valued inner loop on the concrete ambient weight type
+`WeightLatticeElem{DT,R}`, making the `Dict` key type and all BWB / `degree`
+calls statically dispatched.  `mdt` is not needed: `p_dominant_weight(comp)`
+already returns the ambient weight stored directly on each `IrrepLevi`.
 """
-function dimensions(E::CompletelyReducibleBundle)
-  mdt = marked_dynkin_type(variety(E))
-  d = dimension(E.variety)
+function _dimensions_typed(
+  comps::Vector{IrrepLevi}, d::Int, ::WeightLatticeElem{DT,R}
+) where {DT,R}
   entries = zeros(BigInt, d + 1)
-
-  weight_counts = Dict{WeightLatticeElem,Int}()
-  for comp in components(E)
-    λ = to_ambient_weight(mdt, comp)
+  weight_counts = Dict{WeightLatticeElem{DT,R},Int}()
+  for comp in comps
+    λ = p_dominant_weight(comp)::WeightLatticeElem{DT,R}
     weight_counts[λ] = get(weight_counts, λ, 0) + 1
   end
-
   for (λ, mult) in weight_counts
     result = borel_weil_bott(λ)
     result === nothing && continue
@@ -239,8 +275,19 @@ function dimensions(E::CompletelyReducibleBundle)
       entries[deg + 1] += mult * degree(μ)
     end
   end
-
   Cohomology{BigInt}(entries, d)
+end
+
+"""
+    dimensions(E::CompletelyReducibleBundle) -> Cohomology{BigInt}
+
+Compute dimension-valued cohomology directly.
+"""
+function dimensions(E::CompletelyReducibleBundle)
+  d = dimension(E.variety)
+  comps = components(E)
+  isempty(comps) && return Cohomology{BigInt}(zeros(BigInt, d + 1), d)
+  _dimensions_typed(comps, d, p_dominant_weight(first(comps)))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -301,6 +348,33 @@ Synonym for [`euler_characteristic(H)`](@ref).
 chi(H::Cohomology) = euler_characteristic(H)
 
 """
+    _euler_characteristic_typed(comps, sentinel::WeightLatticeElem{DT,R}) where {DT,R}
+
+**Function barrier** — see [`_cohomology_typed`](@ref) for a full explanation.
+
+Specialises the Euler-characteristic accumulation loop on `WeightLatticeElem{DT,R}`
+so that the `Dict`, BWB dispatch, and `degree` call are all type-stable.
+`mdt` is not needed: each component's ambient weight is already its `p_dominant_weight`.
+"""
+function _euler_characteristic_typed(
+  comps::Vector{IrrepLevi}, ::WeightLatticeElem{DT,R}
+) where {DT,R}
+  weight_counts = Dict{WeightLatticeElem{DT,R},Int}()
+  for comp in comps
+    λ = p_dominant_weight(comp)::WeightLatticeElem{DT,R}
+    weight_counts[λ] = get(weight_counts, λ, 0) + 1
+  end
+  result = BigInt(0)
+  for (λ, mult) in weight_counts
+    bwb = borel_weil_bott(λ)
+    bwb === nothing && continue
+    (deg, μ) = bwb
+    result += (iseven(deg) ? 1 : -1) * mult * degree(μ)
+  end
+  result
+end
+
+"""
     euler_characteristic(E::CompletelyReducibleBundle) -> BigInt
 
 Compute the Euler characteristic ``\\chi(G/P, E)`` directly via BWB,
@@ -321,21 +395,9 @@ julia> euler_characteristic(structure_sheaf(X))
 ```
 """
 function euler_characteristic(E::CompletelyReducibleBundle)
-  mdt = marked_dynkin_type(variety(E))
-  # Deduplicate: count multiplicities of identical ambient weights
-  weight_counts = Dict{WeightLatticeElem,Int}()
-  for comp in components(E)
-    λ = to_ambient_weight(mdt, comp)
-    weight_counts[λ] = get(weight_counts, λ, 0) + 1
-  end
-  result = BigInt(0)
-  for (λ, mult) in weight_counts
-    bwb = borel_weil_bott(λ)
-    bwb === nothing && continue
-    (deg, μ) = bwb
-    result += (iseven(deg) ? 1 : -1) * mult * degree(μ)
-  end
-  result
+  comps = components(E)
+  isempty(comps) && return BigInt(0)
+  _euler_characteristic_typed(comps, p_dominant_weight(first(comps)))
 end
 
 """
