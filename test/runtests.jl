@@ -41,7 +41,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Product types
     DT = parse_dynkin_type("A2xB3")
-    @test DT === ProductDynkinType{Tuple{TypeA{2}, TypeB{3}}}
+    @test DT === ProductDynkinType{Tuple{TypeA{2},TypeB{3}}}
 
     # Whitespace tolerance
     @test parse_dynkin_type(" A3 ") === TypeA{3}
@@ -94,7 +94,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Levi type computation" begin
     # Gr(2,5) = A4/P2 → Levi = A1 × A2
     @test levi_type(mdt(TypeA{4}, (2,))) ==
-          ProductDynkinType{Tuple{TypeA{1},TypeA{2}}}
+      ProductDynkinType{Tuple{TypeA{1},TypeA{2}}}
 
     # Gr(1,5) = A4/P1 → Levi = A3
     @test levi_type(mdt(TypeA{4}, (1,))) == TypeA{3}
@@ -374,7 +374,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     L = line_bundle(X, 1)
     @test rank_bundle(L) == 1
     @test variety(L) === X
-    @test p_dominant_weight(only(components(L))) == WeightLatticeElem(dynkin_type(X), [1, 0, 0, 0])
+    @test p_dominant_weight(only(components(L))) ==
+      WeightLatticeElem(dynkin_type(X), [1, 0, 0, 0])
   end
 
   @testset "Line bundle: Picard rank check" begin
@@ -392,7 +393,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Multi-node form works for Picard rank > 1
     L2 = line_bundle(X2, [2, 1])
     @test rank_bundle(L2) == 1
-    @test p_dominant_weight(only(components(L2))) == WeightLatticeElem(dynkin_type(X2), [2, 0, 1])
+    @test p_dominant_weight(only(components(L2))) ==
+      WeightLatticeElem(dynkin_type(X2), [2, 0, 1])
 
     # Multi-node form also works for Picard rank 1
     L3 = line_bundle(X1, [3])
@@ -453,12 +455,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(det_T) == 1
 
     L = line_bundle(X, 3)
-    @test p_dominant_weight(only(components(det_bundle(L)))) == p_dominant_weight(only(components(L)))
+    @test p_dominant_weight(only(components(det_bundle(L)))) ==
+      p_dominant_weight(only(components(L)))
 
     M = line_bundle(X, 2)
     det_sum = det_bundle(direct_sum(L, M))
     @test p_dominant_weight(only(components(det_sum))) ==
-          p_dominant_weight(only(components(L))) + p_dominant_weight(only(components(M)))
+      p_dominant_weight(only(components(L))) + p_dominant_weight(only(components(M)))
   end
 
   @testset "Canonical and anticanonical bundles" begin
@@ -513,7 +516,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test fano_index(freudenthal_variety()) == 18
 
     # Picard rank > 1: fano_index is gcd of anticanonical degrees
-    @test fano_index(partial_flag_variety(TypeA{3}, (1, 3))) == gcd(anticanonical_degrees(partial_flag_variety(TypeA{3}, (1, 3)))...)
+    @test fano_index(partial_flag_variety(TypeA{3}, (1, 3))) ==
+      gcd(anticanonical_degrees(partial_flag_variety(TypeA{3}, (1, 3)))...)
   end
 
   @testset "Fano index: zero loci" begin
@@ -1414,10 +1418,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # must NOT be applied when computing cohomology of bundles on the zero locus.
 
     # b2: O(2)² on Gr(2,5)   — h¹¹=1, h¹³=20, h²²=132, χ_top=176
-    let X = Gr(2, 5),
-      E = direct_sum(line_bundle(X, 2), line_bundle(X, 2)),
-      Z = zero_locus(E),
-      h = hodge_numbers(Z)
+    let X = Gr(2, 5), E = direct_sum(line_bundle(X, 2), line_bundle(X, 2)),
+      Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
       @test h[2, 2] == 1     # h^{1,1}
@@ -1428,11 +1430,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # b6: O(1)³ + O(2) on Gr(2,6)   — h¹¹=1, h¹³=15, h²²=106, χ_top=140
-    let X = Gr(2, 6),
-      O1 = line_bundle(X, 1),
+    let X = Gr(2, 6), O1 = line_bundle(X, 1),
       E = direct_sum(direct_sum(O1, direct_sum(O1, O1)), line_bundle(X, 2)),
-      Z = zero_locus(E),
-      h = hodge_numbers(Z)
+      Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
       @test h[2, 2] == 1     # h^{1,1}
@@ -1442,10 +1442,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # b7: O(1)⁶ on Gr(2,7)   — h¹¹=1, h¹³=6, h²²=57, χ_top=73
-    let X = Gr(2, 7),
-      O1 = line_bundle(X, 1),
-      E = foldl(direct_sum, [line_bundle(X, 1) for _ in 1:6]),
-      Z = zero_locus(E),
+    let X = Gr(2, 7), O1 = line_bundle(X, 1),
+      E = foldl(direct_sum, [line_bundle(X, 1) for _ in 1:6]), Z = zero_locus(E),
       h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
@@ -1457,10 +1455,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # b10: O(2) + Q*(1) on Gr(2,7)   — h¹¹=1, h¹³=14, h²²=100, χ_top=132
     # (Q*(1) = dual(universal_quotient_bundle) ⊗ O(1))
-    let X = Gr(2, 7),
-      Q = universal_quotient_bundle(X),
-      E = direct_sum(line_bundle(X, 2), twist(dual(Q), 1)),
-      Z = zero_locus(E),
+    let X = Gr(2, 7), Q = universal_quotient_bundle(X),
+      E = direct_sum(line_bundle(X, 2), twist(dual(Q), 1)), Z = zero_locus(E),
       h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
@@ -1471,12 +1467,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # c3: Q*(1)² on Gr(3,7)   — h¹¹=1, h¹³=0, h²²=15, χ_top=19
-    let X = Gr(3, 7),
-      Q = universal_quotient_bundle(X),
-      Qd1 = twist(dual(Q), 1),
-      E = direct_sum(Qd1, Qd1),
-      Z = zero_locus(E),
-      h = hodge_numbers(Z)
+    let X = Gr(3, 7), Q = universal_quotient_bundle(X), Qd1 = twist(dual(Q), 1),
+      E = direct_sum(Qd1, Qd1), Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
       @test h[2, 2] == 1     # h^{1,1}
@@ -1488,11 +1480,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # c7: O(1) + (∧²Q* ⊗ O(1)) on Gr(3,8)   — h¹¹=2, h¹³=1, h²²=22, χ_top=30
     # This was previously catastrophically wrong (h²²=-1888) due to a spurious
     # Serre duality application on the Fano zero locus.
-    let X = Gr(3, 8),
-      Q = universal_quotient_bundle(X),
+    let X = Gr(3, 8), Q = universal_quotient_bundle(X),
       E = direct_sum(line_bundle(X, 1), twist(exterior_power(dual(Q), 2), 1)),
-      Z = zero_locus(E),
-      h = hodge_numbers(Z)
+      Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
       @test h[2, 2] == 2     # h^{1,1}
@@ -1501,5 +1491,4 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 30
     end
   end
-
 end  # @testset "PartialFlagVarieties.jl"

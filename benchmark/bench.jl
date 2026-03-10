@@ -22,8 +22,12 @@ suite_generated["dimension/OP2"] = @benchmarkable dimension($(cayley_plane()))
 suite_generated["dimension/OGr510"] = @benchmarkable dimension($(OGr(5, 10)))
 
 # Levi type
-suite_generated["levi_type/A4_P2"] = @benchmarkable levi_type($(MarkedDynkinType(TypeA{4}, (2,))))
-suite_generated["levi_type/E6_P1"] = @benchmarkable levi_type($(MarkedDynkinType(TypeE{6}, (1,))))
+suite_generated["levi_type/A4_P2"] = @benchmarkable levi_type(
+  $(MarkedDynkinType(TypeA{4}, (2,)))
+)
+suite_generated["levi_type/E6_P1"] = @benchmarkable levi_type(
+  $(MarkedDynkinType(TypeE{6}, (1,)))
+)
 
 # Euler characteristic
 suite_generated["euler_char/Gr25"] = @benchmarkable euler_characteristic($(Gr(2, 5)))
@@ -34,10 +38,14 @@ suite_generated["betti/Gr25"] = @benchmarkable betti_numbers($(Gr(2, 5)))
 suite_generated["betti/OP2"] = @benchmarkable betti_numbers($(cayley_plane()))
 
 # Decomposition matrix
-suite_generated["decomposition_matrix/A3_P2"] = @benchmarkable decomposition_matrix($(MarkedDynkinType(TypeA{3}, (2,))))
-suite_generated["decomposition_matrix/E6_P1"] = @benchmarkable decomposition_matrix($(MarkedDynkinType(TypeE{6}, (1,))))
+suite_generated["decomposition_matrix/A3_P2"] = @benchmarkable decomposition_matrix(
+  $(MarkedDynkinType(TypeA{3}, (2,)))
+)
+suite_generated["decomposition_matrix/E6_P1"] = @benchmarkable decomposition_matrix(
+  $(MarkedDynkinType(TypeE{6}, (1,)))
+)
 
-results_gen = run(suite_generated, seconds=2)
+results_gen = run(suite_generated; seconds=2)
 display(results_gen)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -61,7 +69,7 @@ let mdt = MarkedDynkinType(TypeA{4}, (2,))
   suite_levi["fiber_dim/A4_P2"] = @benchmarkable fiber_dimension($rep)
 end
 
-results_levi = run(suite_levi, seconds=2)
+results_levi = run(suite_levi; seconds=2)
 display(results_levi)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -89,7 +97,7 @@ let X = projective_space(4)
   suite_bundle["symmetric_power_2/P4"] = @benchmarkable symmetric_power($T, 2)
 end
 
-results_bundle = run(suite_bundle, seconds=2)
+results_bundle = run(suite_bundle; seconds=2)
 display(results_bundle)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -115,7 +123,7 @@ let X = Gr(2, 4)
   suite_cohom["dim H*(Gr24, O)"] = @benchmarkable dimensions($O)
 end
 
-results_cohom = run(suite_cohom, seconds=3)
+results_cohom = run(suite_cohom; seconds=3)
 display(results_cohom)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -148,26 +156,26 @@ suite_zl = BenchmarkGroup()
 let E = _Gr_bundle(2, 5, [[0, 0, 0, 3, 3], [0, 0, 0, 1, 1]])
   Z = zero_locus(E)
   suite_zl["zero_locus/b1_construction"] = @benchmarkable zero_locus($E)
-  suite_zl["hilbert_polynomial/b1"]      = @benchmarkable hilbert_polynomial($Z)
-  suite_zl["euler_characteristic/b1"]   = @benchmarkable euler_characteristic($Z)
-  suite_zl["hodge_numbers/b1"]          = @benchmarkable hodge_numbers($Z)
+  suite_zl["hilbert_polynomial/b1"] = @benchmarkable hilbert_polynomial($Z)
+  suite_zl["euler_characteristic/b1"] = @benchmarkable euler_characteristic($Z)
+  suite_zl["hodge_numbers/b1"] = @benchmarkable hodge_numbers($Z)
 end
 
 # b3: ∧³Q*⊗O(2) on Gr(2,6)
 let E = _Gr_bundle(2, 6, [[1, 1, 1, 0, 2, 2]])
   Z = zero_locus(E)
   suite_zl["hilbert_polynomial/b3"] = @benchmarkable hilbert_polynomial($Z)
-  suite_zl["hodge_numbers/b3"]      = @benchmarkable hodge_numbers($Z)
+  suite_zl["hodge_numbers/b3"] = @benchmarkable hodge_numbers($Z)
 end
 
 # c3: Q*(1)² on Gr(3,7)  — larger ambient
 let E = _Gr_bundle(3, 7, [[1, 0, 0, 0, 1, 1, 1], [1, 0, 0, 0, 1, 1, 1]])
   Z = zero_locus(E)
   suite_zl["hilbert_polynomial/c3"] = @benchmarkable hilbert_polynomial($Z)
-  suite_zl["hodge_numbers/c3"]      = @benchmarkable hodge_numbers($Z)
+  suite_zl["hodge_numbers/c3"] = @benchmarkable hodge_numbers($Z)
 end
 
-results_zl = run(suite_zl, seconds=5)
+results_zl = run(suite_zl; seconds=5)
 display(results_zl)
 
 println("\nBenchmarks complete.")
