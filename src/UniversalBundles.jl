@@ -56,7 +56,7 @@ julia> rank_bundle(U)
 function universal_subbundle(X::PartialFlagVariety{MDT}) where {
   MDT<:MarkedDynkinType{DT,Marked}
 } where {DT,Marked}
-  is_generalized_grassmannian(MDT) || throw(ArgumentError(
+  is_generalized_grassmannian(X) || throw(ArgumentError(
     "universal_subbundle requires a generalized Grassmannian (1 marked node)"
   ))
 
@@ -103,7 +103,7 @@ julia> rank_bundle(universal_subbundle(X)) + rank_bundle(universal_quotient_bund
 function universal_quotient_bundle(X::PartialFlagVariety{MDT}) where {
   MDT<:MarkedDynkinType{DT,Marked}
 } where {DT,Marked}
-  is_generalized_grassmannian(MDT) || throw(ArgumentError(
+  is_generalized_grassmannian(X) || throw(ArgumentError(
     "universal_quotient_bundle requires a generalized Grassmannian (1 marked node)"
   ))
 

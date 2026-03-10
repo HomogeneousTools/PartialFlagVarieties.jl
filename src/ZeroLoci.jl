@@ -239,6 +239,7 @@ function cohomology_on_restriction(
   Z::ZeroLocus{MDT},
   F::CompletelyReducibleBundle{MDT},
 ) where {MDT}
+
   d_Z = dimension(Z)
 
   terms = koszul_terms(Z, F)
@@ -468,7 +469,7 @@ function _anticanonical_central(::Type{MDT}) where {MDT<:MarkedDynkinType}
   sf = central_scaling_factor(MDT)
   DT = _ambient_type(MDT)
   Cinv = Lie.cartan_matrix_inverse(DT)
-  degs = anticanonical_degrees(MDT)
+  degs = anticanonical_degrees(PartialFlagVariety{MDT}())
 
   # central[i] = Σ_{j=1}^K  round(Int, Cinv[Marked[i], Marked[j]] * sf) * degs[j]
   # (same formula as _apply_central_ext applied to the anticanonical weight vector)
@@ -559,13 +560,13 @@ julia> fano_index(Z_CY)  # Calabi–Yau: -K_Z = O(0)
 0
 ```
 """
-function fano_index(Z::ZeroLocus{MDT}) where {MDT<:MarkedDynkinType}
-  Marked = marked_nodes(MDT)
-  length(Marked) == 1 || throw(ArgumentError(
+function fano_index(Z::ZeroLocus)
+  marked = marked_nodes(Z.ambient)
+  length(marked) == 1 || throw(ArgumentError(
     "fano_index is only defined for zero loci in Picard-rank-1 ambient varieties; " *
     "use anticanonical_degrees and det_bundle for the general case.")
   )
-  m = Marked[1]
+  m = marked[1]
   det_E = det_bundle(Z.defining_bundle)
   deg_det = p_dominant_weight(only(det_E.components)).vec[m]
   fano_index(Z.ambient) - deg_det

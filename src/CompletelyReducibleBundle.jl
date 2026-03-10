@@ -74,12 +74,14 @@ Construct the equivariant bundle on the partial flag variety determined by `mdt`
 corresponding to the Levi representation of highest weight `λ`.
 """
 function CompletelyReducibleBundle(mdt::MarkedDynkinType, λ::WeightLatticeElem)
+  # TODO I feel like this method should't exist
   MDT = typeof(mdt)
   rep = IrrepLevi(MDT, λ)
   return CompletelyReducibleBundle(PartialFlagVariety{MDT}(), IrrepLevi{MDT}[rep])
 end
 
 function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
+  # TODO what's the point of this?
   E = CompletelyReducibleBundle(marked_dynkin_type(X), λ)
   return CompletelyReducibleBundle(X, components(E))
 end
@@ -344,8 +346,8 @@ julia> dimensions(K2)[4]  # H⁴(ℙ⁴, 𝒪(-5)) = 1
 1
 ```
 """
-function canonical_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  degs = anticanonical_degrees(MDT)
+function canonical_bundle(X::PartialFlagVariety)
+  degs = anticanonical_degrees(X)
   return line_bundle(X, Vector{Int}(-degs))
 end
 
@@ -394,7 +396,7 @@ julia> dimensions(L2)[0]  # H⁰(ℙ⁴, 𝒪(5)) = 126
 ```
 """
 function anticanonical_bundle(X::PartialFlagVariety)
-  degs = anticanonical_degrees(typeof(marked_dynkin_type(X)))
+  degs = anticanonical_degrees(X)
   return line_bundle(X, Vector{Int}(degs))
 end
 
@@ -408,17 +410,12 @@ function anticanonical_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
 end
 
 """
-    anticanonical_degrees(X::PartialFlagVariety) -> SVector
-
-Instance-level dispatch of [`anticanonical_degrees(::Type{MDT})`](@ref).
-"""
-anticanonical_degrees(X::PartialFlagVariety{MDT}) where {MDT} = anticanonical_degrees(MDT)
-
-"""
     fano_index(X::PartialFlagVariety) -> Int
 
-The Fano index of the partial flag variety ``G/P``, defined as the unique
-positive integer ``r`` such that
+The Fano index of the partial flag variety ``G/P``, defined as the gcd of the
+anticanonical degrees.
+
+For Picard-rank-1 varieties this is the unique positive integer ``r`` such that
 
 ```math
 -K_{G/P} = r\\,\\omega_m
@@ -428,9 +425,6 @@ where ``\\omega_m`` is the ample generator of ``\\mathrm{Pic}(G/P) \\cong \\math
 
 All partial flag varieties are Fano (the anticanonical bundle is ample), so
 the Fano index is always a positive integer.
-
-Throws an `ArgumentError` when `picard_rank(X) > 1`; use
-`anticanonical_degrees` for the multi-degree description in that case.
 
 # Examples
 ```jldoctest
@@ -446,13 +440,8 @@ julia> fano_index(quadric(4))
 4
 ```
 """
-function fano_index(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  Marked = marked_nodes(MDT)
-  length(Marked) == 1 || throw(ArgumentError(
-    "fano_index is only defined for Picard-rank-1 varieties; " *
-    "use anticanonical_degrees for the multi-degree description.")
-  )
-  anticanonical_degrees(MDT)[1]
+function fano_index(X::PartialFlagVariety)
+  gcd(anticanonical_degrees(X)...)
 end
 
 function _trivial_semisimple_weight(X::PartialFlagVariety)
@@ -512,8 +501,8 @@ julia> rank_bundle(dual(E)) == rank_bundle(E)
 true
 ```
 """
-function dual(E::CompletelyReducibleBundle)
-  return CompletelyReducibleBundle(variety(E), [dual(c) for c in E.components])
+function dual(E::CompletelyReducibleBundle{MDT}) where {MDT}
+  return CompletelyReducibleBundle(variety(E), IrrepLevi{MDT}[dual(c) for c in E.components])
 end
 
 """

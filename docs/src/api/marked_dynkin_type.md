@@ -34,17 +34,6 @@ positive_parabolic_roots
 tangent_weights
 ```
 
-## Classification
-
-```@docs
-is_generalized_grassmannian
-is_full_flag
-is_cominuscule
-is_minuscule
-is_adjoint
-is_coadjoint
-```
-
 ## Display
 
 ```@docs

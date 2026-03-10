@@ -14,7 +14,8 @@ export partial_flag_variety, full_flag_variety
 export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule
-export is_adjoint, is_coadjoint, is_full_flag
+export is_adjoint, is_coadjoint, is_full_flag_variety
+export anticanonical_degrees
 export marked_type, marked_dynkin_type, marked_nodes
 
 """
@@ -169,7 +170,7 @@ julia> using PartialFlagVarieties
 
 julia> X = full_flag_variety(TypeA{2});
 
-julia> is_full_flag(X)
+julia> is_full_flag_variety(X)
 true
 
 julia> dimension(X)
@@ -297,13 +298,9 @@ julia> euler_characteristic(partial_flag_variety(TypeE{6}, (1,)))
 27
 ```
 """
-function euler_characteristic(::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  _euler_characteristic(MDT)
-end
-
-function _euler_characteristic(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked}
-  R = rank(DT)
-  unmarked = [i for i in 1:R if !(i in Marked)]
+function euler_characteristic(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  unmarked = collect(unmarked_nodes(X))
   wG = weyl_order(DT)
   if isempty(unmarked)
     wL = BigInt(1)
@@ -414,18 +411,249 @@ central_rank(X::PartialFlagVariety) = X.central_rank
 #  Classification predicates
 # ═══════════════════════════════════════════════════════════════════════════════
 
-is_generalized_grassmannian(X::PartialFlagVariety) = is_generalized_grassmannian(marked_type(X))
-is_cominuscule(X::PartialFlagVariety) = is_cominuscule(marked_type(X))
-is_minuscule(X::PartialFlagVariety) = is_minuscule(marked_type(X))
-is_adjoint(X::PartialFlagVariety) = is_adjoint(marked_type(X))
-is_coadjoint(X::PartialFlagVariety) = is_coadjoint(marked_type(X))
-is_full_flag(X::PartialFlagVariety) = is_full_flag(marked_type(X))
+"""
+    is_generalized_grassmannian(X::PartialFlagVariety) -> Bool
+
+A partial flag variety is a generalized Grassmannian iff exactly one node is marked.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_generalized_grassmannian(Gr(2, 4))
+true
+
+julia> is_generalized_grassmannian(partial_flag_variety(TypeA{3}, (1, 3)))
+false
+```
+"""
+is_generalized_grassmannian(X::PartialFlagVariety) = length(marked_nodes(X)) == 1
+
+"""
+    is_full_flag_variety(X::PartialFlagVariety) -> Bool
+
+Check if all nodes are marked (i.e., ``G/B``).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_full_flag_variety(full_flag_variety(TypeA{2}))
+true
+
+julia> is_full_flag_variety(Gr(2, 4))
+false
+```
+"""
+is_full_flag_variety(X::PartialFlagVariety) = length(marked_nodes(X)) == rank(X)
+
+"""
+    is_cominuscule(X::PartialFlagVariety) -> Bool
+
+Check whether the partial flag variety is cominuscule (each irreducible factor
+is a cominuscule generalized Grassmannian).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_cominuscule(Gr(2, 4))
+true
+
+julia> is_cominuscule(partial_flag_variety(TypeB{3}, (2,)))
+false
+
+julia> is_cominuscule(partial_flag_variety(TypeB{3}, (1,)))
+true
+```
+"""
+function is_cominuscule(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)
+  DT <: SimpleDynkinType || return false
+  length(marked) != 1 && return false
+  m = marked[1]
+  R = rank(X)
+  DT <: TypeA && return true
+  DT <: TypeB && return m == 1
+  DT <: TypeC && return m == R
+  DT <: TypeD && return (m == 1 || m == R - 1 || m == R)
+  DT <: TypeE{6} && return (m == 1 || m == 6)
+  DT <: TypeE{7} && return m == 7
+  return false
+end
+
+"""
+    is_minuscule(X::PartialFlagVariety) -> Bool
+
+Check whether the partial flag variety is minuscule.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_minuscule(Gr(2, 5))
+true
+
+julia> is_minuscule(partial_flag_variety(TypeB{3}, (3,)))
+true
+
+julia> is_minuscule(partial_flag_variety(TypeB{3}, (1,)))
+false
+```
+"""
+function is_minuscule(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)
+  DT <: SimpleDynkinType || return false
+  length(marked) != 1 && return false
+  m = marked[1]
+  R = rank(X)
+  DT <: TypeA && return true
+  DT <: TypeB && return m == R
+  DT <: TypeC && return m == 1
+  DT <: TypeD && return (m == 1 || m == R - 1 || m == R)
+  DT <: TypeE{6} && return (m == 1 || m == 6)
+  DT <: TypeE{7} && return m == 7
+  return false
+end
+
+"""
+    is_adjoint(X::PartialFlagVariety) -> Bool
+
+Check whether the partial flag variety is the adjoint variety.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_adjoint(partial_flag_variety(TypeB{3}, (2,)))
+true
+
+julia> is_adjoint(adjoint_variety(TypeG2))
+true
+
+julia> is_adjoint(partial_flag_variety(TypeA{3}, (1, 3)))
+true
+```
+"""
+function is_adjoint(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)
+  R = rank(X)
+  DT <: SimpleDynkinType || return false
+  if DT <: TypeA
+    return length(marked) == 2 && marked == (1, R)
+  end
+  length(marked) != 1 && return false
+  m = marked[1]
+  DT <: TypeB && return m == 2
+  DT <: TypeC && return m == 1
+  DT <: TypeD && R >= 4 && return m == 2
+  DT <: TypeE{6} && return m == 2
+  DT <: TypeE{7} && return m == 1
+  DT <: TypeE{8} && return m == 8
+  DT <: TypeF4 && return m == 1
+  DT <: TypeG2 && return m == 2
+  return false
+end
+
+"""
+    is_coadjoint(X::PartialFlagVariety) -> Bool
+
+Check whether the partial flag variety is the coadjoint variety.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_coadjoint(coadjoint_variety(TypeB{3}))
+true
+
+julia> is_coadjoint(coadjoint_variety(TypeG2))
+true
+```
+"""
+function is_coadjoint(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)
+  R = rank(X)
+  DT <: SimpleDynkinType || return false
+  if DT <: TypeA
+    return length(marked) == 2 && marked == (1, R)
+  end
+  length(marked) != 1 && return false
+  m = marked[1]
+  DT <: TypeB && return m == 1
+  DT <: TypeC && return m == 2
+  DT <: TypeD && R >= 4 && return m == 2
+  DT <: TypeE{6} && return m == 2
+  DT <: TypeE{7} && return m == 1
+  DT <: TypeE{8} && return m == 8
+  DT <: TypeF4 && return m == 4
+  DT <: TypeG2 && return m == 1
+  return false
+end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Diagram
 # ═══════════════════════════════════════════════════════════════════════════════
 
 marked_dynkin_diagram(X::PartialFlagVariety) = marked_dynkin_diagram(marked_type(X))
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Anticanonical degrees
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    anticanonical_degrees(X::PartialFlagVariety) -> Vector{Int}
+
+Return the degrees ``(a_1, \\ldots, a_K)`` of the anticanonical bundle
+``-K_{G/P}`` at the marked nodes, so that
+
+```math
+-K_{G/P} = \\sum_{i \\in \\mathrm{marked}} a_i \\,\\omega_i.
+```
+
+For each marked node ``i``, the coefficient is
+
+```math
+a_i = 2 - \\langle 2\\rho_P, \\alpha_i^\\vee \\rangle,
+```
+
+where ``\\rho_P`` is the Weyl vector of the Levi subgroup.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> anticanonical_degrees(Gr(2, 4))[1]  # Gr(2,4): -K = 4ω₂
+4
+
+julia> anticanonical_degrees(partial_flag_variety(TypeG2, 1))[1]   # G₂/P₁: -K = 5ω₁
+5
+
+julia> anticanonical_degrees(partial_flag_variety(TypeG2, 2))[1]   # G₂/P₂: -K = 3ω₂
+3
+```
+"""
+function anticanonical_degrees(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)
+  unmarked = unmarked_nodes(X)
+  R = rank(X)
+  n = length(unmarked)
+  C = Lie._cartan_matrix_data(DT)
+
+  if n == 0
+    return fill(2, length(marked))
+  end
+
+  C_L = Rational{Int}[C[unmarked[p], unmarked[q]] for p in 1:n, q in 1:n]
+  x_L = C_L \ ones(Rational{Int}, n)
+
+  Int[round(Int, 2 - 2 * sum(C[i, unmarked[q]] * x_L[q] for q in 1:n)) for i in marked]
+end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Equality

@@ -60,7 +60,6 @@ using StaticArrays
 
     # Full flag
     MDT_full = MarkedDynkinType{TypeA{3}, (1, 2, 3)}
-    @test is_full_flag(MDT_full)
     @test levi_type(MDT_full) === nothing
     @test central_rank(MDT_full) == 3
     @test levi_rank(MDT_full) == 0
@@ -116,10 +115,16 @@ using StaticArrays
     V = partial_flag_variety(TypeA{3}, (2,))
     @test V isa PartialFlagVariety
     @test marked_nodes(V) == (2,)
+    @test marked_dynkin_type(V) == MarkedDynkinType(TypeA{3}, (2,))
+    @test unmarked_nodes(V) == (1, 3)
     @test dynkin_type(V) == TypeA{3}
+    @test levi_type(V) == ProductDynkinType{Tuple{TypeA{1},TypeA{1}}}
+    @test levi_rank(V) == 2
+    @test central_rank(V) == 1
 
     V_full = full_flag_variety(TypeA{2})
-    @test is_full_flag(V_full)
+    @test is_full_flag_variety(V_full)
+    @test levi_type(V_full) === nothing
 
     # String constructor
     V_str = PartialFlagVariety("A3", [2])
@@ -242,8 +247,8 @@ using StaticArrays
     @test is_generalized_grassmannian(Gr(2, 4))
     @test !is_generalized_grassmannian(partial_flag_variety(TypeA{3}, (1, 3)))
 
-    @test is_full_flag(full_flag_variety(TypeA{2}))
-    @test !is_full_flag(Gr(2, 4))
+    @test is_full_flag_variety(full_flag_variety(TypeA{2}))
+    @test !is_full_flag_variety(Gr(2, 4))
 
     # Cominuscule
     @test is_cominuscule(Gr(2, 5))
@@ -350,9 +355,13 @@ using StaticArrays
   @testset "Structure sheaf" begin
     X = Gr(2, 4)
     O = structure_sheaf(X)
+    O2 = PartialFlagVarieties.O(X)
     @test rank_bundle(O) == 1
+    @test variety(O2) === X
+    @test components(O) == components(O2)
     @test n_components(O) == 1
     @test variety(O) === X
+    @test p_dominant_weight(only(components(O))) == WeightLatticeElem(dynkin_type(X))
   end
 
   @testset "Line bundles" begin
@@ -360,6 +369,7 @@ using StaticArrays
     L = line_bundle(X, 1)
     @test rank_bundle(L) == 1
     @test variety(L) === X
+    @test p_dominant_weight(only(components(L))) == WeightLatticeElem(dynkin_type(X), [1, 0, 0, 0])
   end
 
   @testset "Line bundle: Picard rank check" begin
@@ -377,6 +387,7 @@ using StaticArrays
     # Multi-node form works for Picard rank > 1
     L2 = line_bundle(X2, [2, 1])
     @test rank_bundle(L2) == 1
+    @test p_dominant_weight(only(components(L2))) == WeightLatticeElem(dynkin_type(X2), [2, 0, 1])
 
     # Multi-node form also works for Picard rank 1
     L3 = line_bundle(X1, [3])
@@ -435,6 +446,14 @@ using StaticArrays
     T = tangent_bundle(X)
     det_T = det_bundle(T)
     @test rank_bundle(det_T) == 1
+
+    L = line_bundle(X, 3)
+    @test p_dominant_weight(only(components(det_bundle(L)))) == p_dominant_weight(only(components(L)))
+
+    M = line_bundle(X, 2)
+    det_sum = det_bundle(direct_sum(L, M))
+    @test p_dominant_weight(only(components(det_sum))) ==
+          p_dominant_weight(only(components(L))) + p_dominant_weight(only(components(M)))
   end
 
   @testset "Canonical and anticanonical bundles" begin
@@ -493,8 +512,8 @@ using StaticArrays
     @test fano_index(cayley_plane()) == 12
     @test fano_index(freudenthal_variety()) == 18
 
-    # Throws for Picard rank > 1
-    @test_throws ArgumentError fano_index(partial_flag_variety(TypeA{3}, (1, 3)))
+    # Picard rank > 1: fano_index is gcd of anticanonical degrees
+    @test fano_index(partial_flag_variety(TypeA{3}, (1, 3))) == gcd(anticanonical_degrees(partial_flag_variety(TypeA{3}, (1, 3)))...)
   end
 
   @testset "Fano index: zero loci" begin
