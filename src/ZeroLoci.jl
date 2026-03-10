@@ -236,10 +236,12 @@ fallback is attempted: if ``H^*(Z, F^*|_Z)`` is fully determined, then
 ``K_Z \\cong \\mathcal{O}_Z``, e.g. for Calabi–Yau and hyperkähler zero loci).
 """
 function cohomology_on_restriction(
-  Z::ZeroLocus{MDT},
-  F::CompletelyReducibleBundle{MDT},
-) where {MDT}
-
+  Z::ZeroLocus,
+  F::CompletelyReducibleBundle,
+)
+  marked_type(variety(F)) == marked_type(Z.ambient) || throw(ArgumentError(
+    "The bundle F must live on the ambient variety of the zero locus Z"
+  ))
   d_Z = dimension(Z)
 
   terms = koszul_terms(Z, F)
@@ -306,7 +308,7 @@ end
 
 Compute ``H^*(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
 """
-function cohomology_on_restriction(Z::ZeroLocus{MDT}) where {MDT}
+function cohomology_on_restriction(Z::ZeroLocus)
   cohomology_on_restriction(Z, structure_sheaf(Z.ambient))
 end
 
