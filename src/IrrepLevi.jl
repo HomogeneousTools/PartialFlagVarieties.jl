@@ -115,14 +115,11 @@ so no `SMatrix` or `Rational` type appears at runtime.
   λ_ivec::SVector{R0,Int},
 ) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked,R0}
   R = rank(DT)
-  Cinv = Lie.cartan_matrix_inverse(DT)
   K = length(Marked)
-  sf = 1
-  for j in Marked, k in 1:R
-    sf = lcm(sf, denominator(Cinv[j, k]))
-  end
+  M = decomposition_matrix(MDT)
+  sf = Int(central_scaling_factor(MDT))
   row_exprs = map(1:K) do i
-    terms = [:($(round(Int, Cinv[Marked[i], k] * sf)) * λ_ivec[$k]) for k in 1:R]
+    terms = [:($(round(Int, M[Marked[i], k] * sf)) * λ_ivec[$k]) for k in 1:R]
     length(terms) == 1 ? terms[1] : Expr(:call, :+, terms...)
   end
   return :(SVector{$K,Int}($(row_exprs...)))
@@ -143,20 +140,8 @@ is triggered by the return type.
   ::Type{MDT},
 ) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
   R = rank(DT)
-  Cinv = Lie.cartan_matrix_inverse(DT)
-  sf = 1
-  for j in Marked, k in 1:R
-    sf = lcm(sf, denominator(Cinv[j, k]))
-  end
-  unmarked = [i for i in 1:R if !(i in Marked)]
-  M = zeros(Rational{Int}, R, R)
-  for i in unmarked
-    M[i, i] = 1
-  end
-  for j in Marked, k in 1:R
-    M[j, k] = Cinv[j, k]
-  end
-  Minv = inv(M)
+  sf = Int(central_scaling_factor(MDT))
+  Minv = decomposition_matrix_inv(MDT)
   sf_total = sf
   for j in 1:R, k in 1:R
     sf_total = lcm(sf_total, denominator(Minv[j, k]))
@@ -179,20 +164,8 @@ the StaticArrays `gen_by_access` / `mul_parent` specialization cost.
   x::SVector{R0,Int},
 ) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked,R0}
   R = rank(DT)
-  Cinv = Lie.cartan_matrix_inverse(DT)
-  sf = 1
-  for j in Marked, k in 1:R
-    sf = lcm(sf, denominator(Cinv[j, k]))
-  end
-  unmarked = [i for i in 1:R if !(i in Marked)]
-  M = zeros(Rational{Int}, R, R)
-  for i in unmarked
-    M[i, i] = 1
-  end
-  for j in Marked, k in 1:R
-    M[j, k] = Cinv[j, k]
-  end
-  Minv = inv(M)
+  sf = Int(central_scaling_factor(MDT))
+  Minv = decomposition_matrix_inv(MDT)
   sf_total = sf
   for j in 1:R, k in 1:R
     sf_total = lcm(sf_total, denominator(Minv[j, k]))
