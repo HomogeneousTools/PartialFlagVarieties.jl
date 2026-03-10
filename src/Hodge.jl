@@ -106,11 +106,11 @@ julia> X = Gr(2, 6);
 julia> Z = zero_locus(reduce(direct_sum, [line_bundle(X, 1) for _ in 1:6]));
 
 julia> print_hodge_diamond(stdout, hodge_numbers(Z))  # K3 of degree 14
-     1
-  0     0
-1    20    1
-  0     0
-     1
+      1
+   0     0
+ 1    20    1
+   0     0
+      1
 ```
 """
 function print_hodge_diamond(io::IO, h::Matrix{<:Integer})
