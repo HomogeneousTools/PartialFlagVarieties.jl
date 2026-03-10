@@ -393,8 +393,8 @@ julia> dimensions(L2)[0]  # H⁰(ℙ⁴, 𝒪(5)) = 126
 126
 ```
 """
-function anticanonical_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
-  degs = anticanonical_degrees(MDT)
+function anticanonical_bundle(X::PartialFlagVariety)
+  degs = anticanonical_degrees(typeof(marked_dynkin_type(X)))
   return line_bundle(X, Vector{Int}(degs))
 end
 
@@ -512,8 +512,8 @@ julia> rank_bundle(dual(E)) == rank_bundle(E)
 true
 ```
 """
-function dual(E::CompletelyReducibleBundle{MDT}) where {MDT}
-  return CompletelyReducibleBundle{MDT}(E.variety, [dual(c) for c in E.components])
+function dual(E::CompletelyReducibleBundle)
+  return CompletelyReducibleBundle(variety(E), [dual(c) for c in E.components])
 end
 
 """
