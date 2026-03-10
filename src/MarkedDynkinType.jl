@@ -14,6 +14,7 @@
 
 export MarkedDynkinType
 export marked_nodes, unmarked_nodes, levi_type, levi_rank, central_rank
+export central_scaling_factor
 export decomposition_matrix, decomposition_matrix_inv
 export levi_permutation
 export marked_dynkin_diagram
@@ -170,6 +171,45 @@ central_rank(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked} = length(Mar
 
 Lie.rank(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked} = rank(DT)
 
+"""
+    central_scaling_factor(::Type{MDT}) -> Int
+
+Return the scaling factor for the central part of Levi representations
+associated to `MDT`.  This is the LCM of all denominators of the
+inverse Cartan matrix entries at the marked rows:
+
+``\\mathrm{lcm}\\{\\mathrm{denom}(C^{-1}[j, k]) : j \\in \\mathrm{Marked},\\; 1 \\le k \\le R\\}``
+
+Central characters are stored internally as integers multiplied by this
+factor, eliminating all `Rational{Int}` arithmetic from hot paths.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> central_scaling_factor(MarkedDynkinType{TypeA{3}, (2,)})
+2
+
+julia> central_scaling_factor(MarkedDynkinType{TypeA{4}, (2,)})
+5
+```
+"""
+@generated function central_scaling_factor(
+  ::Type{MDT},
+) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  R = rank(DT)
+  Cinv = Lie.cartan_matrix_inverse(DT)
+  sf = 1
+  for j in Marked
+    for k in 1:R
+      sf = lcm(sf, denominator(Cinv[j, k]))
+    end
+  end
+  return :($sf)
+end
+
+central_scaling_factor(mdt::MarkedDynkinType) = central_scaling_factor(typeof(mdt))
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Levi type computation
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -214,6 +254,10 @@ true
   lt = _cartan_type_to_dynkin_type(ct)
   return :($lt)
 end
+
+# Instance-dispatch overload: allows `levi_type(mdt)` where `mdt` is a
+# MarkedDynkinType value (as returned by `marked_dynkin_type(rep)`).
+levi_type(mdt::MarkedDynkinType) = levi_type(typeof(mdt))
 
 """
     levi_permutation(::Type{MDT}) -> Tuple{Int,...}

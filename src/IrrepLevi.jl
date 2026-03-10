@@ -14,7 +14,6 @@
 export IrrepLevi
 export central_part, semisimple_part
 export to_ambient_weight, fiber_dimension, p_dominant_weight
-export central_scaling_factor
 
 # Names from Lie and StaticArrays are available via the parent module's
 # `using Lie` and `using StaticArrays`.
@@ -82,57 +81,26 @@ IrrepLevi{MDT}(λ, c::SVector{K,Int}, ss) where {MDT,K} = IrrepLevi{MDT,K}(λ, c
 # ─── Core accessors ──────────────────────────────────────────────────────────
 
 """
-    p_dominant_weight(rep::IrrepLevi{MDT}) -> WeightLatticeElem{DT,R}
+    marked_dynkin_type(rep::IrrepLevi{MDT}) -> MDT
+
+Return the singleton instance of the marked Dynkin type `MDT` for the
+representation `rep`.
+
+This accessor allows generic code (e.g. [`dual`](@ref)) to recover the
+MarkedDynkinType value via instance dispatch, rather than extracting `MDT`
+directly as a type parameter.  In particular it enables writing
+`levi_type(marked_dynkin_type(rep))` instead of `levi_type(MDT)`, so the
+body of the calling function does not need to be specialised purely to name
+the `MDT` type parameter.
+"""
+marked_dynkin_type(rep::IrrepLevi{MDT}) where {MDT} = MDT()
+
+"""
+    p_dominant_weight(rep::IrrepLevi) -> WeightLatticeElem
 
 Return the P-dominant weight ``\\lambda`` that defines this Levi representation.
-
-This accessor is `@generated` to ensure the return type
-`WeightLatticeElem{DT,R}` is fully inferred from `MDT`.
 """
-@generated function p_dominant_weight(rep::IrrepLevi{MDT}) where {MDT<:MarkedDynkinType}
-  DT = _ambient_type(MDT)
-  R = rank(DT)
-  return :(rep.λ::WeightLatticeElem{$DT,$R})
-end
-
-# ─── Central scaling factor ──────────────────────────────────────────────────
-
-"""
-    central_scaling_factor(::Type{MDT}) -> Int
-
-Return the scaling factor for the central part of Levi representations
-associated to `MDT`.  This is the LCM of all denominators of the
-inverse Cartan matrix entries at the marked rows:
-
-``\\mathrm{lcm}\\{\\mathrm{denom}(C^{-1}[j, k]) : j \\in \\mathrm{Marked},\\; 1 \\le k \\le R\\}``
-
-Central characters are stored internally as integers multiplied by this
-factor, eliminating all `Rational{Int}` arithmetic from hot paths.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> central_scaling_factor(MarkedDynkinType{TypeA{3}, (2,)})
-2
-
-julia> central_scaling_factor(MarkedDynkinType{TypeA{4}, (2,)})
-5
-```
-"""
-@generated function central_scaling_factor(
-  ::Type{MDT},
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
-  R = rank(DT)
-  Cinv = Lie.cartan_matrix_inverse(DT)
-  sf = 1
-  for j in Marked
-    for k in 1:R
-      sf = lcm(sf, denominator(Cinv[j, k]))
-    end
-  end
-  return :($sf)
-end
+p_dominant_weight(rep::IrrepLevi) = rep.λ
 
 """
     _apply_central_ext(::Type{MDT}, λ_ivec::SVector{R,Int}) -> SVector{K,Int}
@@ -245,30 +213,17 @@ Internally the central character is stored as scaled integers
 (multiplied by `central_scaling_factor`).  This accessor
 unscales and returns the original `Rational{Int}` values.
 """
-function central_part(rep::IrrepLevi{MDT}) where {MDT}
-  sf = central_scaling_factor(MDT)
+function central_part(rep::IrrepLevi)
+  sf = central_scaling_factor(marked_dynkin_type(rep))
   return Vector{Rational{Int}}(Rational{Int}[c // sf for c in rep.central])
 end
 
 """
-    semisimple_part(rep::IrrepLevi{MDT}) -> WeightLatticeElem{LT,LR}
+    semisimple_part(rep::IrrepLevi) -> WeightLatticeElem
 
 Return the highest weight of the semisimple part.
-
-This accessor is `@generated` to ensure the return type
-`WeightLatticeElem{LT,LR}` is fully inferred from `MDT`,
-eliminating dynamic dispatch on downstream Lie.jl operations
-(`degree`, `dual`, `tensor_product`, `exterior_power`, etc.).
 """
-@generated function semisimple_part(rep::IrrepLevi{MDT}) where {MDT<:MarkedDynkinType}
-  LT = levi_type(MDT)
-  if LT === nothing
-    return :(rep.semisimple::WeightLatticeElem{TypeA{1},1})
-  else
-    LR = rank(LT)
-    return :(rep.semisimple::WeightLatticeElem{$LT,$LR})
-  end
-end
+semisimple_part(rep::IrrepLevi) = rep.semisimple
 
 # ─── Construction from ambient weight ───────────────────────────────────────
 
@@ -563,17 +518,20 @@ julia> central_part(d) == -central_part(rep)
 true
 ```
 """
-function dual(rep::IrrepLevi{MDT}) where {MDT}
-  LT = levi_type(MDT)
+function dual(rep::IrrepLevi)
+  LT = levi_type(marked_dynkin_type(rep))
   new_central = -rep.central
   ss = semisimple_part(rep)
 
+  # Two cases where Lie.dual is not needed and we can return immediately:
+  #   LT === nothing — the Levi factor is a pure torus
+  #   iszero(ss)     — dual(0) = 0 in every Lie type
   if LT === nothing || iszero(ss)
-    return IrrepLevi(MDT, new_central, ss)
+    return IrrepLevi(typeof(marked_dynkin_type(rep)), new_central, ss)
   end
 
   new_ss = Lie.dual(ss)
-  return IrrepLevi(MDT, new_central, new_ss)
+  return IrrepLevi(typeof(marked_dynkin_type(rep)), new_central, new_ss)
 end
 
 """
