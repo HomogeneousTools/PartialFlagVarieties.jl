@@ -73,7 +73,7 @@ jobs:
           version: '1'
       - uses: julia-actions/cache@v2
       - name: Install Lie.jl from GitHub
-        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")'
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl"); Pkg.add("JSON")'
       - uses: julia-actions/julia-buildpkg@v1
       - name: Run example
         run: |
