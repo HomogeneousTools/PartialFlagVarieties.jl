@@ -451,15 +451,15 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Determinant bundle" begin
     X = Gr(2, 4)
     T = tangent_bundle(X)
-    det_T = det_bundle(T)
+    det_T = det(T)
     @test rank_bundle(det_T) == 1
 
     L = line_bundle(X, 3)
-    @test p_dominant_weight(only(components(det_bundle(L)))) ==
+    @test p_dominant_weight(only(components(det(L)))) ==
       p_dominant_weight(only(components(L)))
 
     M = line_bundle(X, 2)
-    det_sum = det_bundle(direct_sum(L, M))
+    det_sum = det(direct_sum(L, M))
     @test p_dominant_weight(only(components(det_sum))) ==
       p_dominant_weight(only(components(L))) + p_dominant_weight(only(components(M)))
   end

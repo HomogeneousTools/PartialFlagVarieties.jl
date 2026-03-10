@@ -522,7 +522,7 @@ Compute h⁰(-K_Z) = χ(-K_Z) (by Kodaira vanishing on Fano varieties).
 -K_Z on X is ``(-K_X) \\otimes \\det(E)^*``.
 """
 function compute_h0_antiK(Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle)
-  antiK_Z = tensor_product(anticanonical_bundle(X), dual(det_bundle(E)))
+  antiK_Z = tensor_product(anticanonical_bundle(X), dual(det(E)))
   Int(euler_characteristic(Z, antiK_Z))
 end
 
@@ -532,7 +532,7 @@ Compute (-K_Z)⁴ via finite differences of χ(Z, (-K_Z)^{⊗t}) for t = 0,…,4
 function compute_antiK_fourth(
   Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
 )
-  L = tensor_product(anticanonical_bundle(X), dual(det_bundle(E)))
+  L = tensor_product(anticanonical_bundle(X), dual(det(E)))
 
   vals = BigInt[]
   for t in 0:4

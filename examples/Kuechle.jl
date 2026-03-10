@@ -197,13 +197,13 @@ function compute_family(label, k, n, weights, desc)
 
   # h^0(-K_Z) via sheaf cohomology: by adjunction ω_Z ≅ (ω_X ⊗ det(E))|_Z,
   # so H^0(Z, ω_Z^{-1}) = H^0(Z, F_antiK|_Z) where
-  #   F_antiK = anticanonical_bundle(X) ⊗ dual(det_bundle(E)).
+  #   F_antiK = anticanonical_bundle(X) ⊗ dual(det(E)).
   h0aK = nothing
   try
     @time anticanonical_bundle(X)
-    @time det_bundle(E)
-    @time dual(det_bundle(E))
-    @time F_antiK = anticanonical_bundle(X) ⊗ dual(det_bundle(E))
+    @time det(E)
+    @time dual(det(E))
+    @time F_antiK = anticanonical_bundle(X) ⊗ dual(det(E))
     @time (H_antiK, _) = cohomology_on_restriction(Z, F_antiK)
     h0aK = H_antiK[0]
   catch e

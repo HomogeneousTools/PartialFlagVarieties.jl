@@ -26,7 +26,8 @@ tangent_bundle
 cotangent_bundle
 canonical_bundle
 anticanonical_bundle
-det_bundle
+det
+determinant
 ```
 
 ## Operations

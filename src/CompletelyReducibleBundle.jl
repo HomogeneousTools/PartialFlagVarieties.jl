@@ -12,7 +12,7 @@ export CompletelyReducibleBundle
 export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
 export structure_sheaf, O, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
-export det_bundle
+export det, determinant
 export fano_index
 
 # Names from Lie, StaticArrays, Combinatorics are available via the parent module.
@@ -439,37 +439,7 @@ end
 
 function _trivial_semisimple_weight(X::PartialFlagVariety)
   mdt = marked_dynkin_type(X)
-  return WeightLatticeElem(is_borel(mdt) ? TypeA{1} : levi_type(mdt))
-end
-
-function _det_bundle_irrep(X::PartialFlagVariety, rep::IrrepLevi)
-  mdt = marked_dynkin_type(X)
-  d = Int(fiber_dimension(rep))
-  return IrrepLevi(mdt, d .* rep.central, _trivial_semisimple_weight(X))
-end
-
-"""
-    det_bundle(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
-
-The determinant line bundle ``\\det(E) = \\bigwedge^{\\mathrm{rk}(E)} E``.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties, Lie
-
-julia> X = Gr(2, 4);
-
-julia> rank_bundle(det_bundle(tangent_bundle(X)))
-1
-```
-"""
-function det_bundle(E::CompletelyReducibleBundle)
-  X = variety(E)
-  λ = WeightLatticeElem(dynkin_type(X))
-  for c in components(E)
-    λ += p_dominant_weight(_det_bundle_irrep(X, c))
-  end
-  return CompletelyReducibleBundle(X, λ)
+  WeightLatticeElem(is_borel(mdt) ? TypeA{1} : levi_type(mdt))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -680,6 +650,37 @@ function symmetric_power(E::CompletelyReducibleBundle, k::Integer)
 
   return CompletelyReducibleBundle(E.variety, result)
 end
+
+"""
+    det(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
+    determinant(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
+
+The determinant line bundle ``\\det(E) = \\bigwedge^{\\mathrm{rk}(E)} E``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(2, 4);
+
+julia> rank_bundle(det(tangent_bundle(X)))
+1
+```
+"""
+function det(E::CompletelyReducibleBundle)
+  X = variety(E)
+  λ = WeightLatticeElem(dynkin_type(X))
+  for c in components(E)
+    mdt = marked_dynkin_type(X)
+    d = Int(fiber_dimension(c))
+    det_rep = IrrepLevi(mdt, d .* c.central, _trivial_semisimple_weight(X))
+    λ += p_dominant_weight(det_rep)
+  end
+  CompletelyReducibleBundle(X, λ)
+end
+
+"""Alias for [`det`](@ref)."""
+determinant(E::CompletelyReducibleBundle) = det(E)
 
 """
     direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)

@@ -88,7 +88,7 @@ let X = Gr(2, 4)
   T = tangent_bundle(X)
   suite_bundle["rank/tangent_Gr24"] = @benchmarkable rank_bundle($T)
   suite_bundle["exterior_power_2/Gr24"] = @benchmarkable exterior_power($T, 2)
-  suite_bundle["det/tangent_Gr24"] = @benchmarkable det_bundle($T)
+  suite_bundle["det/tangent_Gr24"] = @benchmarkable det($T)
 end
 
 let X = projective_space(4)

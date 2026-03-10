@@ -551,7 +551,7 @@ ample generator ``\\omega_m``.
 
 Requires the ambient variety to have Picard rank 1 (i.e., `picard_rank(ambient_variety(Z)) == 1`).
 For higher-rank ambient Picard groups, use `anticanonical_degrees` and
-`det_bundle` directly.
+`det` directly.
 
 Throws an `ArgumentError` if the ambient Picard rank exceeds 1.
 
@@ -577,10 +577,10 @@ function fano_index(Z::ZeroLocus)
   length(marked) == 1 || throw(
     ArgumentError(
       "fano_index is only defined for zero loci in Picard-rank-1 ambient varieties; " *
-      "use anticanonical_degrees and det_bundle for the general case."),
+      "use anticanonical_degrees and det for the general case."),
   )
   m = marked[1]
-  det_E = det_bundle(Z.defining_bundle)
+  det_E = det(Z.defining_bundle)
   deg_det = p_dominant_weight(only(det_E.components)).vec[m]
   fano_index(Z.ambient) - deg_det
 end
