@@ -458,9 +458,9 @@ end
 
 """Compute the scaled central character of the anticanonical bundle -K_{G/P}.
 
-Uses [`anticanonical_degrees`](@ref) to obtain the anticanonical ω-coordinates
+Uses `anticanonical_degrees` to obtain the anticanonical ω-coordinates
 at the marked nodes, then converts to the scaled central character used
-internally by `IrrepLevi` (coordinates multiplied by [`central_scaling_factor`](@ref)).
+internally by `IrrepLevi` (coordinates multiplied by `central_scaling_factor`).
 """
 function _anticanonical_central(::Type{MDT}) where {MDT<:MarkedDynkinType}
   Marked = marked_nodes(MDT)

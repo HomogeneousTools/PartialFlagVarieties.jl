@@ -134,12 +134,12 @@ end
 
 Tensor each graded piece of `F` with `E`, preserving the filtration.
 """
-function tensor_product(F::FilteredBundle{MDT}, E::CompletelyReducibleBundle{MDT}) where {MDT}
+function tensor_product(F::FilteredBundle, E::CompletelyReducibleBundle)
   new_pieces = [tensor_product(p, E) for p in F.pieces]
   FilteredBundle(F.variety, new_pieces)
 end
 
-function tensor_product(E::CompletelyReducibleBundle{MDT}, F::FilteredBundle{MDT}) where {MDT}
+function tensor_product(E::CompletelyReducibleBundle, F::FilteredBundle)
   tensor_product(F, E)
 end
 

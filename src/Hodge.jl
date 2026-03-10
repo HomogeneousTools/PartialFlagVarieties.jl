@@ -98,19 +98,19 @@ giving exact alignment regardless of digit count.
 `(2d+1) × (2d+1)` string matrix (where `d = size(h,1) - 1`).
 
 # Examples
-```jldoctest
+```julia
 julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 6);
 
 julia> Z = zero_locus(reduce(direct_sum, [line_bundle(X, 1) for _ in 1:6]));
 
-julia> print_hodge_diamond(stdout, hodge_numbers(Z))  # K3 of degree 14
-        1
-     0      0
-  1     20     1
-     0      0
-        1
+julia> print_hodge_diamond(stdout, hodge_numbers(Z));  # K3 of degree 14 in P^5
+       1
+    0      0
+ 1     20     1
+    0      0
+       1
 ```
 """
 function print_hodge_diamond(io::IO, h::Matrix{<:Integer})

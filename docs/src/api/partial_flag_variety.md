@@ -15,6 +15,6 @@ full_flag_variety
 ```@docs
 dimension
 picard_rank
-euler_characteristic
+euler_characteristic(::PartialFlagVariety)
 betti_numbers
 ```

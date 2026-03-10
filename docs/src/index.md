@@ -1,7 +1,7 @@
 # PartialFlagVarieties.jl
 
 A Julia package for computing with **partial flag varieties** ``G/P`` using
-compile-time specialization via [Lie.jl](../Lie.jl).
+compile-time specialization via [Lie.jl](https://github.com/HomogeneousTools/Lie.jl).
 
 ## Features
 

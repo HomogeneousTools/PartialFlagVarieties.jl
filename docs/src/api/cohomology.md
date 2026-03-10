@@ -19,6 +19,6 @@ dimensions
 
 ```@docs
 chi
-euler_char_bundle
+euler_characteristic
 hilbert_polynomial
 ```

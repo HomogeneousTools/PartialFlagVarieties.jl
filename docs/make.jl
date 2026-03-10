@@ -1,4 +1,5 @@
 using Documenter
+using Lie
 using PartialFlagVarieties
 
 makedocs(
@@ -10,6 +11,7 @@ makedocs(
     assets=String[],
   ),
   modules=[PartialFlagVarieties],
+  warnonly=[:missing_docs],
   pages=[
     "Home" => "index.md",
     "Mathematical Background" => "math.md",

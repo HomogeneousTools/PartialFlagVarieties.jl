@@ -179,7 +179,7 @@ Lie.rank(::Type{MarkedDynkinType{DT,Marked}}) where {DT,Marked} = rank(DT)
 
 Return the Dynkin type of the semisimple part of the Levi subgroup.
 This is computed from the sub-Cartan matrix on the unmarked nodes,
-using [`cartan_type`](@ref) to identify the resulting Cartan matrix.
+using `cartan_type` to identify the resulting Cartan matrix.
 
 Returns `nothing` for the full flag variety (all nodes marked), since the
 Levi is then a torus with trivial semisimple part.

@@ -150,6 +150,21 @@ function O(X::PartialFlagVariety)
   return CompletelyReducibleBundle(X, WeightLatticeElem(dynkin_type(X)))
 end
 
+"""
+    structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
+
+The trivial line bundle ``\\mathcal{O}_{G/P}``. Alias for `O`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(2, 4);
+
+julia> rank_bundle(structure_sheaf(X))
+1
+```
+"""
 structure_sheaf(X::PartialFlagVariety) = O(X)
 
 """
@@ -307,7 +322,7 @@ K_{G/P} = -\\sum_{i \\in \\mathrm{marked}} a_i\\,\\omega_i,
 \\qquad a_i = \\langle 2(\\rho_G - \\rho_P),\\,\\alpha_i^\\vee\\rangle,
 ```
 
-without constructing the (co)tangent bundle.  See [`anticanonical_degrees`](@ref).
+without constructing the (co)tangent bundle.  See `anticanonical_degrees`.
 
 # Examples
 ```jldoctest
@@ -356,7 +371,7 @@ This is computed directly from the formula
 \\qquad a_i = \\langle 2(\\rho_G - \\rho_P),\\,\\alpha_i^\\vee\\rangle.
 ```
 
-See [`anticanonical_degrees`](@ref).
+See `anticanonical_degrees`.
 
 # Examples
 ```jldoctest
@@ -415,7 +430,7 @@ All partial flag varieties are Fano (the anticanonical bundle is ample), so
 the Fano index is always a positive integer.
 
 Throws an `ArgumentError` when `picard_rank(X) > 1`; use
-[`anticanonical_degrees`](@ref) for the multi-degree description in that case.
+`anticanonical_degrees` for the multi-degree description in that case.
 
 # Examples
 ```jldoctest
@@ -440,6 +455,18 @@ function fano_index(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType}
   anticanonical_degrees(MDT)[1]
 end
 
+function _trivial_semisimple_weight(X::PartialFlagVariety)
+  MDT = typeof(marked_dynkin_type(X))
+  LT = levi_type(MDT)
+  return WeightLatticeElem(LT === nothing ? TypeA{1} : LT)
+end
+
+function _det_bundle_irrep(X::PartialFlagVariety, rep::IrrepLevi)
+  MDT = typeof(marked_dynkin_type(X))
+  d = Int(fiber_dimension(rep))
+  return IrrepLevi(MDT, d * rep.central, _trivial_semisimple_weight(X))
+end
+
 """
     det_bundle(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
 
@@ -455,18 +482,6 @@ julia> rank_bundle(det_bundle(tangent_bundle(X)))
 1
 ```
 """
-function _trivial_semisimple_weight(X::PartialFlagVariety)
-  MDT = typeof(marked_dynkin_type(X))
-  LT = levi_type(MDT)
-  return WeightLatticeElem(LT === nothing ? TypeA{1} : LT)
-end
-
-function _det_bundle_irrep(X::PartialFlagVariety, rep::IrrepLevi)
-  MDT = typeof(marked_dynkin_type(X))
-  d = Int(fiber_dimension(rep))
-  return IrrepLevi(MDT, d * rep.central, _trivial_semisimple_weight(X))
-end
-
 function det_bundle(E::CompletelyReducibleBundle)
   X = variety(E)
   λ = WeightLatticeElem(dynkin_type(X))

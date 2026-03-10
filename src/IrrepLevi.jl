@@ -46,7 +46,7 @@ weight lattice of the ambient group ``G``.
 Internally the weight also stores the decomposition into:
 - `central::SVector{K,Int}`: scaled coordinates of the central character,
   indexed by the marked (nonparabolic) nodes. Stored as integers
-  multiplied by [`central_scaling_factor`](@ref) for efficiency.
+  multiplied by `central_scaling_factor` for efficiency.
 - `semisimple::WeightLatticeElem`: highest weight of the semisimple part,
   as a weight in the Levi's weight lattice
 
@@ -242,7 +242,7 @@ end
 Return the central character part of the Levi representation.
 
 Internally the central character is stored as scaled integers
-(multiplied by [`central_scaling_factor`](@ref)).  This accessor
+(multiplied by `central_scaling_factor`).  This accessor
 unscales and returns the original `Rational{Int}` values.
 """
 function central_part(rep::IrrepLevi{MDT}) where {MDT}
@@ -327,7 +327,7 @@ end
     IrrepLevi(::Type{MDT}, central::AbstractVector{Int}, semisimple) -> IrrepLevi{MDT}
 
 Construct an `IrrepLevi` from its **scaled** central character `central`
-(pre-multiplied by [`central_scaling_factor`](@ref)) and the highest weight
+(pre-multiplied by `central_scaling_factor`) and the highest weight
 `semisimple` of its semisimple part.  Any `AbstractVector{Int}` is accepted
 and converted to the internal `SVector{K,Int}` representation.
 The ambient P-dominant weight ``\\lambda`` is recovered automatically.
@@ -506,7 +506,9 @@ julia> length(result)
 1
 ```
 """
-function tensor_product(a::IrrepLevi{MDT,K}, b::IrrepLevi{MDT,K}) where {MDT,K}
+tensor_product(a::IrrepLevi, b::IrrepLevi) = _tensor_product_impl(a, b)
+
+function _tensor_product_impl(a::IrrepLevi{MDT,K}, b::IrrepLevi{MDT,K}) where {MDT,K}
   LT = levi_type(MDT)
 
   # Central parts add (in scaled representation); SVector addition is type-stable.

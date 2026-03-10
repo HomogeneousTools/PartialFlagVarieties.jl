@@ -106,7 +106,7 @@ end
     partial_flag_variety(s::AbstractString, marked, name="") -> PartialFlagVariety
 
 Construct a partial flag variety from a Dynkin type string (parsed by
-[`parse_dynkin_type`](@ref)) and a set of marked nodes.
+`parse_dynkin_type`) and a set of marked nodes.
 
 # Examples
 ```jldoctest
@@ -134,7 +134,7 @@ end
 
 Construct a partial flag variety from a Dynkin type string and a set of marked nodes.
 
-The string is parsed by [`parse_dynkin_type`](@ref) (e.g., `"A3"`, `"A2xB3"`, `"E6"`).
+The string is parsed by `parse_dynkin_type` (e.g., `"A3"`, `"A2xB3"`, `"E6"`).
 
 # Examples
 ```jldoctest
