@@ -17,7 +17,7 @@ Part of the [HomogeneousTools](https://homogeneous.tools) project, building on [
 - **Filtered bundles**: tangent bundle filtration by root height (Lemma 2.1, [arXiv:1606.04076](https://arxiv.org/abs/1606.04076))
 - **Sheaf cohomology** via the Borel–Weil–Bott theorem (dimension-valued and character-valued)
 - **Hodge numbers**, **twisted Hodge numbers**, **Hochschild cohomology** with polyvector parallelogram display
-- Type-level encoding with `@generated` functions for compile-time constants
+- Runtime marked Dynkin data with cached structural invariants
 - Bourbaki/Oscar conventions throughout
 
 ## Quick start

@@ -1,10 +1,34 @@
 export MarkedDynkinType
 export marked_nodes, unmarked_nodes, levi_type, levi_rank, central_rank
+export is_borel
 export central_scaling_factor
 export decomposition_matrix, decomposition_matrix_inv
 export levi_permutation
 export marked_dynkin_diagram
 
+"""
+    MarkedDynkinType(DT::Type{<:DynkinType}, marked)
+
+Runtime description of a partial flag variety `G/P`, given by a Dynkin type
+`DT` and the tuple of marked simple roots defining the parabolic subgroup `P`.
+
+The marked nodes are stored as runtime data rather than type parameters, while
+derived invariants such as the Levi type, decomposition matrix, and dimension
+are cached on first use.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> mdt = MarkedDynkinType(TypeA{4}, (2,));
+
+julia> marked_nodes(mdt)
+(2,)
+
+julia> unmarked_nodes(mdt)
+(1, 3, 4)
+```
+"""
 struct MarkedDynkinType
   dynkin::DataType
   marked::Tuple{Vararg{Int}}
@@ -104,18 +128,48 @@ _mdt_data(mdt::MarkedDynkinType) = get!(_marked_dynkin_cache, mdt) do
   _compute_marked_dynkin_data(mdt)
 end
 
+"""Return the ambient Dynkin type of `mdt`."""
 dynkin_type(mdt::MarkedDynkinType) = mdt.dynkin
+
+"""Return the marked nodes defining the parabolic subgroup."""
 marked_nodes(mdt::MarkedDynkinType) = mdt.marked
+
+"""Return the unmarked simple roots, i.e. the Levi nodes."""
 unmarked_nodes(mdt::MarkedDynkinType) = _mdt_data(mdt).unmarked
+
+"""Return the rank of the center of the Levi subgroup."""
 central_rank(mdt::MarkedDynkinType) = length(marked_nodes(mdt))
+
+"""Return the Dynkin type of the semisimple Levi factor, or `nothing` for `G/B`."""
 levi_type(mdt::MarkedDynkinType) = _mdt_data(mdt).levi
+
+"""Return the rank of the semisimple Levi factor."""
 levi_rank(mdt::MarkedDynkinType) = length(unmarked_nodes(mdt))
+
+"""Return `true` exactly for full flag varieties `G/B`."""
+is_borel(mdt::MarkedDynkinType) = isempty(unmarked_nodes(mdt))
+
+"""Return the permutation sending natural Levi-node order to canonical Cartan order."""
 levi_permutation(mdt::MarkedDynkinType) = _mdt_data(mdt).levi_permutation
+
+"""Return the integer clearing denominators of the marked rows of the decomposition matrix."""
 central_scaling_factor(mdt::MarkedDynkinType) = _mdt_data(mdt).central_scaling_factor
-decomposition_matrix(mdt::MarkedDynkinType) = _mdt_data(mdt).decomposition_matrix
-decomposition_matrix_inv(mdt::MarkedDynkinType) = _mdt_data(mdt).decomposition_matrix_inv
+
+"""
+    decomposition_matrix(mdt::MarkedDynkinType) -> Matrix{Rational{Int}}
+
+Return the change-of-basis matrix from ambient fundamental weights to
+central-plus-Levi coordinates. Unmarked rows are the identity and marked rows
+are the corresponding rows of the inverse Cartan matrix.
+"""
+@inline decomposition_matrix(mdt::MarkedDynkinType) = _mdt_data(mdt).decomposition_matrix
+
+"""Return the inverse of [`decomposition_matrix`](@ref)."""
+@inline decomposition_matrix_inv(mdt::MarkedDynkinType) = _mdt_data(mdt).decomposition_matrix_inv
 
 Lie.rank(mdt::MarkedDynkinType) = rank(dynkin_type(mdt))
+
+"""Return the dimension of the partial flag variety encoded by `mdt`."""
 dimension(mdt::MarkedDynkinType) = _mdt_data(mdt).dimension
 
 function _nonparabolic_height(α_vec::AbstractVector{<:Integer}, marked::Tuple{Vararg{Int}})

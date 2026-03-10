@@ -2,10 +2,10 @@
 #  PartialFlagVarieties.jl
 #
 #  A Julia package for computing with partial flag varieties G/P using
-#  compile-time specialization via Lie.jl.
+#  runtime marked Dynkin data built on Lie.jl.
 #
 #  Provides:
-#   - MarkedDynkinType: type-level encoding of G/P
+#   - MarkedDynkinType: runtime encoding of G/P
 #   - PartialFlagVariety: named user-facing wrapper
 #   - IrrepLevi: irreducible representations of the Levi subgroup
 #   - CompletelyReducibleBundle: equivariant bundles on G/P

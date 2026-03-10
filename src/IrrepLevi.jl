@@ -2,6 +2,13 @@ export IrrepLevi
 export central_part, semisimple_part
 export to_ambient_weight, fiber_dimension, p_dominant_weight
 
+"""
+    IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
+
+An irreducible representation of the Levi factor attached to `mdt`, stored by
+its ambient `P`-dominant weight together with its central and semisimple Levi
+coordinates.
+"""
 struct IrrepLevi
   mdt::MarkedDynkinType
   λ::WeightLatticeElem
@@ -15,7 +22,7 @@ semisimple_part(rep::IrrepLevi) = rep.semisimple
 
 _central_length(mdt::MarkedDynkinType) = central_rank(mdt)
 
-function _apply_central_ext(mdt::MarkedDynkinType, λ_ivec::AbstractVector{Int})
+@inline function _apply_central_ext(mdt::MarkedDynkinType, λ_ivec::AbstractVector{Int})
   marked = marked_nodes(mdt)
   M = decomposition_matrix(mdt)
   sf = Int(central_scaling_factor(mdt))
@@ -30,7 +37,7 @@ function _apply_central_ext(mdt::MarkedDynkinType, λ_ivec::AbstractVector{Int})
   central
 end
 
-function _amb_scalars(mdt::MarkedDynkinType)
+@inline function _amb_scalars(mdt::MarkedDynkinType)
   sf = Int(central_scaling_factor(mdt))
   Minv = decomposition_matrix_inv(mdt)
   sf_total = sf
@@ -40,7 +47,7 @@ function _amb_scalars(mdt::MarkedDynkinType)
   (sf_total, sf_total ÷ sf)
 end
 
-function _apply_Minv_int(mdt::MarkedDynkinType, x::AbstractVector{Int})
+@inline function _apply_Minv_int(mdt::MarkedDynkinType, x::AbstractVector{Int})
   Minv = decomposition_matrix_inv(mdt)
   sf_total, _ = _amb_scalars(mdt)
   result = Vector{Int}(undef, length(x))
@@ -60,20 +67,19 @@ function central_part(rep::IrrepLevi)
 end
 
 function _trivial_semisimple_weight(mdt::MarkedDynkinType)
-  LT = levi_type(mdt)
-  trivial_type = LT === nothing ? TypeA{1} : LT
+  trivial_type = is_borel(mdt) ? TypeA{1} : levi_type(mdt)
   WeightLatticeElem(trivial_type, zeros(Int, rank(trivial_type)))
 end
 
 function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
-  LT = levi_type(mdt)
   unmarked = unmarked_nodes(mdt)
   λ_ivec = Int[c for c in coefficients(λ)]
   central = _apply_central_ext(mdt, λ_ivec)
 
-  if LT === nothing
+  if is_borel(mdt)
     semisimple = _trivial_semisimple_weight(mdt)
   else
+    LT = levi_type(mdt)
     LR = rank(LT)
     perm = levi_permutation(mdt)
     ss_coords = [λ_ivec[unmarked[perm[j]]] for j in 1:LR]
@@ -140,8 +146,7 @@ function to_ambient_weight(mdt::MarkedDynkinType, rep::IrrepLevi)
 end
 
 function fiber_dimension(rep::IrrepLevi)
-  LT = levi_type(marked_dynkin_type(rep))
-  LT === nothing && return BigInt(1)
+  is_borel(marked_dynkin_type(rep)) && return BigInt(1)
   ss = semisimple_part(rep)
   iszero(ss) && return BigInt(1)
   is_dominant(ss) || return BigInt(0)
@@ -158,12 +163,11 @@ function tensor_product(a::IrrepLevi, b::IrrepLevi)
   ))
 
   mdt = marked_dynkin_type(a)
-  LT = levi_type(mdt)
   new_central = a.central + b.central
 
   ss_a = semisimple_part(a)
   ss_b = semisimple_part(b)
-  if LT === nothing || (iszero(ss_a) && iszero(ss_b))
+  if is_borel(mdt) || (iszero(ss_a) && iszero(ss_b))
     return [IrrepLevi(mdt, new_central, ss_a)]
   end
   if iszero(ss_a)
@@ -185,10 +189,9 @@ end
 
 function dual(rep::IrrepLevi)
   mdt = marked_dynkin_type(rep)
-  LT = levi_type(mdt)
   new_central = -rep.central
   ss = semisimple_part(rep)
-  if LT === nothing || iszero(ss)
+  if is_borel(mdt) || iszero(ss)
     return IrrepLevi(mdt, new_central, ss)
   end
   IrrepLevi(mdt, new_central, Lie.dual(ss))
@@ -197,7 +200,6 @@ end
 function exterior_power(rep::IrrepLevi, k::Integer)
   k = Int(k)
   mdt = marked_dynkin_type(rep)
-  LT = levi_type(mdt)
 
   k < 0 && return IrrepLevi[]
   k == 0 && return [IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))]
@@ -206,7 +208,7 @@ function exterior_power(rep::IrrepLevi, k::Integer)
   new_central = k .* rep.central
   ss = semisimple_part(rep)
 
-  if LT === nothing || iszero(ss)
+  if is_borel(mdt) || iszero(ss)
     return IrrepLevi[]
   end
 
@@ -226,7 +228,6 @@ end
 function symmetric_power(rep::IrrepLevi, k::Integer)
   k = Int(k)
   mdt = marked_dynkin_type(rep)
-  LT = levi_type(mdt)
 
   k < 0 && return IrrepLevi[]
   k == 0 && return [IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))]
@@ -234,7 +235,7 @@ function symmetric_power(rep::IrrepLevi, k::Integer)
 
   new_central = k .* rep.central
   ss = semisimple_part(rep)
-  if LT === nothing || iszero(ss)
+  if is_borel(mdt) || iszero(ss)
     return [IrrepLevi(mdt, new_central, ss)]
   end
 

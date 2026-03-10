@@ -94,7 +94,6 @@ Build a `CompletelyReducibleBundle` from the `bundle` field and `ambient` factor
 """
 function build_bundle(X, factors::Vector, bundle_data::Vector)
   mdt = marked_dynkin_type(X)
-  DT = PartialFlagVarieties._ambient_type(mdt)
 
   factor_ks = Vector{Int}[]
   factor_ns = Int[]
@@ -105,9 +104,9 @@ function build_bundle(X, factors::Vector, bundle_data::Vector)
   end
 
   summands = IrrepLevi[]
-  isempty(bundle_data) && return CompletelyReducibleBundle(X, summands)
+  isempty(bundle_data) && return zero_bundle(X)
   ds = bundle_data[1]
-  (ds isa Vector && isempty(ds)) && return CompletelyReducibleBundle(X, summands)
+  (ds isa Vector && isempty(ds)) && return zero_bundle(X)
 
   for summand in ds
     omega_coords = Int[]
@@ -116,7 +115,7 @@ function build_bundle(X, factors::Vector, bundle_data::Vector)
       omega = gl_weight_to_omega_flag(factor_ks[j], factor_ns[j], w)
       append!(omega_coords, omega)
     end
-    lam = WeightLatticeElem(DT, omega_coords)
+    lam = WeightLatticeElem(dynkin_type(X), omega_coords)
     push!(summands, IrrepLevi(mdt, lam))
   end
 

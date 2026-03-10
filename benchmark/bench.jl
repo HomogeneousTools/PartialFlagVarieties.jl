@@ -9,10 +9,10 @@ println("=" ^ 60)
 Lie.clear_all_caches!()
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Type-level computation benchmarks (@generated functions)
+#  Cached invariant benchmarks
 # ═══════════════════════════════════════════════════════════════════════════════
 
-println("\n── @generated function benchmarks (first-call + cached) ──\n")
+println("\n── cached invariant benchmarks ──\n")
 
 suite_generated = BenchmarkGroup()
 
@@ -22,8 +22,8 @@ suite_generated["dimension/OP2"] = @benchmarkable dimension($(cayley_plane()))
 suite_generated["dimension/OGr510"] = @benchmarkable dimension($(OGr(5, 10)))
 
 # Levi type
-suite_generated["levi_type/A4_P2"] = @benchmarkable levi_type($MarkedDynkinType{TypeA{4},(2,)})
-suite_generated["levi_type/E6_P1"] = @benchmarkable levi_type($MarkedDynkinType{TypeE{6},(1,)})
+suite_generated["levi_type/A4_P2"] = @benchmarkable levi_type($(MarkedDynkinType(TypeA{4}, (2,))))
+suite_generated["levi_type/E6_P1"] = @benchmarkable levi_type($(MarkedDynkinType(TypeE{6}, (1,))))
 
 # Euler characteristic
 suite_generated["euler_char/Gr25"] = @benchmarkable euler_characteristic($(Gr(2, 5)))
@@ -34,8 +34,8 @@ suite_generated["betti/Gr25"] = @benchmarkable betti_numbers($(Gr(2, 5)))
 suite_generated["betti/OP2"] = @benchmarkable betti_numbers($(cayley_plane()))
 
 # Decomposition matrix
-suite_generated["decomposition_matrix/A3_P2"] = @benchmarkable decomposition_matrix($MarkedDynkinType{TypeA{3},(2,)})
-suite_generated["decomposition_matrix/E6_P1"] = @benchmarkable decomposition_matrix($MarkedDynkinType{TypeE{6},(1,)})
+suite_generated["decomposition_matrix/A3_P2"] = @benchmarkable decomposition_matrix($(MarkedDynkinType(TypeA{3}, (2,))))
+suite_generated["decomposition_matrix/E6_P1"] = @benchmarkable decomposition_matrix($(MarkedDynkinType(TypeE{6}, (1,))))
 
 results_gen = run(suite_generated, seconds=2)
 display(results_gen)
@@ -48,15 +48,15 @@ println("\n── IrrepLevi benchmarks ──\n")
 
 suite_levi = BenchmarkGroup()
 
-let MDT = MarkedDynkinType{TypeA{4},(2,)}
+let mdt = MarkedDynkinType(TypeA{4}, (2,))
   ω₁ = fundamental_weight(TypeA{4}, 1)
   ω₂ = fundamental_weight(TypeA{4}, 2)
 
-  suite_levi["construct/A4_P2_ω₁"] = @benchmarkable IrrepLevi($MDT, $ω₁)
-  suite_levi["construct/A4_P2_ω₂"] = @benchmarkable IrrepLevi($MDT, $ω₂)
+  suite_levi["construct/A4_P2_ω₁"] = @benchmarkable IrrepLevi($mdt, $ω₁)
+  suite_levi["construct/A4_P2_ω₂"] = @benchmarkable IrrepLevi($mdt, $ω₂)
 
-  rep = IrrepLevi(MDT, ω₁)
-  suite_levi["to_ambient/A4_P2"] = @benchmarkable to_ambient_weight($MDT, $rep)
+  rep = IrrepLevi(mdt, ω₁)
+  suite_levi["to_ambient/A4_P2"] = @benchmarkable to_ambient_weight($mdt, $rep)
   suite_levi["dual/A4_P2"] = @benchmarkable dual($rep)
   suite_levi["fiber_dim/A4_P2"] = @benchmarkable fiber_dimension($rep)
 end
@@ -133,14 +133,13 @@ end
 
 function _Gr_bundle(k, n, weight_vecs)
   X = Gr(k, n)
-  MDT = marked_type(X)
-  DT = PartialFlagVarieties._ambient_type(MDT)
-  summands = IrrepLevi{MDT}[]
+  mdt = marked_dynkin_type(X)
+  summands = IrrepLevi[]
   for w in weight_vecs
-    lam = WeightLatticeElem(DT, _gl_to_omega(k, n, w))
-    push!(summands, IrrepLevi(MDT, lam))
+    lam = WeightLatticeElem(dynkin_type(X), _gl_to_omega(k, n, w))
+    push!(summands, IrrepLevi(mdt, lam))
   end
-  CompletelyReducibleBundle{MDT}(X, summands)
+  CompletelyReducibleBundle(X, summands)
 end
 
 suite_zl = BenchmarkGroup()

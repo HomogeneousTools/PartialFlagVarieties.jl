@@ -21,7 +21,7 @@ export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    FilteredBundle{MDT}
+  FilteredBundle
 
 An equivariant vector bundle on ``G/P`` equipped with a filtration by
 equivariant subbundles. Stored as an ordered list of associated graded
@@ -32,8 +32,8 @@ bottom piece (smallest filtration step), and `graded_pieces(F)[end]` is
 the top piece.
 
 # Fields
-- `variety::PartialFlagVariety{MDT}`: the partial flag variety
-- `pieces::Vector{CompletelyReducibleBundle{MDT}}`: the associated graded pieces
+- `variety::PartialFlagVariety`: the partial flag variety
+- `pieces::Vector{CompletelyReducibleBundle}`: the associated graded pieces
 
 # Examples
 ```jldoctest
@@ -55,6 +55,11 @@ struct FilteredBundle <: Bundle
     variety::PartialFlagVariety,
     pieces::Vector{CompletelyReducibleBundle}
   )
+    for (idx, piece) in enumerate(pieces)
+      marked_dynkin_type(variety(piece)) == marked_dynkin_type(variety) || throw(ArgumentError(
+        "Filtered bundle piece $idx lives on $(variety(piece)), expected $variety."
+      ))
+    end
     new(variety, pieces)
   end
 end

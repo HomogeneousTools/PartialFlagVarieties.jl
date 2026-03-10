@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ZeroLoci.jl — Zero loci of sections of equivariant bundles
 #
-#  A ZeroLocus{MDT} represents the zero locus Z(s) of a regular section
+#  A ZeroLocus represents the zero locus Z(s) of a regular section
 #  s ∈ H⁰(X, E) of an equivariant bundle E on X = G/P.
 #
 #  Provides:
@@ -25,7 +25,7 @@ export hodge_numbers_symbolic
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    ZeroLocus{MDT}
+    ZeroLocus
 
 The zero locus ``Z(s)`` of a regular section ``s \\in H^0(X, E)`` of an
 equivariant bundle ``E`` on the partial flag variety ``X = G/P``.
@@ -162,7 +162,7 @@ Return the terms of the twisted Koszul complex:
 where ``E`` is the defining bundle and ``r = \\mathrm{rank}(E)``.
 """
 function koszul_terms(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_type(variety(F)) == marked_type(Z.ambient) || throw(ArgumentError(
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(ArgumentError(
     "koszul_terms requires a bundle on the ambient variety of the zero locus."
   ))
   CompletelyReducibleBundle[tensor_product(F, w) for w in _koszul_wedges!(Z)]
@@ -242,7 +242,7 @@ function cohomology_on_restriction(
   Z::ZeroLocus,
   F::CompletelyReducibleBundle,
 )
-  marked_type(variety(F)) == marked_type(Z.ambient) || throw(ArgumentError(
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(ArgumentError(
     "The bundle F must live on the ambient variety of the zero locus Z"
   ))
   d_Z = dimension(Z)

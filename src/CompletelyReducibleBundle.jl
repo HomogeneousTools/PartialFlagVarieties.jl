@@ -22,10 +22,9 @@ export fano_index
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    Bundle{MDT}
+  Bundle
 
-Abstract supertype for equivariant vector bundles on the partial flag variety
-``G/P`` encoded by the marked Dynkin type `MDT`.
+Abstract supertype for equivariant vector bundles on a partial flag variety.
 
 Concrete subtypes:
 - [`CompletelyReducibleBundle`](@ref): semisimple equivariant bundles
@@ -38,17 +37,16 @@ abstract type Bundle end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    CompletelyReducibleBundle{MDT}
+  CompletelyReducibleBundle
 
-A completely reducible equivariant vector bundle on the partial flag variety
-``G/P`` encoded by the marked Dynkin type `MDT`.
+A completely reducible equivariant vector bundle on a partial flag variety.
 
 Stored as a list of irreducible Levi representations (with multiplicity
 encoded by repetition), together with the underlying [`PartialFlagVariety`](@ref).
 
 # Fields
-- `variety::PartialFlagVariety{MDT}`: the partial flag variety
-- `components::Vector{IrrepLevi{MDT}}`: the irreducible summands
+- `variety::PartialFlagVariety`: the partial flag variety
+- `components::Vector{IrrepLevi}`: the irreducible summands
 
 # Examples
 ```jldoctest
@@ -65,6 +63,19 @@ julia> rank_bundle(T)
 struct CompletelyReducibleBundle <: Bundle
   variety::PartialFlagVariety
   components::Vector{IrrepLevi}
+
+  function CompletelyReducibleBundle(
+    variety::PartialFlagVariety,
+    components::Vector{IrrepLevi}
+  )
+    bundle_mdt = marked_dynkin_type(variety)
+    for (idx, component) in enumerate(components)
+      marked_dynkin_type(component) == bundle_mdt || throw(ArgumentError(
+        "Bundle component $idx belongs to $(marked_dynkin_type(component)), expected $bundle_mdt."
+      ))
+    end
+    new(variety, components)
+  end
 end
 
 """
@@ -415,8 +426,8 @@ function fano_index(X::PartialFlagVariety)
 end
 
 function _trivial_semisimple_weight(X::PartialFlagVariety)
-  LT = levi_type(marked_dynkin_type(X))
-  return WeightLatticeElem(LT === nothing ? TypeA{1} : LT)
+  mdt = marked_dynkin_type(X)
+  return WeightLatticeElem(is_borel(mdt) ? TypeA{1} : levi_type(mdt))
 end
 
 function _det_bundle_irrep(X::PartialFlagVariety, rep::IrrepLevi)
@@ -554,11 +565,11 @@ true
 """
 function exterior_power(E::CompletelyReducibleBundle, k::Integer)
   k = Int(k)
-  n = n_components(E)
-  k < 0 && return CompletelyReducibleBundle(E.variety, IrrepLevi[])
+  k < 0 && return zero_bundle(E.variety)
   k == 0 && return structure_sheaf(E.variety)
   k == 1 && return E
 
+  n = n_components(E)
   ranks = [Int(fiber_dimension(c)) for c in E.components]
 
   result = IrrepLevi[]
@@ -620,7 +631,7 @@ true
 function symmetric_power(E::CompletelyReducibleBundle, k::Integer)
   k = Int(k)
   n = n_components(E)
-  k < 0 && return CompletelyReducibleBundle(E.variety, IrrepLevi[])
+  k < 0 && return zero_bundle(E.variety)
   k == 0 && return structure_sheaf(E.variety)
   k == 1 && return E
 
@@ -694,13 +705,12 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
   i, k = Int(i), Int(k)
   mdt = marked_dynkin_type(E.variety)
   marked = marked_nodes(mdt)
-  DT = dynkin_type(mdt)
   1 <= i <= length(marked) || throw(ArgumentError(
     "Index $i out of range. MDT has $(length(marked)) marked node(s)."
   ))
 
   m = marked[i]
-  ω = fundamental_weight(DT, m)
+  ω = fundamental_weight(dynkin_type(mdt), m)
   λ = k * ω
   twist_rep = IrrepLevi(mdt, λ)
 

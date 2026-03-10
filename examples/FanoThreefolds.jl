@@ -70,7 +70,6 @@ end
 
 function build_m2_bundle(X, factors, bundle_weights)
   mdt = marked_dynkin_type(X)
-  DT = PartialFlagVarieties._ambient_type(mdt)
 
   factor_ks = [f[1:end-1] for f in factors]
   factor_ns = [f[end] for f in factors]
@@ -82,7 +81,7 @@ function build_m2_bundle(X, factors, bundle_weights)
       omega = gl_weight_to_omega_flag(factor_ks[j], factor_ns[j], Int.(w))
       append!(omega_coords, omega)
     end
-    lam = WeightLatticeElem(DT, omega_coords)
+    lam = WeightLatticeElem(dynkin_type(X), omega_coords)
     push!(summands, IrrepLevi(mdt, lam))
   end
   CompletelyReducibleBundle(X, summands)

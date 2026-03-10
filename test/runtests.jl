@@ -3,6 +3,8 @@ using PartialFlagVarieties
 using Lie
 using StaticArrays
 
+mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
+
 @testset "PartialFlagVarieties.jl" begin
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -50,7 +52,7 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "MarkedDynkinType basics" begin
-    MDT = MarkedDynkinType{TypeA{4},(2,)}
+    MDT = mdt(TypeA{4}, (2,))
 
     @test marked_nodes(MDT) == (2,)
     @test unmarked_nodes(MDT) == (1, 3, 4)
@@ -59,13 +61,13 @@ using StaticArrays
     @test rank(MDT) == 4
 
     # Full flag
-    MDT_full = MarkedDynkinType{TypeA{3}, (1, 2, 3)}
+    MDT_full = mdt(TypeA{3}, (1, 2, 3))
     @test levi_type(MDT_full) === nothing
     @test central_rank(MDT_full) == 3
     @test levi_rank(MDT_full) == 0
 
     # Two marked nodes
-    MDT2 = MarkedDynkinType{TypeA{4}, (1, 3)}
+    MDT2 = mdt(TypeA{4}, (1, 3))
     @test marked_nodes(MDT2) == (1, 3)
     @test unmarked_nodes(MDT2) == (2, 4)
     @test central_rank(MDT2) == 2
@@ -73,13 +75,16 @@ using StaticArrays
 
   @testset "MarkedDynkinType constructors" begin
     mdt1 = MarkedDynkinType(TypeA{3}, (2,))
-    @test mdt1 isa MarkedDynkinType{TypeA{3},(2,)}
+    @test dynkin_type(mdt1) === TypeA{3}
+    @test marked_nodes(mdt1) == (2,)
 
     mdt2 = MarkedDynkinType(TypeB{4}, [1, 3])
-    @test mdt2 isa MarkedDynkinType{TypeB{4},(1,3)}
+    @test dynkin_type(mdt2) === TypeB{4}
+    @test marked_nodes(mdt2) == (1, 3)
 
     mdt3 = MarkedDynkinType(TypeD{5}, 5)
-    @test mdt3 isa MarkedDynkinType{TypeD{5},(5,)}
+    @test dynkin_type(mdt3) === TypeD{5}
+    @test marked_nodes(mdt3) == (5,)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -88,23 +93,23 @@ using StaticArrays
 
   @testset "Levi type computation" begin
     # Gr(2,5) = A4/P2 → Levi = A1 × A2
-    @test levi_type(MarkedDynkinType{TypeA{4},(2,)}) ==
+    @test levi_type(mdt(TypeA{4}, (2,))) ==
           ProductDynkinType{Tuple{TypeA{1},TypeA{2}}}
 
     # Gr(1,5) = A4/P1 → Levi = A3
-    @test levi_type(MarkedDynkinType{TypeA{4},(1,)}) == TypeA{3}
+    @test levi_type(mdt(TypeA{4}, (1,))) == TypeA{3}
 
     # D5/P5 → Levi = A4
-    @test levi_type(MarkedDynkinType{TypeD{5},(5,)}) == TypeA{4}
+    @test levi_type(mdt(TypeD{5}, (5,))) == TypeA{4}
 
     # B3/P1 → Levi = B2
-    @test levi_type(MarkedDynkinType{TypeB{3},(1,)}) == TypeB{2}
+    @test levi_type(mdt(TypeB{3}, (1,))) == TypeB{2}
 
     # E6/P1 → Levi = D5
-    @test levi_type(MarkedDynkinType{TypeE{6},(1,)}) == TypeD{5}
+    @test levi_type(mdt(TypeE{6}, (1,))) == TypeD{5}
 
     # E6/P2 → Levi = A4 × ... (compute and check rank)
-    @test levi_rank(MarkedDynkinType{TypeE{6},(2,)}) == 5
+    @test levi_rank(mdt(TypeE{6}, (2,))) == 5
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -227,7 +232,7 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Decomposition matrix" begin
-    MDT = MarkedDynkinType{TypeA{3},(2,)}
+    MDT = mdt(TypeA{3}, (2,))
     M = decomposition_matrix(MDT)
     Minv = decomposition_matrix_inv(MDT)
 
@@ -280,13 +285,13 @@ using StaticArrays
 
   @testset "Tangent weights" begin
     # ℙⁿ: tangent bundle is irreducible → 1 tangent weight
-    @test length(tangent_weights(MarkedDynkinType{TypeA{4},(1,)})) == 1
+    @test length(tangent_weights(mdt(TypeA{4}, (1,)))) == 1
 
     # Gr(2,4) = A3/P2: T = S* ⊗ Q (irreducible under Levi) → 1 tangent weight
-    @test length(tangent_weights(MarkedDynkinType{TypeA{3},(2,)})) == 1
+    @test length(tangent_weights(mdt(TypeA{3}, (2,)))) == 1
 
     # Full flag: each positive root is maximal → #tangent weights = dim
-    @test length(tangent_weights(MarkedDynkinType{TypeA{2},(1,2)})) == 3
+    @test length(tangent_weights(mdt(TypeA{2}, (1, 2)))) == 3
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -294,7 +299,7 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Root decomposition" begin
-    MDT = MarkedDynkinType{TypeA{3},(2,)}
+    MDT = mdt(TypeA{3}, (2,))
 
     nonpar = positive_nonparabolic_roots(MDT)
     par = positive_parabolic_roots(MDT)
@@ -312,7 +317,7 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "IrrepLevi construction" begin
-    MDT = MarkedDynkinType{TypeA{3},(2,)}
+    MDT = mdt(TypeA{3}, (2,))
 
     # Fundamental weight ω₁
     ω₁ = fundamental_weight(TypeA{3}, 1)
@@ -326,7 +331,7 @@ using StaticArrays
   end
 
   @testset "IrrepLevi round-trip" begin
-    MDT = MarkedDynkinType{TypeA{4},(2,)}
+    MDT = mdt(TypeA{4}, (2,))
 
     for i in 1:4
       ω = fundamental_weight(TypeA{4}, i)
@@ -336,7 +341,7 @@ using StaticArrays
   end
 
   @testset "IrrepLevi dual" begin
-    MDT = MarkedDynkinType{TypeA{3},(2,)}
+    MDT = mdt(TypeA{3}, (2,))
     ω₁ = fundamental_weight(TypeA{3}, 1)
     rep = IrrepLevi(MDT, ω₁)
     d = dual(rep)
@@ -487,11 +492,6 @@ using StaticArrays
     X = projective_space(2)
     prod = canonical_bundle(X) ⊗ anticanonical_bundle(X)
     @test dimensions(prod)[0] == 1  # H^0(O) = 1
-
-    # Type-level dispatch: canonical_bundle(::Type{MDT})
-    MDT = marked_type(projective_space(2))
-    @test rank_bundle(canonical_bundle(MDT)) == 1
-    @test rank_bundle(anticanonical_bundle(MDT)) == 1
   end
 
   @testset "Fano index: ambient varieties" begin
@@ -676,7 +676,7 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Marked Dynkin diagram" begin
-    diagram = marked_dynkin_diagram(MarkedDynkinType{TypeA{4},(2,)})
+    diagram = marked_dynkin_diagram(mdt(TypeA{4}, (2,)))
     @test occursin("×", diagram)
     @test occursin("○", diagram)
   end
@@ -693,7 +693,7 @@ using StaticArrays
       (TypeE{6}, (1,)),
       (TypeG2, (1,)),
     ]
-      MDT = MarkedDynkinType{DT,marks}
+      MDT = mdt(DT, marks)
       X = partial_flag_variety(DT, marks)
       @test dimension(X) == length(positive_nonparabolic_roots(MDT))
     end
@@ -729,20 +729,20 @@ using StaticArrays
 
   @testset "levi_permutation" begin
     # For type A, canonical ordering = natural ordering → identity permutation
-    perm_A4 = levi_permutation(MarkedDynkinType{TypeA{4},(2,)})
+    perm_A4 = levi_permutation(mdt(TypeA{4}, (2,)))
     @test collect(perm_A4) == [1, 2, 3]
 
     # D4/P1: unmarked nodes (2,3,4) of D4 form an A3 sub-diagram
     # cartan_type_with_ordering finds the canonical A3 ordering = [2,1,3]
-    perm_D4 = levi_permutation(MarkedDynkinType{TypeD{4},(1,)})
+    perm_D4 = levi_permutation(mdt(TypeD{4}, (1,)))
     @test collect(perm_D4) == [2, 1, 3]
 
     # B3/P1: unmarked nodes (2,3) form a B2 sub-diagram → identity
-    perm_B3 = levi_permutation(MarkedDynkinType{TypeB{3},(1,)})
+    perm_B3 = levi_permutation(mdt(TypeB{3}, (1,)))
     @test length(perm_B3) == 2
 
     # G2/P1: unmarked node (2) → trivial A1 sub-diagram
-    perm_G2 = levi_permutation(MarkedDynkinType{TypeG2,(1,)})
+    perm_G2 = levi_permutation(mdt(TypeG2, (1,)))
     @test collect(perm_G2) == [1]
   end
 
@@ -751,7 +751,7 @@ using StaticArrays
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "IrrepLevi round-trip: D types" begin
-    MDT = MarkedDynkinType{TypeD{4},(1,)}
+    MDT = mdt(TypeD{4}, (1,))
     for i in 1:4
       ω = fundamental_weight(TypeD{4}, i)
       rep = IrrepLevi(MDT, ω)
@@ -966,7 +966,7 @@ using StaticArrays
     T = tangent_bundle(X)
     @test T isa Bundle
     @test T isa CompletelyReducibleBundle
-    @test T isa Bundle{marked_type(X)}
+    @test variety(T) === X
     @test structure_sheaf(X) isa Bundle
   end
 
@@ -1209,6 +1209,10 @@ using StaticArrays
       H_F4 = dimensions(cohomology(line_bundle(Y_F4, t)))
       @test H_Z[0] == H_F4[0]
     end
+
+    # Test that cohomology_on_restriction validates that F lives on the ambient variety of Z
+    F_wrong = line_bundle(Y_F4, 1)
+    @test_throws ArgumentError cohomology_on_restriction(Z, F_wrong)
   end
 
   @testset "ZeroLocus: Euler characteristic" begin
