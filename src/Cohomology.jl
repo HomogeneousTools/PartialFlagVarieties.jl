@@ -148,27 +148,29 @@ function cohomology(E::CompletelyReducibleBundle)
   mdt = marked_dynkin_type(variety(E))
   DT = dynkin_type(mdt)
   R = rank(DT)
-  R = rank(DT)
   d = dimension(E.variety)
 
   # Initialize cohomology entries as zero characters
   entries = [WeylCharacter(DT) for _ in 0:d]
 
+  weight_counts = Dict{WeightLatticeElem,Int}()
   for comp in components(E)
-    # Convert to ambient weight
     λ = to_ambient_weight(mdt, comp)
+    weight_counts[λ] = get(weight_counts, λ, 0) + 1
+  end
 
-    # Apply Borel–Weil–Bott
+  for (λ, mult) in weight_counts
     result = borel_weil_bott(λ)
 
     if result !== nothing
       (deg, μ) = result
-      # Add the irreducible V_μ to H^deg
       if 0 <= deg <= d
-        add!(entries[deg + 1], WeylCharacter(μ))
+        χμ = WeylCharacter(μ)
+        for _ in 1:mult
+          add!(entries[deg + 1], χμ)
+        end
       end
     end
-    # If result is nothing, weight is singular → all Hⁱ vanish for this component
   end
 
   return Cohomology{WeylCharacter{DT,R}}(entries, d)
@@ -219,7 +221,26 @@ end
 Compute dimension-valued cohomology directly.
 """
 function dimensions(E::CompletelyReducibleBundle)
-  return dimensions(cohomology(E))
+  mdt = marked_dynkin_type(variety(E))
+  d = dimension(E.variety)
+  entries = zeros(BigInt, d + 1)
+
+  weight_counts = Dict{WeightLatticeElem,Int}()
+  for comp in components(E)
+    λ = to_ambient_weight(mdt, comp)
+    weight_counts[λ] = get(weight_counts, λ, 0) + 1
+  end
+
+  for (λ, mult) in weight_counts
+    result = borel_weil_bott(λ)
+    result === nothing && continue
+    deg, μ = result
+    if 0 <= deg <= d
+      entries[deg + 1] += mult * degree(μ)
+    end
+  end
+
+  Cohomology{BigInt}(entries, d)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -354,12 +375,14 @@ true
 ```
 """
 function hilbert_polynomial(E::CompletelyReducibleBundle;
-  max_degree::Int=20
+  max_degree::Int=20,
 )
   marked = marked_nodes(variety(E))
-  length(marked) == 1 || throw(ArgumentError(
-    "Hilbert polynomial requires a generalized Grassmannian (1 marked node)"
-  ))
+  length(marked) == 1 || throw(
+    ArgumentError(
+      "Hilbert polynomial requires a generalized Grassmannian (1 marked node)"
+    ),
+  )
 
   d = dimension(E.variety)
   # By Riemann-Roch-Hirzebruch or direct computation,
@@ -490,7 +513,7 @@ end
 function _superscript(n::Int)
   digits = Dict(
     '0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
-    '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹'
+    '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹',
   )
   return String([get(digits, c, c) for c in string(n)])
 end

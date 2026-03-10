@@ -341,7 +341,7 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
   println("╟──────────────────────────────────────────────────────────────────────╢")
   println("║  Varieties: $(lpad(n, 3))                                                  ║")
   println(
-    "║  Rank:      ≤ $(max_rank)$(include_e8 ? " (including E₈)" : "              ")                                  ║",
+    "║  Rank:      ≤ $(max_rank)$(include_e8 ? " (including E₈)" : "              ")                                  ║"
   )
   println("║  Output:    $(rpad(relpath(OUTPUT_DIR), 52))║")
   println(

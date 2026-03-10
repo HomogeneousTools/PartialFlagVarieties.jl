@@ -52,7 +52,7 @@ mutable struct ZeroLocus
   const defining_bundle::CompletelyReducibleBundle
   # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧˾i E*.
   # Populated lazily on the first call that needs them; reused thereafter.
-  koszul_wedges::Union{Nothing, Vector{CompletelyReducibleBundle}}
+  koszul_wedges::Union{Nothing,Vector{CompletelyReducibleBundle}}
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -162,9 +162,11 @@ Return the terms of the twisted Koszul complex:
 where ``E`` is the defining bundle and ``r = \\mathrm{rank}(E)``.
 """
 function koszul_terms(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(ArgumentError(
-    "koszul_terms requires a bundle on the ambient variety of the zero locus."
-  ))
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError(
+      "koszul_terms requires a bundle on the ambient variety of the zero locus."
+    ),
+  )
   CompletelyReducibleBundle[tensor_product(F, w) for w in _koszul_wedges!(Z)]
 end
 
@@ -242,9 +244,11 @@ function cohomology_on_restriction(
   Z::ZeroLocus,
   F::CompletelyReducibleBundle,
 )
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(ArgumentError(
-    "The bundle F must live on the ambient variety of the zero locus Z"
-  ))
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError(
+      "The bundle F must live on the ambient variety of the zero locus Z"
+    ),
+  )
   d_Z = dimension(Z)
 
   terms = koszul_terms(Z, F)
@@ -282,7 +286,8 @@ function cohomology_on_restriction(
     # all available constraints and the result can be trusted.
     dim_ambient = koszul_cohos[1].dim_variety
     chi_exact = sum(
-      ((-1)^(i - 1)) * sum((-1)^k * koszul_cohos[i][k] for k in 0:dim_ambient; init=BigInt(0))
+      ((-1)^(i - 1)) *
+      sum((-1)^k * koszul_cohos[i][k] for k in 0:dim_ambient; init=BigInt(0))
       for i in 1:length(koszul_cohos);
       init=BigInt(0),
     )
@@ -290,7 +295,8 @@ function cohomology_on_restriction(
 
     dim_ambient_dual = koszul_cohos_dual[1].dim_variety
     chi_exact_dual = sum(
-      ((-1)^(i - 1)) * sum((-1)^k * koszul_cohos_dual[i][k] for k in 0:dim_ambient_dual; init=BigInt(0))
+      ((-1)^(i - 1)) *
+      sum((-1)^k * koszul_cohos_dual[i][k] for k in 0:dim_ambient_dual; init=BigInt(0))
       for i in 1:length(koszul_cohos_dual);
       init=BigInt(0),
     )
@@ -568,9 +574,10 @@ julia> fano_index(Z_CY)  # Calabi–Yau: -K_Z = O(0)
 """
 function fano_index(Z::ZeroLocus)
   marked = marked_nodes(Z.ambient)
-  length(marked) == 1 || throw(ArgumentError(
-    "fano_index is only defined for zero loci in Picard-rank-1 ambient varieties; " *
-    "use anticanonical_degrees and det_bundle for the general case.")
+  length(marked) == 1 || throw(
+    ArgumentError(
+      "fano_index is only defined for zero loci in Picard-rank-1 ambient varieties; " *
+      "use anticanonical_degrees and det_bundle for the general case."),
   )
   m = marked[1]
   det_E = det_bundle(Z.defining_bundle)
@@ -804,7 +811,7 @@ Recursion: ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z) =
             \\wedge^i E^* \\otimes G|_Z)``
 """
 function _chi_omega_tensor(
-  Z::ZeroLocus, j::Int, G::CompletelyReducibleBundle,
+  Z::ZeroLocus, j::Int, G::CompletelyReducibleBundle
 )
   X = Z.ambient
 
@@ -825,7 +832,7 @@ end
 
 """Try to resolve remaining unknowns in row `p` of the Hodge diamond."""
 function _resolve_remaining!(
-  hodge::Matrix{BigInt}, known::BitMatrix, p::Int, d::Int, χ::BigInt,
+  hodge::Matrix{BigInt}, known::BitMatrix, p::Int, d::Int, χ::BigInt
 )
   unknown_qs = [q for q in 0:d if !known[p + 1, q + 1]]
 
