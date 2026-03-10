@@ -641,7 +641,6 @@ function anticanonical_degrees(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)
   unmarked = unmarked_nodes(X)
-  R = rank(X)
   n = length(unmarked)
   C = Lie._cartan_matrix_data(DT)
 

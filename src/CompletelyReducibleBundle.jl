@@ -68,22 +68,14 @@ struct CompletelyReducibleBundle{MDT<:MarkedDynkinType} <: Bundle{MDT}
 end
 
 """
-    CompletelyReducibleBundle(mdt::MarkedDynkinType, λ::WeightLatticeElem) -> CompletelyReducibleBundle
+    CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem) -> CompletelyReducibleBundle
 
-Construct the equivariant bundle on the partial flag variety determined by `mdt`
+Construct the equivariant bundle on the partial flag variety `X``
 corresponding to the Levi representation of highest weight `λ`.
 """
-function CompletelyReducibleBundle(mdt::MarkedDynkinType, λ::WeightLatticeElem)
-  # TODO I feel like this method should't exist
-  MDT = typeof(mdt)
-  rep = IrrepLevi(MDT, λ)
-  return CompletelyReducibleBundle(PartialFlagVariety{MDT}(), IrrepLevi{MDT}[rep])
-end
-
 function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
-  # TODO what's the point of this?
-  E = CompletelyReducibleBundle(marked_dynkin_type(X), λ)
-  return CompletelyReducibleBundle(X, components(E))
+  MDT = typeof(marked_dynkin_type(X))
+  return CompletelyReducibleBundle(X, IrrepLevi{MDT}[IrrepLevi(MDT, λ)])
 end
 
 # ─── Accessors ───────────────────────────────────────────────────────────────
@@ -233,12 +225,12 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
     string("Expected ", length(marked), " degrees (one per marked node), got ", length(degrees), ".")
   ))
 
-  coords = zeros(Int, rank(X))
+  coefficients = zeros(Int, rank(X))
   for (j, m) in enumerate(marked)
-    coords[m] = Int(degrees[j])
+    coefficients[m] = Int(degrees[j])
   end
 
-  λ = WeightLatticeElem(dynkin_type(X), SVector{rank(X),Int}(coords))
+  λ = WeightLatticeElem(dynkin_type(X), coefficients)
   return CompletelyReducibleBundle(X, λ)
 end
 
@@ -312,7 +304,6 @@ function cotangent_bundle(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinTy
 end
 
 """
-    canonical_bundle(::Type{MDT}) -> CompletelyReducibleBundle
     canonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The canonical line bundle ``\\omega_{G/P} = K_{G/P}``.
@@ -351,17 +342,7 @@ function canonical_bundle(X::PartialFlagVariety)
   return line_bundle(X, Vector{Int}(-degs))
 end
 
-"""Type-level dispatch of [`canonical_bundle`](@ref): returns a zero-variety
-bundle placeholder for use in type-level computations.
-
-Same as `canonical_bundle(X)` where `X = PartialFlagVariety{MDT}()`."""
-function canonical_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  X = PartialFlagVariety{MDT}()
-  canonical_bundle(X)
-end
-
 """
-    anticanonical_bundle(::Type{MDT}) -> CompletelyReducibleBundle
     anticanonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The anticanonical line bundle ``\\omega_{G/P}^{-1} = -K_{G/P}``.
@@ -396,17 +377,7 @@ julia> dimensions(L2)[0]  # H⁰(ℙ⁴, 𝒪(5)) = 126
 ```
 """
 function anticanonical_bundle(X::PartialFlagVariety)
-  degs = anticanonical_degrees(X)
-  return line_bundle(X, Vector{Int}(degs))
-end
-
-"""Type-level dispatch of [`anticanonical_bundle`](@ref): returns a zero-variety
-bundle placeholder for use in type-level computations.
-
-Same as `anticanonical_bundle(X)` where `X = PartialFlagVariety{MDT}()`."""
-function anticanonical_bundle(::Type{MDT}) where {MDT<:MarkedDynkinType}
-  X = PartialFlagVariety{MDT}()
-  anticanonical_bundle(X)
+  return line_bundle(X, anticanonical_degrees(X))
 end
 
 """
