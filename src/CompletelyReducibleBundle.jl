@@ -88,7 +88,7 @@ corresponding to the Levi representation of highest weight `λ`.
 """
 function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
   mdt = marked_dynkin_type(X)
-  return CompletelyReducibleBundle(X, IrrepLevi[IrrepLevi(mdt, λ)])
+  CompletelyReducibleBundle(X, IrrepLevi[IrrepLevi(mdt, λ)])
 end
 
 # ─── Accessors ───────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 function rank_bundle(E::CompletelyReducibleBundle)
-  return sum(fiber_dimension(c) for c in E.components; init=BigInt(0))
+  sum(fiber_dimension(c) for c in E.components; init=BigInt(0))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -154,7 +154,7 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 function O(X::PartialFlagVariety)
-  return CompletelyReducibleBundle(X, WeightLatticeElem(dynkin_type(X)))
+  CompletelyReducibleBundle(X, WeightLatticeElem(dynkin_type(X)))
 end
 
 """
@@ -180,7 +180,7 @@ structure_sheaf(X::PartialFlagVariety) = O(X)
 The zero bundle on `X` (the empty direct sum).
 """
 function zero_bundle(X::PartialFlagVariety)
-  return CompletelyReducibleBundle(X, IrrepLevi[])
+  CompletelyReducibleBundle(X, IrrepLevi[])
 end
 
 """
@@ -212,7 +212,7 @@ function line_bundle(X::PartialFlagVariety, i::Integer)
     ),
   )
 
-  return line_bundle(X, [i])
+  line_bundle(X, [i])
 end
 
 """
@@ -253,7 +253,7 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
   end
 
   λ = WeightLatticeElem(dynkin_type(X), coefficients)
-  return CompletelyReducibleBundle(X, λ)
+  CompletelyReducibleBundle(X, λ)
 end
 
 # ─── Type-level caches for tangent/cotangent rep lists ───────────────────────
@@ -303,7 +303,7 @@ julia> rank_bundle(T)
 ```
 """
 function tangent_bundle(X::PartialFlagVariety)
-  return CompletelyReducibleBundle(X, _tangent_reps(marked_dynkin_type(X)))
+  CompletelyReducibleBundle(X, _tangent_reps(marked_dynkin_type(X)))
 end
 
 """
@@ -322,7 +322,7 @@ true
 ```
 """
 function cotangent_bundle(X::PartialFlagVariety)
-  return CompletelyReducibleBundle(X, _cotangent_reps(marked_dynkin_type(X)))
+  CompletelyReducibleBundle(X, _cotangent_reps(marked_dynkin_type(X)))
 end
 
 """
@@ -361,7 +361,7 @@ julia> dimensions(K2)[4]  # H⁴(ℙ⁴, 𝒪(-5)) = 1
 """
 function canonical_bundle(X::PartialFlagVariety)
   degs = anticanonical_degrees(X)
-  return line_bundle(X, Vector{Int}(-degs))
+  line_bundle(X, Vector{Int}(-degs))
 end
 
 """
@@ -399,7 +399,7 @@ julia> dimensions(L2)[0]  # H⁰(ℙ⁴, 𝒪(5)) = 126
 ```
 """
 function anticanonical_bundle(X::PartialFlagVariety)
-  return line_bundle(X, anticanonical_degrees(X))
+  line_bundle(X, anticanonical_degrees(X))
 end
 
 """
@@ -464,7 +464,7 @@ true
 ```
 """
 function dual(E::CompletelyReducibleBundle)
-  return CompletelyReducibleBundle(variety(E), IrrepLevi[dual(c) for c in E.components])
+  CompletelyReducibleBundle(variety(E), IrrepLevi[dual(c) for c in E.components])
 end
 
 """
@@ -518,7 +518,7 @@ function tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBund
       end
     end
   end
-  return CompletelyReducibleBundle(X, result)
+  CompletelyReducibleBundle(X, result)
 end
 
 """
@@ -586,7 +586,7 @@ function exterior_power(E::CompletelyReducibleBundle, k::Integer)
     append!(result, current)
   end
 
-  return CompletelyReducibleBundle(E.variety, result)
+  CompletelyReducibleBundle(E.variety, result)
 end
 
 """
@@ -648,7 +648,7 @@ function symmetric_power(E::CompletelyReducibleBundle, k::Integer)
     append!(result, current)
   end
 
-  return CompletelyReducibleBundle(E.variety, result)
+  CompletelyReducibleBundle(E.variety, result)
 end
 
 """
@@ -695,7 +695,7 @@ function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
       "direct_sum requires bundles on the same partial flag variety type."
     ),
   )
-  return CompletelyReducibleBundle(X, vcat(E.components, F.components))
+  CompletelyReducibleBundle(X, vcat(E.components, F.components))
 end
 
 # ─── Twist ───────────────────────────────────────────────────────────────────
@@ -735,7 +735,7 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
   for c in E.components
     append!(result, tensor_product(c, twist_rep))
   end
-  return CompletelyReducibleBundle(E.variety, result)
+  CompletelyReducibleBundle(E.variety, result)
 end
 
 # ─── Arithmetic operators ───────────────────────────────────────────────────
@@ -751,7 +751,7 @@ Returns the zero bundle when `n == 0` and throws for `n < 0`.
 function Base.:*(n::Integer, E::CompletelyReducibleBundle)
   n < 0 && throw(ArgumentError("Cannot multiply a bundle by a negative integer ($n)"))
   n == 0 && return zero_bundle(E.variety)
-  return CompletelyReducibleBundle(E.variety, repeat(E.components, n))
+  CompletelyReducibleBundle(E.variety, repeat(E.components, n))
 end
 Base.:*(E::CompletelyReducibleBundle, n::Integer) = n * E
 
