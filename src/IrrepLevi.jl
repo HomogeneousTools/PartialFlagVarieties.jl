@@ -89,10 +89,14 @@ function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
   IrrepLevi(mdt, λ, central, semisimple)
 end
 
-function IrrepLevi(mdt::MarkedDynkinType, central::AbstractVector{Int}, semisimple::WeightLatticeElem)
-  length(central) == _central_length(mdt) || throw(ArgumentError(
-    "Expected $(_central_length(mdt)) central coordinates, got $(length(central))."
-  ))
+function IrrepLevi(
+  mdt::MarkedDynkinType, central::AbstractVector{Int}, semisimple::WeightLatticeElem
+)
+  length(central) == _central_length(mdt) || throw(
+    ArgumentError(
+      "Expected $(_central_length(mdt)) central coordinates, got $(length(central))."
+    ),
+  )
 
   DT = dynkin_type(mdt)
   marked = marked_nodes(mdt)
@@ -132,7 +136,9 @@ function IrrepLevi(mdt::MarkedDynkinType, central::AbstractVector{Int}, semisimp
   IrrepLevi(mdt, λ, Vector{Int}(central), semisimple)
 end
 
-function IrrepLevi(mdt::MarkedDynkinType, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem)
+function IrrepLevi(
+  mdt::MarkedDynkinType, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem
+)
   sf = central_scaling_factor(mdt)
   central_scaled = Int[Int(c * sf) for c in central]
   IrrepLevi(mdt, central_scaled, semisimple)
@@ -141,7 +147,8 @@ end
 to_ambient_weight(rep::IrrepLevi) = p_dominant_weight(rep)
 
 function to_ambient_weight(mdt::MarkedDynkinType, rep::IrrepLevi)
-  marked_dynkin_type(rep) == mdt || throw(ArgumentError("Representation belongs to a different marked Dynkin type."))
+  marked_dynkin_type(rep) == mdt ||
+    throw(ArgumentError("Representation belongs to a different marked Dynkin type."))
   p_dominant_weight(rep)
 end
 
@@ -158,9 +165,11 @@ function Base.show(io::IO, rep::IrrepLevi)
 end
 
 function tensor_product(a::IrrepLevi, b::IrrepLevi)
-  marked_dynkin_type(a) == marked_dynkin_type(b) || throw(ArgumentError(
-    "tensor_product requires Levi representations with the same marked Dynkin type."
-  ))
+  marked_dynkin_type(a) == marked_dynkin_type(b) || throw(
+    ArgumentError(
+      "tensor_product requires Levi representations with the same marked Dynkin type."
+    ),
+  )
 
   mdt = marked_dynkin_type(a)
   new_central = a.central + b.central
@@ -202,7 +211,9 @@ function exterior_power(rep::IrrepLevi, k::Integer)
   mdt = marked_dynkin_type(rep)
 
   k < 0 && return IrrepLevi[]
-  k == 0 && return [IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))]
+  k == 0 && return [
+    IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))
+  ]
   k == 1 && return [rep]
 
   new_central = k .* rep.central
@@ -230,7 +241,9 @@ function symmetric_power(rep::IrrepLevi, k::Integer)
   mdt = marked_dynkin_type(rep)
 
   k < 0 && return IrrepLevi[]
-  k == 0 && return [IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))]
+  k == 0 && return [
+    IrrepLevi(mdt, zeros(Int, length(rep.central)), _trivial_semisimple_weight(mdt))
+  ]
   k == 1 && return [rep]
 
   new_central = k .* rep.central
@@ -250,6 +263,7 @@ function symmetric_power(rep::IrrepLevi, k::Integer)
 end
 
 Base.:(==)(a::IrrepLevi, b::IrrepLevi) =
-  marked_dynkin_type(a) == marked_dynkin_type(b) && p_dominant_weight(a) == p_dominant_weight(b)
+  marked_dynkin_type(a) == marked_dynkin_type(b) &&
+  p_dominant_weight(a) == p_dominant_weight(b)
 
 Base.hash(a::IrrepLevi, h::UInt) = hash((a.mdt, a.λ), h)

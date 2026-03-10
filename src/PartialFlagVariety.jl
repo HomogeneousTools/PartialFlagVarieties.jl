@@ -25,17 +25,23 @@ PartialFlagVariety(mdt::MarkedDynkinType, name::String="") = PartialFlagVariety(
 
 Construct the partial flag variety of type `DT/P_marked`.
 """
-function partial_flag_variety(::Type{DT}, marked::Tuple, name::String="") where {DT<:DynkinType}
+function partial_flag_variety(
+  ::Type{DT}, marked::Tuple, name::String=""
+) where {DT<:DynkinType}
   PartialFlagVariety(MarkedDynkinType(DT, marked), name)
 end
 
-partial_flag_variety(::Type{DT}, marked::Vector{<:Integer}, name::String="") where {DT<:DynkinType} =
-  partial_flag_variety(DT, Tuple(sort(Int.(marked))), name)
+partial_flag_variety(::Type{DT}, marked::Vector{<:Integer}, name::String="") where {DT<:DynkinType} = partial_flag_variety(
+  DT, Tuple(sort(Int.(marked))), name
+)
 
-partial_flag_variety(::Type{DT}, marked::Integer, name::String="") where {DT<:DynkinType} =
-  partial_flag_variety(DT, (Int(marked),), name)
+partial_flag_variety(::Type{DT}, marked::Integer, name::String="") where {DT<:DynkinType} = partial_flag_variety(
+  DT, (Int(marked),), name
+)
 
-function partial_flag_variety(s::AbstractString, marked::AbstractVector{<:Integer}, name::String="")
+function partial_flag_variety(
+  s::AbstractString, marked::AbstractVector{<:Integer}, name::String=""
+)
   partial_flag_variety(parse_dynkin_type(s), Vector{Int}(marked), name)
 end
 
@@ -43,8 +49,9 @@ function partial_flag_variety(s::AbstractString, marked::Integer, name::String="
   partial_flag_variety(parse_dynkin_type(s), Int(marked), name)
 end
 
-PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) =
-  partial_flag_variety(parse_dynkin_type(s), Vector{Int}(marked))
+PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_variety(
+  parse_dynkin_type(s), Vector{Int}(marked)
+)
 
 """Construct the full flag variety `G/B` of type `DT`."""
 function full_flag_variety(::Type{DT}, name::String="") where {DT<:DynkinType}
@@ -87,7 +94,11 @@ end
 """Return the Betti numbers of `X` in even degrees."""
 function betti_numbers(X::PartialFlagVariety)
   degs_G = collect(degrees_fundamental_invariants(dynkin_type(X)))
-  degs_L = is_borel(marked_dynkin_type(X)) ? Int[] : collect(degrees_fundamental_invariants(levi_type(X)))
+  degs_L = if is_borel(marked_dynkin_type(X))
+    Int[]
+  else
+    collect(degrees_fundamental_invariants(levi_type(X)))
+  end
 
   num = BigInt[1]
   for d in degs_G
@@ -225,5 +236,6 @@ function anticanonical_degrees(X::PartialFlagVariety)
   Int[round(Int, 2 - 2 * sum(C[i, unmarked[q]] * x_L[q] for q in 1:n)) for i in marked]
 end
 
-Base.:(==)(X₁::PartialFlagVariety, X₂::PartialFlagVariety) = marked_dynkin_type(X₁) == marked_dynkin_type(X₂)
+Base.:(==)(X₁::PartialFlagVariety, X₂::PartialFlagVariety) =
+  marked_dynkin_type(X₁) == marked_dynkin_type(X₂)
 Base.hash(X::PartialFlagVariety, h::UInt) = hash(marked_dynkin_type(X), h)

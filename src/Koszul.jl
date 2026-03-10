@@ -71,7 +71,7 @@ function solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
   end
 
   # Iterate forward-backward passes until convergence
-  for _ in 1:d + 2
+  for _ in 1:(d + 2)
     changed = false
 
     # Forward pass
@@ -232,7 +232,9 @@ function solve_koszul_filtration(
   end
 
   # Extract symbolic entries at 0..dim_zero_locus.
-  sym_result = Cohomology{AffineExpr}(AffineExpr[mat[1, k + 1] for k in 0:dim_zero_locus], dim_zero_locus)
+  sym_result = Cohomology{AffineExpr}(
+    AffineExpr[mat[1, k + 1] for k in 0:dim_zero_locus], dim_zero_locus
+  )
 
   # Apply the Euler characteristic constraint: χ(F|_Z) = Σ_i (-1)^i χ(K_i).
   # χ(K_i) is computed exactly from the ambient Koszul terms.
@@ -299,7 +301,9 @@ end
 AffineExpr(c::Integer) = AffineExpr(BigInt(c), Dict{Int,BigInt}())
 
 """Create a fresh symbolic variable ``x_i``."""
-symbolic_variable(var_id::Int) = AffineExpr(BigInt(0), Dict{Int,BigInt}(var_id => BigInt(1)))
+symbolic_variable(var_id::Int) = AffineExpr(
+  BigInt(0), Dict{Int,BigInt}(var_id => BigInt(1))
+)
 
 """Check whether the expression is fully determined (no symbolic variables)."""
 is_determined(e::AffineExpr) = isempty(e.coeffs)
@@ -332,7 +336,9 @@ end
 
 function Base.:*(c::Integer, a::AffineExpr)
   c == 0 && return AffineExpr(0)
-  AffineExpr(BigInt(c) * a.constant, Dict{Int,BigInt}(k => BigInt(c) * v for (k, v) in a.coeffs))
+  AffineExpr(
+    BigInt(c) * a.constant, Dict{Int,BigInt}(k => BigInt(c) * v for (k, v) in a.coeffs)
+  )
 end
 Base.:*(a::AffineExpr, c::Integer) = c * a
 
@@ -350,7 +356,7 @@ Base.:-(c::Integer, a::AffineExpr) = AffineExpr(c) - a
 function Base.show(io::IO, e::AffineExpr)
   if isempty(e.coeffs)
     print(io, e.constant)
-    return
+    return nothing
   end
   sorted_vars = sort(collect(e.coeffs); by=first)
   first_term = true
@@ -450,7 +456,9 @@ end
 Apply the constraint ``\\mathrm{hodge}[pi, qi] = \\mathrm{target}`` by
 eliminating one symbolic variable.
 """
-function _apply_linear_constraint!(hodge::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt)
+function _apply_linear_constraint!(
+  hodge::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt
+)
   expr = hodge[pi, qi]
   is_determined(expr) && return false
   _apply_equation!(hodge, expr - AffineExpr(target))
@@ -470,8 +478,10 @@ function _ses_delta_bounds(a_vals::Vector{BigInt}, b_vals::Vector{BigInt}, d::In
   lb = zeros(BigInt, d + 2)
   ub = fill(BigInt(10)^18, d + 2)
 
-  lb[1] = BigInt(0); ub[1] = BigInt(0)      # δ_{-1} = 0
-  lb[d + 2] = BigInt(0); ub[d + 2] = BigInt(0)  # δ_d = 0
+  lb[1] = BigInt(0);
+  ub[1] = BigInt(0)      # δ_{-1} = 0
+  lb[d + 2] = BigInt(0);
+  ub[d + 2] = BigInt(0)  # δ_d = 0
 
   for i in 0:(d - 1)
     ub[i + 2] = min(ub[i + 2], a_vals[i + 2])  # δ_i ≤ a_{i+1}

@@ -30,7 +30,9 @@ function Lie.WeightLatticeElem(::Type{DT}) where {DT<:DynkinType}
   return WeightLatticeElem(DT, zero(SVector{R,Int}))
 end
 
-Base.zero(::Type{Lie.WeightLatticeElem{DT,R}}) where {DT<:DynkinType,R} = WeightLatticeElem(DT)
+Base.zero(::Type{Lie.WeightLatticeElem{DT,R}}) where {DT<:DynkinType,R} = WeightLatticeElem(
+  DT
+)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  cartan_type_with_ordering
@@ -148,15 +150,15 @@ function cartan_type_with_ordering(C::AbstractMatrix{<:Integer})
       # Trace the path
       path = [start, only(adj[start])]
       for _ in 1:(len_comp - 2)
-        push!(path, only(filter(!=(path[end-1]), adj[path[end]])))
+        push!(path, only(filter(!=(path[end - 1]), adj[path[end]])))
       end
 
       # Determine type from last edge
       if len_comp == 4 && C[path[3], path[2]] == -2
         push!(type, (:F, 4))
-      elseif C[path[end-1], path[end]] == -2
+      elseif C[path[end - 1], path[end]] == -2
         push!(type, (:C, len_comp))
-      elseif C[path[end], path[end-1]] == -2
+      elseif C[path[end], path[end - 1]] == -2
         push!(type, (:B, len_comp))
       else
         push!(type, (:A, len_comp))
@@ -170,7 +172,7 @@ function cartan_type_with_ordering(C::AbstractMatrix{<:Integer})
       paths = [[v_deg3, v_n] for v_n in adj[v_deg3]]
       for path in paths
         while length(adj[path[end]]) == 2
-          push!(path, only(filter(!=(path[end-1]), adj[path[end]])))
+          push!(path, only(filter(!=(path[end - 1]), adj[path[end]])))
         end
         popfirst!(path)  # remove the branch node itself
       end
@@ -293,10 +295,12 @@ function parse_dynkin_type(s::AbstractString)
     isempty(part) && continue
 
     m = match(r"^([A-Ga-g])(\d+)$", part)
-    m === nothing && throw(ArgumentError(
-      "Cannot parse Dynkin type component: \"$part\". " *
-      "Expected format like \"A3\", \"B4\", \"E6\"."
-    ))
+    m === nothing && throw(
+      ArgumentError(
+        "Cannot parse Dynkin type component: \"$part\". " *
+        "Expected format like \"A3\", \"B4\", \"E6\".",
+      ),
+    )
 
     fam = Symbol(uppercase(m.captures[1]))
     rk = parse(Int, m.captures[2])
@@ -322,12 +326,12 @@ end
 Check that `(fam, rk)` is a valid Cartan type. Throws `ArgumentError` if not.
 """
 function _validate_cartan_type(fam::Symbol, rk::Int)
-  fam === :A && rk >= 1 && return
-  fam === :B && rk >= 2 && return
-  fam === :C && rk >= 2 && return
-  fam === :D && rk >= 4 && return
-  fam === :E && rk in (6, 7, 8) && return
-  fam === :F && rk == 4 && return
-  fam === :G && rk == 2 && return
+  fam === :A && rk >= 1 && return nothing
+  fam === :B && rk >= 2 && return nothing
+  fam === :C && rk >= 2 && return nothing
+  fam === :D && rk >= 4 && return nothing
+  fam === :E && rk in (6, 7, 8) && return nothing
+  fam === :F && rk == 4 && return nothing
+  fam === :G && rk == 2 && return nothing
   throw(ArgumentError("Invalid Cartan type: ($fam, $rk)"))
 end

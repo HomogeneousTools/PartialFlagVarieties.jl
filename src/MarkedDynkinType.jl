@@ -38,9 +38,11 @@ struct MarkedDynkinType
 
     R = rank(dynkin)
     for m in marked
-      1 <= m <= R || throw(ArgumentError(
-        "Marked node $m is out of range for $(Lie._type_name(dynkin)) (rank $R)"
-      ))
+      1 <= m <= R || throw(
+        ArgumentError(
+          "Marked node $m is out of range for $(Lie._type_name(dynkin)) (rank $R)"
+        ),
+      )
     end
 
     issorted(marked) || throw(ArgumentError("Marked nodes must be sorted, got $marked"))
@@ -62,11 +64,13 @@ function MarkedDynkinType(::Type{DT}, marked::Tuple) where {DT<:DynkinType}
   invoke(MarkedDynkinType, Tuple{DataType,Tuple{Vararg{Int}}}, DT, marked_int)
 end
 
-MarkedDynkinType(::Type{DT}, marked::Vector{<:Integer}) where {DT<:DynkinType} =
-  MarkedDynkinType(DT, Tuple(sort(Int.(marked))))
+MarkedDynkinType(::Type{DT}, marked::Vector{<:Integer}) where {DT<:DynkinType} = MarkedDynkinType(
+  DT, Tuple(sort(Int.(marked)))
+)
 
-MarkedDynkinType(::Type{DT}, marked::Integer) where {DT<:DynkinType} =
-  MarkedDynkinType(DT, (Int(marked),))
+MarkedDynkinType(::Type{DT}, marked::Integer) where {DT<:DynkinType} = MarkedDynkinType(
+  DT, (Int(marked),)
+)
 
 struct _MarkedDynkinData
   unmarked::Tuple{Vararg{Int}}
@@ -124,9 +128,10 @@ function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
   _MarkedDynkinData(unmarked, levi, perm, sf, M, Minv, n_pos_G - n_pos_L)
 end
 
-_mdt_data(mdt::MarkedDynkinType) = get!(_marked_dynkin_cache, mdt) do
-  _compute_marked_dynkin_data(mdt)
-end
+_mdt_data(mdt::MarkedDynkinType) =
+  get!(_marked_dynkin_cache, mdt) do
+    _compute_marked_dynkin_data(mdt)
+  end
 
 """Return the ambient Dynkin type of `mdt`."""
 dynkin_type(mdt::MarkedDynkinType) = mdt.dynkin
@@ -165,7 +170,8 @@ are the corresponding rows of the inverse Cartan matrix.
 @inline decomposition_matrix(mdt::MarkedDynkinType) = _mdt_data(mdt).decomposition_matrix
 
 """Return the inverse of [`decomposition_matrix`](@ref)."""
-@inline decomposition_matrix_inv(mdt::MarkedDynkinType) = _mdt_data(mdt).decomposition_matrix_inv
+@inline decomposition_matrix_inv(mdt::MarkedDynkinType) =
+  _mdt_data(mdt).decomposition_matrix_inv
 
 Lie.rank(mdt::MarkedDynkinType) = rank(dynkin_type(mdt))
 
@@ -181,8 +187,7 @@ function _nonparabolic_height(α_vec::AbstractVector{<:Integer}, marked::Tuple{V
 end
 
 function positive_nonparabolic_roots(mdt::MarkedDynkinType)
-  DT = dynkin_type(mdt)
-  RS = RootSystem(DT)
+  RS = RootSystem(dynkin_type(mdt))
   roots = collect(positive_roots(RS))
   result = eltype(roots)[]
   for α in roots
@@ -192,8 +197,7 @@ function positive_nonparabolic_roots(mdt::MarkedDynkinType)
 end
 
 function positive_parabolic_roots(mdt::MarkedDynkinType)
-  DT = dynkin_type(mdt)
-  RS = RootSystem(DT)
+  RS = RootSystem(dynkin_type(mdt))
   roots = collect(positive_roots(RS))
   result = eltype(roots)[]
   for α in roots

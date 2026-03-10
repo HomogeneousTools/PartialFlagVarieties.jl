@@ -64,24 +64,24 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Table format with no borders and no dividing lines, used for Hodge diamonds.
-const _DIAMOND_FMT = TextTableFormat(
-  borders = text_table_borders__borderless,
-  horizontal_line_at_beginning = false,
-  horizontal_lines_at_column_labels = :none,
-  horizontal_line_at_merged_column_labels = false,
-  horizontal_line_after_column_labels = false,
-  horizontal_lines_at_data_rows = :none,
-  horizontal_line_before_row_group_label = false,
-  horizontal_line_after_row_group_label = false,
-  horizontal_line_after_data_rows = false,
-  horizontal_line_before_summary_rows = false,
-  horizontal_line_after_summary_rows = false,
-  vertical_line_at_beginning = false,
-  vertical_line_after_row_number_column = false,
-  vertical_line_after_row_label_column = false,
-  vertical_lines_at_data_columns = :none,
-  vertical_line_after_data_columns = false,
-  vertical_line_after_continuation_column = false,
+const _DIAMOND_FMT = TextTableFormat(;
+  borders=text_table_borders__borderless,
+  horizontal_line_at_beginning=false,
+  horizontal_lines_at_column_labels=:none,
+  horizontal_line_at_merged_column_labels=false,
+  horizontal_line_after_column_labels=false,
+  horizontal_lines_at_data_rows=:none,
+  horizontal_line_before_row_group_label=false,
+  horizontal_line_after_row_group_label=false,
+  horizontal_line_after_data_rows=false,
+  horizontal_line_before_summary_rows=false,
+  horizontal_line_after_summary_rows=false,
+  vertical_line_at_beginning=false,
+  vertical_line_after_row_number_column=false,
+  vertical_line_after_row_label_column=false,
+  vertical_lines_at_data_columns=:none,
+  vertical_line_after_data_columns=false,
+  vertical_line_after_continuation_column=false,
 )
 
 """
@@ -123,9 +123,9 @@ function print_hodge_diamond(io::IO, h::Matrix{<:Integer})
   end
 
   pretty_table(io, cells;
-    table_format = _DIAMOND_FMT,
-    show_column_labels = false,
-    alignment = :c,
+    table_format=_DIAMOND_FMT,
+    show_column_labels=false,
+    alignment=:c,
   )
 end
 

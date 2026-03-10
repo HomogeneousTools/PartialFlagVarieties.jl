@@ -66,13 +66,15 @@ struct CompletelyReducibleBundle <: Bundle
 
   function CompletelyReducibleBundle(
     variety::PartialFlagVariety,
-    components::Vector{IrrepLevi}
+    components::Vector{IrrepLevi},
   )
     bundle_mdt = marked_dynkin_type(variety)
     for (idx, component) in enumerate(components)
-      marked_dynkin_type(component) == bundle_mdt || throw(ArgumentError(
-        "Bundle component $idx belongs to $(marked_dynkin_type(component)), expected $bundle_mdt."
-      ))
+      marked_dynkin_type(component) == bundle_mdt || throw(
+        ArgumentError(
+          "Bundle component $idx belongs to $(marked_dynkin_type(component)), expected $bundle_mdt."
+        ),
+      )
     end
     new(variety, components)
   end
@@ -203,10 +205,12 @@ julia> rank_bundle(L)
 ```
 """
 function line_bundle(X::PartialFlagVariety, i::Integer)
-  picard_rank(X) == 1 || throw(ArgumentError(
-    "line_bundle(X, i::Integer) requires Picard rank 1, but X has Picard rank $(picard_rank(X)). " *
-    "Use line_bundle(X, degrees::Vector{<:Integer}) instead."
-  ))
+  picard_rank(X) == 1 || throw(
+    ArgumentError(
+      "line_bundle(X, i::Integer) requires Picard rank 1, but X has Picard rank $(picard_rank(X)). " *
+      "Use line_bundle(X, degrees::Vector{<:Integer}) instead.",
+    ),
+  )
 
   return line_bundle(X, [i])
 end
@@ -231,9 +235,17 @@ julia> rank_bundle(L)
 """
 function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
   marked = marked_nodes(X)
-  length(degrees) == length(marked) || throw(ArgumentError(
-    string("Expected ", length(marked), " degrees (one per marked node), got ", length(degrees), ".")
-  ))
+  length(degrees) == length(marked) || throw(
+    ArgumentError(
+      string(
+        "Expected ",
+        length(marked),
+        " degrees (one per marked node), got ",
+        length(degrees),
+        ".",
+      ),
+    ),
+  )
 
   coefficients = zeros(Int, rank(X))
   for (j, m) in enumerate(marked)
@@ -509,9 +521,11 @@ true
 function tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   X = variety(E)
   Y = variety(F)
-  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(ArgumentError(
-    "tensor_product requires bundles on the same partial flag variety type."
-  ))
+  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(
+    ArgumentError(
+      "tensor_product requires bundles on the same partial flag variety type."
+    ),
+  )
 
   # Deduplicate components to avoid redundant tensor product calls.
   # E.g., O(1)⁶ has 6 identical components → compute ⊗ once, replicate.
@@ -675,9 +689,11 @@ The direct sum ``E \\oplus F``.
 function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   X = variety(E)
   Y = variety(F)
-  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(ArgumentError(
-    "direct_sum requires bundles on the same partial flag variety type."
-  ))
+  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(
+    ArgumentError(
+      "direct_sum requires bundles on the same partial flag variety type."
+    ),
+  )
   return CompletelyReducibleBundle(X, vcat(E.components, F.components))
 end
 

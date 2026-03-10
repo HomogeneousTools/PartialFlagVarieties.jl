@@ -54,19 +54,20 @@ julia> rank_bundle(U)
 ```
 """
 function universal_subbundle(X::PartialFlagVariety)
-  is_generalized_grassmannian(X) || throw(ArgumentError(
-    "universal_subbundle requires a generalized Grassmannian (1 marked node)"
-  ))
+  is_generalized_grassmannian(X) || throw(
+    ArgumentError(
+      "universal_subbundle requires a generalized Grassmannian (1 marked node)"
+    ),
+  )
 
   mdt = marked_dynkin_type(X)
-  DT = dynkin_type(mdt)
 
   # The universal subbundle on G/P_k corresponds to the first fundamental
   # weight ω₁ of the ambient group G.  On Gr(k,n) = A_{n-1}/P_k, this gives
   # the rank-k tautological subbundle (the standard representation of GL_n
   # restricted to the parabolic).  The Levi decomposition then produces a
   # bundle of fiber dimension k (from the standard rep of the GL_k factor).
-  ω = fundamental_weight(DT, 1)
+  ω = fundamental_weight(dynkin_type(mdt), 1)
   rep = IrrepLevi(mdt, ω)
   CompletelyReducibleBundle(X, [rep])
 end
@@ -102,9 +103,11 @@ julia> rank_bundle(universal_subbundle(X)) + rank_bundle(universal_quotient_bund
 ```
 """
 function universal_quotient_bundle(X::PartialFlagVariety)
-  is_generalized_grassmannian(X) || throw(ArgumentError(
-    "universal_quotient_bundle requires a generalized Grassmannian (1 marked node)"
-  ))
+  is_generalized_grassmannian(X) || throw(
+    ArgumentError(
+      "universal_quotient_bundle requires a generalized Grassmannian (1 marked node)"
+    ),
+  )
 
   mdt = marked_dynkin_type(X)
   DT = dynkin_type(mdt)
@@ -205,7 +208,8 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
   R = rank(DT)
 
   if DT <: TypeB
-    half in (:plus, :minus) && @warn "Odd quadric has a single spinor bundle; ignoring half=$half"
+    half in (:plus, :minus) &&
+      @warn "Odd quadric has a single spinor bundle; ignoring half=$half"
     ω = fundamental_weight(DT, R)
     rep = IrrepLevi(mdt, ω)
     return CompletelyReducibleBundle(X, [rep])

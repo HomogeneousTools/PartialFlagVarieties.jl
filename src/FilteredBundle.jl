@@ -52,15 +52,17 @@ struct FilteredBundle <: Bundle
   pieces::Vector{CompletelyReducibleBundle}
 
   function FilteredBundle(
-    variety::PartialFlagVariety,
-    pieces::Vector{CompletelyReducibleBundle}
+    X::PartialFlagVariety,
+    pieces::Vector{CompletelyReducibleBundle},
   )
     for (idx, piece) in enumerate(pieces)
-      marked_dynkin_type(variety(piece)) == marked_dynkin_type(variety) || throw(ArgumentError(
-        "Filtered bundle piece $idx lives on $(variety(piece)), expected $variety."
-      ))
+      marked_dynkin_type(variety(piece)) == marked_dynkin_type(X) || throw(
+        ArgumentError(
+          "Filtered bundle piece $idx lives on $(variety(piece)), expected $X."
+        ),
+      )
     end
-    new(variety, pieces)
+    new(X, pieces)
   end
 end
 
