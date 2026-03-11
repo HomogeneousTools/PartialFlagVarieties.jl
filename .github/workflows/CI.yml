@@ -11,7 +11,7 @@ concurrency:
 jobs:
   test:
     name: Julia ${{ matrix.version }} — ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: self-hosted
     strategy:
       fail-fast: false
       matrix:
@@ -22,25 +22,25 @@ jobs:
             os: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v4.2.0
+      - uses: julia-actions/setup-julia@v2.5.0
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v2.1.0
       - name: Install Lie.jl from GitHub
         run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")'
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-buildpkg@v1.6.0
+      - uses: julia-actions/julia-runtest@v1.6.0
 
   doctest:
     name: Doctests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v4.2.0
+      - uses: julia-actions/setup-julia@v2.5.0
         with:
           version: '1'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v2.1.0
       - name: Install dependencies
         run: |
           rm -f docs/Manifest.toml
@@ -50,7 +50,7 @@ jobs:
 
   examples:
     name: Example — ${{ matrix.example }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       fail-fast: false
       matrix:
@@ -69,21 +69,21 @@ jobs:
           - Kuechle.jl
           - LinearSections.jl
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v4.2.0
+      - uses: julia-actions/setup-julia@v2.5.0
         with:
           version: '1'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v2.1.0
       - name: Install Lie.jl from GitHub
         run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl"); Pkg.add("JSON")'
-      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-buildpkg@v1.6.0
       - name: Run example
         run: |
           mkdir -p examples-output
           julia --project=. examples/${{ matrix.example }} > examples-output/${{ matrix.example }}.log 2>&1
       - name: Upload example output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.2.0
         with:
           name: example-${{ matrix.example }}
           path: examples-output/${{ matrix.example }}.log
