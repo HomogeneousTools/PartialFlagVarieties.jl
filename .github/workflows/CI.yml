@@ -81,9 +81,9 @@ jobs:
         run: |
           mkdir -p examples-output
           julia --project=. examples/${{ matrix.example }} > examples-output/${{ matrix.example }}.log 2>&1
-      - name: Upload example output
+      - name: Write summary
         if: always()
-        uses: actions/upload-artifact@v4.2.0
-        with:
-          name: example-${{ matrix.example }}
-          path: examples-output/${{ matrix.example }}.log
+        run: |
+          echo "## ${{ matrix.example }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat examples-output/${{ matrix.example }}.log >> $GITHUB_STEP_SUMMARY
