@@ -549,9 +549,17 @@ true
 """
 function exterior_power(E::CompletelyReducibleBundle, k::Integer)
   k = Int(k)
+  r = rank_bundle(E)
   k < 0 && return zero_bundle(E.variety)
+  k > r && return zero_bundle(E.variety)
   k == 0 && return structure_sheaf(E.variety)
+  k == r && return det(E)
   k == 1 && return E
+
+  # Perfect pairing shortcut: ∧^k E ≅ det(E) ⊗ ∧^(r-k) E∨ when k > r/2
+  if 2k > r
+    return tensor_product(det(E), exterior_power(dual(E), r - k))
+  end
 
   # Group identical components: unique_comps[i] with multiplicity mults[i]
   comp_counts = Dict{IrrepLevi,Int}()
