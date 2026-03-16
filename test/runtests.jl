@@ -1342,7 +1342,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     H_num = hodge_numbers(Z)
     for p in 0:3, q in 0:3
       @test is_determined(H_sym[p + 1, q + 1])
-      @test H_sym[p + 1, q + 1].constant == H_num[p + 1, q + 1]
+      @test is_determined(H_num[p + 1, q + 1])
+      @test H_sym[p + 1, q + 1].constant == H_num[p + 1, q + 1].constant
     end
 
     # Constraint propagation: h^{1,0} = 0 for Küchle c6 Fano fourfold
@@ -1491,4 +1492,166 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test 2 + 2 * h[2, 2] + 2 * h[2, 4] + h[3, 3] == 30
     end
   end
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  Zero locus: Hodge numbers dim=6 (2·Sym²U on Gr(2,8))
+  # ════════════════════════════════════════════════════════════════════════════
+
+  @testset "ZeroLocus: Hodge numbers dim=6" begin
+    # 2·Sym²(U) on Gr(2,8): a 6-dimensional zero locus.
+    # Some entries are undetermined by Koszul + symmetry constraints;
+    # those carry symbolic variables and are NOT defaulted to 0.
+    let X = Gr(2, 8), U = universal_subbundle(X),
+      E = 2 * symmetric_power(U, 2),
+      Z = zero_locus(E)
+
+      @test dimension(Z) == 6
+      @test euler_characteristic(Z) == 1
+
+      h = hodge_numbers(Z)
+
+      # Non-negative constant parts for all entries
+      for p in 0:6, q in 0:6
+        @test h[p + 1, q + 1].constant >= 0
+      end
+
+      # Determined entries
+      @test is_determined(h[1, 1])  # h^{0,0}
+      @test h[1, 1] == 1
+      @test is_determined(h[7, 7])  # h^{6,6}
+      @test h[7, 7] == 1
+      @test is_determined(h[2, 2])  # h^{1,1}
+      @test h[2, 2] == 1
+
+      # h^{1,2} has constant part 3 (undetermined — symbolic expression)
+      @test h[2, 3].constant == 3
+      @test !is_determined(h[2, 3])
+
+      # h^{2,5} = 0 (correctly enforced by combined Hodge–Serre constraint)
+      @test is_determined(h[3, 6])
+      @test h[3, 6] == 0
+
+      # Symmetry: h^{p,q} = h^{d-p,d-q} (Serre duality)
+      for p in 0:6, q in 0:6
+        @test h[p + 1, q + 1] == h[7 - p, 7 - q]
+      end
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Zero loci: Hochschild cohomology (polyvector parallelogram)
+  #  Reference values from Sage twisted-hodge-ci project (Brückmann formula)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "ZeroLocus: Hochschild cohomology" begin
+    # Cubic surface (dim=2): degree 3 in ℙ³
+    let X = projective_space(3), Z = zero_locus(line_bundle(X, 3))
+      P = hochschild_cohomology(Z)
+      @test P.dim == 2
+      @test P[0, 0] == 1
+      @test P[1, 1] == 4
+      @test P[2, 0] == 4
+      @test P[0, 1] == 0
+      @test P[1, 0] == 0
+      @test P[0, 2] == 0
+    end
+
+    # Quartic threefold (dim=3): Fano, ω = O(-1)
+    let X = projective_space(4), Z = zero_locus(line_bundle(X, 4))
+      P = hochschild_cohomology(Z)
+      @test P.dim == 3
+      @test P[0, 0] == 1
+      @test P[1, 1] == 45
+      @test P[2, 2] == 15
+      @test P[3, 0] == 5
+      # Vanishing checks
+      @test P[1, 0] == 0
+      @test P[2, 0] == 0
+      @test P[2, 1] == 0
+      @test P[3, 1] == 0
+    end
+
+    # Quintic CY3 (dim=3): Calabi–Yau, ω ≅ O
+    let X = projective_space(4), Z = zero_locus(line_bundle(X, 5))
+      P = hochschild_cohomology(Z)
+      @test P.dim == 3
+      @test P[0, 0] == 1
+      @test P[0, 3] == 1
+      @test P[1, 1] == 101
+      @test P[1, 2] == 1
+      @test P[2, 1] == 1
+      @test P[2, 2] == 101
+      @test P[3, 0] == 1
+      @test P[3, 3] == 1
+    end
+
+    # Two quadrics in ℙ⁵ (dim=3)
+    let X = projective_space(5), Z = zero_locus(2 * line_bundle(X, 2))
+      P = hochschild_cohomology(Z)
+      @test P.dim == 3
+      @test P[0, 0] == 1
+      @test P[1, 1].constant == 3  # undetermined connecting map rank
+      @test P[2, 0] == 15
+      @test P[3, 0] == 19
+    end
+
+    # CI(2,3) in ℙ⁴ — K3 surface
+    let X = projective_space(4),
+      Z = zero_locus(line_bundle(X, 2) + line_bundle(X, 3))
+
+      P = hochschild_cohomology(Z)
+      @test P.dim == 2
+      @test P[0, 0] == 1
+      @test P[0, 2] == 1
+      @test P[1, 1] == 20
+      @test P[2, 0] == 1
+      @test P[2, 2] == 1
+    end
+
+    # CI(3,3) in ℙ⁵ — CY3
+    let X = projective_space(5), Z = zero_locus(2 * line_bundle(X, 3))
+      P = hochschild_cohomology(Z)
+      @test P.dim == 3
+      @test P[0, 0] == 1
+      @test P[0, 3] == 1
+      @test P[1, 1] == 73
+      @test P[1, 2] == 1
+      @test P[2, 1] == 1
+      @test P[2, 2] == 73
+      @test P[3, 0] == 1
+      @test P[3, 3] == 1
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  hodge_numbers vs hodge_numbers_symbolic agreement
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "hodge_numbers_les == hodge_numbers_symbolic" begin
+    let X = projective_space(4), Z = zero_locus(line_bundle(X, 5))
+      @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
+    end
+
+    let X = projective_space(5), Z = zero_locus(2 * line_bundle(X, 2))
+      @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
+    end
+
+    let X = Gr(2, 5), S = universal_subbundle(X),
+      Z = zero_locus(symmetric_power(dual(S), 2))
+
+      @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
+    end
+
+    let X = Gr(2, 7), S = universal_subbundle(X),
+      Z = zero_locus(2 * symmetric_power(dual(S), 2))
+
+      h1 = hodge_numbers(Z)
+      h2 = hodge_numbers_symbolic(Z)
+      d = dimension(Z)
+      for p in 0:d, q in 0:d
+        @test h1[p + 1, q + 1] == h2[p + 1, q + 1]
+      end
+    end
+  end
+
 end  # @testset "PartialFlagVarieties.jl"
