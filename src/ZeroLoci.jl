@@ -214,6 +214,33 @@ end
 #  Memory-efficient Koszul cohomology (bypass CRB construction)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Cache: (a, b) → [(degree, dimension), ...] from BWB applied to tensor_product(a, b).
+# Populated lazily; avoids repeated borel_weil_bott + degree calls.
+const _BWB_PAIR_CACHE = Dict{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}()
+
+"""
+Compute and cache the BWB contributions `[(deg, dim), ...]` for
+`tensor_product(a, b)`.  Returns an empty vector when all components are
+acyclic.
+"""
+function _bwb_pair(a::IrrepLevi, b::IrrepLevi)
+  key = (a, b)
+  cached = get(_BWB_PAIR_CACHE, key, nothing)
+  cached !== nothing && return cached
+
+  tp = tensor_product(a, b)
+  result = Pair{Int,BigInt}[]
+  for c in tp
+    λ = p_dominant_weight(c)
+    bwb = borel_weil_bott(λ)
+    bwb === nothing && continue
+    deg, μ = bwb
+    push!(result, deg => BigInt(degree(μ)))
+  end
+  _BWB_PAIR_CACHE[key] = result
+  result
+end
+
 """
     _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
       -> Vector{Cohomology{BigInt}}
@@ -251,27 +278,15 @@ function _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
       w_counts[c] = get(w_counts, c, 0) + 1
     end
 
-    # Compute weight counts from tensor products without creating a CRB
-    weight_counts = Dict{WeightLatticeElem,Int}()
+    entries = zeros(BigInt, d + 1)
     for (a, ma) in f_counts
       for (b, mb) in w_counts
-        tp = tensor_product(a, b)
         total = ma * mb
-        for c in tp
-          λ = p_dominant_weight(c)
-          weight_counts[λ] = get(weight_counts, λ, 0) + total
+        for (deg, dim) in _bwb_pair(a, b)
+          if 0 <= deg <= d
+            entries[deg + 1] += total * dim
+          end
         end
-      end
-    end
-
-    # Apply BWB directly on weight counts
-    entries = zeros(BigInt, d + 1)
-    for (λ, mult) in weight_counts
-      bwb = borel_weil_bott(λ)
-      bwb === nothing && continue
-      deg, μ = bwb
-      if 0 <= deg <= d
-        entries[deg + 1] += mult * degree(μ)
       end
     end
     result[wi] = Cohomology{BigInt}(entries, d)
@@ -282,6 +297,52 @@ end
 
 function _koszul_dimensions(Z::ZeroLocus)
   _koszul_dimensions(Z, structure_sheaf(Z.ambient))
+end
+
+"""
+    _koszul_dimensions(Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int})
+      -> Vector{Cohomology{BigInt}}
+
+Dict-accepting overload: skips CRB construction entirely.
+"""
+function _koszul_dimensions(
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int},
+)
+  d = dimension(Z.ambient)
+
+  wedges = _koszul_wedges!(Z)
+  result = Vector{Cohomology{BigInt}}(undef, length(wedges))
+
+  for (wi, w) in enumerate(wedges)
+    w_counts = _to_counts(w)
+
+    entries = zeros(BigInt, d + 1)
+    for (a, ma) in f_counts
+      for (b, mb) in w_counts
+        total = ma * mb
+        for (deg, dim) in _bwb_pair(a, b)
+          if 0 <= deg <= d
+            entries[deg + 1] += total * dim
+          end
+        end
+      end
+    end
+    result[wi] = Cohomology{BigInt}(entries, d)
+  end
+
+  result
+end
+
+"""
+Dual of a multiplicity dict: map each IrrepLevi to its dual.
+"""
+function _dual_counts(f_counts::Dict{IrrepLevi,Int})
+  result = Dict{IrrepLevi,Int}()
+  for (c, m) in f_counts
+    d = dual(c)
+    result[d] = get(result, d, 0) + m
+  end
+  result
 end
 
 """
@@ -308,24 +369,14 @@ function _koszul_euler_characteristics(Z::ZeroLocus, F::CompletelyReducibleBundl
   result = Vector{BigInt}(undef, length(wedges))
 
   for (wi, w) in enumerate(wedges)
-    # Deduplicate wedge components
-    w_counts = Dict{IrrepLevi,Int}()
-    for c in w.components
-      w_counts[c] = get(w_counts, c, 0) + 1
-    end
+    w_counts = _to_counts(w)
 
-    # Compute weight counts and euler characteristic directly
     chi = BigInt(0)
     for (a, ma) in f_counts
       for (b, mb) in w_counts
-        tp = tensor_product(a, b)
         total = ma * mb
-        for c in tp
-          λ = p_dominant_weight(c)
-          bwb = borel_weil_bott(λ)
-          bwb === nothing && continue
-          deg, μ = bwb
-          chi += (iseven(deg) ? 1 : -1) * total * degree(μ)
+        for (deg, dim) in _bwb_pair(a, b)
+          chi += (iseven(deg) ? 1 : -1) * total * dim
         end
       end
     end
@@ -574,10 +625,16 @@ Falls back to the numeric path when fully determined.
 function _restrict_to_zero_locus_les(
   Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int},
 )
+  _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter)
+end
+
+function _restrict_to_zero_locus_les(
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int},
+)
   d_Z = dimension(Z)
 
   # Compute Koszul cohomologies once (memory-efficient path)
-  koszul_cohos = _koszul_dimensions(Z, F)
+  koszul_cohos = _koszul_dimensions(Z, f_counts)
   d_ambient = koszul_cohos[1].dim_variety
 
   # Try numeric solve first
@@ -588,8 +645,8 @@ function _restrict_to_zero_locus_les(
 
   # Try Serre duality fallback before symbolic path
   if is_calabi_yau_candidate(Z.defining_bundle)
-    F_dual = dual(F)
-    koszul_cohos_dual = _koszul_dimensions(Z, F_dual)
+    f_dual_counts = _dual_counts(f_counts)
+    koszul_cohos_dual = _koszul_dimensions(Z, f_dual_counts)
     (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
     if det_dual
       entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
@@ -1270,14 +1327,9 @@ function _euler_characteristic_from_counts(
     chi = BigInt(0)
     for (a, ma) in f_counts
       for (b, mb) in w_counts
-        tp = tensor_product(a, b)
         total = ma * mb
-        for c in tp
-          λ = p_dominant_weight(c)
-          bwb = borel_weil_bott(λ)
-          bwb === nothing && continue
-          deg, μ = bwb
-          chi += (iseven(deg) ? 1 : -1) * total * degree(μ)
+        for (deg, dim) in _bwb_pair(a, b)
+          chi += (iseven(deg) ? 1 : -1) * total * dim
         end
       end
     end

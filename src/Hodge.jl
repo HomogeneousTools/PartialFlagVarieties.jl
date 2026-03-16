@@ -482,9 +482,13 @@ function hochschild_cohomology(Z::ZeroLocus)
 
   E_dual = dual(E)
 
-  # Precompute Sym^k(E*) and Ω^j_X
-  syms = CompletelyReducibleBundle[symmetric_power(E_dual, k) for k in 0:d]
-  omegas = CompletelyReducibleBundle[exterior_power(cotangent_bundle(X), j) for j in 0:d]
+  # Precompute Sym^k(E*) and Ω^j_X as multiplicity dicts
+  syms_counts = Dict{IrrepLevi,Int}[
+    _to_counts(symmetric_power(E_dual, k)) for k in 0:d
+  ]
+  omegas_counts = Dict{IrrepLevi,Int}[
+    _to_counts(exterior_power(cotangent_bundle(X), j)) for j in 0:d
+  ]
 
   # ── Build symbolic twisted Hodge matrices via LES ──────────────────────
   # M1[p+1, q+1] = h^q(Ω^p_Z ⊗ ω_Z^{-1}), symbolic AffineExpr
@@ -497,18 +501,24 @@ function hochschild_cohomology(Z::ZeroLocus)
   end
 
   for (M, L) in ((M1, L_anti), (M2, L_can))
+    l_counts = _to_counts(L)
     for p in 0:d
       if p == d
         # Ω^d_Z ⊗ L = (ω_X ⊗ det(E) ⊗ L)|_Z — direct Koszul
-        F = tensor_product(tensor_product(canonical_bundle(X), det(E)), L)
-        Hp = _restrict_to_zero_locus_les(Z, F, var_counter)
+        f_counts = _tensor_product_counts(
+          _to_counts(tensor_product(canonical_bundle(X), det(E))), l_counts,
+        )
+        Hp = _restrict_to_zero_locus_les(Z, f_counts, var_counter)
       else
         # Conormal filtration via symbolic LES chain
         # conormal_cohos[j+1] = H*(Z, Sym^{p-j}(E*) ⊗ Ω^j_X ⊗ L|_Z) for j=0..p
         conormal_cohos = Vector{AffineExpr}[]
         for j in 0:p
-          F = tensor_product(tensor_product(syms[p - j + 1], omegas[j + 1]), L)
-          Hj = _restrict_to_zero_locus_les(Z, F, var_counter)
+          f_counts = _tensor_product_counts(
+            _tensor_product_counts(syms_counts[p - j + 1], omegas_counts[j + 1]),
+            l_counts,
+          )
+          Hj = _restrict_to_zero_locus_les(Z, f_counts, var_counter)
           push!(conormal_cohos, Hj)
         end
         # Conormal chain: C_p = conormal_cohos[1] (highest Sym power)
