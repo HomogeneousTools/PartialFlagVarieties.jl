@@ -456,6 +456,66 @@ function cohomology_on_restriction_symbolic(
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  Alternative Koszul restriction (output-variable LES)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    _restrict_to_zero_locus_les(Z, F, var_counter) -> Vector{AffineExpr}
+
+Compute ``H^*(Z, F|_Z)`` using the output-variable LES approach.
+
+Instead of parametrising connecting-map ranks (``\\delta``-variables),
+creates a fresh symbolic variable for each output entry and applies
+the alternating-sum LES equations.  This mirrors the Macaulay2
+`shortExactSequenceCoker` / `longExactSequence` pipeline.
+
+Falls back to the numeric path when fully determined.
+"""
+function _restrict_to_zero_locus_les(
+  Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int},
+)
+  d_Z = dimension(Z)
+
+  # Fast path: if the numeric solver fully determines everything, use it
+  (H_numeric, det_numeric) = cohomology_on_restriction(Z, F)
+  if det_numeric
+    return AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
+  end
+
+  # Build Koszul cohomologies on the ambient variety
+  terms = koszul_terms(Z, F)
+  koszul_cohos = Cohomology{BigInt}[dimensions(K) for K in terms]
+  d_ambient = koszul_cohos[1].dim_variety
+
+  # Extract BigInt vectors, reversed: K_r, K_{r-1}, …, K_0
+  koszul_vecs = Vector{BigInt}[
+    BigInt[kc[i] for i in 0:d_ambient] for kc in reverse(koszul_cohos)
+  ]
+
+  # Apply alternative LES chain
+  result_full = long_exact_sequence_cokernel(koszul_vecs, var_counter)
+
+  # Apply vanishing: H^k(Z, F|_Z) = 0 for k > d_Z
+  if d_ambient > d_Z
+    mat = reshape(copy(result_full), 1, length(result_full))
+    for k in (d_Z + 1):d_ambient
+      expr = mat[1, k + 1]
+      is_zero_expr(expr) && continue
+      _apply_equation_in_vars!(mat, expr)
+    end
+    return AffineExpr[mat[1, k + 1] for k in 0:d_Z]
+  end
+
+  result_full[1:(d_Z + 1)]
+end
+
+function _restrict_to_zero_locus_les(
+  Z::ZeroLocus, var_counter::Ref{Int},
+)
+  _restrict_to_zero_locus_les(Z, structure_sheaf(Z.ambient), var_counter)
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  Calabi–Yau detection
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -616,6 +676,132 @@ function fano_index(Z::ZeroLocus)
   fano_index(Z.ambient) - deg_det
 end
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Alternative Hodge numbers (output-variable LES pipeline)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    hodge_numbers_les(Z::ZeroLocus) -> Matrix{AffineExpr}
+
+Compute the symbolic Hodge diamond using the Macaulay2-style
+output-variable LES approach.
+
+For each row ``p``, the conormal terms
+``H^*(Z, \\mathrm{Sym}^{p-j}(E^*) \\otimes \\Omega^j_X|_Z)``
+are computed via `_restrict_to_zero_locus_les` (alternative inner Koszul),
+then chained via `long_exact_sequence_cokernel` (alternative outer conormal).
+
+This is an independent implementation from `hodge_numbers_symbolic`,
+matching the alternative `shortExactSequenceCoker`/`longExactSequence` pipeline
+nearly verbatim.  The free parameters in the output represent genuine
+degrees of freedom that cannot be resolved from the Koszul complex and
+symmetry constraints alone.
+"""
+function hodge_numbers_les(Z::ZeroLocus)
+  d = dimension(Z)
+  X = Z.ambient
+  E_dual = dual(Z.defining_bundle)
+  var_counter = Ref(0)
+
+  half = d ÷ 2
+  syms = CompletelyReducibleBundle[symmetric_power(E_dual, k) for k in 0:half]
+  omegas = CompletelyReducibleBundle[exterior_power(cotangent_bundle(X), k) for k in 0:half]
+
+  hodge = Matrix{AffineExpr}(undef, d + 1, d + 1)
+  for i in eachindex(hodge)
+    hodge[i] = AffineExpr(0)
+  end
+
+  # ── Compute rows p = 0..⌊d/2⌋ via alternative LES ──────────────────────
+  for p in 0:half
+    if p == 0
+      Hp = _restrict_to_zero_locus_les(Z, var_counter)
+    else
+      # Conormal terms: H*(Z, Sym^{p-j}(E*) ⊗ Ω^j_X |_Z) for j = 0..p
+      conormal_cohos = Vector{AffineExpr}[]
+      for j in 0:p
+        F = tensor_product(syms[p - j + 1], omegas[j + 1])
+        Hj = _restrict_to_zero_locus_les(Z, F, var_counter)
+        push!(conormal_cohos, Hj)
+      end
+      # Outer conormal filtration via alternative LES chain
+      Hp = long_exact_sequence_cokernel(conormal_cohos, var_counter)
+    end
+    for q in 0:d
+      hodge[p + 1, q + 1] = Hp[q + 1]
+    end
+  end
+
+  # ── Apply symmetry constraints (same loop as hodge_numbers_symbolic) ─
+  chi_vals = BigInt[_chi_omega_p_conormal(Z, p) for p in 0:half]
+
+  constraint_changed = true
+  while constraint_changed
+    constraint_changed = false
+
+    # Hodge corner constraints: h^{p,0} = h^{0,p}, h^{p,d} = h^{0,d-p}
+    for p in 1:half
+      if is_determined(hodge[1, p + 1])
+        constraint_changed =
+          _apply_hodge_constraint!(hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d) ||
+          constraint_changed
+      end
+      dp = d - p
+      if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
+        constraint_changed =
+          _apply_hodge_constraint!(hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d) ||
+          constraint_changed
+      end
+    end
+
+    # χ(Ω^p_Z) constraint
+    for p in 0:half
+      alt_sum = sum((-1)^q * hodge[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
+      constraint_changed =
+        _apply_equation!(hodge, alt_sum - AffineExpr(chi_vals[p + 1])) ||
+        constraint_changed
+    end
+
+    # Cross-row Hodge symmetry: h^{p,q} = h^{q,p} for p,q ∈ 0..half
+    for p in 0:half, q in 0:half
+      p == q && continue
+      constraint_changed =
+        _apply_hodge_pair!(hodge, p + 1, q + 1, q + 1, p + 1, chi_vals, d) ||
+        constraint_changed
+    end
+
+    # Middle-row Serre: h^{half,q} = h^{half,d-q}
+    if d % 2 == 0
+      p = half
+      for q in 0:(d ÷ 2 - 1)
+        constraint_changed =
+          _apply_hodge_pair!(hodge, p + 1, q + 1, p + 1, d - q + 1, chi_vals, d) ||
+          constraint_changed
+      end
+    end
+
+    # Combined Hodge–Serre: h^{p,q} = h^{d-q,d-p}
+    for p in 0:half, q in 0:d
+      dq = d - q
+      dp = d - p
+      (0 <= dq <= half) || continue
+      (0 <= dp <= d) || continue
+      (p == dq && q == dp) && continue
+      constraint_changed =
+        _apply_hodge_pair!(hodge, p + 1, q + 1, dq + 1, dp + 1, chi_vals, d) ||
+        constraint_changed
+    end
+  end
+
+  # ── Fill rows p > ⌊d/2⌋ via Serre duality ────────────────────────────
+  for p in (half + 1):d
+    for q in 0:d
+      hodge[p + 1, q + 1] = hodge[d - p + 1, d - q + 1]
+    end
+  end
+
+  _renumber_variables!(hodge)
+end
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Symbolic Hodge numbers  (concrete hodge_numbers is in Hodge.jl)
 # ═══════════════════════════════════════════════════════════════════════════════
