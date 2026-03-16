@@ -168,12 +168,12 @@ struct FanoResult
   k::Int
   n::Int
   h0_antiK::Union{BigInt,Nothing}
-  chi_top::Union{BigInt,Nothing}
-  b2::Union{BigInt,Nothing}
-  b3::Union{BigInt,Nothing}
-  h11::Union{BigInt,Nothing}
-  h22::Union{BigInt,Nothing}
-  h13::Union{BigInt,Nothing}
+  chi_top::Any
+  b2::Any
+  b3::Any
+  h11::Any
+  h22::Any
+  h13::Any
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -220,12 +220,12 @@ function compute_family(label, k, n, weights, desc)
   try
     @time hm = hodge_numbers(Z)
     # χ_top = Σ_{p,q} (-1)^{p+q} h^{p,q}
-    chi = BigInt(sum((-1)^(p + q) * hm[p + 1, q + 1] for p in 0:4, q in 0:4))
-    β2 = BigInt(hm[2, 2])                    # h^{1,1}
-    β3 = BigInt(hm[3, 2] + hm[2, 3])        # h^{2,1} + h^{1,2} = 2 h^{2,1}
-    h11 = BigInt(hm[2, 2])                   # h^{1,1}
-    h22 = BigInt(hm[3, 3])                   # h^{2,2}
-    h13 = BigInt(hm[2, 4])                   # h^{1,3}
+    chi = sum((-1)^(p + q) * hm[p + 1, q + 1] for p in 0:4, q in 0:4)
+    β2 = hm[2, 2]                    # h^{1,1}
+    β3 = hm[3, 2] + hm[2, 3]        # h^{2,1} + h^{1,2} = 2 h^{2,1}
+    h11 = hm[2, 2]                   # h^{1,1}
+    h22 = hm[3, 3]                   # h^{2,2}
+    h13 = hm[2, 4]                   # h^{1,3}
   catch e
     @warn "  $label Hodge failed: $(sprint(showerror, e))"
   end

@@ -54,7 +54,7 @@ struct SectionRecord
   d::Int
   χ::BigInt
   fano_idx::Int          # -999 = not defined (d==0) or not computed
-  hodge::Union{Nothing,Matrix{BigInt}}
+  hodge::Union{Nothing,Matrix}
   note::String
 end
 

@@ -47,17 +47,17 @@ bundle_sum(E::CompletelyReducibleBundle, F::Vararg{CompletelyReducibleBundle}) =
 
 function hodge_signature(h)
   (
-    h00=BigInt(h[1, 1]),
-    h10=BigInt(h[2, 1]),
-    h20=BigInt(h[3, 1]),
-    h30=BigInt(h[4, 1]),
-    h11=BigInt(h[2, 2]),
-    h21=BigInt(h[3, 2]),
+    h00=h[1, 1],
+    h10=h[2, 1],
+    h20=h[3, 1],
+    h30=h[4, 1],
+    h11=h[2, 2],
+    h21=h[3, 2],
   )
 end
 
 function topological_euler(h)
-  BigInt(sum((-1)^(p + q) * h[p + 1, q + 1] for p in 0:3, q in 0:3))
+  sum((-1)^(p + q) * h[p + 1, q + 1] for p in 0:3, q in 0:3)
 end
 
 fmt(x) = string(x)
@@ -200,13 +200,13 @@ Base.@kwdef struct CY3Record
   label::String
   ambient::String
   description::String
-  h00::BigInt
-  h10::BigInt
-  h20::BigInt
-  h30::BigInt
-  h11::BigInt
-  h21::BigInt
-  chi::BigInt
+  h00::Any
+  h10::Any
+  h20::Any
+  h30::Any
+  h11::Any
+  h21::Any
+  chi::Any
   source::String
   matches_paper::Bool
   note::String
@@ -249,14 +249,14 @@ function compute_family(spec::CY3Family)
 
   if !raw_matches_paper && spec.no in PAPER_CORRECTED_FAMILIES
     sig = (
-      h00=BigInt(spec.expected_h00),
-      h10=BigInt(spec.expected_h10),
-      h20=BigInt(spec.expected_h20),
-      h30=BigInt(spec.expected_h30),
-      h11=BigInt(spec.expected_h11),
-      h21=BigInt(spec.expected_h21),
+      h00=spec.expected_h00,
+      h10=spec.expected_h10,
+      h20=spec.expected_h20,
+      h30=spec.expected_h30,
+      h11=spec.expected_h11,
+      h21=spec.expected_h21,
     )
-    chi = BigInt(spec.expected_chi)
+    chi = spec.expected_chi
     source = "paper"
   end
 

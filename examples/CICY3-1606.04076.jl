@@ -153,8 +153,8 @@ struct CY3Result
   bundle_desc::String
   rank_E::Int
   chi_O::BigInt
-  h11::BigInt
-  h21::BigInt
+  h11::Any    # AffineExpr or nothing
+  h21::Any    # AffineExpr or nothing
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -190,8 +190,8 @@ function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Resu
     chi_O = euler_characteristic(Z)
 
     # Attempt Hodge numbers
-    h11 = BigInt(-1)
-    h21 = BigInt(-1)
+    h11 = nothing
+    h21 = nothing
     try
       h = hodge_numbers(Z)
       h11 = h[2, 2]  # h^{1,1}
@@ -283,8 +283,8 @@ function main()
   descs = [r.bundle_desc for r in results]
   ranks = [string(r.rank_E) for r in results]
   chis = [string(r.chi_O) for r in results]
-  h11s = [r.h11 >= 0 ? string(r.h11) : "—" for r in results]
-  h21s = [r.h21 >= 0 ? string(r.h21) : "—" for r in results]
+  h11s = [r.h11 !== nothing ? string(r.h11) : "—" for r in results]
+  h21s = [r.h21 !== nothing ? string(r.h21) : "—" for r in results]
 
   data = hcat(ambients, descs, ranks, chis, h11s, h21s)
   pretty_table(data;
