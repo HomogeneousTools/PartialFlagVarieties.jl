@@ -698,6 +698,8 @@ function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   CompletelyReducibleBundle(X, vcat(E.components, F.components))
 end
 
+Base.:+(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) = direct_sum(E, F)
+
 # ─── Twist ───────────────────────────────────────────────────────────────────
 
 """
