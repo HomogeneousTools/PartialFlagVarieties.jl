@@ -142,6 +142,18 @@ is_generalized_grassmannian(X::PartialFlagVariety) = length(marked_nodes(X)) == 
 """Return `true` for full flag varieties `G/B`."""
 is_full_flag_variety(X::PartialFlagVariety) = is_borel(marked_dynkin_type(X))
 
+"""
+    is_cominuscule(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is a cominuscule flag variety, i.e., a generalized
+Grassmannian `G/P_i` whose highest root has coefficient 1 at node `i`.
+
+Cominuscule varieties include all Grassmannians (type A), spinor varieties
+``\\mathrm{OGr}(n, 2n)``, Lagrangian Grassmannians ``\\mathrm{LGr}(n, 2n)``,
+the two connected components of the orthogonal Grassmannian in type D,
+the Cayley plane (``E_6/P_1``, ``E_6/P_6``), and the Freudenthal variety
+(``E_7/P_7``).
+"""
 function is_cominuscule(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)
@@ -158,6 +170,16 @@ function is_cominuscule(X::PartialFlagVariety)
   false
 end
 
+"""
+    is_minuscule(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is a minuscule flag variety, i.e., a generalized
+Grassmannian `G/P_i` whose fundamental weight `\\omega_i` is minuscule
+(all coroot pairings are 0 or 1).
+
+Minuscule varieties are the same as cominuscule for simply laced types, but
+differ for types B and C.
+"""
 function is_minuscule(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)
@@ -174,6 +196,13 @@ function is_minuscule(X::PartialFlagVariety)
   false
 end
 
+"""
+    is_adjoint(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is the adjoint variety of its Lie type, i.e., the
+orbit of the highest root line in the projectivisation of the adjoint
+representation.
+"""
 function is_adjoint(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)
@@ -195,6 +224,13 @@ function is_adjoint(X::PartialFlagVariety)
   false
 end
 
+"""
+    is_coadjoint(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is the coadjoint variety of its Lie type, i.e., the
+orbit of the highest weight line in the dual of the adjoint representation.
+For simply laced types the adjoint and coadjoint coincide.
+"""
 function is_coadjoint(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)

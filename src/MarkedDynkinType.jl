@@ -186,6 +186,13 @@ function _nonparabolic_height(α_vec::AbstractVector{<:Integer}, marked::Tuple{V
   h
 end
 
+"""
+    positive_nonparabolic_roots(mdt::MarkedDynkinType) -> Vector
+
+Return all positive roots of the ambient Lie algebra that have positive
+coefficient on at least one marked simple root (i.e., the roots not in the
+Levi subalgebra). These span the tangent directions of `G/P`.
+"""
 function positive_nonparabolic_roots(mdt::MarkedDynkinType)
   RS = RootSystem(dynkin_type(mdt))
   roots = collect(positive_roots(RS))
@@ -196,6 +203,12 @@ function positive_nonparabolic_roots(mdt::MarkedDynkinType)
   result
 end
 
+"""
+    positive_parabolic_roots(mdt::MarkedDynkinType) -> Vector
+
+Return all positive roots of the ambient Lie algebra that have zero coefficient
+on every marked simple root (i.e., the positive roots of the Levi subalgebra).
+"""
 function positive_parabolic_roots(mdt::MarkedDynkinType)
   RS = RootSystem(dynkin_type(mdt))
   roots = collect(positive_roots(RS))
@@ -206,6 +219,13 @@ function positive_parabolic_roots(mdt::MarkedDynkinType)
   result
 end
 
+"""
+    tangent_weights(mdt::MarkedDynkinType) -> Vector{WeightLatticeElem}
+
+Return the highest weights of the irreducible Levi-module decomposition of the
+tangent space ``T_{eP}(G/P)`` at the base point. Each weight corresponds to
+a Levi-orbit of nonparabolic positive roots.
+"""
 function tangent_weights(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
   RS = RootSystem(DT)
@@ -226,6 +246,12 @@ function Base.show(io::IO, mdt::MarkedDynkinType)
   print(io, "$(Lie._type_name(dynkin_type(mdt))) / P_{$(join(marked_nodes(mdt), ","))}")
 end
 
+"""
+    marked_dynkin_diagram(mdt::MarkedDynkinType) -> String
+
+Return an ASCII art string representation of the Dynkin diagram of `mdt` with
+the marked nodes highlighted (enclosed in square brackets).
+"""
 function marked_dynkin_diagram(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
   marked = marked_nodes(mdt)

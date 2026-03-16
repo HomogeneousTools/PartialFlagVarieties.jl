@@ -18,6 +18,12 @@ end
 
 marked_dynkin_type(rep::IrrepLevi) = rep.mdt
 p_dominant_weight(rep::IrrepLevi) = rep.λ
+
+"""
+    semisimple_part(rep::IrrepLevi) -> WeightLatticeElem
+
+Return the highest weight of the semisimple Levi factor component of `rep`.
+"""
 semisimple_part(rep::IrrepLevi) = rep.semisimple
 
 _central_length(mdt::MarkedDynkinType) = central_rank(mdt)
@@ -61,6 +67,12 @@ end
   result
 end
 
+"""
+    central_part(rep::IrrepLevi) -> Vector{Rational{Int}}
+
+Return the central character of `rep` as a vector of rational numbers, one per
+marked node.
+"""
 function central_part(rep::IrrepLevi)
   sf = central_scaling_factor(marked_dynkin_type(rep))
   Vector{Rational{Int}}(Rational{Int}[c // sf for c in rep.central])
@@ -144,6 +156,12 @@ function IrrepLevi(
   IrrepLevi(mdt, central_scaled, semisimple)
 end
 
+"""
+    to_ambient_weight(rep::IrrepLevi) -> WeightLatticeElem
+
+Return the ambient `P`-dominant weight of `rep` in the fundamental weight basis
+of the ambient Lie algebra.
+"""
 to_ambient_weight(rep::IrrepLevi) = p_dominant_weight(rep)
 
 function to_ambient_weight(mdt::MarkedDynkinType, rep::IrrepLevi)
@@ -152,6 +170,13 @@ function to_ambient_weight(mdt::MarkedDynkinType, rep::IrrepLevi)
   p_dominant_weight(rep)
 end
 
+"""
+    fiber_dimension(rep::IrrepLevi) -> BigInt
+
+Return the dimension of the fiber of the equivariant bundle defined by `rep`,
+i.e., the dimension of the irreducible representation of the semisimple Levi
+factor given by the Weyl dimension formula.
+"""
 function fiber_dimension(rep::IrrepLevi)
   is_borel(marked_dynkin_type(rep)) && return BigInt(1)
   ss = semisimple_part(rep)
@@ -164,6 +189,12 @@ function Base.show(io::IO, rep::IrrepLevi)
   print(io, "(", sprint(show, p_dominant_weight(rep)), ")")
 end
 
+"""
+    tensor_product(a::IrrepLevi, b::IrrepLevi) -> Vector{IrrepLevi}
+
+Return the tensor product of two irreducible Levi representations as a list
+of irreducible summands (with multiplicity).
+"""
 function tensor_product(a::IrrepLevi, b::IrrepLevi)
   marked_dynkin_type(a) == marked_dynkin_type(b) || throw(
     ArgumentError(
@@ -196,6 +227,11 @@ function tensor_product(a::IrrepLevi, b::IrrepLevi)
   result
 end
 
+"""
+    dual(rep::IrrepLevi) -> IrrepLevi
+
+Return the dual (contragredient) representation of `rep`.
+"""
 function dual(rep::IrrepLevi)
   mdt = marked_dynkin_type(rep)
   new_central = -rep.central
@@ -206,6 +242,12 @@ function dual(rep::IrrepLevi)
   IrrepLevi(mdt, new_central, Lie.dual(ss))
 end
 
+"""
+    exterior_power(rep::IrrepLevi, k::Int) -> Vector{IrrepLevi}
+
+Return the `k`-th exterior power of the irreducible Levi representation `rep`
+as a list of irreducible summands.
+"""
 function exterior_power(rep::IrrepLevi, k::Integer)
   k = Int(k)
   mdt = marked_dynkin_type(rep)
@@ -236,6 +278,12 @@ function exterior_power(rep::IrrepLevi, k::Integer)
   result
 end
 
+"""
+    symmetric_power(rep::IrrepLevi, k::Int) -> Vector{IrrepLevi}
+
+Return the `k`-th symmetric power of the irreducible Levi representation `rep`
+as a list of irreducible summands.
+"""
 function symmetric_power(rep::IrrepLevi, k::Integer)
   k = Int(k)
   mdt = marked_dynkin_type(rep)
