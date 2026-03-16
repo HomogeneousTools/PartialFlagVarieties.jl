@@ -345,6 +345,8 @@ Base.:*(a::AffineExpr, c::Integer) = c * a
 function Base.:(==)(a::AffineExpr, b::AffineExpr)
   a.constant == b.constant && a.coeffs == b.coeffs
 end
+Base.:(==)(a::AffineExpr, c::Integer) = is_determined(a) && a.constant == c
+Base.:(==)(c::Integer, a::AffineExpr) = a == c
 
 Base.:+(a::AffineExpr, c::Integer) = a + AffineExpr(c)
 Base.:+(c::Integer, a::AffineExpr) = AffineExpr(c) + a
@@ -755,4 +757,169 @@ function solve_koszul_filtration_symbolic(
   # Restrict to zero locus dimension
   entries = AffineExpr[current_sym[i] for i in 0:dim_zero_locus]
   Cohomology{AffineExpr}(entries, dim_zero_locus)
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Alternative LES cokernel solver
+#
+#  Alternative to the δ-based symbolic SES solver.  Introduces a fresh
+#  symbolic variable for each *output* entry and derives linear equations
+#  from the alternating-sum condition on non-zero segments of the LES.
+#  This matches the approach in Macaulay2's `shortExactSequenceCoker`.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    _apply_equation_in_vars!(M, eq)
+
+Like `_apply_equation!` but only eliminates variables that appear in `M`.
+If the equation involves variables not in `M`, they are treated as
+parameters (kept as-is in the solution).
+"""
+function _apply_equation_in_vars!(M::Matrix{AffineExpr}, eq::AffineExpr)
+  isempty(eq.coeffs) && return false
+
+  # Collect variable IDs present in M
+  mat_vars = Set{Int}()
+  for e in M
+    for v in keys(e.coeffs)
+      push!(mat_vars, v)
+    end
+  end
+
+  # Among the equation's variables, pick the smallest that appears in M
+  candidates = [v for v in keys(eq.coeffs) if v in mat_vars]
+  isempty(candidates) && return false
+
+  var_id = minimum(candidates)
+  coeff = eq.coeffs[var_id]
+
+  rest_const = eq.constant
+  rest_coeffs = copy(eq.coeffs)
+  delete!(rest_coeffs, var_id)
+
+  rest_const % coeff == 0 || return false
+  all(v % coeff == 0 for (_, v) in rest_coeffs) || return false
+
+  sub_const = -(rest_const ÷ coeff)
+  sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
+  filter!(p -> p.second != 0, sub_coeffs)
+  _substitute_var!(M, var_id, AffineExpr(sub_const, sub_coeffs))
+  true
+end
+
+"""
+    les_cokernel(a, b, var_counter) -> Vector{AffineExpr}
+
+Given `H^*(A)` and `H^*(B)` from a short exact sequence
+`0 → A → B → C → 0`, compute `H^*(C)` using the M2-style output-variable
+approach.
+
+Creates a fresh symbolic variable for each `H^i(C)`, then derives linear
+equations from the alternating-sum condition on non-zero segments of the
+interleaved LES `(A₀, B₀, C₀, A₁, B₁, C₁, …)`.  Returns the simplified
+`C` entries.
+"""
+function les_cokernel(
+  a::Vector{AffineExpr}, b::Vector{AffineExpr},
+  var_counter::Ref{Int},
+)
+  n = length(a)
+  @assert length(b) == n
+
+  # Create fresh variables for c
+  c = Vector{AffineExpr}(undef, n)
+  for i in 1:n
+    var_counter[] += 1
+    c[i] = symbolic_variable(var_counter[])
+  end
+
+  # Build the interleaved LES: a_1, b_1, c_1, a_2, b_2, c_2, ...
+  les = Vector{AffineExpr}(undef, 3n)
+  for i in 1:n
+    les[3(i - 1) + 1] = a[i]
+    les[3(i - 1) + 2] = b[i]
+    les[3(i - 1) + 3] = c[i]
+  end
+
+  # Split at zeros, form alternating-sum = 0 equations
+  equations = AffineExpr[]
+  subseq = AffineExpr[]
+  for entry in les
+    if is_zero_expr(entry)
+      if !isempty(subseq)
+        alt = sum((-1)^(k - 1) * subseq[k] for k in 1:length(subseq); init=AffineExpr(0))
+        push!(equations, alt)
+        subseq = AffineExpr[]
+      end
+    else
+      push!(subseq, entry)
+    end
+  end
+  if !isempty(subseq)
+    alt = sum((-1)^(k - 1) * subseq[k] for k in 1:length(subseq); init=AffineExpr(0))
+    push!(equations, alt)
+  end
+
+  # Solve equations, eliminating only c variables
+  mat = reshape(copy(c), 1, n)
+  for eq in equations
+    _apply_equation_in_vars!(mat, eq)
+  end
+
+  AffineExpr[mat[1, i] for i in 1:n]
+end
+
+function les_cokernel(
+  a::Vector{BigInt}, b::Vector{BigInt},
+  var_counter::Ref{Int},
+)
+  les_cokernel(
+    AffineExpr[AffineExpr(x) for x in a],
+    AffineExpr[AffineExpr(x) for x in b],
+    var_counter,
+  )
+end
+
+"""
+    long_exact_sequence_cokernel(terms, var_counter) -> Vector{AffineExpr}
+
+Given cohomology of terms `[K_r, K_{r-1}, …, K_0]` (reversed Koszul order),
+iteratively apply `les_cokernel` to compute the final cokernel.
+
+The filtration is:
+  C_r = K_r,  0 → C_{j+1} → K_j → C_j → 0  (j = r-1, …, 0)
+"""
+function long_exact_sequence_cokernel(
+  terms::Vector{Vector{BigInt}},
+  var_counter::Ref{Int},
+)
+  r = length(terms) - 1
+  r == 0 && return AffineExpr[AffineExpr(x) for x in terms[1]]
+
+  # First step: both inputs are BigInt
+  current = les_cokernel(terms[1], terms[2], var_counter)
+
+  # Subsequent steps: A is AffineExpr, B is BigInt
+  for j in 3:length(terms)
+    b_expr = AffineExpr[AffineExpr(x) for x in terms[j]
+    ]
+    current = les_cokernel(current, b_expr, var_counter)
+  end
+
+  current
+end
+
+function long_exact_sequence_cokernel(
+  terms::Vector{Vector{AffineExpr}},
+  var_counter::Ref{Int},
+)
+  r = length(terms) - 1
+  r == 0 && return copy(terms[1])
+
+  current = les_cokernel(terms[1], terms[2], var_counter)
+  for j in 3:length(terms)
+    current = les_cokernel(current, terms[j], var_counter)
+  end
+
+  current
 end
