@@ -19,6 +19,37 @@ export is_calabi_yau, is_calabi_yau_candidate
 export fano_index
 export hilbert_polynomial
 export hodge_numbers_symbolic
+export hodge_numbers_les
+
+"""
+Renumber variables in an `AffineExpr` matrix to use contiguous IDs
+starting from 0.  This makes the output more readable (e.g. `x_0, x_1, …`)
+rather than reflecting the internal counter."""
+function _renumber_variables!(M::Matrix{AffineExpr})
+  # Collect all variable IDs
+  old_ids = Set{Int}()
+  for e in M
+    for v in keys(e.coeffs)
+      push!(old_ids, v)
+    end
+  end
+  isempty(old_ids) && return M
+
+  # Build mapping: sorted old IDs → 0, 1, 2, …
+  mapping = Dict{Int,Int}()
+  for (new_id, old_id) in enumerate(sort!(collect(old_ids)))
+    mapping[old_id] = new_id - 1  # 0-based
+  end
+
+  # Apply mapping
+  for i in eachindex(M)
+    e = M[i]
+    isempty(e.coeffs) && continue
+    new_coeffs = Dict{Int,BigInt}(mapping[k] => v for (k, v) in e.coeffs)
+    M[i] = AffineExpr(e.constant, new_coeffs)
+  end
+  M
+end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
