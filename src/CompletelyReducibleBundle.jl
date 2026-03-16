@@ -553,40 +553,142 @@ function exterior_power(E::CompletelyReducibleBundle, k::Integer)
   k == 0 && return structure_sheaf(E.variety)
   k == 1 && return E
 
-  n = n_components(E)
-  ranks = [Int(fiber_dimension(c)) for c in E.components]
+  # Group identical components: unique_comps[i] with multiplicity mults[i]
+  comp_counts = Dict{IrrepLevi,Int}()
+  for c in E.components
+    comp_counts[c] = get(comp_counts, c, 0) + 1
+  end
+  unique_comps = collect(keys(comp_counts))
+  mults = [comp_counts[c] for c in unique_comps]
+  n_groups = length(unique_comps)
+  ranks = [Int(fiber_dimension(c)) for c in unique_comps]
 
   result = IrrepLevi[]
 
-  for α in multiexponents(n, k)
-    any(α[i] > ranks[i] for i in 1:n) && continue
+  # Outer multiexponents: how much of k is allocated to each group
+  for group_alloc in multiexponents(n_groups, k)
+    any(group_alloc[i] > ranks[i] * mults[i] for i in 1:n_groups) && continue
 
-    factors = Vector{Vector{IrrepLevi}}()
+    # For each group, compute ∧^{group_alloc[i]}(V^{⊕m}) by iterating
+    # sorted compositions of group_alloc[i] into mults[i] parts
+    group_results = Vector{Vector{Pair{Vector{IrrepLevi},Int}}}()
     skip = false
-    for i in 1:n
-      wedge_i = exterior_power(E.components[i], α[i])
-      if isempty(wedge_i)
+    for g in 1:n_groups
+      ga = group_alloc[g]
+      m = mults[g]
+      r = ranks[g]
+      comp = unique_comps[g]
+
+      # Iterate multiexponents for this group (m copies of comp)
+      group_terms = Pair{Vector{IrrepLevi},Int}[]
+      for α in multiexponents(m, ga)
+        any(α[j] > r for j in 1:m) && continue
+
+        # Check if this is a canonical (sorted) representative
+        sorted_α = sort(collect(α); rev=true)
+        if collect(α) != sorted_α
+          continue  # skip non-canonical permutations
+        end
+
+        # Multinomial coefficient: m! / prod(count_i!)
+        multinomial = _multinomial_coeff(α)
+
+        # Compute ∧^{α₁}(comp) ⊗ ... ⊗ ∧^{αₘ}(comp)
+        factors = Vector{Vector{IrrepLevi}}()
+        inner_skip = false
+        for j in 1:m
+          wj = exterior_power(comp, α[j])
+          if isempty(wj)
+            inner_skip = true
+            break
+          end
+          push!(factors, wj)
+        end
+        inner_skip && continue
+
+        current = factors[1]
+        for i in 2:length(factors)
+          next = IrrepLevi[]
+          for a in current
+            for b in factors[i]
+              append!(next, tensor_product(a, b))
+            end
+          end
+          current = next
+        end
+        push!(group_terms, current => multinomial)
+      end
+
+      if isempty(group_terms)
         skip = true
         break
       end
-      push!(factors, wedge_i)
+      push!(group_results, group_terms)
     end
     skip && continue
 
-    current = factors[1]
-    for i in 2:length(factors)
-      next = IrrepLevi[]
-      for a in current
-        for b in factors[i]
-          append!(next, tensor_product(a, b))
-        end
-      end
-      current = next
-    end
-    append!(result, current)
+    # Combine across groups via tensor product
+    _combine_group_results!(result, group_results)
   end
 
   CompletelyReducibleBundle(E.variety, result)
+end
+
+"""
+Compute the multinomial coefficient for a multiexponent α:
+the number of distinct permutations = n! / (c₁! c₂! ⋯ cₖ!)
+where cᵢ counts occurrences of each distinct value.
+"""
+function _multinomial_coeff(α)
+  n = length(α)
+  counts = Dict{Int,Int}()
+  for v in α
+    counts[v] = get(counts, v, 0) + 1
+  end
+  result = factorial(n)
+  for c in values(counts)
+    result = div(result, factorial(c))
+  end
+  result
+end
+
+"""
+Combine group results across groups via tensor product, expanding multiplicities.
+Each group contributes a list of (IrrepLevi[], multiplicity) pairs.
+"""
+function _combine_group_results!(result::Vector{IrrepLevi}, group_results)
+  if length(group_results) == 1
+    for (comps, mult) in group_results[1]
+      for _ in 1:mult
+        append!(result, comps)
+      end
+    end
+    return
+  end
+
+  # Iteratively combine groups
+  current_combined = group_results[1]
+  for g in 2:length(group_results)
+    next_combined = Pair{Vector{IrrepLevi},Int}[]
+    for (comps_a, mult_a) in current_combined
+      for (comps_b, mult_b) in group_results[g]
+        combined = IrrepLevi[]
+        for a in comps_a
+          for b in comps_b
+            append!(combined, tensor_product(a, b))
+          end
+        end
+        push!(next_combined, combined => mult_a * mult_b)
+      end
+    end
+    current_combined = next_combined
+  end
+
+  for (comps, mult) in current_combined
+    for _ in 1:mult
+      append!(result, comps)
+    end
+  end
 end
 
 """
@@ -614,38 +716,80 @@ true
 """
 function symmetric_power(E::CompletelyReducibleBundle, k::Integer)
   k = Int(k)
-  n = n_components(E)
   k < 0 && return zero_bundle(E.variety)
   k == 0 && return structure_sheaf(E.variety)
   k == 1 && return E
 
+  # Group identical components: unique_comps[i] with multiplicity mults[i]
+  comp_counts = Dict{IrrepLevi,Int}()
+  for c in E.components
+    comp_counts[c] = get(comp_counts, c, 0) + 1
+  end
+  unique_comps = collect(keys(comp_counts))
+  mults = [comp_counts[c] for c in unique_comps]
+  n_groups = length(unique_comps)
+
   result = IrrepLevi[]
 
-  for α in multiexponents(n, k)
-    factors = Vector{Vector{IrrepLevi}}()
+  # Outer multiexponents: how much of k is allocated to each group
+  for group_alloc in multiexponents(n_groups, k)
+    # For each group, compute Sym^{group_alloc[i]}(V^{⊕m}) by iterating
+    # sorted compositions of group_alloc[i] into mults[i] parts
+    group_results = Vector{Vector{Pair{Vector{IrrepLevi},Int}}}()
     skip = false
-    for i in 1:n
-      sym_i = symmetric_power(E.components[i], α[i])
-      # TODO should be iszero?
-      if isempty(sym_i)
+    for g in 1:n_groups
+      ga = group_alloc[g]
+      m = mults[g]
+      comp = unique_comps[g]
+
+      # Iterate multiexponents for this group (m copies of comp)
+      group_terms = Pair{Vector{IrrepLevi},Int}[]
+      for α in multiexponents(m, ga)
+        # Check if this is a canonical (sorted) representative
+        sorted_α = sort(collect(α); rev=true)
+        if collect(α) != sorted_α
+          continue  # skip non-canonical permutations
+        end
+
+        # Multinomial coefficient: m! / prod(count_i!)
+        multinomial = _multinomial_coeff(α)
+
+        # Compute Sym^{α₁}(comp) ⊗ ... ⊗ Sym^{αₘ}(comp)
+        factors = Vector{Vector{IrrepLevi}}()
+        inner_skip = false
+        for j in 1:m
+          sj = symmetric_power(comp, α[j])
+          if isempty(sj)
+            inner_skip = true
+            break
+          end
+          push!(factors, sj)
+        end
+        inner_skip && continue
+
+        current = factors[1]
+        for i in 2:length(factors)
+          next = IrrepLevi[]
+          for a in current
+            for b in factors[i]
+              append!(next, tensor_product(a, b))
+            end
+          end
+          current = next
+        end
+        push!(group_terms, current => multinomial)
+      end
+
+      if isempty(group_terms)
         skip = true
         break
       end
-      push!(factors, sym_i)
+      push!(group_results, group_terms)
     end
     skip && continue
 
-    current = factors[1]
-    for i in 2:length(factors)
-      next = IrrepLevi[]
-      for a in current
-        for b in factors[i]
-          append!(next, tensor_product(a, b))
-        end
-      end
-      current = next
-    end
-    append!(result, current)
+    # Combine across groups via tensor product
+    _combine_group_results!(result, group_results)
   end
 
   CompletelyReducibleBundle(E.variety, result)

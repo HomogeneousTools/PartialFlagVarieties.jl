@@ -211,6 +211,131 @@ function koszul_terms(Z::ZeroLocus)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  Memory-efficient Koszul cohomology (bypass CRB construction)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
+      -> Vector{Cohomology{BigInt}}
+
+Compute dimension-valued cohomology for each Koszul term ``F ⊗ ∧^i E^*``
+without materialising intermediate `CompletelyReducibleBundle` objects.
+
+Deduplicates F and wedge components into multiplicity dicts, then
+computes tensor-product weight counts and applies BWB directly.
+This avoids allocating ``O(N^2)`` `IrrepLevi` vectors that are
+immediately re-deduplicated by `dimensions()`.
+"""
+function _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError(
+      "_koszul_dimensions requires a bundle on the ambient variety of the zero locus."
+    ),
+  )
+
+  d = dimension(F.variety)
+
+  # Deduplicate F components once
+  f_counts = Dict{IrrepLevi,Int}()
+  for c in F.components
+    f_counts[c] = get(f_counts, c, 0) + 1
+  end
+
+  wedges = _koszul_wedges!(Z)
+  result = Vector{Cohomology{BigInt}}(undef, length(wedges))
+
+  for (wi, w) in enumerate(wedges)
+    # Deduplicate wedge components
+    w_counts = Dict{IrrepLevi,Int}()
+    for c in w.components
+      w_counts[c] = get(w_counts, c, 0) + 1
+    end
+
+    # Compute weight counts from tensor products without creating a CRB
+    weight_counts = Dict{WeightLatticeElem,Int}()
+    for (a, ma) in f_counts
+      for (b, mb) in w_counts
+        tp = tensor_product(a, b)
+        total = ma * mb
+        for c in tp
+          λ = p_dominant_weight(c)
+          weight_counts[λ] = get(weight_counts, λ, 0) + total
+        end
+      end
+    end
+
+    # Apply BWB directly on weight counts
+    entries = zeros(BigInt, d + 1)
+    for (λ, mult) in weight_counts
+      bwb = borel_weil_bott(λ)
+      bwb === nothing && continue
+      deg, μ = bwb
+      if 0 <= deg <= d
+        entries[deg + 1] += mult * degree(μ)
+      end
+    end
+    result[wi] = Cohomology{BigInt}(entries, d)
+  end
+
+  result
+end
+
+function _koszul_dimensions(Z::ZeroLocus)
+  _koszul_dimensions(Z, structure_sheaf(Z.ambient))
+end
+
+"""
+    _koszul_euler_characteristics(Z::ZeroLocus, F::CompletelyReducibleBundle)
+      -> Vector{BigInt}
+
+Compute ``χ(X, F ⊗ ∧^i E^*)`` for each Koszul term without materialising
+intermediate `CompletelyReducibleBundle` objects.
+"""
+function _koszul_euler_characteristics(Z::ZeroLocus, F::CompletelyReducibleBundle)
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError(
+      "_koszul_euler_characteristics requires a bundle on the ambient variety."
+    ),
+  )
+
+  # Deduplicate F components once
+  f_counts = Dict{IrrepLevi,Int}()
+  for c in F.components
+    f_counts[c] = get(f_counts, c, 0) + 1
+  end
+
+  wedges = _koszul_wedges!(Z)
+  result = Vector{BigInt}(undef, length(wedges))
+
+  for (wi, w) in enumerate(wedges)
+    # Deduplicate wedge components
+    w_counts = Dict{IrrepLevi,Int}()
+    for c in w.components
+      w_counts[c] = get(w_counts, c, 0) + 1
+    end
+
+    # Compute weight counts and euler characteristic directly
+    chi = BigInt(0)
+    for (a, ma) in f_counts
+      for (b, mb) in w_counts
+        tp = tensor_product(a, b)
+        total = ma * mb
+        for c in tp
+          λ = p_dominant_weight(c)
+          bwb = borel_weil_bott(λ)
+          bwb === nothing && continue
+          deg, μ = bwb
+          chi += (iseven(deg) ? 1 : -1) * total * degree(μ)
+        end
+      end
+    end
+    result[wi] = chi
+  end
+
+  result
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  Euler characteristic (always exact)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -233,10 +358,9 @@ julia> euler_characteristic(Z)
 ```
 """
 function euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  terms = koszul_terms(Z, F)
+  chis = _koszul_euler_characteristics(Z, F)
   result = BigInt(0)
-  for (i, K) in enumerate(terms)
-    χ = euler_characteristic(K)
+  for (i, χ) in enumerate(chis)
     result += (-1)^(i - 1) * χ
   end
   result
@@ -282,11 +406,7 @@ function cohomology_on_restriction(
   )
   d_Z = dimension(Z)
 
-  terms = koszul_terms(Z, F)
-  koszul_cohos = Cohomology{BigInt}[]
-  for K in terms
-    push!(koszul_cohos, dimensions(K))
-  end
+  koszul_cohos = _koszul_dimensions(Z, F)
 
   (H, det) = solve_koszul_filtration(koszul_cohos, d_Z)
   det && return (H, true)
@@ -294,11 +414,7 @@ function cohomology_on_restriction(
   # Serre duality fallback: H^k(Z, F) = H^{d-k}(Z, F*) when K_Z = O_Z.
   # Try computing H*(Z, F*) directly (without further fallback to avoid recursion).
   F_dual = dual(F)
-  terms_dual = koszul_terms(Z, F_dual)
-  koszul_cohos_dual = Cohomology{BigInt}[]
-  for K in terms_dual
-    push!(koszul_cohos_dual, dimensions(K))
-  end
+  koszul_cohos_dual = _koszul_dimensions(Z, F_dual)
   (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
 
   # Serre duality is only valid H^k(F) = H^{d-k}(F*) when K_Z ≅ O_Z.
@@ -372,25 +488,37 @@ function cohomology_on_restriction_symbolic(
 )
   d_Z = dimension(Z)
 
-  # First try the numeric path (which includes Serre duality fallback).
-  # If fully determined, promote to AffineExpr immediately — no symbolic variables introduced.
-  (H_numeric, det_numeric) = cohomology_on_restriction(Z, F)
+  # Compute Koszul cohomologies once (memory-efficient path)
+  koszul_cohos = _koszul_dimensions(Z, F)
+
+  # Try numeric solve first
+  (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
   if det_numeric
     entries = AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
     return Cohomology{AffineExpr}(entries, d_Z)
   end
 
-  # Numeric path underdetermined: fall back to symbolic filtration.
-  terms = koszul_terms(Z, F)
-  koszul_cohos = Cohomology{BigInt}[]
-  for K in terms
-    push!(koszul_cohos, dimensions(K))
+  # Also try Serre duality fallback (numeric on the dual)
+  serre_resolved = false
+  H_dual_result = nothing
+  if is_calabi_yau_candidate(Z.defining_bundle)
+    F_dual = dual(F)
+    koszul_cohos_dual = _koszul_dimensions(Z, F_dual)
+    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+    if det_dual
+      serre_resolved = true
+      H_dual_result = H_dual
+    end
   end
 
-  # Run the symbolic Koszul filtration over the FULL ambient dimension,
-  # not just d_Z.  The entries at degrees d_Z+1..d_ambient must all vanish
-  # (cohomology of a sheaf on a d_Z-dimensional variety), so we use those
-  # as additional equations to eliminate symbolic variables.
+  if serre_resolved
+    # H^k(F) = H^{d-k}(F*) is fully known from Serre duality
+    entries = AffineExpr[AffineExpr(Int(H_dual_result[d_Z - k])) for k in 0:d_Z]
+    return Cohomology{AffineExpr}(entries, d_Z)
+  end
+
+  # Numeric path underdetermined: fall back to symbolic filtration.
+  # Reuse already-computed koszul_cohos.
   d_ambient = koszul_cohos[1].dim_variety
   H_sym_full = solve_koszul_filtration_symbolic(koszul_cohos, d_ambient, var_counter)
 
@@ -409,34 +537,6 @@ function cohomology_on_restriction_symbolic(
   end
   # Extract the result at degrees 0..d_Z
   H_sym = Cohomology{AffineExpr}(AffineExpr[mat[1, k + 1] for k in 0:d_Z], d_Z)
-
-  # Apply Serre duality constraints: H^k(Z, F) = H^{d-k}(Z, F*)
-  # for trivially-canonical Z (K_Z = O_Z).
-  # Try computing H*(F*) numerically without further Serre fallback.
-  F_dual = dual(F)
-  terms_dual = koszul_terms(Z, F_dual)
-  koszul_cohos_dual = Cohomology{BigInt}[]
-  for K in terms_dual
-    push!(koszul_cohos_dual, dimensions(K))
-  end
-  (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-
-  # Serre duality H^k(F) = H^{d-k}(F*) is only valid when K_Z ≅ O_Z.
-  if det_dual && is_calabi_yau_candidate(Z.defining_bundle)
-    # H^k(F) = H^{d-k}(F*) is fully known: substitute into symbolic result.
-    n = d_Z + 1
-    mat2 = Matrix{AffineExpr}(undef, 1, n)
-    for k in 0:d_Z
-      mat2[1, k + 1] = H_sym[k]
-    end
-    for k in 0:d_Z
-      val = H_dual[d_Z - k]
-      if !is_determined(mat2[1, k + 1])
-        _apply_equation!(mat2, mat2[1, k + 1] - AffineExpr(Int(val)))
-      end
-    end
-    return Cohomology{AffineExpr}(AffineExpr[mat2[1, k + 1] for k in 0:d_Z], d_Z)
-  end
 
   H_sym
 end
@@ -476,17 +576,52 @@ function _restrict_to_zero_locus_les(
 )
   d_Z = dimension(Z)
 
-  # Fast path: if the numeric solver fully determines everything, use it
-  (H_numeric, det_numeric) = cohomology_on_restriction(Z, F)
+  # Compute Koszul cohomologies once (memory-efficient path)
+  koszul_cohos = _koszul_dimensions(Z, F)
+  d_ambient = koszul_cohos[1].dim_variety
+
+  # Try numeric solve first
+  (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
   if det_numeric
     return AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
   end
 
-  # Build Koszul cohomologies on the ambient variety
-  terms = koszul_terms(Z, F)
-  koszul_cohos = Cohomology{BigInt}[dimensions(K) for K in terms]
-  d_ambient = koszul_cohos[1].dim_variety
+  # Try Serre duality fallback before symbolic path
+  if is_calabi_yau_candidate(Z.defining_bundle)
+    F_dual = dual(F)
+    koszul_cohos_dual = _koszul_dimensions(Z, F_dual)
+    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+    if det_dual
+      entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
+      return AffineExpr[AffineExpr(Int(e)) for e in entries]
+    end
 
+    # Cross-validation: check if both are consistent
+    chi_exact = sum(
+      ((-1)^(i - 1)) *
+      sum((-1)^k * koszul_cohos[i][k] for k in 0:d_ambient; init=BigInt(0))
+      for i in 1:length(koszul_cohos);
+      init=BigInt(0),
+    )
+    chi_numeric = sum((-1)^k * H_numeric[k] for k in 0:d_Z; init=BigInt(0))
+
+    dim_ambient_dual = koszul_cohos_dual[1].dim_variety
+    chi_exact_dual = sum(
+      ((-1)^(i - 1)) *
+      sum((-1)^k * koszul_cohos_dual[i][k] for k in 0:dim_ambient_dual; init=BigInt(0))
+      for i in 1:length(koszul_cohos_dual);
+      init=BigInt(0),
+    )
+    chi_numeric_dual = sum((-1)^k * H_dual[k] for k in 0:d_Z; init=BigInt(0))
+
+    serre_consistent = all(H_numeric[k] == H_dual[d_Z - k] for k in 0:d_Z)
+
+    if chi_numeric == chi_exact && chi_numeric_dual == chi_exact_dual && serre_consistent
+      return AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
+    end
+  end
+
+  # Symbolic path: reuse already-computed koszul_cohos
   # Extract BigInt vectors, reversed: K_r, K_{r-1}, …, K_0
   koszul_vecs = Vector{BigInt}[
     BigInt[kc[i] for i in 0:d_ambient] for kc in reverse(koszul_cohos)
@@ -1081,7 +1216,117 @@ the K-theory relation ``[\\wedge^p \\Omega_X|_Z] = \\sum_i [\\wedge^i E^*|_Z \\o
 Koszul-computable Euler characteristics on ``X``.
 """
 function _chi_omega_p_conormal(Z::ZeroLocus, p::Int)
-  _chi_omega_tensor(Z, p, structure_sheaf(Z.ambient))
+  g_counts = _to_counts(structure_sheaf(Z.ambient))
+  _chi_omega_tensor_counts(Z, p, g_counts)
+end
+
+# ─── Dict-based tensor and euler operations for _chi_omega_tensor ────────────
+
+"""
+Convert a `CompletelyReducibleBundle` to a `Dict{IrrepLevi,Int}` of counts.
+"""
+function _to_counts(E::CompletelyReducibleBundle)
+  counts = Dict{IrrepLevi,Int}()
+  for c in E.components
+    counts[c] = get(counts, c, 0) + 1
+  end
+  counts
+end
+
+"""
+Tensor product of two multiplicity dicts, returning a new multiplicity dict.
+"""
+function _tensor_product_counts(
+  a_counts::Dict{IrrepLevi,Int}, b_counts::Dict{IrrepLevi,Int}
+)
+  result = Dict{IrrepLevi,Int}()
+  for (a, ma) in a_counts
+    for (b, mb) in b_counts
+      tp = tensor_product(a, b)
+      total = ma * mb
+      for c in tp
+        result[c] = get(result, c, 0) + total
+      end
+    end
+  end
+  result
+end
+
+"""
+Compute ``\\chi(Z, F|_Z)`` from a multiplicity dict, without creating CRBs.
+
+Uses the Koszul spectral sequence:
+``\\chi(Z, F|_Z) = \\sum_i (-1)^i \\chi(X, F \\otimes \\wedge^i E^*)``
+"""
+function _euler_characteristic_from_counts(
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}
+)
+  wedges = _koszul_wedges!(Z)
+  result = BigInt(0)
+
+  for (wi, w) in enumerate(wedges)
+    w_counts = _to_counts(w)
+
+    chi = BigInt(0)
+    for (a, ma) in f_counts
+      for (b, mb) in w_counts
+        tp = tensor_product(a, b)
+        total = ma * mb
+        for c in tp
+          λ = p_dominant_weight(c)
+          bwb = borel_weil_bott(λ)
+          bwb === nothing && continue
+          deg, μ = bwb
+          chi += (iseven(deg) ? 1 : -1) * total * degree(μ)
+        end
+      end
+    end
+    result += (-1)^(wi - 1) * chi
+  end
+
+  result
+end
+
+"""
+Recursively compute ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z)`` where ``G`` is
+represented as a multiplicity dict (restricted to ``Z`` via Koszul).
+
+Works entirely with `Dict{IrrepLevi,Int}` to avoid creating large intermediate
+`CompletelyReducibleBundle` objects.  Results are memoized via `memo` to avoid
+exponential recomputation of shared subtrees.
+"""
+function _chi_omega_tensor_counts(
+  Z::ZeroLocus, j::Int, g_counts::Dict{IrrepLevi,Int},
+  memo::Dict{Tuple{Int,UInt},BigInt}=Dict{Tuple{Int,UInt},BigInt}(),
+)
+  # Use hash of (j, g_counts) as memo key
+  g_hash = hash(g_counts)
+  memo_key = (j, g_hash)
+  cached = get(memo, memo_key, nothing)
+  cached !== nothing && return cached
+
+  if j == 0
+    result = _euler_characteristic_from_counts(Z, g_counts)
+    memo[memo_key] = result
+    return result
+  end
+
+  X = Z.ambient
+  Ωj_X = exterior_power(cotangent_bundle(X), j)
+  ω_counts = _to_counts(Ωj_X)
+  r = length(_koszul_wedges!(Z)) - 1
+
+  fg_counts = _tensor_product_counts(ω_counts, g_counts)
+  result = _euler_characteristic_from_counts(Z, fg_counts)
+
+  for i in 1:min(j, r)
+    w_counts = _to_counts(_koszul_wedges!(Z)[i + 1])
+    gw_counts = _tensor_product_counts(g_counts, w_counts)
+    result -= _chi_omega_tensor_counts(Z, j - i, gw_counts, memo)
+  end
+
+  memo[memo_key] = result
+  result
 end
 
 """
@@ -1097,21 +1342,7 @@ Recursion: ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z) =
 function _chi_omega_tensor(
   Z::ZeroLocus, j::Int, G::CompletelyReducibleBundle
 )
-  X = Z.ambient
-
-  if j == 0
-    return euler_characteristic(Z, G)
-  end
-
-  Ωj_X = exterior_power(cotangent_bundle(X), j)
-  r = length(_koszul_wedges!(Z)) - 1  # = codimension(Z)
-
-  result = euler_characteristic(Z, tensor_product(Ωj_X, G))
-  for i in 1:min(j, r)
-    result -= _chi_omega_tensor(Z, j - i, tensor_product(_koszul_wedges!(Z)[i + 1], G))
-  end
-
-  result
+  _chi_omega_tensor_counts(Z, j, _to_counts(G))
 end
 
 """Try to resolve remaining unknowns in row `p` of the Hodge diamond."""

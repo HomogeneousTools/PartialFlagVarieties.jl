@@ -563,8 +563,10 @@ function hochschild_cohomology(Z::ZeroLocus)
     end
 
     # χ(∧^p T_Z) constraint: Σ_q (-1)^q data[p+1, q+1] = exact value
+    chi_memo = Dict{Tuple{Int,UInt},BigInt}()
+    l_anti_counts = _to_counts(L_anti)
     for p in 0:d
-      chi_p = _chi_omega_tensor(Z, d - p, L_anti)
+      chi_p = _chi_omega_tensor_counts(Z, d - p, l_anti_counts, chi_memo)
       alt_sum = sum((-1)^q * data[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
       eq = alt_sum - AffineExpr(chi_p)
       if !isempty(eq.coeffs)

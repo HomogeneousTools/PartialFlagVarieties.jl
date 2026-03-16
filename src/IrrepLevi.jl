@@ -189,13 +189,29 @@ function Base.show(io::IO, rep::IrrepLevi)
   print(io, "(", sprint(show, p_dominant_weight(rep)), ")")
 end
 
+# ─── Cached tensor product ──────────────────────────────────────────────────
+
+const _TENSOR_PRODUCT_CACHE = Dict{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}()
+
 """
     tensor_product(a::IrrepLevi, b::IrrepLevi) -> Vector{IrrepLevi}
 
 Return the tensor product of two irreducible Levi representations as a list
 of irreducible summands (with multiplicity).
+
+Results are cached to avoid redundant Lie decomposition calls.
 """
 function tensor_product(a::IrrepLevi, b::IrrepLevi)
+  key = (a, b)
+  cached = get(_TENSOR_PRODUCT_CACHE, key, nothing)
+  cached !== nothing && return cached
+
+  result = _tensor_product_uncached(a, b)
+  _TENSOR_PRODUCT_CACHE[key] = result
+  result
+end
+
+function _tensor_product_uncached(a::IrrepLevi, b::IrrepLevi)
   marked_dynkin_type(a) == marked_dynkin_type(b) || throw(
     ArgumentError(
       "tensor_product requires Levi representations with the same marked Dynkin type."
