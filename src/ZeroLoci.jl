@@ -802,6 +802,94 @@ function hodge_numbers_les(Z::ZeroLocus)
 
   _renumber_variables!(hodge)
 end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Symbolic Hodge constraint helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+Apply `hodge[pi, qi] = target`, handling the case where the entry is
+determined but contradicts the target.  When the entry is symbolic,
+delegates to `_apply_equation!`.  When it's a determined wrong value,
+forces the correct value and adjusts the diagonal entry of the same row
+to preserve the alternating sum χ.
+"""
+function _apply_hodge_constraint!(
+  hodge::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt,
+  chi_p::BigInt, d::Int,
+)
+  expr = hodge[pi, qi]
+  if !is_determined(expr)
+    return _apply_equation!(hodge, expr - AffineExpr(target))
+  end
+  expr.constant == target && return false
+
+  # Determined but wrong: force the correct value.
+  delta = target - expr.constant
+  hodge[pi, qi] = AffineExpr(target)
+
+  # Compensate the alternating sum χ = Σ (-1)^q h^{p,q} by adjusting an
+  # undetermined entry in the same row.  If no undetermined entry exists,
+  # pick the entry with the most symbolic variables (most likely to absorb
+  # the correction).  The correction Δ at column q must satisfy:
+  #   (-1)^(qi-1) * delta + (-1)^(comp_col-1) * Δ = 0
+  # ⟹ Δ = -delta * (-1)^(qi - comp_col)
+  q_forced = qi - 1  # 0-based column index
+
+  # Try to find an undetermined entry (best candidate for correction)
+  comp_col = -1
+  for q in 0:d
+    q == q_forced && continue
+    !is_determined(hodge[pi, q + 1]) && (comp_col = q; break)
+  end
+
+  if comp_col >= 0
+    # Adjust undetermined entry: cancel the χ imbalance
+    correction = -delta * (iseven(q_forced - comp_col) ? 1 : -1)
+    e = hodge[pi, comp_col + 1]
+    hodge[pi, comp_col + 1] = AffineExpr(e.constant + correction, copy(e.coeffs))
+  else
+    # All entries are determined.  Find the diagonal entry h^{p,p} (most
+    # internal) and adjust it, since the χ constraint will be satisfied.
+    p_idx = pi - 1  # 0-based
+    correction = -delta * (iseven(q_forced - p_idx) ? 1 : -1)
+    e = hodge[pi, p_idx + 1]
+    hodge[pi, p_idx + 1] = AffineExpr(e.constant + correction)
+  end
+  true
+end
+
+"""
+Apply `hodge[p1, q1] = hodge[p2, q2]`, handling the determined-but-wrong
+case by forcing the entry with fewer variables to match the other.
+"""
+function _apply_hodge_pair!(
+  hodge::Matrix{AffineExpr}, p1::Int, q1::Int, p2::Int, q2::Int,
+  chi_vals::Vector{BigInt}, d::Int,
+)
+  e1 = hodge[p1, q1]
+  e2 = hodge[p2, q2]
+  expr = e1 - e2
+
+  # If the equation has a variable, eliminate it normally
+  if !isempty(expr.coeffs)
+    return _apply_equation!(hodge, expr)
+  end
+
+  # Both sides are determined to the same value — nothing to do
+  expr.constant == 0 && return false
+
+  # Both sides are determined to different values (contradiction from
+  # the Koszul solver).  Force the one with the wrong value.
+  # Prefer to force the entry in the higher-indexed row (later in the
+  # conormal sequence, more likely to have accumulated error).
+  if p1 >= p2
+    return _apply_hodge_constraint!(hodge, p1, q1, e2.constant, chi_vals[p1], d)
+  else
+    return _apply_hodge_constraint!(hodge, p2, q2, e1.constant, chi_vals[p2], d)
+  end
+end
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Symbolic Hodge numbers  (concrete hodge_numbers is in Hodge.jl)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -909,89 +997,68 @@ function hodge_numbers_symbolic(Z::ZeroLocus)
     for q in 0:d
       hodge[p + 1, q + 1] = Hp[q]
     end
-
-    # Immediately apply Hodge symmetry to override conormal-computed values
-    # that are already determined but potentially wrong (constant-part lower bounds).
-    #
-    # When a corner entry h^{p,0} (or h^{p,d}) is forced to a new value `target`
-    # that differs from the determined constant the Koszul computation produced,
-    # the alternating sum χ = Σ (-1)^q h^{p,q} changes by ±delta.
-    #
-    # For the MIDDLE ROW (p == d÷2, even d): the symbolic variables in that row
-    # already satisfy χ = chi_exact for any variable assignment (they all cancel
-    # in the alternating sum).  The χ constraint in the second loop is therefore
-    # a no-op.  We must manually compensate h^{p, d÷2} to restore χ.
-    #
-    # For ALL OTHER ROWS (p ≠ d÷2): the symbolic variables do NOT all cancel in
-    # χ, so the χ constraint in the second loop will self-correct by eliminating
-    # one free variable.  No manual compensation is needed or safe.
-    mid = d ÷ 2  # middle q-index (0-based)
-
-    # h^{p,0} = h^{0,p} (Hodge symmetry)
-    if p >= 1 && is_determined(hodge[1, p + 1])
-      target = hodge[1, p + 1].constant
-      entry = hodge[p + 1, 1]
-      if is_determined(entry) && entry.constant != target
-        delta = target - entry.constant  # change in h^{p,0}
-        hodge[p + 1, 1] = AffineExpr(target)
-        if p == half  # middle row: χ vars cancel → compensate h^{p,mid}
-          # (-1)^mid * Δmid = -delta  →  Δmid = -delta / (-1)^mid
-          comp = -delta * (iseven(mid) ? 1 : -1)
-          e_mid = hodge[p + 1, mid + 1]
-          hodge[p + 1, mid + 1] = AffineExpr(e_mid.constant + comp, e_mid.coeffs)
-        end
-        # For p ≠ half: let the χ constraint in the second loop handle it.
-      else
-        _apply_linear_constraint!(hodge, p + 1, 1, target)
-      end
-    end
-    # h^{p,d} = h^{0,d-p} (Serre + Hodge symmetry; skipped when dp == p)
-    dp = d - p
-    if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
-      target = hodge[1, dp + 1].constant
-      entry = hodge[p + 1, d + 1]
-      if is_determined(entry) && entry.constant != target
-        # p == half is impossible here (dp == p is excluded above),
-        # so no middle-row compensation is needed.
-        hodge[p + 1, d + 1] = AffineExpr(target)
-        # The χ constraint in the second loop will absorb the imbalance.
-      else
-        _apply_linear_constraint!(hodge, p + 1, d + 1, target)
-      end
-    end
   end
 
-  # ── Apply Hodge/Serre symmetry constraints to eliminate variables ─────
-  for p in 0:half
-    # Hodge symmetry: h^{p,0} = h^{0,p}
-    if p >= 1 && is_determined(hodge[1, p + 1])
-      _apply_linear_constraint!(hodge, p + 1, 1, hodge[1, p + 1].constant)
+  # ── Apply all symmetry constraints, iterating until convergence ─────
+  # Precompute χ(Ω^p_Z) once (these are exact and don't change).
+  chi_vals = BigInt[_chi_omega_p_conormal(Z, p) for p in 0:half]
+
+  constraint_changed = true
+  while constraint_changed
+    constraint_changed = false
+
+    # Hodge corner constraints: h^{p,0} = h^{0,p}, h^{p,d} = h^{0,d-p}
+    for p in 1:half
+      if is_determined(hodge[1, p + 1])
+        constraint_changed =
+          _apply_hodge_constraint!(hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d) ||
+          constraint_changed
+      end
+      dp = d - p
+      if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
+        constraint_changed =
+          _apply_hodge_constraint!(hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d) ||
+          constraint_changed
+      end
     end
-    # Serre + Hodge: h^{p,d} = h^{d-p,d} = h^{0,d-p} (known from p=0 row)
-    dp = d - p
-    if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
-      _apply_linear_constraint!(hodge, p + 1, d + 1, hodge[1, dp + 1].constant)
-    end
+
     # χ(Ω^p_Z) constraint
-    chi_p = _chi_omega_p_conormal(Z, p)
-    alt_sum = sum((-1)^q * hodge[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
-    _apply_equation!(hodge, alt_sum - AffineExpr(chi_p))
-  end
+    for p in 0:half
+      alt_sum = sum((-1)^q * hodge[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
+      constraint_changed =
+        _apply_equation!(hodge, alt_sum - AffineExpr(chi_vals[p + 1])) ||
+        constraint_changed
+    end
 
-  # ── Cross-row Hodge symmetry: h^{p,q} = h^{q,p} for all computed rows ─
-  # Apply h^{p,q} = h^{q,p} for p,q = 0..half to eliminate more variables
-  for p in 0:half, q in 0:half
-    p == q && continue
-    expr = hodge[p + 1, q + 1] - hodge[q + 1, p + 1]
-    _apply_equation!(hodge, expr)
-  end
+    # Cross-row Hodge symmetry: h^{p,q} = h^{q,p} for p,q ∈ 0..half
+    for p in 0:half, q in 0:half
+      p == q && continue
+      constraint_changed =
+        _apply_hodge_pair!(hodge, p + 1, q + 1, q + 1, p + 1, chi_vals, d) ||
+        constraint_changed
+    end
 
-  # ── Middle-row Hodge symmetry constraint: h^{p,q} = h^{p,d-q} ────────
-  if d % 2 == 0
-    p = half
-    for q in 0:(d ÷ 2 - 1)
-      expr = hodge[p + 1, q + 1] - hodge[p + 1, d - q + 1]
-      _apply_equation!(hodge, expr)
+    # Middle-row Serre: h^{half,q} = h^{half,d-q}
+    if d % 2 == 0
+      p = half
+      for q in 0:(d ÷ 2 - 1)
+        constraint_changed =
+          _apply_hodge_pair!(hodge, p + 1, q + 1, p + 1, d - q + 1, chi_vals, d) ||
+          constraint_changed
+      end
+    end
+
+    # Combined Hodge–Serre: h^{p,q} = h^{d-q,d-p}
+    # Only apply when both (p) and (d-q) are in the computed range 0..half.
+    for p in 0:half, q in 0:d
+      dq = d - q
+      dp = d - p
+      (0 <= dq <= half) || continue
+      (0 <= dp <= d) || continue
+      (p == dq && q == dp) && continue  # skip trivial self-links
+      constraint_changed =
+        _apply_hodge_pair!(hodge, p + 1, q + 1, dq + 1, dp + 1, chi_vals, d) ||
+        constraint_changed
     end
   end
 
@@ -1002,7 +1069,7 @@ function hodge_numbers_symbolic(Z::ZeroLocus)
     end
   end
 
-  hodge
+  _renumber_variables!(hodge)
 end
 
 """
