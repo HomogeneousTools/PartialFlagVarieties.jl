@@ -258,7 +258,9 @@ julia> all(is_exceptional, Es)
 true
 ```
 """
-function beilinson_collection(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+function beilinson_collection(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  Marked = marked_nodes(X)
   DT <: TypeA || throw(ArgumentError(
     "beilinson_collection requires projective space (type A with one marked node)"
   ))
@@ -293,7 +295,9 @@ julia> all(is_exceptional, Es)
 true
 ```
 """
-function beilinson_collection_dual(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+function beilinson_collection_dual(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  Marked = marked_nodes(X)
   DT <: TypeA || throw(ArgumentError(
     "beilinson_collection_dual requires projective space (type A with one marked node)"
   ))
@@ -350,7 +354,9 @@ julia> is_full_exceptional_sequence(Es, X)
 true
 ```
 """
-function kapranov_collection(X::PartialFlagVariety{MDT}) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+function kapranov_collection(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  Marked = marked_nodes(X)
   _is_quadric(DT, Marked) || throw(ArgumentError(
     "kapranov_collection requires a quadric (B_m/P_1 or D_m/P_1)"
   ))
@@ -421,9 +427,11 @@ julia> rank_bundle(L1)
 ```
 """
 function schur_functor(
-  X::PartialFlagVariety{MDT},
+  X::PartialFlagVariety,
   partition::Vector{<:Integer},
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+)
+  DT = dynkin_type(X)
+  Marked = marked_nodes(X)
   DT <: TypeA || throw(ArgumentError(
     "schur_functor is only implemented for Type A Grassmannians"
   ))
@@ -469,8 +477,9 @@ function schur_functor(
   end
 
   λ = WeightLatticeElem(DT, coeffs)
-  rep = IrrepLevi(MDT, λ)
-  CompletelyReducibleBundle{MDT}(X, [rep])
+  mdt = marked_type(X)
+  rep = IrrepLevi(mdt, λ)
+  CompletelyReducibleBundle(X, [rep])
 end
 
 """
@@ -534,8 +543,10 @@ julia> euler_characteristic(X)
 ```
 """
 function kapranov_bundles_grassmannian(
-  X::PartialFlagVariety{MDT},
-) where {MDT<:MarkedDynkinType{DT,Marked}} where {DT,Marked}
+  X::PartialFlagVariety,
+)
+  DT = dynkin_type(X)
+  Marked = marked_nodes(X)
   DT <: TypeA || throw(ArgumentError(
     "kapranov_bundles_grassmannian requires a Type-A Grassmannian"
   ))
