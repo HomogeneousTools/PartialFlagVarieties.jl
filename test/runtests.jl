@@ -1334,6 +1334,117 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test h[3, 3] == 1   # h^{2,2} = h^{0,0}
   end
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Exceptional collections
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "is_exceptional: basic bundles" begin
+    X = projective_space(3)
+    @test is_exceptional(structure_sheaf(X))
+    @test is_exceptional(line_bundle(X, 1))
+    @test is_exceptional(line_bundle(X, -1))
+    @test is_exceptional(tangent_bundle(X))
+    @test is_exceptional(cotangent_bundle(X))
+  end
+
+  @testset "is_exceptional_pair: line bundles on ℙ³" begin
+    X = projective_space(3)
+    O0 = structure_sheaf(X)
+    O1 = line_bundle(X, 1)
+    O2 = line_bundle(X, 2)
+    # (Oₐ, O_b) is exceptional pair iff a < b
+    @test is_exceptional_pair(O0, O1)
+    @test is_exceptional_pair(O0, O2)
+    @test is_exceptional_pair(O1, O2)
+    @test !is_exceptional_pair(O1, O0)
+  end
+
+  @testset "is_strong_exceptional_pair: line bundles on ℙ³" begin
+    X = projective_space(3)
+    O0 = structure_sheaf(X)
+    O1 = line_bundle(X, 1)
+    @test is_strong_exceptional_pair(O0, O1)
+  end
+
+  @testset "Beilinson collection on ℙ⁴" begin
+    X = projective_space(4)
+    Es = beilinson_collection(X)
+    @test length(Es) == 5
+    @test is_full_exceptional_sequence(Es, X)
+    @test is_strong_exceptional_sequence(Es)
+    # dual Beilinson
+    Ed = beilinson_collection_dual(X)
+    @test length(Ed) == 5
+    @test is_full_exceptional_sequence(Ed, X)
+    @test is_strong_exceptional_sequence(Ed)
+  end
+
+  @testset "Kapranov collection on quadrics" begin
+    # Odd quadrics Q^{2m-1}: B_m/P_1, collection has n+1 elements
+    Q3 = quadric(3)   # B_2/P_1
+    Es3 = kapranov_collection(Q3)
+    @test length(Es3) == 4   # = chi(Q^3)
+    @test is_full_exceptional_sequence(Es3, Q3)
+
+    Q5 = quadric(5)   # B_3/P_1
+    Es5 = kapranov_collection(Q5)
+    @test length(Es5) == 6   # = chi(Q^5)
+    @test is_full_exceptional_sequence(Es5, Q5)
+
+    # Even quadrics Q^{2m}: D_m/P_1, collection has n+2 elements
+    Q4 = quadric(4)   # D_3/P_1
+    Es4 = kapranov_collection(Q4)
+    @test length(Es4) == 6   # = chi(Q^4)
+    @test is_full_exceptional_sequence(Es4, Q4)
+  end
+
+  @testset "schur_functor ranks on Gr(2,4)" begin
+    X = Gr(2, 4)
+    @test rank_bundle(schur_functor(X, [0, 0])) == 1     # O
+    @test rank_bundle(schur_functor(X, [1, 0])) == 2     # U^∨
+    @test rank_bundle(schur_functor(X, [1, 1])) == 1     # det(U^∨)
+    @test rank_bundle(schur_functor(X, [2, 0])) == 3     # Sym²(U^∨)
+    @test rank_bundle(schur_functor(X, [2, 1])) == 2     # U^∨ ⊗ det
+    @test rank_bundle(schur_functor(X, [2, 2])) == 1     # det²
+    # NTuple form
+    @test rank_bundle(schur_functor(X, (2, 0))) == 3
+  end
+
+  @testset "schur_functor ranks on Gr(2,5)" begin
+    X = Gr(2, 5)
+    # GL(2) Schur functors: Sym^d has rank d+1
+    @test rank_bundle(schur_functor(X, [0, 0])) == 1
+    @test rank_bundle(schur_functor(X, [1, 0])) == 2
+    @test rank_bundle(schur_functor(X, [1, 1])) == 1
+    @test rank_bundle(schur_functor(X, [2, 0])) == 3
+    @test rank_bundle(schur_functor(X, [3, 0])) == 4
+    @test rank_bundle(schur_functor(X, [3, 3])) == 1
+  end
+
+  @testset "Kapranov collection on Gr(2,4)" begin
+    X = Gr(2, 4)
+    Es = kapranov_bundles_grassmannian(X)
+    @test length(Es) == euler_characteristic(X)
+    @test is_full_exceptional_sequence(Es, X)
+    @test is_strong_exceptional_sequence(Es)
+  end
+
+  @testset "Kapranov collection on Gr(2,5)" begin
+    X = Gr(2, 5)
+    Es = kapranov_bundles_grassmannian(X)
+    @test length(Es) == euler_characteristic(X)   # = 10
+    @test is_full_exceptional_sequence(Es, X)
+    @test is_strong_exceptional_sequence(Es)
+  end
+
+  @testset "Kapranov collection on Gr(3,6)" begin
+    X = Gr(3, 6)
+    Es = kapranov_bundles_grassmannian(X)
+    @test length(Es) == euler_characteristic(X)   # = 20
+    @test is_full_exceptional_sequence(Es, X)
+    @test is_strong_exceptional_sequence(Es)
+  end
+
   @testset "ZeroLocus: symbolic Hodge numbers" begin
     # Fully determined case: symbolic = numeric
     X = projective_space(4)

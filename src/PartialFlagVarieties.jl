@@ -43,6 +43,7 @@ include("Cohomology.jl")
 include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
+include("ExceptionalCollections.jl")
 include("Hodge.jl")
 
 # ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
