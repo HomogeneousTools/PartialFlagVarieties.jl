@@ -66,6 +66,7 @@ jobs:
           # this one is rather slow, so we skip it for now
           #- HochschildAffine.jl
           - Hyperkaehler.jl
+          - HyperellipticLinesExceptional.jl
           - Kuechle.jl
           - LinearSections.jl
     steps:
