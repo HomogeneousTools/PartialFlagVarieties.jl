@@ -24,13 +24,13 @@ export borel_weil_bott
 """
     borel_weil_bott(λ::WeightLatticeElem{DT,R}) -> Union{Nothing, Tuple{Int, WeightLatticeElem{DT,R}}}
 
-Apply the Borel–Weil–Bott theorem to the weight `λ`.
+Apply the Borel–Weil–Bott theorem to the weight ``λ``.
 
-Compute `μ = λ + ρ` and find the unique Weyl group element `w` such that
-`w(μ)` is dominant.  If `μ` is singular (any coordinate zero after
+Compute ``μ = λ + ρ`` and find the unique Weyl group element ``w`` such that
+``w(μ)`` is dominant.  If ``μ`` is singular (any coordinate zero after
 reflecting to the dominant chamber), all cohomology vanishes and
-`nothing` is returned.  Otherwise return `(d, w(μ) - ρ)` where
-`d = ℓ(w)` is the cohomological degree.
+`nothing` is returned.  Otherwise return ``(d,\\, w(μ) - ρ)`` where
+``d = \\ell(w)`` is the cohomological degree.
 
 # Examples
 ```jldoctest

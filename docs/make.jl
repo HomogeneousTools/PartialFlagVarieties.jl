@@ -24,6 +24,8 @@ makedocs(
       "UniversalBundles" => "api/universal_bundles.md",
       "Cohomology" => "api/cohomology.md",
       "Hodge & Hochschild" => "api/hochschild.md",
+      "ZeroLoci" => "api/zero_loci.md",
+      "Koszul Algebra" => "api/koszul.md",
       "Constructions" => "api/constructions.md",
       "ExceptionalCollections" => "api/exceptional_collections.md",
     ],

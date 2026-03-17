@@ -3,20 +3,26 @@
 [![CI](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/CI.yml)
 
 A Julia package for computing with **partial flag varieties** $G/P$:
-equivariant bundles, sheaf cohomology via the Borel–Weil–Bott theorem,
-Hodge numbers, Hochschild cohomology, and more.
+equivariant vector bundles, sheaf cohomology via the Borel–Weil–Bott theorem,
+zero loci, Hodge numbers, Hochschild cohomology, exceptional collections,
+and more.
 
 Part of the [HomogeneousTools](https://homogeneous.tools) project, building on [Lie.jl](https://github.com/HomogeneousTools/Lie.jl).
 
 ## Features
 
-- **Partial flag varieties** for all simple Lie types (A–G, including E₆, E₇, E₈, F₄, G₂)
-- Named constructors: `Gr`, `OGr`, `SGr`, `LGr`, `projective_space`, `quadric`, `flag_variety`, `cayley_plane`, `freudenthal_variety`, `adjoint_variety`, `coadjoint_variety`
-- **Equivariant vector bundles**: structure sheaf, tangent/cotangent, canonical, line bundles, exterior/symmetric powers, tensor products, duals, twists
-- **Universal bundles**: tautological subbundle, quotient bundle, spinor bundles on quadrics
-- **Filtered bundles**: tangent bundle filtration by root height (Lemma 2.1, [arXiv:1606.04076](https://arxiv.org/abs/1606.04076))
-- **Sheaf cohomology** via the Borel–Weil–Bott theorem (dimension-valued and character-valued)
+- **Partial flag varieties** for all simple Lie types (A–G, including $\mathrm{E}_6$, $\mathrm{E}_7$, $\mathrm{E}_8$, $\mathrm{F}_4$, $\mathrm{G}_2$)
+- Named constructors: `Gr`, `OGr`, `SGr`, `LGr`, `IGr`, `projective_space`, `quadric`, `flag_variety`, `cayley_plane`, `freudenthal_variety`, `adjoint_variety`, `coadjoint_variety`
+- **Equivariant vector bundles**: structure sheaf, tangent/cotangent, canonical, line bundles, exterior/symmetric powers, tensor products, duals, twists, determinants
+- **Universal bundles**: tautological subbundles, quotient bundles, spinor bundles on quadrics
+- **Filtered bundles**: tangent bundle filtration by root height, with induced filtrations on exterior/symmetric powers, duals, and tensor products
+- **Sheaf cohomology** via the Borel–Weil–Bott theorem (both dimension-valued and character-valued)
+- **Hilbert polynomials** of equivariant bundles and zero loci
+- **Zero loci** of sections of equivariant bundles, with Koszul resolutions, restriction cohomology, and Calabi–Yau detection
 - **Hodge numbers**, **twisted Hodge numbers**, **Hochschild cohomology** with polyvector parallelogram display
+- **Symbolic Hodge computation** for zero loci using long exact sequences, Serre duality cross-constraints, and Akizuki–Nakano vanishing
+- **Exceptional collections**: Beilinson on $\mathbb{P}^n$, Kapranov on quadrics, Kapranov–Orlov on Grassmannians, Schur functors
+- Topological invariants: dimension, Euler characteristic, Betti numbers, Picard rank, Fano index, classification predicates (minuscule, cominuscule, adjoint, coadjoint)
 - Runtime marked Dynkin data with cached structural invariants
 - Bourbaki/Oscar conventions throughout
 
@@ -27,25 +33,25 @@ using PartialFlagVarieties
 
 # Grassmannian Gr(2, 5)
 X = Gr(2, 5)
-dimension(X)         # 6
+dimension(X)             # 6
 euler_characteristic(X)  # 10
 
 # Tangent bundle cohomology
 T = tangent_bundle(X)
-dimensions(T)        # H⁰ = 24
+dimensions(T)            # H⁰ = 24
 
 # Exterior powers
 E = exterior_power(T, 2)
-dimensions(E)        # H⁰ = 276
+dimensions(E)            # H⁰ = 276
 
 # Universal bundles
 U = universal_subbundle(X)
 Q = universal_quotient_bundle(X)
-rank_bundle(U)       # 2
-rank_bundle(Q)       # 3
+rank_bundle(U)           # 2
+rank_bundle(Q)           # 3
 
 # Hodge numbers
-H = hodge_numbers(X)  # diagonal: h^{p,p} = b_{2p}
+H = hodge_numbers(X)     # diagonal: h^{p,p} = b_{2p}
 
 # Hochschild cohomology (polyvector parallelogram)
 P = hochschild_cohomology(projective_space(2))
@@ -66,6 +72,19 @@ flag_variety(5, (1, 3))      # Fl(1,3; 5)
 cayley_plane()               # E₆/P₁
 freudenthal_variety()        # E₇/P₇
 adjoint_variety(TypeE{6})    # E₆/P₂
+```
+
+## Zero loci
+
+```julia
+X = Gr(2, 5)
+L = line_bundle(X, 1)
+Z = zero_locus(L)            # hypersurface in Gr(2,5)
+dimension(Z)                 # 5
+is_calabi_yau(Z)             # false
+
+# Hodge numbers of zero loci
+hodge_numbers(Z)
 ```
 
 ## Spinor bundles
@@ -93,12 +112,35 @@ F2 = exterior_power(F, 2)   # ∧² with induced filtration
 S2 = symmetric_power(F, 2)  # Sym² with induced filtration
 ```
 
+## Exceptional collections
+
+```julia
+X = projective_space(3)
+Es = beilinson_collection(X)               # ⟨𝒪, 𝒪(1), 𝒪(2), 𝒪(3)⟩
+is_full_exceptional_sequence(Es, X)        # true
+
+X = quadric(4)
+Es = kapranov_collection(X)               # spinor bundles + line bundles
+
+X = Gr(2, 4)
+Es = kapranov_bundles_grassmannian(X)      # Schur functors of U∨
+is_strong_exceptional_sequence(Es)         # true
+```
+
 ## Examples
 
 The `examples/` directory contains standalone scripts:
 
-- **`HochschildAffine.jl`** — Euler characteristics of polyvector fields $\chi(\bigwedge^p T_{G/P})$ for all types up to rank 8, with progress bars, output files, and cache management
+- **`HochschildAffine.jl`** — Euler characteristics of polyvector fields $\chi(\bigwedge^p T_{G/P})$ for all types up to rank 8
 - **`BottVanishing.jl`** — Verification of Bott vanishing failure for (co)adjoint varieties
+- **`CICY3-1606.04076.jl`** — Calabi–Yau threefold classification in exceptional flag varieties
+- **`CICY3-1607.07821.jl`** — Complete-intersection Calabi–Yau threefolds on Grassmannians
+- **`Kuechle.jl`** — Küchle's classification of Fano fourfolds in Grassmannians
+- **`FanoThreefolds.jl`** — Hodge diamonds and polyvector parallelograms for homogeneous Fano threefolds
+- **`FanoFourfolds.jl`** — Hodge number computation for Fano fourfolds from JSON dataset
+- **`ExceptionalCollections.jl`** — Exceptional collection verification on various varieties
+- **`Hyperkaehler.jl`** — Hodge numbers of hyperkähler fourfolds of $\mathrm{K3}^{[2]}$-type
+- **`LinearSections.jl`** — Linear sections of Grassmannians and homological projective duality
 
 Run with:
 ```sh

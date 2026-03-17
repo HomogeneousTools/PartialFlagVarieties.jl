@@ -6,7 +6,7 @@ export to_ambient_weight, fiber_dimension, p_dominant_weight
     IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
 
 An irreducible representation of the Levi factor attached to `mdt`, stored by
-its ambient `P`-dominant weight together with its central and semisimple Levi
+its ambient ``P``-dominant weight together with its central and semisimple Levi
 coordinates.
 """
 struct IrrepLevi
