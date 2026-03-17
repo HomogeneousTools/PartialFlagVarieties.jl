@@ -181,13 +181,24 @@ These zero-constraints are applied inside the symbolic fixed-point loop,
 substituting ``0`` for the relevant entries of ``M_1``, ``M_2``, and ``data``
 and propagating the resulting equations to resolve further symbolic variables.
 
-**Current implementation caveat: ample vs. nef on the ambient.**  The function
-`_is_fano_zero_locus` tests whether the anticanonical weight of ``Z``,
-viewed as a character on the ambient ``G/P``, is strictly dominant — i.e.,
-whether ``\omega_Z^{-1}`` lifts to an **ample** line bundle on ``X``.  This is
-*sufficient* but not *necessary* for ``Z`` to be Fano.
+**Implementation: tristate Fano test.**  The function
+`_is_fano_zero_locus` returns a three-valued result:
 
-A counterexample arises when ``X = \mathrm{Fl}(1,3;\,4) = A_3/P_{\{1,3\}}``
+- **`true`** — all central-coordinate differences of ``\omega_Z^{-1}`` are
+  strictly positive: ``\omega_Z^{-1}`` is ample on ``X``, hence ample on
+  ``Z`` (definitely Fano).  Akizuki–Nakano vanishing is applied.
+- **`false`** — some difference is strictly negative: ``\omega_Z^{-1}`` is
+  not nef on ``X``, hence ``Z`` is not weak Fano.
+- **`nothing`** — all differences are ``\ge 0`` but some equal zero:
+  ``\omega_Z^{-1}`` is nef but not ample on ``X``; whether ``Z`` itself is
+  Fano cannot be determined from the ambient coordinates.  Nakano vanishing
+  is *not* assumed in this case.
+
+The function `is_weak_fano` short-circuits on `true` (Fano ``\Rightarrow``
+weak Fano), then falls through to a nef+big check using Picard-basis
+coordinates and the leading coefficient of the Hilbert polynomial.
+
+A counterexample illustrating the `nothing` case arises when ``X = \mathrm{Fl}(1,3;\,4) = A_3/P_{\{1,3\}}``
 (Picard rank 2, coordinates ``[\omega_1, \omega_3]``).  Take a bundle ``E``
 with ``\det(E) = \mathcal{O}(2, 0)``.  Then
 
@@ -199,9 +210,11 @@ with ``\det(E) = \mathcal{O}(2, 0)``.  Then
 
 On ``X``, ``\mathcal{O}(0,2)`` is **nef** (non-negative degree on all curves)
 but **not ample** (it is pulled back from a factor and vanishes on the fibers
-of the projection).  The check ``\mathtt{antican\_c1}[1] > \mathtt{det\_c1}[1]``
-evaluates ``2 > 2``, which is false, so the algorithm conservatively skips
-Nakano vanishing even if ``Z`` happens to be Fano.
+of the projection).  The central-coordinate difference at node 1 is ``2 - 2 = 0``,
+so `_is_fano_zero_locus` returns `nothing` and Nakano vanishing is not applied.
+However, `is_weak_fano` still correctly returns `true` for this ``Z``: the
+Picard-basis nef check passes (``[0,2]``, all ``\ge 0``) and the Hilbert
+polynomial of ``({\omega_Z^{-1}})^{\otimes t}`` has positive leading coefficient.
 
 For a zero locus of a **rank-1 bundle** (hypersurface section), the Lefschetz
 hyperplane theorem guarantees that ampleness is preserved under restriction, so

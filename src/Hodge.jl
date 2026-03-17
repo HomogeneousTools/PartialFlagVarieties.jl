@@ -422,15 +422,6 @@ end
 #  Hochschild cohomology of zero loci via HKR
 # ═══════════════════════════════════════════════════════════════════════════════
 
-"""Check whether the zero locus has ample anticanonical bundle (Fano)."""
-function _is_fano_zero_locus(Z::ZeroLocus)
-  E = Z.defining_bundle
-  mdt = marked_dynkin_type(Z.ambient)
-  det_c1 = _determinant_central(E)
-  antican_c1 = _anticanonical_central(mdt)
-  all(antican_c1[j] > det_c1[j] for j in eachindex(det_c1))
-end
-
 """
     hochschild_cohomology(Z::ZeroLocus) -> PolyvectorParallelogram{AffineExpr}
 
@@ -443,8 +434,11 @@ Uses the identity ``H^q(Z, \\bigwedge^p T_Z) = H^q(Z, \\Omega^{d-p}_Z
 to twisted Hodge numbers with the anticanonical twist
 ``L = \\omega_X^{-1} \\otimes \\det(E)^{-1}`` lifted to the ambient variety.
 
-When ``Z`` is Fano (``\\omega_Z^{-1}`` ample), Akizuki–Nakano vanishing
-forces ``h^q(\\bigwedge^p T_Z) = 0`` for ``q > p``.
+Akizuki–Nakano vanishing (``h^q(\\bigwedge^p T_Z) = 0`` for ``q > p``) is
+applied when ``\\omega_Z^{-1}`` is *confirmed* ample from the ambient ``G/P``
+(i.e. all Picard-coordinate differences are strictly positive).  When some
+coordinate is zero the Fano status of ``Z`` is undetermined and vanishing is
+not assumed.
 
 Returns a [`PolyvectorParallelogram`](@ref) with `AffineExpr` entries:
 fully determined entries display as integers, undetermined entries
@@ -590,7 +584,7 @@ function hochschild_cohomology(Z::ZeroLocus)
     # Equivalently on twisted Hodge matrices:
     #   M1[p+1,q+1] = h^q(Ω^p ⊗ ω⁻¹) = 0 for p+q > d     (AN vanishing)
     #   M2[p+1,q+1] = h^q(Ω^p ⊗ ω)   = 0 for p+q < d     (Nakano dual)
-    if is_fano
+    if is_fano === true
       for p in 0:d, q in (p + 1):d
         eq = data[p + 1, q + 1]
         if !is_zero_expr(eq)
