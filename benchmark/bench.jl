@@ -482,10 +482,10 @@ let X = cayley_plane()
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  8. End-to-end: Hochschild on affine cone (from HochschildAffine.jl)
+#  8. End-to-end: Hochschild on G/P (from HochschildAffine.jl)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-header("8. End-to-end: Hochschild affine cone")
+header("8. End-to-end: Hochschild on G/P")
 
 # Full computation: for each p=0..dim, compute χ(∧ᵖT) via BWB
 function _bench_hochschild_e2e(X)
