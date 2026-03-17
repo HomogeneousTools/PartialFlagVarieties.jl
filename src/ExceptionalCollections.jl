@@ -594,3 +594,123 @@ function _partitions_in_box_helper!(
   end
 end
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Exceptionality predicates on zero loci
+#
+#  These methods take bundles on the ambient variety X and check
+#  exceptionality of their restrictions to the zero locus Z ⊂ X,
+#  using the Koszul resolution to compute Ext groups on Z.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    is_exceptional(E::CompletelyReducibleBundle, Z::ZeroLocus) -> Bool
+
+Check whether the restriction ``E|_Z`` is an exceptional object on the
+zero locus ``Z``.
+
+Computes ``\\operatorname{Ext}^*(E|_Z, E|_Z) = H^*(Z, E^\\vee \\otimes E|_Z)``
+via the Koszul resolution and checks that ``\\operatorname{Hom} = \\mathbb{k}``
+and all higher Ext groups vanish.
+"""
+function is_exceptional(E::CompletelyReducibleBundle, Z::ZeroLocus)
+  EE = dual(E) ⊗ E
+  (H, det) = cohomology_on_restriction(Z, EE)
+  det || @warn "cohomology_on_restriction underdetermined for self-Ext"
+  H[0] == 1 || return false
+  d_Z = dimension(Z)
+  for i in 1:d_Z
+    H[i] == 0 || return false
+  end
+  true
+end
+
+"""
+    is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle,
+                        Z::ZeroLocus) -> Bool
+
+Check whether ``(E|_Z, F|_Z)`` is an exceptional pair on the zero locus ``Z``:
+``\\operatorname{RHom}(F|_Z, E|_Z) = 0``.
+"""
+function is_exceptional_pair(
+  E::CompletelyReducibleBundle,
+  F::CompletelyReducibleBundle,
+  Z::ZeroLocus,
+)
+  FvE = dual(F) ⊗ E
+  (H, det) = cohomology_on_restriction(Z, FvE)
+  det || @warn "cohomology_on_restriction underdetermined for exceptional pair"
+  d_Z = dimension(Z)
+  for i in 0:d_Z
+    H[i] == 0 || return false
+  end
+  true
+end
+
+"""
+    is_strong_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle,
+                                Z::ZeroLocus) -> Bool
+
+Check whether ``(E|_Z, F|_Z)`` is a strong exceptional pair on ``Z``:
+``\\operatorname{RHom}(F|_Z, E|_Z) = 0`` and
+``\\operatorname{Ext}^{>0}(E|_Z, F|_Z) = 0``.
+"""
+function is_strong_exceptional_pair(
+  E::CompletelyReducibleBundle,
+  F::CompletelyReducibleBundle,
+  Z::ZeroLocus,
+)
+  is_exceptional_pair(E, F, Z) || return false
+  EvF = dual(E) ⊗ F
+  (H, det) = cohomology_on_restriction(Z, EvF)
+  det || @warn "cohomology_on_restriction underdetermined for strong pair"
+  d_Z = dimension(Z)
+  for i in 1:d_Z
+    H[i] == 0 || return false
+  end
+  true
+end
+
+"""
+    is_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle},
+                            Z::ZeroLocus) -> Bool
+
+Check whether the restrictions ``E_i|_Z`` form an exceptional sequence on ``Z``.
+"""
+function is_exceptional_sequence(
+  Es::Vector{<:CompletelyReducibleBundle},
+  Z::ZeroLocus,
+)
+  n = length(Es)
+  for i in 1:n
+    is_exceptional(Es[i], Z) || return false
+  end
+  for i in 1:n
+    for j in (i + 1):n
+      is_exceptional_pair(Es[i], Es[j], Z) || return false
+    end
+  end
+  true
+end
+
+"""
+    is_strong_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle},
+                                    Z::ZeroLocus) -> Bool
+
+Check whether the restrictions ``E_i|_Z`` form a strong exceptional sequence on ``Z``.
+"""
+function is_strong_exceptional_sequence(
+  Es::Vector{<:CompletelyReducibleBundle},
+  Z::ZeroLocus,
+)
+  n = length(Es)
+  for i in 1:n
+    is_exceptional(Es[i], Z) || return false
+  end
+  for i in 1:n
+    for j in (i + 1):n
+      is_strong_exceptional_pair(Es[i], Es[j], Z) || return false
+    end
+  end
+  true
+end
+
