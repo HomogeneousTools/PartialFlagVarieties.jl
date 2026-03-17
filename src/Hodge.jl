@@ -550,7 +550,9 @@ function hochschild_cohomology(Z::ZeroLocus)
   # ── Build symbolic polyvector data matrix ──────────────────────────────
   # data[p+1, q+1] = h^q(∧^p T_Z)
   #   = h^q(Ω^{d-p} ⊗ ω^{-1}) = M1[d-p+1, q+1]    (HKR identity)
-  #   = h^{d-q}(Ω^p ⊗ ω)       = M2[p+1, d-q+1]    (Serre duality)
+  #   = h^{d-q}(Ω^p ⊗ ω)       = M2[p+1, d-q+1]    (Serre: h^q(∧^p T) = h^{d-q}((∧^p T)*⊗ω) = h^{d-q}(Ω^p⊗ω))
+  # In terms of M1–M2 alone: M1[p,q] = M2[d-p, d-q]
+  # (Serre on Ω^p⊗ω^{-1}: h^{d-q}((Ω^p⊗ω^{-1})*⊗ω) = h^{d-q}(∧^pT⊗ω²) = h^{d-q}(Ω^{d-p}⊗ω) via HKR)
   data = Matrix{AffineExpr}(undef, d + 1, d + 1)
   for p in 0:d, q in 0:d
     data[p + 1, q + 1] = M1[d - p + 1, q + 1]

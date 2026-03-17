@@ -67,3 +67,145 @@ converting back to an ambient weight via the special matrix.
 - **Betti numbers**: computed from the ratio of Poincaré polynomials of ``W_G``
   and ``W_L``
 - **Picard rank**: equals ``|I|``, the number of marked nodes
+
+## Hochschild cohomology of zero loci
+
+### HKR decomposition
+
+For a smooth variety ``Z``, the **Hochschild–Kostant–Rosenberg theorem** gives
+
+```math
+\mathrm{HH}^n(Z) = \bigoplus_{p+q=n} H^q\!\bigl(Z,\, \bigwedge^p T_Z\bigr).
+```
+
+The entries ``h^{p,q}(Z) = h^q(\bigwedge^p T_Z)`` form the **polyvector
+parallelogram**.  For a smooth zero locus ``Z = Z(s) \subset X`` of a regular
+section of an equivariant bundle ``E``, the adjunction formula gives
+
+```math
+\omega_Z \cong \bigl(\omega_X \otimes \det E\bigr)\big|_Z,
+```
+
+so the anticanonical twist is ``\omega_Z^{-1} = \bigl(\omega_X^{-1} \otimes
+\det(E)^{-1}\bigr)\big|_Z``.  The **HKR identity** then reduces polyvector
+fields to twisted Hodge numbers:
+
+```math
+h^q\!\bigl(\bigwedge^p T_Z\bigr)
+  = h^q\!\bigl(\Omega^{d-p}_Z \otimes \omega_Z^{-1}\bigr),
+  \quad d = \dim Z.
+```
+
+### The two twisted Hodge matrices
+
+The algorithm introduces two ``(d+1)\times(d+1)`` matrices of symbolic affine
+expressions:
+
+```math
+M_1[p,q] = h^q\!\bigl(\Omega^p_Z \otimes \omega_Z^{-1}\bigr),
+\qquad
+M_2[p,q] = h^q\!\bigl(\Omega^p_Z \otimes \omega_Z\bigr).
+```
+
+Each entry is computed by applying the **conormal filtration** of
+``\Omega^p_Z \hookrightarrow \Omega^p_X|_Z`` together with the Koszul
+resolution of ``\mathcal{O}_Z``.  The long exact sequences involved have
+connecting maps of unknown rank, which are introduced as fresh **symbolic
+variables** ``x_i``.  After the chain of LES steps, many entries remain as
+affine expressions ``c + \sum_i k_i x_i`` rather than integers.
+
+**Serre cross-constraints resolve symbolic variables.**  By Serre duality on
+``Z``, applied to ``F = \Omega^p_Z \otimes \omega_Z^{-1}`` and using the HKR
+isomorphism ``\bigwedge^p T_Z \cong \Omega^{d-p}_Z \otimes \omega_Z^{-1}``:
+
+```math
+h^q\!\bigl(\Omega^p_Z \otimes \omega_Z^{-1}\bigr)
+  = h^{d-q}\!\bigl(\Omega^{d-p}_Z \otimes \omega_Z\bigr),
+```
+
+which translates to the matrix equation ``M_1[p,q] = M_2[d-p,\,d-q]``.
+The derivation is: ``h^q(F) = h^{d-q}(F^* \otimes \omega_Z)`` with
+``F^* \otimes \omega_Z = \bigwedge^p T_Z \otimes \omega_Z^2
+\cong \Omega^{d-p}_Z \otimes \omega_Z``.
+Whenever one side is a determined integer and the other still contains a
+symbolic variable, this equation eliminates that variable globally across
+every entry that references it.
+
+**Why M1 alone is insufficient — a worked example.** Consider a degree-5
+hypersurface ``Z \subset \mathbb{P}^4`` (a Calabi–Yau threefold, ``d=3``).
+The conormal filtration for ``\Omega^2_Z \otimes \omega_Z^{-1}`` involves a
+three-step LES chain; suppose the connecting map at one step has unknown
+rank ``x_0``, leaving ``M_1[2,1] = c_0 + x_0``.  The independent
+computation of ``M_2[1,2] = h^2(\Omega^1_Z \otimes \omega_Z)`` is fully
+determined (say ``= k``).  The Serre equation
+``M_1[2,1] = M_2[d-2,\, d-1] = M_2[1,2]`` — concretely, the
+cross-identification
+
+```math
+h^1\!\bigl(\Omega^2_Z \otimes \omega_Z^{-1}\bigr)
+  = h^{d-1}\!\bigl(\Omega^{d-2}_Z \otimes \omega_Z\bigr)
+```
+
+at ``(p,q) = (2, 1)`` with ``d = 3`` reads ``M_1[2,1] = M_2[1,2]``.
+If ``M_2[1,2]`` is determined, the variable ``x_0`` is resolved.
+
+**Euler characteristic constraints** provide additional equations.  For each
+``p``:
+
+```math
+\chi(Z,\, \bigwedge^p T_Z) = \sum_{q=0}^{d} (-1)^q h^{p,q}(Z)
+```
+
+is computed exactly from the Koszul resolution (an alternating sum of BWB
+dimensions — no LES ambiguity).  Each such value yields a linear equation in
+the remaining symbolic variables.
+
+### Akizuki–Nakano vanishing for Fano zero loci
+
+When the zero locus is **Fano** (``\omega_Z^{-1}`` ample), the
+**Akizuki–Nakano theorem** gives:
+
+```math
+H^q\!\bigl(Z,\, \Omega^p_Z \otimes L\bigr) = 0
+  \quad\text{for } p + q > \dim Z,
+```
+
+for any ample line bundle ``L``.  Applied to ``L = \omega_Z^{-1}``:
+
+- ``h^q(\Omega^p_Z \otimes \omega_Z^{-1}) = 0`` for ``p + q > d``
+  (equivalently ``h^{p,q} = 0`` for ``q > p``), and
+- by the Serre dual statement: ``h^q(\Omega^p_Z \otimes \omega_Z) = 0``
+  for ``p + q < d``.
+
+These zero-constraints are applied inside the symbolic fixed-point loop,
+substituting ``0`` for the relevant entries of ``M_1``, ``M_2``, and ``data``
+and propagating the resulting equations to resolve further symbolic variables.
+
+**Current implementation caveat: ample vs. nef on the ambient.**  The function
+`_is_fano_zero_locus` tests whether the anticanonical weight of ``Z``,
+viewed as a character on the ambient ``G/P``, is strictly dominant — i.e.,
+whether ``\omega_Z^{-1}`` lifts to an **ample** line bundle on ``X``.  This is
+*sufficient* but not *necessary* for ``Z`` to be Fano.
+
+A counterexample arises when ``X = \mathrm{Fl}(1,3;\,4) = A_3/P_{\{1,3\}}``
+(Picard rank 2, coordinates ``[\omega_1, \omega_3]``).  Take a bundle ``E``
+with ``\det(E) = \mathcal{O}(2, 0)``.  Then
+
+```math
+\omega_Z^{-1} = \bigl(\omega_X^{-1} \otimes \det(E)^{-1}\bigr)\big|_Z
+  = \mathcal{O}(2,2) \otimes \mathcal{O}(-2,0)\big|_Z
+  = \mathcal{O}(0,2)\big|_Z.
+```
+
+On ``X``, ``\mathcal{O}(0,2)`` is **nef** (non-negative degree on all curves)
+but **not ample** (it is pulled back from a factor and vanishes on the fibers
+of the projection).  The check ``\mathtt{antican\_c1}[1] > \mathtt{det\_c1}[1]``
+evaluates ``2 > 2``, which is false, so the algorithm conservatively skips
+Nakano vanishing even if ``Z`` happens to be Fano.
+
+For a zero locus of a **rank-1 bundle** (hypersurface section), the Lefschetz
+hyperplane theorem guarantees that ampleness is preserved under restriction, so
+``\mathcal{O}(0,2)|_Z`` is ample when ``Z`` is ample.  For higher-rank bundles
+the situation is more subtle: ampleness of ``L|_Z`` must be checked
+independently on ``Z`` and cannot be read off from the restriction of the Picard
+coordinates of ``X``.
