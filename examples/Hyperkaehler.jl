@@ -42,7 +42,7 @@ println("=" ^ 70)
 println()
 
 X1 = Gr(2, 6)
-E1 = symmetric_power(universal_subbundle(X1), 3)   # Sym³(S*), rank 4
+E1 = symmetric_power(dual(universal_subbundle(X1)), 3)   # Sym³(S*), rank 4
 Z1 = zero_locus(E1)
 @assert dimension(Z1) == 4 "Expected dim Z = 4, got $(dimension(Z1))"
 
@@ -63,7 +63,7 @@ println("=" ^ 70)
 println()
 
 X2 = Gr(6, 10)
-E2 = exterior_power(universal_subbundle(X2), 3)    # ∧³(S*), rank 20
+E2 = exterior_power(dual(universal_subbundle(X2)), 3)    # ∧³(S*), rank 20
 Z2 = zero_locus(E2)
 @assert dimension(Z2) == 4 "Expected dim Z = 4, got $(dimension(Z2))"
 

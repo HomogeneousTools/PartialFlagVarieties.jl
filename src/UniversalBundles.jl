@@ -62,14 +62,13 @@ function universal_subbundle(X::PartialFlagVariety)
 
   mdt = marked_dynkin_type(X)
 
-  # The universal subbundle on G/P_k corresponds to the first fundamental
-  # weight ω₁ of the ambient group G.  On Gr(k,n) = A_{n-1}/P_k, this gives
-  # the rank-k tautological subbundle (the standard representation of GL_n
-  # restricted to the parabolic).  The Levi decomposition then produces a
-  # bundle of fiber dimension k (from the standard rep of the GL_k factor).
+  # The equivariant bundle with weight ω₁ is the dual U^∨ of the
+  # tautological subbundle (it has global sections = the standard
+  # representation, whereas U has none).  The universal subbundle is
+  # therefore the dual of this bundle.
   ω = fundamental_weight(dynkin_type(mdt), 1)
   rep = IrrepLevi(mdt, ω)
-  CompletelyReducibleBundle(X, [rep])
+  CompletelyReducibleBundle(X, [dual(rep)])
 end
 
 """
@@ -78,7 +77,9 @@ end
 The universal quotient bundle ``\\mathcal{Q}`` on a Grassmannian
 ``\\mathrm{Gr}(k, n)``.
 
-This is the dual of the universal subbundle: ``\\mathcal{Q} = \\mathcal{U}^*``.
+On type A, this is the equivariant bundle with weight ``\\omega_{n-1}``.
+For isotropic Grassmannians (types B, C, D), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
+via the bilinear form.
 It has rank ``n - k`` on ``\\mathrm{Gr}(k, n)``.
 
 # Examples

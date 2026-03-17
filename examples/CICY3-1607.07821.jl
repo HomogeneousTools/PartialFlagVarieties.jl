@@ -29,7 +29,7 @@ using Printf
 # ═══════════════════════════════════════════════════════════════════════════════
 
 O(X, d::Integer) = line_bundle(X, Int(d))
-Sstar(X) = universal_subbundle(X)
+Sstar(X) = dual(universal_subbundle(X))
 Sbundle(X) = dual(Sstar(X))
 Qbundle(X) = universal_quotient_bundle(X)
 Qstar(X) = dual(Qbundle(X))

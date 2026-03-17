@@ -1508,7 +1508,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Zero locus of ∧³(S*) on Gr(6,10); dim = 24 - 20 = 4.
     # Also of K3^[2]-type: same Hodge numbers.
     X2 = Gr(6, 10)
-    E2 = exterior_power(universal_subbundle(X2), 3)
+    E2 = exterior_power(dual(universal_subbundle(X2)), 3)
     Z2 = zero_locus(E2)
     @test dimension(Z2) == 4
     h2 = hodge_numbers(Z2)
@@ -1609,11 +1609,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   # ════════════════════════════════════════════════════════════════════════════
 
   @testset "ZeroLocus: Hodge numbers dim=6" begin
-    # 2·Sym²(U) on Gr(2,8): a 6-dimensional zero locus.
+    # 2·Sym²(U^∨) on Gr(2,8): a 6-dimensional zero locus.
     # Some entries are undetermined by Koszul + symmetry constraints;
     # those carry symbolic variables and are NOT defaulted to 0.
     let X = Gr(2, 8), U = universal_subbundle(X),
-      E = 2 * symmetric_power(U, 2),
+      E = 2 * symmetric_power(dual(U), 2),
       Z = zero_locus(E)
 
       @test dimension(Z) == 6
@@ -1748,13 +1748,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     let X = Gr(2, 5), S = universal_subbundle(X),
-      Z = zero_locus(symmetric_power(dual(S), 2))
+      Z = zero_locus(symmetric_power(S, 2))
 
       @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
     end
 
     let X = Gr(2, 7), S = universal_subbundle(X),
-      Z = zero_locus(2 * symmetric_power(dual(S), 2))
+      Z = zero_locus(2 * symmetric_power(S, 2))
 
       h1 = hodge_numbers(Z)
       h2 = hodge_numbers_symbolic(Z)
