@@ -82,7 +82,12 @@ struct _MarkedDynkinData
   dimension::Int
 end
 
-const _marked_dynkin_cache = Dict{MarkedDynkinType,_MarkedDynkinData}()
+const _marked_dynkin_cache = let b = _default_cache_budget()
+  LRU{MarkedDynkinType,_MarkedDynkinData}(
+    maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.4),
+    by=Base.summarysize,
+  )
+end
 
 function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)

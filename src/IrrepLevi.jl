@@ -191,7 +191,12 @@ end
 
 # ─── Cached tensor product ──────────────────────────────────────────────────
 
-const _TENSOR_PRODUCT_CACHE = Dict{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}()
+const _TENSOR_PRODUCT_CACHE = let b = _default_cache_budget()
+  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}(
+    maxsize=_cache_maxsize(b, _DEFAULT_TENSOR_FRAC),
+    by=Base.summarysize,
+  )
+end
 
 """
     tensor_product(a::IrrepLevi, b::IrrepLevi) -> Vector{IrrepLevi}
@@ -199,16 +204,13 @@ const _TENSOR_PRODUCT_CACHE = Dict{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}
 Return the tensor product of two irreducible Levi representations as a list
 of irreducible summands (with multiplicity).
 
-Results are cached to avoid redundant Lie decomposition calls.
+Results are cached in a thread-safe LRU cache to avoid redundant Lie
+decomposition calls.
 """
 function tensor_product(a::IrrepLevi, b::IrrepLevi)
-  key = (a, b)
-  cached = get(_TENSOR_PRODUCT_CACHE, key, nothing)
-  cached !== nothing && return cached
-
-  result = _tensor_product_uncached(a, b)
-  _TENSOR_PRODUCT_CACHE[key] = result
-  result
+  get!(_TENSOR_PRODUCT_CACHE, (a, b)) do
+    _tensor_product_uncached(a, b)
+  end
 end
 
 function _tensor_product_uncached(a::IrrepLevi, b::IrrepLevi)

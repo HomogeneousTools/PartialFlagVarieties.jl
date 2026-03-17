@@ -16,6 +16,7 @@
 module PartialFlagVarieties
 
 using Lie
+using LRUCache
 using Preferences
 using PrettyTables
 using StaticArrays
@@ -29,6 +30,18 @@ using Distributed: myid
 import Lie: dimension, dual, tensor_product, exterior_power, symmetric_power
 import Lie: n_components
 import Lie: rank, degree
+
+# ─── Cache budget (computed before any cache is created) ─────────────────────
+
+const _MIN_CACHE_BUDGET = 256 * 1024^2  # 256 MiB floor
+
+_default_cache_budget() = max(div(Int(Sys.total_memory()), 10), _MIN_CACHE_BUDGET)
+
+const _DEFAULT_TENSOR_FRAC = 0.70
+const _DEFAULT_BWB_FRAC = 0.20
+const _DEFAULT_STRUCTURAL_FRAC = 0.10
+
+_cache_maxsize(budget::Int, fraction::Float64) = max(1, round(Int, budget * fraction))
 
 # ─── Core types and infrastructure ───────────────────────────────────────────
 
@@ -45,6 +58,7 @@ include("Koszul.jl")
 include("ZeroLoci.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
+include("CacheConfig.jl")
 
 # ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
 
@@ -76,6 +90,7 @@ export solve_ses_cohomology, solve_koszul_filtration
 export AffineExpr, is_determined, is_zero_expr, symbolic_variable
 export solve_ses_cohomology_symbolic, solve_koszul_filtration_symbolic
 export hodge_numbers_symbolic, cohomology_on_restriction_symbolic
+export configure_caches!, clear_caches!, cache_info
 
 # ─── Startup banner ──────────────────────────────────────────────────────────
 
@@ -120,6 +135,9 @@ end
 function __init__()
   # Suppress the Lie.jl startup banner: PartialFlagVarieties will show its own
   set_preferences!(Lie, "show_banner" => false)
+
+  # Apply any user cache preferences from LocalPreferences.toml
+  _apply_cache_preferences!()
 
   # Don't show the banner on worker processes or when stdout is too narrow
   if myid() == 1 && displaysize(stdout)[2] >= 80
