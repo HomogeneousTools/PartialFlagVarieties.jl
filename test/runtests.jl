@@ -1445,6 +1445,46 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_strong_exceptional_sequence(Es)
   end
 
+  @testset "Exceptional collection on zero locus: cubic threefold" begin
+    # Cubic 3-fold Z(O(3)) ⊂ ℙ⁴ is Fano, O|_Z and O(1)|_Z are exceptional.
+    X = projective_space(4)
+    Z = zero_locus(line_bundle(X, 3))
+    @test is_exceptional(structure_sheaf(X), Z)
+    @test is_exceptional(line_bundle(X, 1), Z)
+    @test is_exceptional_pair(structure_sheaf(X), line_bundle(X, 1), Z)
+  end
+
+  @testset "Exceptional sequence on zero locus: Fano lines on Q₁∩Q₂, g=3" begin
+    # Conjecture: F₁(Q₁∩Q₂) for g=3 has (g-1)(2g-5) = 2 exceptional objects
+    # F = Z((Sym²U^∨)^⊕2) on Gr(2,8)
+    G = Gr(2, 8)
+    U = universal_subbundle(G)
+    E = 2 * symmetric_power(dual(U), 2)
+    Z = zero_locus(E)
+    @test dimension(Z) == dimension(G) - Int(rank_bundle(E))
+
+    # Build the collection: for g=3, (g-1)(2g-5) = 2
+    # k=0: Sym⁰U^∨ = O, Sym¹U^∨ = U^∨  (i=0,1 since g-1=2)
+    # k≥g-3=0 means i < g-2=1, so for k=0 only i=0 survives in the short block
+    # Actually for k < g-3: full block (g-1 objects); for k ≥ g-3: short block (g-2 objects)
+    # g=3: g-3=0, so ALL k ≥ 0 use the short block of g-2=1 object
+    # k ranges over 0..2g-6=0, so only k=0: just O_F
+    # Wait, 2g-5=1 twist levels: k=0
+    # Short block (k ≥ g-3=0): i = 0..g-3=0, so just O
+    # That gives only 1 object — but (g-1)(2g-5)=2*1=2
+    # Let me re-check: the conjecture says (g-3)(g-1) + (g-1)(g-2) objects
+    # g=3: (0)(2) + (2)(1) = 2 objects
+    # Full block for k=0..g-4=-1 (empty), short block for k=g-3..2g-5: k=0..1
+    # Short block: i=0..g-3=0, so just {O(k)} for k=0,1
+    L = CompletelyReducibleBundle[
+      twist(structure_sheaf(G), 1, 0),  # O
+      twist(structure_sheaf(G), 1, 1),  # O(1)
+    ]
+    @test length(L) == 2
+    @test is_exceptional_sequence(L, Z)
+    @test is_strong_exceptional_sequence(L, Z)
+  end
+
   @testset "ZeroLocus: symbolic Hodge numbers" begin
     # Fully determined case: symbolic = numeric
     X = projective_space(4)
@@ -1488,7 +1528,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Zero locus of Sym³(S*) on Gr(2,6); dim = 8 - 4 = 4.
     # Hodge numbers of K3^[2]-type: h^{1,1}=21, h^{2,2}=232.
     X1 = Gr(2, 6)
-    E1 = symmetric_power(universal_subbundle(X1), 3)
+    E1 = symmetric_power(dual(universal_subbundle(X1)), 3)
     Z1 = zero_locus(E1)
     @test dimension(Z1) == 4
     h1 = hodge_numbers(Z1)
