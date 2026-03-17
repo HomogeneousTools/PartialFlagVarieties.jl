@@ -77,11 +77,7 @@ end
 """Clear all PartialFlagVarieties + Lie caches for cold benchmarking."""
 function clear_all_pfv_caches!()
   Lie.clear_all_caches!()
-  empty!(PartialFlagVarieties._marked_dynkin_cache)
-  empty!(PartialFlagVarieties._tangent_reps_cache)
-  empty!(PartialFlagVarieties._cotangent_reps_cache)
-  empty!(PartialFlagVarieties._TENSOR_PRODUCT_CACHE)
-  empty!(PartialFlagVarieties._BWB_PAIR_CACHE)
+  PartialFlagVarieties.clear_caches!()
   return nothing
 end
 
