@@ -26,14 +26,14 @@ export print_hodge_diamond
 """
     hodge_numbers(X::PartialFlagVariety) -> Matrix{BigInt}
 
-Compute the Hodge numbers ``h^{p,q}(X) = \\dim H^q(X, \\Omega^p_X)``
+Compute the Hodge numbers ``\\mathrm{h}^{p,q}(X) = \\dim H^q(X, \\Omega^p_X)``
 of the partial flag variety ``X = G/P``.
 
 Since ``G/P`` is rational (and simply connected), the Hodge diamond is
-diagonal: ``h^{p,q} = 0`` for ``p \\neq q``, and ``h^{p,p} = b_{2p}``
+diagonal: ``\\mathrm{h}^{p,q} = 0`` for ``p \\neq q``, and ``\\mathrm{h}^{p,p} = b_{2p}``
 where ``b_i`` are the Betti numbers.
 
-Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = h^{p,q}``,
+Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^{p,q}``,
 with ``d = \\dim X``.
 
 # Examples
@@ -121,16 +121,19 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    PolyvectorParallelogram
+    PolyvectorParallelogram{T}
 
 The Hochschild–Kostant–Rosenberg decomposition of Hochschild cohomology:
 
 ``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} H^q(X, \\bigwedge^p T_X)``
 
-Stored as a matrix where entry ``[p+1, q+1] = h^q(X, \bigwedge^p T_X)``.
+Stored as a matrix where entry ``[p+1, q+1] = h^q(X, \\bigwedge^p T_X)``.
+The type parameter `T` is `BigInt` when all entries are determined and
+[`AffineExpr`](@ref) when some entries depend on undetermined connecting-map
+ranks from long exact sequences (typically for zero loci).
 
 # Fields
-- `data::Matrix{T}`: the HKR decomposition matrix (`BigInt` for varieties, `AffineExpr` for zero loci)
+- `data::Matrix{T}`: the HKR decomposition matrix
 - `dim::Int`: the dimension of the variety
 """
 struct PolyvectorParallelogram{T}
@@ -269,10 +272,10 @@ end
 """
     hodge_numbers(Z::ZeroLocus) -> Matrix{AffineExpr}
 
-Compute the Hodge diamond ``h^{p,q}(Z)`` for ``p, q = 0, \\ldots, \\dim Z``.
+Compute the Hodge diamond ``\\mathrm{h}^{p,q}(Z)`` for ``p, q = 0, \\ldots, \\dim Z``.
 
 Uses the Koszul resolution and long exact sequences.
-Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = h^{p,q}``.
+Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^{p,q}``.
 Entries that are fully determined are plain integers (wrapped in `AffineExpr`);
 entries that cannot be resolved from Koszul + symmetry constraints contain
 symbolic variables.
@@ -734,12 +737,12 @@ const _DIAMOND_FMT = TextTableFormat(;
 
 Print a centred ASCII Hodge diamond for a variety of arbitrary dimension.
 
-`h[p+1, q+1] = h^{p,q}` (1-based matrix indexing). The diamond is centred
+`h[p+1, q+1] = \\mathrm{h}^{p,q}` (1-based matrix indexing). The diamond is centred
 using PrettyTables so that each column is as wide as its largest entry,
 giving exact alignment regardless of digit count.
 
 # Layout
-`h^{p,q}` is placed at grid row `p+q+1`, column `p-q+d+1` in a
+`\\mathrm{h}^{p,q}` is placed at grid row `p+q+1`, column `p-q+d+1` in a
 `(2d+1) × (2d+1)` string matrix (where `d = size(h,1) - 1`).
 
 # Examples

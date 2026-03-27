@@ -1228,7 +1228,7 @@ Symbolic version of `hodge_numbers`.  When the long exact sequence does
 not uniquely determine a Hodge number, the entry is an `AffineExpr`
 involving symbolic variables ``x_0, x_1, \\ldots``.
 
-The matrix is ``(d+1) \\times (d+1)`` with ``[p+1, q+1] = h^{p,q}``.
+The matrix is ``(d+1) \\times (d+1)`` with ``[p+1, q+1] = \\mathrm{h}^{p,q}``.
 
 After computing the ``p = 1`` row via the conormal short exact sequence,
 Hodge symmetry (``h^{1,0} = h^{0,1}``), Serre duality
