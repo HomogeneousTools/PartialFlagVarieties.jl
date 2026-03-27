@@ -14,7 +14,8 @@ makedocs(
   warnonly=[:missing_docs],
   pages=[
     "Home" => "index.md",
-    "Mathematical Background" => "math.md",    "Conventions" => "conventions.md",    "API Reference" => [
+    "Mathematical Background" => "math.md",
+    "API Reference" => [
       "MarkedDynkinType" => "api/marked_dynkin_type.md",
       "PartialFlagVariety" => "api/partial_flag_variety.md",
       "IrrepLevi" => "api/irrep_levi.md",

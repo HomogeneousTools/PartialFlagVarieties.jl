@@ -76,6 +76,5 @@ Pages = [
   "api/koszul.md",
   "api/constructions.md",
   "api/exceptional_collections.md",
-  "conventions.md",
 ]
 ```
