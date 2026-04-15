@@ -9,8 +9,8 @@ export marked_dynkin_diagram
 """
     MarkedDynkinType(DT::Type{<:DynkinType}, marked)
 
-Runtime description of a partial flag variety `G/P`, given by a Dynkin type
-`DT` and the tuple of marked simple roots defining the parabolic subgroup `P`.
+Runtime description of a partial flag variety ``G/P``, given by a Dynkin type
+`DT` and the tuple of marked simple roots defining the parabolic subgroup ``P``.
 
 The marked nodes are stored as runtime data rather than type parameters, while
 derived invariants such as the Levi type, decomposition matrix, and dimension
@@ -82,7 +82,12 @@ struct _MarkedDynkinData
   dimension::Int
 end
 
-const _marked_dynkin_cache = Dict{MarkedDynkinType,_MarkedDynkinData}()
+const _marked_dynkin_cache = let b = _default_cache_budget()
+  LRU{MarkedDynkinType,_MarkedDynkinData}(
+    maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.4),
+    by=Base.summarysize,
+  )
+end
 
 function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
@@ -145,13 +150,13 @@ unmarked_nodes(mdt::MarkedDynkinType) = _mdt_data(mdt).unmarked
 """Return the rank of the center of the Levi subgroup."""
 central_rank(mdt::MarkedDynkinType) = length(marked_nodes(mdt))
 
-"""Return the Dynkin type of the semisimple Levi factor, or `nothing` for `G/B`."""
+"""Return the Dynkin type of the semisimple Levi factor, or `nothing` for ``G/B``."""
 levi_type(mdt::MarkedDynkinType) = _mdt_data(mdt).levi
 
 """Return the rank of the semisimple Levi factor."""
 levi_rank(mdt::MarkedDynkinType) = length(unmarked_nodes(mdt))
 
-"""Return `true` exactly for full flag varieties `G/B`."""
+"""Return `true` exactly for full flag varieties ``G/B``."""
 is_borel(mdt::MarkedDynkinType) = isempty(unmarked_nodes(mdt))
 
 """Return the permutation sending natural Levi-node order to canonical Cartan order."""
@@ -191,7 +196,7 @@ end
 
 Return all positive roots of the ambient Lie algebra that have positive
 coefficient on at least one marked simple root (i.e., the roots not in the
-Levi subalgebra). These span the tangent directions of `G/P`.
+Levi subalgebra). These span the tangent directions of ``G/P``.
 """
 function positive_nonparabolic_roots(mdt::MarkedDynkinType)
   RS = RootSystem(dynkin_type(mdt))

@@ -10,7 +10,7 @@ export marked_type, marked_dynkin_type, marked_nodes
 """
     PartialFlagVariety(mdt::MarkedDynkinType, name="")
 
-User-facing wrapper for a partial flag variety `G/P`, storing its runtime
+User-facing wrapper for a partial flag variety ``G/P``, storing its runtime
 [`MarkedDynkinType`](@ref) together with an optional display name.
 """
 struct PartialFlagVariety
@@ -23,7 +23,7 @@ PartialFlagVariety(mdt::MarkedDynkinType, name::String="") = PartialFlagVariety(
 """
     partial_flag_variety(DT::Type{<:DynkinType}, marked, name="") -> PartialFlagVariety
 
-Construct the partial flag variety of type `DT/P_marked`.
+Construct the partial flag variety ``G/P_I`` of type `DT` with marked nodes `marked`.
 """
 function partial_flag_variety(
   ::Type{DT}, marked::Tuple, name::String=""
@@ -53,7 +53,7 @@ PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_
   parse_dynkin_type(s), Vector{Int}(marked)
 )
 
-"""Construct the full flag variety `G/B` of type `DT`."""
+"""Construct the full flag variety ``G/B`` of type `DT`."""
 function full_flag_variety(::Type{DT}, name::String="") where {DT<:DynkinType}
   partial_flag_variety(DT, Tuple(1:rank(DT)), name)
 end
@@ -139,14 +139,14 @@ end
 """Return `true` for generalized Grassmannians, i.e. varieties with one marked node."""
 is_generalized_grassmannian(X::PartialFlagVariety) = length(marked_nodes(X)) == 1
 
-"""Return `true` for full flag varieties `G/B`."""
+"""Return `true` for full flag varieties ``G/B``."""
 is_full_flag_variety(X::PartialFlagVariety) = is_borel(marked_dynkin_type(X))
 
 """
     is_cominuscule(X::PartialFlagVariety) -> Bool
 
 Return `true` if `X` is a cominuscule flag variety, i.e., a generalized
-Grassmannian `G/P_i` whose highest root has coefficient 1 at node `i`.
+Grassmannian ``G/P_i`` whose highest root has coefficient 1 at node ``i``.
 
 Cominuscule varieties include all Grassmannians (type A), spinor varieties
 ``\\mathrm{OGr}(n, 2n)``, Lagrangian Grassmannians ``\\mathrm{LGr}(n, 2n)``,
@@ -174,7 +174,7 @@ end
     is_minuscule(X::PartialFlagVariety) -> Bool
 
 Return `true` if `X` is a minuscule flag variety, i.e., a generalized
-Grassmannian `G/P_i` whose fundamental weight `\\omega_i` is minuscule
+Grassmannian ``G/P_i`` whose fundamental weight ``\\omega_i`` is minuscule
 (all coroot pairings are 0 or 1).
 
 Minuscule varieties are the same as cominuscule for simply laced types, but
@@ -254,7 +254,7 @@ end
 
 marked_dynkin_diagram(X::PartialFlagVariety) = marked_dynkin_diagram(marked_dynkin_type(X))
 
-"""Return the coefficients of `-K_X` in the marked-node basis of `Pic(X)`."""
+"""Return the coefficients of ``-K_X`` in the marked-node basis of ``\\operatorname{Pic}(X)``."""
 function anticanonical_degrees(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)

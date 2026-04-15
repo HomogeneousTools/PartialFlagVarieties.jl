@@ -127,7 +127,7 @@ The Hochschild–Kostant–Rosenberg decomposition of Hochschild cohomology:
 
 ``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} H^q(X, \\bigwedge^p T_X)``
 
-Stored as a matrix `data[p+1, q+1] = h^q(X, ∧^p T_X)`.
+Stored as a matrix where entry ``[p+1, q+1] = h^q(X, \bigwedge^p T_X)``.
 
 # Fields
 - `data::Matrix{T}`: the HKR decomposition matrix (`BigInt` for varieties, `AffineExpr` for zero loci)

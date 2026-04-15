@@ -217,7 +217,12 @@ end
 
 # Cache: (a, b) → [(degree, dimension), ...] from BWB applied to tensor_product(a, b).
 # Populated lazily; avoids repeated borel_weil_bott + degree calls.
-const _BWB_PAIR_CACHE = Dict{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}()
+const _BWB_PAIR_CACHE = let b = _default_cache_budget()
+  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}(
+    maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC),
+    by=Base.summarysize,
+  )
+end
 
 """
 Compute and cache the BWB contributions `[(deg, dim), ...]` for
@@ -225,21 +230,18 @@ Compute and cache the BWB contributions `[(deg, dim), ...]` for
 acyclic.
 """
 function _bwb_pair(a::IrrepLevi, b::IrrepLevi)
-  key = (a, b)
-  cached = get(_BWB_PAIR_CACHE, key, nothing)
-  cached !== nothing && return cached
-
-  tp = tensor_product(a, b)
-  result = Pair{Int,BigInt}[]
-  for c in tp
-    λ = p_dominant_weight(c)
-    bwb = borel_weil_bott(λ)
-    bwb === nothing && continue
-    deg, μ = bwb
-    push!(result, deg => BigInt(degree(μ)))
+  get!(_BWB_PAIR_CACHE, (a, b)) do
+    tp = tensor_product(a, b)
+    result = Pair{Int,BigInt}[]
+    for c in tp
+      λ = p_dominant_weight(c)
+      bwb = borel_weil_bott(λ)
+      bwb === nothing && continue
+      deg, μ = bwb
+      push!(result, deg => BigInt(degree(μ)))
+    end
+    result
   end
-  _BWB_PAIR_CACHE[key] = result
-  result
 end
 
 """

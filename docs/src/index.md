@@ -1,23 +1,38 @@
 # PartialFlagVarieties.jl
 
 A Julia package for computing with **partial flag varieties** ``G/P`` using
-compile-time specialization via [Lie.jl](https://github.com/HomogeneousTools/Lie.jl).
+[Lie.jl](https://github.com/HomogeneousTools/Lie.jl).
 
 ## Features
 
-- **Type-level encoding**: Dynkin types and marked nodes are type parameters,
-  enabling ``@generated`` functions for zero-cost abstractions.
-- **Levi decomposition**: Automatic identification of the Levi subgroup type
-  from the marked Dynkin diagram.
-- **Bundle calculus**: Irreducible Levi representations, completely reducible
-  bundles, and monoidal operations (tensor product, exterior/symmetric powers,
-  dual, twist).
-- **Sheaf cohomology**: Borel–Weil–Bott theorem applied to equivariant bundles,
-  returning either Weyl characters or dimensions.
-- **Named constructors**: `Gr(k,n)`, `OGr(k,n)`, `SGr(k,n)`, `projective_space(n)`,
-  `quadric(n)`, `cayley_plane()`, and more.
-- **Topological invariants**: Dimension, Euler characteristic, Betti numbers,
-  Picard rank, classification predicates.
+- **Partial flag varieties** for all simple Lie types
+  (``\mathrm{A}``–``\mathrm{G}``, including ``\mathrm{E}_6``,
+  ``\mathrm{E}_7``, ``\mathrm{E}_8``, ``\mathrm{F}_4``, ``\mathrm{G}_2``)
+- **Named constructors**: `Gr`, `OGr`, `SGr`, `LGr`, `IGr`,
+  `projective_space`, `quadric`, `flag_variety`, `cayley_plane`,
+  `freudenthal_variety`, `adjoint_variety`, `coadjoint_variety`
+- **Equivariant vector bundles**: structure sheaf, tangent/cotangent,
+  canonical, line bundles, exterior/symmetric powers, tensor products,
+  duals, twists, determinants
+- **Universal bundles**: tautological subbundles, quotient bundles, spinor
+  bundles on quadrics
+- **Filtered bundles**: tangent bundle filtration by root height, with
+  induced filtrations on exterior/symmetric powers, duals, and tensor
+  products
+- **Sheaf cohomology** via the Borel–Weil–Bott theorem (character-valued
+  and dimension-valued)
+- **Hilbert polynomials** of equivariant bundles and zero loci
+- **Zero loci** of sections of equivariant bundles: Koszul resolutions,
+  restriction cohomology, Calabi–Yau detection
+- **Hodge numbers**, **twisted Hodge numbers**, and **Hochschild
+  cohomology** with polyvector parallelogram display
+- **Symbolic Hodge computation** for zero loci, using long exact sequences,
+  Serre duality cross-constraints, and Akizuki–Nakano vanishing
+- **Exceptional collections**: Beilinson on ``\mathbb{P}^n``, Kapranov
+  on quadrics, Kapranov–Orlov on Grassmannians, Schur functors
+- **Topological invariants**: dimension, Euler characteristic, Betti
+  numbers, Picard rank, Fano index, classification predicates
+  (minuscule, cominuscule, adjoint, coadjoint)
 
 ## Quick start
 
@@ -36,28 +51,29 @@ L = line_bundle(X, 1)
 H = dimensions(cohomology(L))
 H[0]                    # 5 = dim H⁰(ℙ⁴, 𝒪(1))
 
+# Zero loci
+X = Gr(2, 5)
+Z = zero_locus(line_bundle(X, 1))
+dimension(Z)            # 5
+
 # The Cayley plane
 V = cayley_plane()
 dimension(V)            # 16
 euler_characteristic(V) # 27
 ```
 
-## Design philosophy
+## Design
 
-The package follows the same compile-time specialization pattern as Lie.jl:
+Each partial flag variety ``G/P`` is encoded as a
+`PartialFlagVariety{MDT}` wrapping a `MarkedDynkinType` that stores the
+Lie type and marked nodes as **runtime values**. Derived structural
+invariants (Cartan matrices, Levi decomposition, Betti numbers,
+decomposition matrices) are **cached on demand**.
 
-1. Each partial flag variety ``G/P`` is encoded as a `PartialFlagVariety{MDT}` wrapping
-   a `MarkedDynkinType{DT, Marked}` where both `DT` (Dynkin type) and `Marked`
-   (crossed-out nodes) are **type parameters**.
-
-2. Heavy mathematical computations (Cartan matrices, Levi decomposition, Betti numbers,
-   decomposition matrices) are performed at **compile time** via `@generated` functions,
-   yielding zero runtime overhead for repeated queries.
-
-3. Bundle operations use the Levi decomposition: each equivariant bundle decomposes
-   as a direct sum of irreducible Levi representations `IrrepLevi{MDT}`, each of
-   which has a central part (character of the center) and a semisimple part
-   (highest weight of the derived subgroup).
+Bundle operations use the Levi decomposition: each equivariant bundle
+decomposes as a direct sum of irreducible Levi representations
+`IrrepLevi`, each with a central part (character of the center
+``Z(L)^\circ``) and a semisimple part (highest weight of ``[L,L]``).
 
 ## Contents
 
@@ -68,7 +84,13 @@ Pages = [
   "api/partial_flag_variety.md",
   "api/irrep_levi.md",
   "api/bundle.md",
+  "api/filtered_bundle.md",
+  "api/universal_bundles.md",
   "api/cohomology.md",
+  "api/hochschild.md",
+  "api/zero_loci.md",
+  "api/koszul.md",
   "api/constructions.md",
+  "api/exceptional_collections.md",
 ]
 ```

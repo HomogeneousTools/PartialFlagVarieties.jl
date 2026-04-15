@@ -151,6 +151,7 @@ function _maybe_clear_caches!()
     mb = round(sz / 1024^2; digits=1)
     @info "Cache size $(mb) MiB exceeds limit, clearing..."
     Lie.clear_all_caches!()
+    PartialFlagVarieties.clear_caches!()
   end
 end
 
@@ -390,6 +391,7 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
     # Cache management: always clear after each variety to prevent memory bloat
     lock(LOCK) do
       Lie.clear_all_caches!()
+      PartialFlagVarieties.clear_caches!()
     end
 
     next!(
