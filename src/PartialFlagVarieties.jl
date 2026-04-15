@@ -45,6 +45,7 @@ include("Koszul.jl")
 include("ZeroLoci.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
+include("SpectralSequence.jl")
 
 # ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
 
