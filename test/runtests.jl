@@ -1805,4 +1805,164 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
   end
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  ZeroLocus64 labels
+  # ═══════════════════════════════════════════════════════════════════════════
+  @testset "ZeroLocus64 labels" begin
+    # ─── Ambient-only encoding against specification worked examples ──────
+    @testset "ambient encoding" begin
+      @test zerolocus64_label(projective_space(1)) == "1"
+      @test zerolocus64_label(projective_space(3)) == "30"
+      @test zerolocus64_label(Gr(2, 4)) == "31"
+      @test zerolocus64_label(Gr(3, 6)) == "53"
+      @test zerolocus64_label(partial_flag_variety(TypeA{3}, (1, 3))) == "34"
+
+      # B-type
+      @test zerolocus64_label(quadric(5)) == "I0"
+      @test zerolocus64_label(full_flag_variety(TypeB{5})) == "KU"
+
+      # D-type: OGr+(5,10) = D5/P5
+      @test zerolocus64_label(partial_flag_variety(TypeD{5}, 5)) == "lF"
+
+      # E-type: E7/P7 (Freudenthal variety)
+      @test zerolocus64_label(freudenthal_variety()) == "y0_"
+    end
+
+    # ─── Product varieties ────────────────────────────────────────────────
+    @testset "product varieties" begin
+      # P^1 × P^1
+      let DT = ProductDynkinType{Tuple{TypeA{1},TypeA{1}}}
+        X = partial_flag_variety(DT, (1, 2))
+        @test zerolocus64_label(X) == "11"
+      end
+
+      # (P^1)^5
+      let DT = ProductDynkinType{Tuple{
+            ProductDynkinType{Tuple{
+              ProductDynkinType{Tuple{
+                ProductDynkinType{Tuple{TypeA{1},TypeA{1}}},
+                TypeA{1}}},
+              TypeA{1}}},
+            TypeA{1}}}
+        X = partial_flag_variety(DT, Tuple(1:5))
+        @test zerolocus64_label(X) == "11111"
+      end
+    end
+
+    # ─── Bundle encoding against specification worked examples ────────────
+    @testset "bundle encoding" begin
+      # O(1) on P^1
+      let X = projective_space(1)
+        @test zerolocus64_label(zero_locus(line_bundle(X, 1))) == "1.21"
+      end
+
+      # O ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
+      let X = projective_space(1)
+        E = direct_sum(structure_sheaf(X), line_bundle(X, 1))
+        @test zerolocus64_label(E) == "1.2021"
+      end
+
+      # O(1) ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
+      let X = projective_space(1)
+        E = direct_sum(line_bundle(X, 1), line_bundle(X, 1))
+        @test zerolocus64_label(E) == "1.2121"
+      end
+
+      # O(1) on P^3
+      let X = projective_space(3)
+        @test zerolocus64_label(zero_locus(line_bundle(X, 1))) == "30.24"
+      end
+
+      # O(1,0) ⊕ O(0,1) on P^1 × P^1
+      let DT = ProductDynkinType{Tuple{TypeA{1},TypeA{1}}}
+        X = partial_flag_variety(DT, (1, 2))
+        L1 = line_bundle(X, [1, 0])
+        L2 = line_bundle(X, [0, 1])
+        E = direct_sum(L1, L2)
+        @test zerolocus64_label(E) == "11.2122"
+      end
+
+      # O(1,1) on P^1 × P^1
+      let DT = ProductDynkinType{Tuple{TypeA{1},TypeA{1}}}
+        X = partial_flag_variety(DT, (1, 2))
+        L = line_bundle(X, [1, 1])
+        @test zerolocus64_label(zero_locus(L)) == "11.23"
+      end
+    end
+
+    # ─── Ambient decoding / round-trip ────────────────────────────────────
+    @testset "ambient decoding" begin
+      @test marked_dynkin_type(PartialFlagVariety("1")) ==
+            marked_dynkin_type(projective_space(1))
+      @test marked_dynkin_type(PartialFlagVariety("30")) ==
+            marked_dynkin_type(projective_space(3))
+      @test marked_dynkin_type(PartialFlagVariety("31")) ==
+            marked_dynkin_type(Gr(2, 4))
+      @test dimension(PartialFlagVariety("53")) == dimension(Gr(3, 6))
+      @test dimension(PartialFlagVariety("I0")) == dimension(quadric(5))
+    end
+
+    # ─── Ambient round-trip identity ──────────────────────────────────────
+    @testset "ambient round-trip" begin
+      for X in [
+        projective_space(1),
+        projective_space(3),
+        Gr(2, 4),
+        Gr(3, 6),
+        quadric(5),
+        partial_flag_variety(TypeA{3}, (1, 3)),
+        partial_flag_variety(TypeD{5}, 5),
+        freudenthal_variety(),
+      ]
+        label = zerolocus64_label(X)
+        X2 = PartialFlagVariety(label)
+        @test zerolocus64_label(X2) == label
+      end
+    end
+
+    # ─── Zero locus decoding ─────────────────────────────────────────────
+    @testset "zero locus decoding" begin
+      # O(1) on P^1
+      let Z = zero_locus("1.21")
+        @test dimension(ambient_variety(Z)) == 1
+        @test rank_bundle(defining_bundle(Z)) == 1
+      end
+
+      # O(1) on P^3
+      let Z = zero_locus("30.24")
+        @test dimension(ambient_variety(Z)) == 3
+        @test dimension(Z) == 2
+      end
+
+      # O(1,1) on P^1 × P^1
+      let Z = zero_locus("11.23")
+        @test dimension(ambient_variety(Z)) == 2
+        @test rank_bundle(defining_bundle(Z)) == 1
+      end
+    end
+
+    # ─── Zero locus round-trip ────────────────────────────────────────────
+    @testset "zero locus round-trip" begin
+      let X = projective_space(1)
+        Z = zero_locus(line_bundle(X, 1))
+        label = zerolocus64_label(Z)
+        Z2 = zero_locus(label)
+        @test zerolocus64_label(Z2) == label
+      end
+
+      let X = projective_space(3)
+        Z = zero_locus(direct_sum(line_bundle(X, 1), line_bundle(X, 1)))
+        label = zerolocus64_label(Z)
+        Z2 = zero_locus(label)
+        @test zerolocus64_label(Z2) == label
+      end
+    end
+
+    # ─── Error handling ───────────────────────────────────────────────────
+    @testset "error handling" begin
+      @test_throws ArgumentError zero_locus("1")
+      @test_throws ArgumentError zero_locus("")
+    end
+  end
+
 end  # @testset "PartialFlagVarieties.jl"

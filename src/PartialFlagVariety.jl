@@ -66,7 +66,13 @@ function Base.show(io::IO, X::PartialFlagVariety)
   end
 end
 
-"""Return the runtime marked Dynkin type attached to `X`."""
+"""
+    marked_type(X::PartialFlagVariety) -> MarkedDynkinType
+    marked_dynkin_type(X::PartialFlagVariety) -> MarkedDynkinType
+
+Return the runtime [`MarkedDynkinType`](@ref) attached to the variety `X`.
+`marked_type` is the short alias.
+"""
 marked_type(X::PartialFlagVariety) = X.mdt
 marked_dynkin_type(X::PartialFlagVariety) = X.mdt
 dynkin_type(X::PartialFlagVariety) = dynkin_type(X.mdt)
@@ -74,24 +80,46 @@ marked_nodes(X::PartialFlagVariety) = marked_nodes(X.mdt)
 unmarked_nodes(X::PartialFlagVariety) = unmarked_nodes(X.mdt)
 Lie.rank(X::PartialFlagVariety) = rank(dynkin_type(X))
 
-"""Return the dimension of `X`."""
+"""
+    dimension(X::PartialFlagVariety) -> Int
+
+Return ``\\dim(G/P) = |\\Phi_G^+| - |\\Phi_L^+|``.
+"""
 dimension(X::PartialFlagVariety) = dimension(marked_dynkin_type(X))
 
-"""Return the Picard rank of `X`."""
+"""
+    picard_rank(X::PartialFlagVariety) -> Int
+
+Return the Picard rank of `X`, equal to the number of marked nodes
+``|I|``.
+"""
 picard_rank(X::PartialFlagVariety) = central_rank(marked_dynkin_type(X))
 
 levi_type(X::PartialFlagVariety) = levi_type(marked_dynkin_type(X))
 levi_rank(X::PartialFlagVariety) = levi_rank(marked_dynkin_type(X))
 central_rank(X::PartialFlagVariety) = central_rank(marked_dynkin_type(X))
 
-"""Return the topological Euler characteristic of `X`."""
+"""
+    euler_characteristic(X::PartialFlagVariety) -> BigInt
+
+Return the topological Euler characteristic ``\\chi(G/P) = |W_G|/|W_L|``.
+"""
 function euler_characteristic(X::PartialFlagVariety)
   wG = weyl_order(dynkin_type(X))
   wL = is_borel(marked_dynkin_type(X)) ? BigInt(1) : weyl_order(levi_type(X))
   wG ÷ wL
 end
 
-"""Return the Betti numbers of `X` in even degrees."""
+"""
+    betti_numbers(X::PartialFlagVariety) -> Vector{BigInt}
+
+Return the Betti numbers of `X` in even degrees, i.e.
+``[b_0, b_2, b_4, \\ldots, b_{2d}]``.
+
+Since ``G/P`` has no odd cohomology this completely describes ``\\mathrm{H}^*(X, \\mathbb{Z})``.
+Computed from the ratio of the Poincaré polynomials of the Weyl groups
+``W_G`` and ``W_L``.
+"""
 function betti_numbers(X::PartialFlagVariety)
   degs_G = collect(degrees_fundamental_invariants(dynkin_type(X)))
   degs_L = if is_borel(marked_dynkin_type(X))
@@ -136,10 +164,19 @@ function _poly_div(a, b)
   result
 end
 
-"""Return `true` for generalized Grassmannians, i.e. varieties with one marked node."""
+"""
+    is_generalized_grassmannian(X::PartialFlagVariety) -> Bool
+
+Return `true` for generalized Grassmannians, i.e. varieties ``G/P_i``
+with exactly one marked node.
+"""
 is_generalized_grassmannian(X::PartialFlagVariety) = length(marked_nodes(X)) == 1
 
-"""Return `true` for full flag varieties ``G/B``."""
+"""
+    is_full_flag_variety(X::PartialFlagVariety) -> Bool
+
+Return `true` for full flag varieties ``G/B`` (all nodes marked).
+"""
 is_full_flag_variety(X::PartialFlagVariety) = is_borel(marked_dynkin_type(X))
 
 """
@@ -254,7 +291,18 @@ end
 
 marked_dynkin_diagram(X::PartialFlagVariety) = marked_dynkin_diagram(marked_dynkin_type(X))
 
-"""Return the coefficients of ``-K_X`` in the marked-node basis of ``\\operatorname{Pic}(X)``."""
+"""
+    anticanonical_degrees(X::PartialFlagVariety) -> Vector{Int}
+
+Return the coefficients ``(a_1, \\ldots, a_r)`` of the anticanonical
+divisor ``-\\mathrm{K}_X = \\sum_j a_j [D_j]`` in the marked-node basis of
+``\\operatorname{Pic}(X)``.
+
+Computed via the formula
+``a_j = \\langle 2(\\rho_G - \\rho_P),\\, \\alpha_j^\\vee \\rangle``
+where ``\\rho_G`` is the Weyl vector of ``G`` and ``\\rho_P`` is the Weyl
+vector of the Levi factor.
+"""
 function anticanonical_degrees(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)

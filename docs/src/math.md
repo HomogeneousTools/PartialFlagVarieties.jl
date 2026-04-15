@@ -20,8 +20,8 @@ The parabolic subgroup ``P = L \ltimes U`` has a **Levi decomposition** where:
 - ``L`` is the **Levi factor** (reductive)
 - ``U`` is the **unipotent radical**
 
-The Levi factor itself decomposes as ``L = Z(L)^\circ \cdot [L, L]`` where:
-- ``Z(L)^\circ`` is the connected center (a torus of rank ``|I|``)
+The Levi factor itself decomposes as ``L = \operatorname{Z}(L)^\circ \cdot [L, L]`` where:
+- ``\operatorname{Z}(L)^\circ`` is the connected center (a torus of rank ``|I|``)
 - ``[L, L]`` is the **semisimple part** whose Dynkin diagram is the sub-diagram
   on the unmarked nodes
 
@@ -34,7 +34,7 @@ correspond to representations of the Levi factor ``L``.
 
 An **irreducible** representation of ``L`` decomposes as:
 ``V = \chi \otimes W``
-where ``\chi`` is a character of the center ``Z(L)^\circ`` (the "central part")
+where ``\chi`` is a character of the center ``\operatorname{Z}(L)^\circ`` (the "central part")
 and ``W`` is an irreducible representation of ``[L, L]`` (the "semisimple part").
 
 This decomposition is effected by the **decomposition matrix** ``M`` which performs
@@ -68,6 +68,107 @@ converting back to an ambient weight via the special matrix.
   and ``W_L``
 - **Picard rank**: equals ``|I|``, the number of marked nodes
 
+## Koszul resolution and zero loci
+
+### Zero loci of equivariant bundles
+
+Let ``X = G/P`` be a partial flag variety and ``E`` an equivariant vector
+bundle of rank ``r`` on ``X``. A **regular section** ``s \in H^0(X, E)``
+defines a smooth subvariety
+
+```math
+Z = Z(s) = \{x \in X \mid s(x) = 0\} \subset X
+```
+
+of codimension ``r`` (hence dimension ``\dim Z = \dim X - r``). The
+**Koszul complex** of ``s`` resolves the structure sheaf of ``Z``:
+
+```math
+0 \to \bigwedge^r E^* \xrightarrow{d_r} \bigwedge^{r-1} E^* \xrightarrow{d_{r-1}} \cdots \xrightarrow{d_2} E^* \xrightarrow{d_1} \mathcal{O}_X \to \mathcal{O}_Z \to 0,
+```
+
+where the differentials ``d_k`` are contractions with ``s``. Exactness holds
+precisely when ``s`` is regular (its zero locus has the expected codimension
+``r``).
+
+### Computing cohomology on ``Z``
+
+To compute the cohomology of a bundle ``F|_Z`` (the restriction of an
+equivariant bundle ``F`` on ``X``), one **twists** the Koszul complex by
+``F``:
+
+```math
+0 \to F \otimes \bigwedge^r E^* \to \cdots \to F \otimes E^* \to F \to F|_Z \to 0.
+```
+
+Each term ``F \otimes \bigwedge^k E^*`` is a bundle on ``X``, so its
+cohomology is computable via the Borel–Weil–Bott theorem. The long exact
+sequence in cohomology then determines ``H^*(Z, F|_Z)`` — either exactly or
+up to symbolic variables representing unknown connecting map ranks (see
+[Koszul Algebra](@ref)).
+
+### Calabi–Yau condition
+
+The **adjunction formula** gives the canonical bundle of ``Z``:
+
+```math
+\omega_Z \cong \bigl(\omega_X \otimes \det E\bigr)\big|_Z.
+```
+
+The zero locus ``Z`` is **Calabi–Yau** (trivial canonical bundle) when
+``\det E \cong \omega_X^{-1}``, i.e. the determinant of the defining bundle
+cancels the canonical class of the ambient variety.
+
+### Fano and weak Fano conditions
+
+The zero locus is **Fano** when ``\omega_Z^{-1}`` is ample, or equivalently
+when ``\omega_X^{-1} \otimes \det(E)^{-1}`` restricts to an ample bundle
+on ``Z``. It is **weak Fano** when ``\omega_Z^{-1}`` is nef and big.
+
+For Picard-rank-1 zero loci, the **Fano index** is
+``r_Z = r_X - \deg(\det E)`` where ``r_X`` is the Fano index of the ambient
+variety.
+
+## The conormal filtration
+
+### From the conormal exact sequence to Hodge numbers
+
+For a smooth zero locus ``Z \subset X``, the **conormal exact sequence** reads
+
+```math
+0 \to E^{\vee}|_Z \to \Omega^1_X|_Z \to \Omega^1_Z \to 0.
+```
+
+Taking exterior powers induces a filtration on ``\Omega^p_Z`` whose graded
+pieces are
+
+```math
+\mathrm{gr}_j\!\bigl(\Omega^p_Z\bigr) = \mathrm{Sym}^j(E^{\vee}|_Z) \otimes \Omega^{p-j}_X\big|_Z, \quad j = 0, \ldots, p.
+```
+
+This reduces the computation of ``H^q(Z, \Omega^p_Z \otimes L)`` (for any
+line bundle ``L``) to a sequence of long exact sequences, each involving
+restrictions of bundles on ``X`` — which are computable via the Koszul
+resolution and the BWB theorem.
+
+### Symbolic resolution
+
+In practice, the long exact sequences arising from the conormal filtration
+have connecting maps whose ranks are not always determined by dimension
+constraints alone. The package introduces **symbolic variables** for these
+ranks and propagates constraints from:
+
+1. **Serre duality** on ``Z``: cross-identifying entries of the two twisted
+   Hodge matrices ``M_1[p,q]`` and ``M_2[d-p,\,d-q]``
+2. **Euler characteristic**: the alternating sum ``\chi(Z, \bigwedge^p T_Z)``
+   is an integer computable exactly from the Koszul complex
+3. **Akizuki–Nakano vanishing** (for Fano ``Z``): forcing certain entries to
+   zero when ``p + q > \dim Z``
+
+These constraints form a linear system that is solved by iterative
+substitution until a fixed point is reached; see
+[Hochschild cohomology of zero loci](@ref) below for the full algorithm.
+
 ## Hochschild cohomology of zero loci
 
 ### HKR decomposition
@@ -78,7 +179,7 @@ For a smooth variety ``Z``, the **Hochschild–Kostant–Rosenberg theorem** giv
 \mathrm{HH}^n(Z) = \bigoplus_{p+q=n} H^q\!\bigl(Z,\, \bigwedge^p T_Z\bigr).
 ```
 
-The entries ``h^{p,q}(Z) = h^q(\bigwedge^p T_Z)`` form the **polyvector
+The entries ``\mathrm{h}^{p,q}(Z) = h^q(\bigwedge^p T_Z)`` form the **polyvector
 parallelogram**.  For a smooth zero locus ``Z = Z(s) \subset X`` of a regular
 section of an equivariant bundle ``E``, the adjunction formula gives
 
@@ -153,7 +254,7 @@ If ``M_2[1,2]`` is determined, the variable ``x_0`` is resolved.
 ``p``:
 
 ```math
-\chi(Z,\, \bigwedge^p T_Z) = \sum_{q=0}^{d} (-1)^q h^{p,q}(Z)
+\chi(Z,\, \bigwedge^p T_Z) = \sum_{q=0}^{d} (-1)^q \mathrm{h}^{p,q}(Z)
 ```
 
 is computed exactly from the Koszul resolution (an alternating sum of BWB
@@ -173,7 +274,7 @@ H^q\!\bigl(Z,\, \Omega^p_Z \otimes L\bigr) = 0
 for any ample line bundle ``L``.  Applied to ``L = \omega_Z^{-1}``:
 
 - ``h^q(\Omega^p_Z \otimes \omega_Z^{-1}) = 0`` for ``p + q > d``
-  (equivalently ``h^{p,q} = 0`` for ``q > p``), and
+  (equivalently ``\mathrm{h}^{p,q} = 0`` for ``q > p``), and
 - by the Serre dual statement: ``h^q(\Omega^p_Z \otimes \omega_Z) = 0``
   for ``p + q < d``.
 

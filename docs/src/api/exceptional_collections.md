@@ -1,7 +1,7 @@
 # Exceptional Collections
 
 Exceptional objects, exceptional sequences, and standard exceptional collections
-on partial flag varieties.
+on partial flag varieties and their zero loci.
 
 ## Exceptionality predicates
 
@@ -17,6 +17,21 @@ is_strong_exceptional_pair
 is_exceptional_sequence
 is_strong_exceptional_sequence
 is_full_exceptional_sequence
+```
+
+## Exceptionality on zero loci
+
+Given bundles ``E_i`` on the ambient variety ``X = G/P`` and a zero locus ``Z \subset X``,
+the following methods check exceptionality of the **restrictions** ``E_i|_Z``, computing
+``\operatorname{Ext}^*(E_i|_Z, E_j|_Z) = H^*(Z,\, E_i^\vee \otimes E_j|_Z)`` via the
+Koszul resolution.
+
+```@docs
+is_exceptional(::CompletelyReducibleBundle, ::ZeroLocus)
+is_exceptional_pair(::CompletelyReducibleBundle, ::CompletelyReducibleBundle, ::ZeroLocus)
+is_strong_exceptional_pair(::CompletelyReducibleBundle, ::CompletelyReducibleBundle, ::ZeroLocus)
+is_exceptional_sequence(::Vector{<:CompletelyReducibleBundle}, ::ZeroLocus)
+is_strong_exceptional_sequence(::Vector{<:CompletelyReducibleBundle}, ::ZeroLocus)
 ```
 
 ## Beilinson collection on ``\mathbb{P}^n``

@@ -17,6 +17,15 @@ struct IrrepLevi
 end
 
 marked_dynkin_type(rep::IrrepLevi) = rep.mdt
+
+"""
+    p_dominant_weight(rep::IrrepLevi) -> WeightLatticeElem
+
+Return the ambient ``P``-dominant weight ``\\lambda`` of the irreducible Levi
+representation `rep`. This is the weight of ``G`` in fundamental weight
+coordinates from which the central and semisimple parts were derived via
+the decomposition matrix.
+"""
 p_dominant_weight(rep::IrrepLevi) = rep.λ
 
 """
@@ -261,7 +270,7 @@ function dual(rep::IrrepLevi)
 end
 
 """
-    exterior_power(rep::IrrepLevi, k::Int) -> Vector{IrrepLevi}
+    exterior_power(rep::IrrepLevi, k::Integer) -> Vector{IrrepLevi}
 
 Return the `k`-th exterior power of the irreducible Levi representation `rep`
 as a list of irreducible summands.
@@ -297,7 +306,7 @@ function exterior_power(rep::IrrepLevi, k::Integer)
 end
 
 """
-    symmetric_power(rep::IrrepLevi, k::Int) -> Vector{IrrepLevi}
+    symmetric_power(rep::IrrepLevi, k::Integer) -> Vector{IrrepLevi}
 
 Return the `k`-th symmetric power of the irreducible Levi representation `rep`
 as a list of irreducible summands.

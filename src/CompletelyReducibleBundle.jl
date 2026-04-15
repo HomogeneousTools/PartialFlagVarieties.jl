@@ -138,8 +138,8 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-  O(X::PartialFlagVariety) -> CompletelyReducibleBundle
-  structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
+    O(X::PartialFlagVariety) -> CompletelyReducibleBundle
+    structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The trivial line bundle ``\\mathcal{O}_{G/P}``.
 
@@ -184,7 +184,7 @@ function zero_bundle(X::PartialFlagVariety)
 end
 
 """
-  line_bundle(X::PartialFlagVariety, i::Integer) -> CompletelyReducibleBundle
+    line_bundle(X::PartialFlagVariety, i::Integer) -> CompletelyReducibleBundle
 
 The line bundle ``\\mathcal{O}(i)`` on `X`.
 
@@ -290,7 +290,7 @@ end
 """
     tangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The tangent bundle ``T_{G/P}``.
+The tangent bundle ``\\mathrm{T}_{G/P}``.
 
 The tangent space at the identity coset decomposes as the direct sum of
 root spaces for the positive nonparabolic roots. The tangent bundle

@@ -56,6 +56,7 @@ include("Cohomology.jl")
 include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
+include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
 include("CacheConfig.jl")
@@ -91,6 +92,7 @@ export AffineExpr, is_determined, is_zero_expr, symbolic_variable
 export solve_ses_cohomology_symbolic, solve_koszul_filtration_symbolic
 export hodge_numbers_symbolic, cohomology_on_restriction_symbolic
 export configure_caches!, clear_caches!, cache_info
+export zerolocus64_label
 
 # ─── Startup banner ──────────────────────────────────────────────────────────
 

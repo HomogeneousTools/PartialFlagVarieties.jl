@@ -203,7 +203,7 @@ end
 """
     filtered_tangent_bundle(X::PartialFlagVariety) -> FilteredBundle
 
-The tangent bundle ``T_{G/P}`` with its natural filtration by
+The tangent bundle ``\\mathrm{T}_{G/P}`` with its natural filtration by
 nonparabolic root height.
 
 The associated graded pieces are indexed by the root height levels

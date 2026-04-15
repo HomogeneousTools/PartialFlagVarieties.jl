@@ -13,6 +13,7 @@ in the Fano vanishing check.
 ```@docs
 hodge_numbers
 twisted_hodge_numbers
+print_hodge_diamond
 ```
 
 ## Hochschild cohomology
@@ -25,5 +26,6 @@ The Hochschild–Kostant–Rosenberg decomposition gives
 
 ```@docs
 hochschild_cohomology
+hochschild_dimension
 PolyvectorParallelogram
 ```
