@@ -28,7 +28,7 @@ jobs:
           version: ${{ matrix.version }}
       #- uses: julia-actions/cache@v2.1.0
       - name: Install unregistered dependencies
-        run: julia --project=. -e 'using Pkg; Pkg.develop([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus64", subdir="julia")])'
+        run: julia --project=. -e 'using Pkg; Pkg.develop([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia")])'
       - uses: julia-actions/julia-buildpkg@v1.6.0
       - uses: julia-actions/julia-runtest@v1.6.0
 
@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: |
           rm -f docs/Manifest.toml
-          julia --project=docs -e 'using Pkg; Pkg.develop([PackageSpec(path="."), PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus64", subdir="julia")]); Pkg.add(["Documenter", "StaticArrays"]); Pkg.instantiate()'
+          julia --project=docs -e 'using Pkg; Pkg.develop([PackageSpec(path="."), PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia")]); Pkg.add(["Documenter", "StaticArrays"]); Pkg.instantiate()'
       - name: Run doctests
         run: julia --project=docs -e 'using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties; manual="docs/src")'
 
@@ -76,7 +76,7 @@ jobs:
           version: '1'
       #- uses: julia-actions/cache@v2.1.0
       - name: Install unregistered dependencies
-        run: julia --project=. -e 'using Pkg; Pkg.develop([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus64", subdir="julia")]); Pkg.add("JSON")'
+        run: julia --project=. -e 'using Pkg; Pkg.develop([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia")]); Pkg.add("JSON")'
       - uses: julia-actions/julia-buildpkg@v1.6.0
       - name: Run example
         run: |
