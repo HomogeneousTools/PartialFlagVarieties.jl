@@ -14,7 +14,7 @@ Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-ZeroLocus64 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
+ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
 
 [compat]
 Combinatorics = "1"
@@ -26,7 +26,7 @@ Preferences = "1.5.2"
 PrettyTables = "3.2.3"
 ProgressMeter = "1.11.0"
 StaticArrays = "1"
-ZeroLocus64 = "1"
+ZeroLocus62 = "2"
 julia = "1.10"
 
 [extras]

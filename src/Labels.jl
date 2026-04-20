@@ -1,13 +1,13 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Labels.jl — ZeroLocus64 label encoding/decoding for G/P and zero loci
+#  Labels.jl — ZeroLocus62 label encoding/decoding for G/P and zero loci
 #
 #  Provides bidirectional conversion between PartialFlagVariety / ZeroLocus
-#  objects and ZeroLocus64 canonical label strings.
+#  objects and ZeroLocus62 canonical label strings.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-export zerolocus64_label
+export zerolocus62_label
 
-using ZeroLocus64: Factor, encode_label, decode_label
+using ZeroLocus62: Factor, encode_label, decode_label
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Internal helpers: DynkinType ↔ Factor conversion
@@ -50,7 +50,7 @@ end
 """
     _mdt_to_factors(mdt::MarkedDynkinType) -> Vector{Factor}
 
-Convert a `MarkedDynkinType` to a vector of `ZeroLocus64.Factor` objects, one
+Convert a `MarkedDynkinType` to a vector of `ZeroLocus62.Factor` objects, one
 per irreducible Dynkin factor. For a simple type this is a single factor; for a
 product type the marked nodes are partitioned by cumulative rank offsets.
 """
@@ -68,7 +68,7 @@ function _mdt_to_factors(mdt::MarkedDynkinType)
     mask == 0 && throw(
       ArgumentError(
         "Factor $(_simple_dynkin_family(sf))$r has no marked nodes; " *
-        "ZeroLocus64 requires at least one marked node per factor."
+        "ZeroLocus62 requires at least one marked node per factor."
       ),
     )
     push!(factors, Factor(_simple_dynkin_family(sf), r, mask))
@@ -89,7 +89,7 @@ _char_to_symbol(c::Char) = Symbol(c)
 """
     _factors_to_mdt(factors::Vector{Factor}) -> MarkedDynkinType
 
-Convert a vector of `ZeroLocus64.Factor` objects back to a `MarkedDynkinType`.
+Convert a vector of `ZeroLocus62.Factor` objects back to a `MarkedDynkinType`.
 """
 function _factors_to_mdt(factors::Vector{Factor})
   length(factors) >= 1 || throw(ArgumentError("Need at least one factor"))
@@ -152,33 +152,33 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    zerolocus64_label(X::PartialFlagVariety) -> String
+    zerolocus62_label(X::PartialFlagVariety) -> String
 
-Encode a partial flag variety as a ZeroLocus64 label (ambient-only, no bundle).
+Encode a partial flag variety as a ZeroLocus62 label (ambient-only, no bundle).
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> zerolocus64_label(projective_space(1))
+julia> zerolocus62_label(projective_space(1))
 "1"
 
-julia> zerolocus64_label(Gr(2, 4))
+julia> zerolocus62_label(Gr(2, 4))
 "31"
 
-julia> zerolocus64_label(projective_space(3))
+julia> zerolocus62_label(projective_space(3))
 "30"
 ```
 """
-function zerolocus64_label(X::PartialFlagVariety)
+function zerolocus62_label(X::PartialFlagVariety)
   factors = _mdt_to_factors(marked_dynkin_type(X))
   encode_label(factors, Vector{Vector{Vector{Int}}}())
 end
 
 """
-    zerolocus64_label(Z::ZeroLocus) -> String
+    zerolocus62_label(Z::ZeroLocus) -> String
 
-Encode a zero locus (ambient variety + defining bundle) as a ZeroLocus64 label.
+Encode a zero locus (ambient variety + defining bundle) as a ZeroLocus62 label.
 
 Each irreducible summand of the defining bundle contributes one summand row
 whose entries are the fundamental-weight coefficients of its ``P``-dominant weight,
@@ -190,11 +190,11 @@ julia> using PartialFlagVarieties
 
 julia> X = projective_space(1);
 
-julia> zerolocus64_label(zero_locus(line_bundle(X, 1)))
+julia> zerolocus62_label(zero_locus(line_bundle(X, 1)))
 "1.21"
 ```
 """
-function zerolocus64_label(Z::ZeroLocus)
+function zerolocus62_label(Z::ZeroLocus)
   X = ambient_variety(Z)
   factors = _mdt_to_factors(marked_dynkin_type(X))
   factor_ranks = [f.rank for f in factors]
@@ -210,9 +210,9 @@ function zerolocus64_label(Z::ZeroLocus)
 end
 
 """
-    zerolocus64_label(E::CompletelyReducibleBundle) -> String
+    zerolocus62_label(E::CompletelyReducibleBundle) -> String
 
-Encode an equivariant bundle on a partial flag variety as a ZeroLocus64 label
+Encode an equivariant bundle on a partial flag variety as a ZeroLocus62 label
 (ambient + bundle summands). This does not require the bundle to define a
 valid zero locus.
 
@@ -222,11 +222,11 @@ julia> using PartialFlagVarieties
 
 julia> X = projective_space(1);
 
-julia> zerolocus64_label(direct_sum(structure_sheaf(X), line_bundle(X, 1)))
+julia> zerolocus62_label(direct_sum(structure_sheaf(X), line_bundle(X, 1)))
 "1.2021"
 ```
 """
-function zerolocus64_label(E::CompletelyReducibleBundle)
+function zerolocus62_label(E::CompletelyReducibleBundle)
   X = variety(E)
   factors = _mdt_to_factors(marked_dynkin_type(X))
   factor_ranks = [f.rank for f in factors]
@@ -247,7 +247,7 @@ end
 """
     PartialFlagVariety(label::AbstractString) -> PartialFlagVariety
 
-Construct a partial flag variety from a ZeroLocus64 label. Any bundle part
+Construct a partial flag variety from a ZeroLocus62 label. Any bundle part
 in the label is ignored.
 
 # Examples
@@ -261,15 +261,15 @@ julia> dimension(X)
 ```
 """
 function PartialFlagVariety(label::AbstractString)
-  factors, _ = decode_label(String(label))
-  mdt = _factors_to_mdt(factors)
+  result = decode_label(String(label))
+  mdt = _factors_to_mdt(result.factors)
   PartialFlagVariety(mdt)
 end
 
 """
     zero_locus(label::AbstractString) -> ZeroLocus
 
-Construct a zero locus from a ZeroLocus64 label. The label must contain a
+Construct a zero locus from a ZeroLocus62 label. The label must contain a
 bundle part (i.e. include a `.` separator).
 
 # Examples
@@ -283,17 +283,17 @@ julia> dimension(Z)
 ```
 """
 function zero_locus(label::AbstractString)
-  factors, summands = decode_label(String(label))
-  isempty(summands) && throw(
+  result = decode_label(String(label))
+  isempty(result.summands) && throw(
     ArgumentError("Label \"$label\" has no bundle part; cannot construct a zero locus.")
   )
 
-  mdt = _factors_to_mdt(factors)
+  mdt = _factors_to_mdt(result.factors)
   DT = dynkin_type(mdt)
   X = PartialFlagVariety(mdt)
 
   irr = IrrepLevi[]
-  for row in summands
+  for row in result.summands
     λ = _summand_row_to_weight(row, DT)
     push!(irr, IrrepLevi(mdt, λ))
   end

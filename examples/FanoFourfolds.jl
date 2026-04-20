@@ -377,7 +377,7 @@ end
   #  Main computation
   # =============================================================================
 
-  function process_entry(entry_with_idx)
+  function _process_entry(entry_with_idx)
     entry, idx = entry_with_idx
     factors = entry["ambient"]
     bundle_data = entry["bundle"]
@@ -418,6 +418,13 @@ end
     return (status=:ok, idx=idx, hodge=H, ref=ref_hodge,
       matches=matches, mapping=mapping, is_symbolic=is_sym)
   end
+
+  function process_entry(entry_with_idx)
+    t0 = time_ns()
+    r = _process_entry(entry_with_idx)
+    elapsed = (time_ns() - t0) / 1e9
+    merge(r, (elapsed=elapsed,))
+  end
 end  # @everywhere
 
 # =============================================================================
@@ -454,7 +461,7 @@ end
 #  Main entry point
 # =============================================================================
 
-function main(; datafile=nothing, max_entries=500)
+function main(; datafile=nothing, max_entries=typemax(Int))
   if datafile === nothing
     candidates = [
       joinpath(@__DIR__, "FanoFourfolds.json"),
@@ -491,9 +498,11 @@ function main(; datafile=nothing, max_entries=500)
   println("  Processing $n_run entries (sorted by bundle rank).")
   println("  Using $(nworkers()) worker process(es).\n")
 
-  # Process in parallel with pmap
+  # Process in parallel with pmap, measuring wall time
   entries_with_indices = collect(zip(data, 1:n_run))
-  results = pmap(process_entry, entries_with_indices)
+  wall_time = @elapsed begin
+    results = pmap(process_entry, entries_with_indices)
+  end
 
   # Categorize results
   ok_numeric = []
@@ -547,12 +556,29 @@ function main(; datafile=nothing, max_entries=500)
     end
   end
 
+  # Timing statistics
+  times = sort([r.elapsed for r in results])
+  n = length(times)
+  println()
+  println("=" ^ 60)
+  println("  TIMING")
+  println("=" ^ 60)
+  @printf("  Wall time:            %8.2f s\n", wall_time)
+  @printf("  Sum of worker times:  %8.2f s\n", sum(times))
+  @printf("  Min per-entry:        %8.3f s\n", times[1])
+  @printf("  Max per-entry:        %8.3f s\n", times[end])
+  @printf("  Mean per-entry:       %8.3f s\n", sum(times) / n)
+  @printf("  Median per-entry:     %8.3f s\n", times[(n + 1) ÷ 2])
+  @printf("  p90 per-entry:        %8.3f s\n", times[max(1, ceil(Int, 0.90 * n))])
+  @printf("  p99 per-entry:        %8.3f s\n", times[max(1, ceil(Int, 0.99 * n))])
+  println("=" ^ 60)
+
   println()
 end
 
 # Run with defaults or parse CLI args
 if abspath(PROGRAM_FILE) == @__FILE__
   datafile = length(ARGS) >= 1 ? ARGS[1] : nothing
-  max_entries = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 500
+  max_entries = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : typemax(Int)
   main(; datafile, max_entries)
 end
