@@ -2,77 +2,160 @@
 #  SpectralSequence.jl — Spectral Sequences
 # ═══════════════════════════════════════════════════════════════════════════════
 
-export is_spectral_sequence_degenerate
+export SpectralSequence, spectral_sequence, E1_page, isotypical_components, does_E1_degenerate
+
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Helper functions
+# Types
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    check_degeneracy_spectral_sequence(E::Matrix{Int}) -> Bool
+    SpectralSequence{T}
 
-Check if the spectral sequence represented by the E₁ page will degenerate at
-some page. Returns false if there exists a possible differential between
-non-zero entries, true otherwise.
+A spectral sequence represented by its first page (E₁-page).
+
+# Type Parameters
+- `T`: Either `Int` (for integer multiplicities) or `WeylCharacter` (for character-valued entries)
+
+# Fields
+- `E1::Dict{Tuple{Int, Int}, T}`: The E₁-page as a dictionary mapping bidegree positions `(p, q)` 
+  to entries of type `T`. Position `(p, q)` represents total degree `p + q` with vertical degree `q`.
 """
-function check_degeneracy_spectral_sequence(E::Matrix{Int})
-  d, n = size(E)
-  for i in 1:(d-1), j in 1:(n-1)
-    if E[i, j] != 0 && any(!=(0), @view E[i+1, j+1:n])
-      return false
-    end
+
+struct SpectralSequence{T <: Union{Int, WeylCharacter}}
+  E1::Dict{Tuple{Int, Int}, T}
+  function SpectralSequence{T}(E1::Dict{Tuple{Int, Int}, T}) where {T <: Union{Int, WeylCharacter}}
+    new{T}(E1)
   end
-  return true
 end
+
+"""
+    E1_page(S::SpectralSequence{T}) -> Dict{Tuple{Int, Int}, T}
+
+Extract the E₁-page from a spectral sequence.
+"""
+
+E1_page(S::SpectralSequence{T}) where {T} = S.E1
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Spectral Sequence
+#  Constructors
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    _construct_E1_page(F::FilteredBundle) -> Matrix{WeylCharacter}
+    spectral_sequence(F::FilteredBundle) -> SpectralSequence{WeylCharacter}
 
-Construct the E₁ page of the spectral sequence from a filtered bundle.
-Helper function shared by `is_spectral_sequence_degenerate` and `E1_page`.
+Given a filtered bundle with graded pieces, this function computes the E₁-page by calculating
+the sheaf cohomology of each graded piece using the Borel–Weil–Bott theorem.
+
+# Details
+The E₁-page entry at position `(p, q)` contains the sheaf cohomology in degree `p+q` of the 
+`q`-th graded piece of the filtration. In other words, the spectral sequence uses the convention where
+bidegree is `(-q + i, q)` for filtration index `q` and cohomology degree `i`.
 """
-function _construct_E1_page(F::FilteredBundle)
+function spectral_sequence(F::FilteredBundle)
   n = n_filtration_steps(F)
   bundles = reverse(graded_pieces(F)) # Reverse to match spectral sequence convention
   d = dimension(variety(F))
   DT = dynkin_type(variety(F))
   R = rank(variety(F))
-  E = Matrix{WeylCharacter{DT,R}}(undef, d, n)
-
-  for j in 1:n
-    H = cohomology(bundles[j])
-    for i in 1:d
-      E[i, j] = H[i-1]
-    end
-  end
-  return E
-end
-
-function is_spectral_sequence_degenerate(F::FilteredBundle)
-  E = _construct_E1_page(F)
-  d, n = size(E)
-  
-  # Extract all weights that appear in the spectral sequence
-  weights = Set{WeightLatticeElem}()
-  for i in 1:d, j in 1:n
-    if E[i, j] != 0
-      union!(weights, keys(E[i, j].terms))
-    end
-  end
-
-  # Check degeneracy for each weight's isotropic component
-  for weight in weights
-    E_iso = zeros(Int, d, n)
-    for i in 1:d, j in 1:n
-      if (char = E[i, j]) != 0 && haskey(char.terms, weight)
-        E_iso[i, j] = char.terms[weight]
+  E = Dict{Tuple{Int, Int}, WeylCharacter{DT,R}}()
+  zero_character = WeylCharacter(DT)
+  for q in 0:n-1
+    H = cohomology(bundles[q+1])
+    for i in 0:d
+      if H[i] != zero_character
+        E[(-q+i,q)] = H[i]
       end
     end
-    if !check_degeneracy_spectral_sequence(E_iso)
-      return false
+  end
+  return SpectralSequence{WeylCharacter{DT,R}}(E)
+end
+
+"""
+    isotypical_components(S::SpectralSequence{WeylCharacter}) -> Dict{WeightLatticeElem, SpectralSequence{Int}}
+
+Decompose a spectral sequence into its isotypical components.
+
+For each weight in the weight lattice that appears in some E₁-page entry, this function
+extracts the multiplicity of that weight across the entire spectral sequence, yielding a
+new spectral sequence with integer entries. This decomposition respects the bidegree structure.
+
+# Details
+Each isotypical component is a spectral sequence where the entry at position `(p, q)` is the
+multiplicity of the weight in the character at that position (or 0 if the weight does not appear).
+"""
+function isotypical_components(S::SpectralSequence{WeylCharacter{DT,R}}) where {DT, R}
+  result = Dict{WeightLatticeElem{DT,R}, SpectralSequence{Int}}()
+  weights = Set{WeightLatticeElem{DT,R}}()
+  for char in values(S.E1)
+    union!(weights, keys(char.terms))
+  end
+  
+  for weight in weights
+    E_iso = Dict{Tuple{Int, Int}, Int}()
+    for (pos, char) in S.E1
+      if haskey(char.terms, weight)
+        E_iso[pos] = char.terms[weight]
+      end
+    end
+    result[weight] = SpectralSequence{Int}(E_iso)
+  end
+  return result
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Degeneracy Check
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    does_E1_degenerate(S::SpectralSequence{Int}) -> Bool
+
+Test whether the E₁-page of an integer-valued spectral sequence degenerates.
+
+# Details
+The function checks for the existence of pairs of positions `(p₁, q₁)` and `(p₂, q₂)` such that:
+- Total degrees satisfy `p₁ + q₁ = p₂ + q₂ - 1`
+- Vertical degrees satisfy `q₁ < q₂`
+"""
+function does_E1_degenerate(S::SpectralSequence{Int})
+  E = E1_page(S)
+  for pos_1 in keys(E)
+    for pos_2 in keys(E)
+      if pos_1[1] + pos_1[2] == pos_2[1] + pos_2[2] - 1 && pos_1[2] < pos_2[2]
+        return false
+      end
     end
   end
   return true
+end
+
+"""
+    does_E1_degenerate(S::SpectralSequence{WeylCharacter}) -> Bool
+
+Test whether the E₁-page of a character-valued spectral sequence degenerates at E₁.
+
+# Details
+The function first decomposes the spectral sequence into isotypical components (one for each
+weight in the weight lattice), then checks whether each component degenerates using the
+integer-valued degeneracy test. If any component has a nonzero differential, returns `false`.
+
+# Examples
+```jldoctest
+
+julia> using PartialFlagVarieties
+
+julia> T = tangent_bundle_filtration(SGr(4, 10))
+
+julia> S_1 = spectral_sequence(exterior_power(T,2))
+
+julia> S_2 = spectral_sequence(exterior_power(T,5))
+
+julia> does_E1_degenerate(S_1)
+true
+
+julia> does_E1_degenerate(S_2)
+false
+```
+"""
+function does_E1_degenerate(S::SpectralSequence{WeylCharacter{DT,R}}) where {DT, R}
+  iso = isotypical_components(S)
+  return all(does_E1_degenerate, values(iso))
 end
