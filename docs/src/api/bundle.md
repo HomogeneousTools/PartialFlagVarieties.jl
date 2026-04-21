@@ -39,6 +39,13 @@ Bundle
 CompletelyReducibleBundle
 ```
 
+## Constructors
+
+```@docs
+CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:Integer})
+CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:AbstractVector{<:Integer}})
+```
+
 ## Accessors
 
 ```@docs

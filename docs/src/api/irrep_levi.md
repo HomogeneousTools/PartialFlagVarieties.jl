@@ -51,6 +51,12 @@ integers (the character coordinates times the
 IrrepLevi
 ```
 
+## Constructors
+
+```@docs
+IrrepLevi(::MarkedDynkinType, ::AbstractVector{<:Integer})
+```
+
 ## Accessors
 
 ```@docs

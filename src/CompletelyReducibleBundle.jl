@@ -91,6 +91,65 @@ function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
   CompletelyReducibleBundle(X, IrrepLevi[IrrepLevi(mdt, λ)])
 end
 
+"""
+    CompletelyReducibleBundle(X::PartialFlagVariety, coeffs::AbstractVector{<:Integer})
+
+Convenience constructor: build the equivariant bundle on `X` corresponding to
+the Levi representation whose ambient highest weight has the given
+fundamental-weight coefficients.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(3, 6);
+
+julia> U = CompletelyReducibleBundle(X, [0, 1, -1, 0, 0]);
+
+julia> components(U) == components(universal_subbundle(X))
+true
+
+julia> rank_bundle(U)
+3
+```
+"""
+function CompletelyReducibleBundle(X::PartialFlagVariety, coeffs::AbstractVector{<:Integer})
+  CompletelyReducibleBundle(X, WeightLatticeElem(dynkin_type(X), Vector{Int}(coeffs)))
+end
+
+"""
+    CompletelyReducibleBundle(X::PartialFlagVariety, coeffs_list::AbstractVector{<:AbstractVector{<:Integer}})
+
+Convenience constructor: build the direct sum of the equivariant bundles on
+`X` corresponding to the ambient highest weights given by the vectors of
+fundamental-weight coefficients in `coeffs_list`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(3, 6);
+
+julia> E = CompletelyReducibleBundle(X, [[0, 1, -1, 0, 0], [0, 0, 0, 0, 0]]);
+
+julia> components(E) == vcat(components(universal_subbundle(X)), components(structure_sheaf(X)))
+true
+
+julia> rank_bundle(E)
+4
+```
+"""
+function CompletelyReducibleBundle(
+  X::PartialFlagVariety, coeffs_list::AbstractVector{<:AbstractVector{<:Integer}}
+)
+  components = IrrepLevi[]
+  mdt = marked_dynkin_type(X)
+  for coeffs in coeffs_list
+    push!(components, IrrepLevi(mdt, coeffs))
+  end
+  CompletelyReducibleBundle(X, components)
+end
+
 # ─── Accessors ───────────────────────────────────────────────────────────────
 
 """
