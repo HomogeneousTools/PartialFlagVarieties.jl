@@ -1322,16 +1322,65 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test chi[2] == chi[4]
   end
 
-  @testset "ZeroLocus: quartic K3 Hodge" begin
-    X = projective_space(3)
-    Z = zero_locus(line_bundle(X, 4))
-    @test dimension(Z) == 2
-    h = hodge_numbers(Z)
-    @test h[1, 1] == 1   # h^{0,0}
-    @test h[2, 2] == 20  # h^{1,1}
-    @test h[1, 3] == 1   # h^{0,2}
-    @test h[3, 1] == 1   # h^{2,0}
-    @test h[3, 3] == 1   # h^{2,2} = h^{0,0}
+  @testset "ZeroLocus: Mukai K3 surfaces" begin
+    k3_hodge = [1 0 1; 0 20 0; 1 0 1]
+
+    function test_k3_model(label, E)
+      @testset "$label" begin
+        Z = zero_locus(E)
+        @test dimension(Z) == 2
+        @test hodge_numbers(Z) == k3_hodge
+      end
+    end
+
+    test_k3_model("g = 3: quartic in P^3", line_bundle(projective_space(3), 4))
+
+    let X = projective_space(4)
+      test_k3_model("g = 4: (2,3) in P^4", line_bundle(X, 2) + line_bundle(X, 3))
+    end
+
+    test_k3_model("g = 5: (2,2,2) in P^5", 3 * line_bundle(projective_space(5), 2))
+
+    let X = Gr(2, 5)
+      test_k3_model("g = 6: (2,1,1,1) on Gr(2,5)", line_bundle(X, 2) + 3 * line_bundle(X, 1))
+    end
+
+    let X = OGr(5, 10)
+      # Mukai writes the generator as O(1/2); in this package it is line_bundle(X, 1).
+      test_k3_model("g = 7: O(1/2)^8 on OGr+(5,10)", 8 * line_bundle(X, 1))
+    end
+
+    test_k3_model("g = 8: O(1)^6 on Gr(2,6)", 6 * line_bundle(Gr(2, 6), 1))
+
+    let X = Gr(3, 6), U = universal_subbundle(X)
+      test_k3_model("g = 9: ∧²U* + O(1)^4 on Gr(3,6)",
+        exterior_power(dual(U), 2) + 4 * line_bundle(X, 1))
+    end
+
+    let X = Gr(2, 7), Q = universal_quotient_bundle(X)
+      test_k3_model("g = 10: Q*(1) + O(1)^3 on Gr(2,7)",
+        twist(dual(Q), 1) + 3 * line_bundle(X, 1))
+    end
+
+    let X = Gr(3, 7), U = universal_subbundle(X)
+      test_k3_model("g = 12: (∧²U*)^3 + O(1) on Gr(3,7)",
+        3 * exterior_power(dual(U), 2) + line_bundle(X, 1))
+    end
+
+    let X = Gr(3, 7), U = universal_subbundle(X), Q = universal_quotient_bundle(X)
+      test_k3_model("g = 13: (∧²U*)^2 + ∧³Q on Gr(3,7)",
+        2 * exterior_power(dual(U), 2) + exterior_power(Q, 3))
+    end
+
+    let X = OGr(3, 9)
+      # This is the rank-2 irreducible bundle of highest weight ω₄.
+      F = CompletelyReducibleBundle(X, [0, 0, 0, 1])
+      test_k3_model("g = 18: F^5 on OGr(3,9)", 5 * F)
+    end
+
+    let X = Gr(4, 9), U = universal_subbundle(X)
+      test_k3_model("g = 20: (∧²U*)^3 on Gr(4,9)", 3 * exterior_power(dual(U), 2))
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
