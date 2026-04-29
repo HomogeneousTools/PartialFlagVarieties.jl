@@ -1865,6 +1865,21 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test hodge_numbers_symbolic(Z) == expected
       @test hodge_numbers_les(Z) == expected
     end
+
+    let Z = zero_locus("2044.5m")
+      x0 = symbolic_variable(0)
+      expected = map(x -> x isa AffineExpr ? x : AffineExpr(x), [
+        1 0 0 0 0
+        0 3 + x0 x0 0 0
+        0 x0 7 + 2 * x0 x0 0
+        0 0 x0 3 + x0 0
+        0 0 0 0 1
+      ])
+      H = hodge_numbers_symbolic(Z)
+      @test H == expected
+      @test hodge_numbers_les(Z) == expected
+      @test all(!is_determined(e) || e.constant >= 0 for e in H)
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════

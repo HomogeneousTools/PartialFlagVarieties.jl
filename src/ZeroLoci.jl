@@ -1150,34 +1150,27 @@ function _apply_hodge_constraint!(
   delta = target - expr.constant
   hodge[pi, qi] = AffineExpr(target)
 
-  # Compensate the alternating sum χ = Σ (-1)^q h^{p,q} by adjusting an
-  # undetermined entry in the same row.  If no undetermined entry exists,
-  # pick the entry with the most symbolic variables (most likely to absorb
-  # the correction).  The correction Δ at column q must satisfy:
-  #   (-1)^(qi-1) * delta + (-1)^(comp_col-1) * Δ = 0
-  # ⟹ Δ = -delta * (-1)^(qi - comp_col)
+  # Preserve the row Euler characteristic immediately, but bias the correction
+  # toward the diagonal entry. This avoids injecting the shift into an arbitrary
+  # symbolic off-diagonal term, which can create impossible negative Hodge
+  # numbers once the remaining symmetry constraints are applied.
   q_forced = qi - 1  # 0-based column index
-
-  # Try to find an undetermined entry (best candidate for correction)
-  comp_col = -1
-  for q in 0:d
-    q == q_forced && continue
-    !is_determined(hodge[pi, q + 1]) && (comp_col = q; break)
+  p_idx = pi - 1  # 0-based
+  comp_col = p_idx == q_forced ? -1 : p_idx
+  if comp_col < 0
+    for q in 0:d
+      q == q_forced && continue
+      if !is_determined(hodge[pi, q + 1])
+        comp_col = q
+        break
+      end
+    end
   end
+  comp_col < 0 && (comp_col = q_forced == 0 ? d : 0)
 
-  if comp_col >= 0
-    # Adjust undetermined entry: cancel the χ imbalance
-    correction = -delta * (iseven(q_forced - comp_col) ? 1 : -1)
-    e = hodge[pi, comp_col + 1]
-    hodge[pi, comp_col + 1] = AffineExpr(e.constant + correction, copy(e.coeffs))
-  else
-    # All entries are determined.  Find the diagonal entry h^{p,p} (most
-    # internal) and adjust it, since the χ constraint will be satisfied.
-    p_idx = pi - 1  # 0-based
-    correction = -delta * (iseven(q_forced - p_idx) ? 1 : -1)
-    e = hodge[pi, p_idx + 1]
-    hodge[pi, p_idx + 1] = AffineExpr(e.constant + correction)
-  end
+  correction = -delta * (iseven(q_forced - comp_col) ? 1 : -1)
+  e = hodge[pi, comp_col + 1]
+  hodge[pi, comp_col + 1] = AffineExpr(e.constant + correction, copy(e.coeffs))
   true
 end
 
