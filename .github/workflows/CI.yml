@@ -48,10 +48,10 @@ jobs:
           rm -f docs/Manifest.toml
           julia --project=docs -e '
             using Pkg
-            Pkg.develop([
-              PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"),
-              PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl"),
-              PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
+            Pkg.add([
+              PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"),
+              PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"),
+              PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia"),
               PackageSpec(path="."),
             ])
             Pkg.instantiate()
