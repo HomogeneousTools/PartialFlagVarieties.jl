@@ -301,6 +301,71 @@ function hodge_numbers(Z::ZeroLocus)
   hodge_numbers_les(Z)
 end
 
+"""
+    hodge_numbers_symbolic(Z::ZeroLocus) -> Matrix{AffineExpr}
+
+Symbolic version of `hodge_numbers`. When the long exact sequence does
+not uniquely determine a Hodge number, the entry is an `AffineExpr`
+involving symbolic variables ``x_0, x_1, \\ldots``.
+
+This function delegates to [`hodge_numbers_les`](@ref), which is the
+shared symbolic Hodge solver used for zero loci.
+
+!!! warning "Lefschetz hyperplane theorem does not apply to higher-rank zero loci"
+    The Lefschetz hyperplane theorem guarantees ``\\mathrm{Pic}(X) \\xrightarrow{\\sim}
+    \\mathrm{Pic}(Z)`` only when ``Z`` is an ample *hypersurface* (codimension 1).
+    For a zero locus of a rank-``r`` bundle with ``r > 1``, the Picard rank of
+    ``Z`` can strictly exceed that of the ambient ``X``, so ``h^{1,1}(Z) > b_2(X)``
+    is possible and may be left as a free symbolic variable by this function.
+    Do **not** assume ``h^{1,1}(Z) = \\mathrm{picard\\_rank}(X)``.
+    Example: ``b9 = (\\mathrm{Sym}^2 S^*)^{\\oplus 2}`` on ``\\mathrm{Gr}(2,7)``
+    has ``h^{1,1} = 8`` even though ``\\mathrm{Pic}(\\mathrm{Gr}(2,7)) \\cong \\mathbb{Z}``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(4);
+
+julia> Z = zero_locus(line_bundle(X, 5));
+
+julia> H = hodge_numbers_symbolic(Z);
+
+julia> is_determined(H[2, 2])  # h^{1,1} fully determined
+true
+
+julia> H[2, 2].constant
+1
+
+julia> H[3, 2].constant  # h^{2,1}
+101
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 6);
+
+julia> E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:4]);
+
+julia> Z = zero_locus(E);
+
+julia> H = hodge_numbers_symbolic(Z);
+
+julia> all(is_determined(H[p+1, q+1]) for p in 0:4, q in 0:4)
+true
+
+julia> H[2, 2].constant  # h^{1,1}
+1
+
+julia> H[3, 3].constant  # h^{2,2}
+8
+```
+"""
+function hodge_numbers_symbolic(Z::ZeroLocus)
+  hodge_numbers_les(Z)
+end
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Twisted Hodge numbers of zero loci
 # ═══════════════════════════════════════════════════════════════════════════════

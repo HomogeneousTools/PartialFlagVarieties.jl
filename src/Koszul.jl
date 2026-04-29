@@ -811,8 +811,7 @@ end
     les_cokernel(a, b, var_counter) -> Vector{AffineExpr}
 
 Given `H^*(A)` and `H^*(B)` from a short exact sequence
-`0 → A → B → C → 0`, compute `H^*(C)` using the M2-style output-variable
-approach.
+`0 → A → B → C → 0`, compute `H^*(C)` using the entry-based LES solver.
 
 Creates a fresh symbolic variable for each `H^i(C)`, then derives linear
 equations from the alternating-sum condition on non-zero segments of the
