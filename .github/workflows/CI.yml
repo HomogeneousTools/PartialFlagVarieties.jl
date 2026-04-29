@@ -46,7 +46,16 @@ jobs:
       - name: Install dependencies
         run: |
           rm -f docs/Manifest.toml
-          julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=".")); Pkg.add([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia")]); Pkg.instantiate()'
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop([
+              PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"),
+              PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl"),
+              PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
+              PackageSpec(path="."),
+            ])
+            Pkg.instantiate()
+          '
       - name: Run doctests
         run: julia --project=docs -e 'using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties; manual="docs/src")'
 
