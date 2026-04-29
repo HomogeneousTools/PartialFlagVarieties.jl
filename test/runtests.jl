@@ -1852,6 +1852,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         @test h1[p + 1, q + 1] == h2[p + 1, q + 1]
       end
     end
+
+    let Z = zero_locus("44.07")
+      expected = AffineExpr.([
+        1 0 0 0 0
+        0 2 0 0 0
+        0 0 2 0 0
+        0 0 0 2 0
+        0 0 0 0 1
+      ])
+      @test hodge_numbers(Z) == expected
+      @test hodge_numbers_symbolic(Z) == expected
+      @test hodge_numbers_les(Z) == expected
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
