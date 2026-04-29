@@ -191,7 +191,7 @@ julia> using PartialFlagVarieties
 julia> X = projective_space(1);
 
 julia> zerolocus62_label(zero_locus(line_bundle(X, 1)))
-"1.21"
+"1.0"
 ```
 """
 function zerolocus62_label(Z::ZeroLocus)
@@ -223,7 +223,7 @@ julia> using PartialFlagVarieties
 julia> X = projective_space(1);
 
 julia> zerolocus62_label(direct_sum(structure_sheaf(X), line_bundle(X, 1)))
-"1.2021"
+"1.0x1"
 ```
 """
 function zerolocus62_label(E::CompletelyReducibleBundle)
@@ -276,7 +276,7 @@ bundle part (i.e. include a `.` separator).
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> Z = zero_locus("1.21");
+julia> Z = zero_locus("1.0");
 
 julia> dimension(Z)
 0

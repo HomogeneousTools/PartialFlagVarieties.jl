@@ -1902,24 +1902,24 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @testset "bundle encoding" begin
       # O(1) on P^1
       let X = projective_space(1)
-        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "1.21"
+        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "1.0"
       end
 
       # O ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
       let X = projective_space(1)
         E = direct_sum(structure_sheaf(X), line_bundle(X, 1))
-        @test zerolocus62_label(E) == "1.2021"
+        @test zerolocus62_label(E) == "1.0x1"
       end
 
       # O(1) ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
       let X = projective_space(1)
         E = direct_sum(line_bundle(X, 1), line_bundle(X, 1))
-        @test zerolocus62_label(E) == "1.2121"
+        @test zerolocus62_label(E) == "1.00"
       end
 
       # O(1) on P^3
       let X = projective_space(3)
-        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "30.24"
+        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "30.0"
       end
 
       # O(1,0) ⊕ O(0,1) on P^1 × P^1
@@ -1928,14 +1928,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         L1 = line_bundle(X, [1, 0])
         L2 = line_bundle(X, [0, 1])
         E = direct_sum(L1, L2)
-        @test zerolocus62_label(E) == "11.2122"
+        @test zerolocus62_label(E) == "11.01"
       end
 
       # O(1,1) on P^1 × P^1
       let DT = ProductDynkinType{Tuple{TypeA{1},TypeA{1}}}
         X = partial_flag_variety(DT, (1, 2))
         L = line_bundle(X, [1, 1])
-        @test zerolocus62_label(zero_locus(L)) == "11.23"
+        @test zerolocus62_label(zero_locus(L)) == "11.E"
       end
     end
 
@@ -1972,19 +1972,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # ─── Zero locus decoding ─────────────────────────────────────────────
     @testset "zero locus decoding" begin
       # O(1) on P^1
-      let Z = zero_locus("1.21")
+      let Z = zero_locus("1.0")
         @test dimension(ambient_variety(Z)) == 1
         @test rank_bundle(defining_bundle(Z)) == 1
       end
 
       # O(1) on P^3
-      let Z = zero_locus("30.24")
+      let Z = zero_locus("30.0")
         @test dimension(ambient_variety(Z)) == 3
         @test dimension(Z) == 2
       end
 
       # O(1,1) on P^1 × P^1
-      let Z = zero_locus("11.23")
+      let Z = zero_locus("11.E")
         @test dimension(ambient_variety(Z)) == 2
         @test rank_bundle(defining_bundle(Z)) == 1
       end
