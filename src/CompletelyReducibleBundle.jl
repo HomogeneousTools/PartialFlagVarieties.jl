@@ -315,6 +315,72 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
   CompletelyReducibleBundle(X, λ)
 end
 
+"""
+    _product_factor_range(total_rank, factor_rank, offset) -> UnitRange{Int}
+
+Return the block of ambient coordinates occupied by a factor embedded into a
+product ambient of rank `total_rank`.
+"""
+function _product_factor_range(total_rank::Int, factor_rank::Int, offset::Int)
+  0 <= offset <= total_rank || throw(ArgumentError("Offset $offset is out of range."))
+
+  last_index = offset + factor_rank
+  last_index <= total_rank || throw(
+    ArgumentError(
+      "A factor of rank $factor_rank does not fit in an ambient rank $total_rank at offset $offset."
+    ),
+  )
+  (offset + 1):last_index
+end
+
+"""
+    _embed_ambient_weight(DT, λ, offset) -> WeightLatticeElem
+
+Embed the weight `λ` into the ambient weight lattice of `DT` by placing its
+coefficients into the coordinate block determined by `offset`.
+"""
+function _embed_ambient_weight(
+  ::Type{DT}, λ::WeightLatticeElem, offset::Int
+) where {DT<:DynkinType}
+  weight_coefficients = collect(Int, coefficients(λ))
+  coordinate_range = _product_factor_range(rank(DT), length(weight_coefficients), offset)
+  ambient_coefficients = zeros(Int, rank(DT))
+  ambient_coefficients[coordinate_range] = weight_coefficients
+  WeightLatticeElem(DT, ambient_coefficients)
+end
+
+"""
+    _lift_irrep_to_product(X, rep, offset) -> IrrepLevi
+
+Lift an irreducible Levi representation from a factor ambient into the product
+ambient `X` by embedding its ambient highest weight at the specified offset.
+"""
+function _lift_irrep_to_product(
+  X::PartialFlagVariety, representation::IrrepLevi, offset::Int
+)
+  weight = _embed_ambient_weight(
+    dynkin_type(X), p_dominant_weight(representation), offset
+  )
+  IrrepLevi(marked_dynkin_type(X), weight)
+end
+
+"""
+    _lift_bundle_to_product(X, E, offset) -> CompletelyReducibleBundle
+
+Lift a completely reducible bundle from one factor of a product ambient into the
+product ambient `X`, embedding each irreducible summand into the coordinate
+block starting at `offset`.
+"""
+function _lift_bundle_to_product(
+  X::PartialFlagVariety, E::CompletelyReducibleBundle, offset::Int
+)
+  _product_factor_range(rank(X), rank(variety(E)), offset)
+  lifted_components = map(components(E)) do component
+    _lift_irrep_to_product(X, component, offset)
+  end
+  CompletelyReducibleBundle(X, lifted_components)
+end
+
 # ─── Type-level caches for tangent/cotangent rep lists ───────────────────────
 # These avoid repeatedly computing tangent_weights + IrrepLevi decomposition
 # for the same MDT.  The caches store only the IrrepLevi component vectors;

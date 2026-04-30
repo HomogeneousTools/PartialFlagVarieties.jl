@@ -122,6 +122,52 @@ function zero_locus(E::CompletelyReducibleBundle)
   ZeroLocus(X, E, nothing)
 end
 
+"""
+    _product_zero_locus(Z1, Z2) -> ZeroLocus
+
+Construct the product of two zero loci by taking the product ambient and the
+direct sum of the defining bundles lifted from the two factors.
+"""
+function _product_zero_locus(Z1::ZeroLocus, Z2::ZeroLocus)
+  X1 = ambient_variety(Z1)
+  X2 = ambient_variety(Z2)
+  X = product(X1, X2)
+  E1 = _lift_bundle_to_product(X, defining_bundle(Z1), 0)
+  E2 = _lift_bundle_to_product(X, defining_bundle(Z2), rank(X1))
+  zero_locus(direct_sum(E1, E2))
+end
+
+"""
+    product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...) -> ZeroLocus
+
+Construct the product of zero loci.
+
+If `Z_i ⊂ X_i` is cut out by a regular section of `E_i`, then the product is
+realized as the zero locus in `X_1 × X_2 × ...` of the direct sum of the
+lifted bundles pulled back from each factor. This is also available through the
+`*` operator.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = product(zero_locus(line_bundle(projective_space(1), 1)),
+                   zero_locus(line_bundle(projective_space(2), 1)));
+
+julia> dimension(Z)
+1
+```
+"""
+function product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...)
+  Z = _product_zero_locus(Z1, Z2)
+  for W in Zs
+    Z = _product_zero_locus(Z, W)
+  end
+  Z
+end
+
+Base.:*(Z1::ZeroLocus, Z2::ZeroLocus) = product(Z1, Z2)
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Accessors
 # ═══════════════════════════════════════════════════════════════════════════════

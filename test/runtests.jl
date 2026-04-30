@@ -141,6 +141,26 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test V_prod isa PartialFlagVariety
   end
 
+  @testset "PartialFlagVariety products" begin
+    X = projective_space(1)
+    Y = projective_space(2)
+    XY = product(X, Y)
+
+    @test XY isa PartialFlagVariety
+    @test XY == X * Y
+    @test XY == partial_flag_variety(ProductDynkinType{Tuple{TypeA{1},TypeA{2}}}, (1, 2))
+    @test dimension(XY) == dimension(X) + dimension(Y)
+    @test picard_rank(XY) == picard_rank(X) + picard_rank(Y)
+    @test marked_nodes(XY) == (1, 2)
+
+    XYZ = product(X, X, X)
+    @test XYZ == (X * X) * X
+    @test dimension(XYZ) == 3
+    @test picard_rank(XYZ) == 3
+    @test marked_nodes(XYZ) == (1, 2, 3)
+    @test zerolocus62_label(XYZ) == "111"
+  end
+
   # ═══════════════════════════════════════════════════════════════════════════
   #  Dimensions (on PartialFlagVariety)
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1188,6 +1208,27 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test dimension(Z) == 3
     @test codimension(Z) == 1
     @test ambient_variety(Z) === X
+  end
+
+  @testset "ZeroLocus: products" begin
+    X12 = product(projective_space(1), projective_space(1))
+    Z12 = zero_locus(line_bundle(X12, [1, 0]))
+    Z3 = zero_locus(line_bundle(projective_space(1), 1))
+
+    Z = product(Z12, Z3)
+    ambient = product(projective_space(1), projective_space(1), projective_space(1))
+    expected_bundle = direct_sum(
+      line_bundle(ambient, [1, 0, 0]),
+      line_bundle(ambient, [0, 0, 1]),
+    )
+
+    @test zerolocus62_label(Z) == zerolocus62_label(Z12 * Z3)
+    @test ambient_variety(Z) == ambient
+    @test dimension(Z) == dimension(Z12) + dimension(Z3)
+    @test codimension(Z) == codimension(Z12) + codimension(Z3)
+    @test rank_bundle(defining_bundle(Z)) == rank_bundle(defining_bundle(Z12)) +
+      rank_bundle(defining_bundle(Z3))
+    @test zerolocus62_label(defining_bundle(Z)) == zerolocus62_label(expected_bundle)
   end
 
   # The zero locus of a section of O(1) on the Cayley plane OP² = E6/P1

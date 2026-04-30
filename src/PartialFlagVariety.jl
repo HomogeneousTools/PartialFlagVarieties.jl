@@ -1,5 +1,5 @@
 export PartialFlagVariety
-export partial_flag_variety, full_flag_variety
+export partial_flag_variety, full_flag_variety, product
 export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule
@@ -111,6 +111,85 @@ simple root is marked.
 function full_flag_variety(::Type{DT}, name::String="") where {DT<:DynkinType}
   partial_flag_variety(DT, Tuple(1:rank(DT)), name)
 end
+
+"""
+    _flatten_dynkin_factors(DT::Type{<:DynkinType}) -> Vector{DataType}
+
+Flatten a simple or nested product Dynkin type into its ordered simple factors.
+"""
+function _flatten_dynkin_factors(::Type{DT}) where {DT<:SimpleDynkinType}
+  DataType[DT]
+end
+
+function _flatten_dynkin_factors(::Type{DT}) where {DT<:ProductDynkinType}
+  result = DataType[]
+  for factor in DT.parameters[1].parameters
+    append!(result, _flatten_dynkin_factors(factor))
+  end
+  result
+end
+
+"""
+    _combine_dynkin_factors(factors) -> Type{<:DynkinType}
+
+Rebuild a Dynkin type from an ordered list of simple factors, preserving the
+left-associated product nesting used elsewhere in the package.
+"""
+function _combine_dynkin_factors(factors::AbstractVector{<:DataType})
+  isempty(factors) && throw(ArgumentError("Need at least one Dynkin factor."))
+  foldl(Iterators.drop(factors, 1); init=first(factors)) do left, right
+    ProductDynkinType{Tuple{left,right}}
+  end
+end
+
+"""
+    _product_marked_dynkin_type(varieties...) -> MarkedDynkinType
+
+Construct the marked Dynkin type of a product ambient by concatenating the
+simple factors of each variety and shifting marked nodes by cumulative rank.
+"""
+function _product_marked_dynkin_type(varieties::Vararg{PartialFlagVariety,N}) where {N}
+  factor_types = DataType[]
+  marked = Int[]
+  offset = 0
+  for X in varieties
+    append!(factor_types, _flatten_dynkin_factors(dynkin_type(X)))
+    append!(marked, (offset + m for m in marked_nodes(X)))
+    offset += rank(X)
+  end
+  DT = _combine_dynkin_factors(factor_types)
+  MarkedDynkinType(DT, Tuple(marked))
+end
+
+"""
+    product(X::PartialFlagVariety, Y::PartialFlagVariety, Zs::PartialFlagVariety...) -> PartialFlagVariety
+
+Construct the product of partial flag varieties.
+
+The ambient Dynkin factors are concatenated in order, and the marked nodes of
+later factors are shifted by the cumulative ranks of the earlier factors.
+This is also available through the `*` operator.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = product(projective_space(1), projective_space(2));
+
+julia> dimension(X)
+3
+
+julia> picard_rank(X)
+2
+```
+"""
+function product(
+  X::PartialFlagVariety, Y::PartialFlagVariety, Zs::PartialFlagVariety...
+)
+  PartialFlagVariety(_product_marked_dynkin_type(X, Y, Zs...))
+end
+
+Base.:*(X::PartialFlagVariety, Y::PartialFlagVariety) = product(X, Y)
 
 function Base.show(io::IO, X::PartialFlagVariety)
   if X.name != ""
