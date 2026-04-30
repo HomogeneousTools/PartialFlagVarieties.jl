@@ -206,14 +206,14 @@ defining_bundle(Z::ZeroLocus) = Z.defining_bundle
 
 Return the codimension of ``Z`` in ``X``, equal to ``\\mathrm{rank}(E)``.
 """
-codimension(Z::ZeroLocus) = Int(rank_bundle(Z.defining_bundle))
+codimension(Z::ZeroLocus)::Int = rank_bundle(Z.defining_bundle)
 
 """
     dimension(Z::ZeroLocus) -> Int
 
 Return the dimension of the zero locus ``Z = \\dim X - \\mathrm{rank}(E)``.
 """
-dimension(Z::ZeroLocus) = dimension(Z.ambient) - codimension(Z)
+dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 
 """
     normal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle

@@ -174,7 +174,7 @@ Return the number of irreducible summands.
 n_components(E::CompletelyReducibleBundle) = length(E.components)
 
 """
-    rank_bundle(E::CompletelyReducibleBundle) -> BigInt
+    rank_bundle(E::CompletelyReducibleBundle) -> Int
 
 Return the total rank (fiber dimension) of the bundle.
 
@@ -189,7 +189,7 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 function rank_bundle(E::CompletelyReducibleBundle)
-  sum(fiber_dimension(c) for c in E.components; init=BigInt(0))
+  sum(fiber_dimension(component) for component in E.components; init=0)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
