@@ -88,7 +88,7 @@ corresponding to the Levi representation of highest weight `λ`.
 """
 function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
   mdt = marked_dynkin_type(X)
-  CompletelyReducibleBundle(X, IrrepLevi[IrrepLevi(mdt, λ)])
+  CompletelyReducibleBundle(X, [IrrepLevi(mdt, λ)])
 end
 
 """
@@ -142,11 +142,8 @@ julia> rank_bundle(E)
 function CompletelyReducibleBundle(
   X::PartialFlagVariety, coeffs_list::AbstractVector{<:AbstractVector{<:Integer}}
 )
-  components = IrrepLevi[]
   mdt = marked_dynkin_type(X)
-  for coeffs in coeffs_list
-    push!(components, IrrepLevi(mdt, coeffs))
-  end
+  components = [IrrepLevi(mdt, coeffs) for coeffs in coeffs_list]
   CompletelyReducibleBundle(X, components)
 end
 
@@ -160,7 +157,7 @@ Return the partial flag variety on which this bundle lives.
 variety(E::CompletelyReducibleBundle) = E.variety
 
 """
-    components(E::CompletelyReducibleBundle) -> Vector{IrrepLevi}
+    components(E::CompletelyReducibleBundle) -> Vector{<:IrrepLevi}
 
 Return the irreducible summands.
 """
