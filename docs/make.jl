@@ -8,7 +8,9 @@ makedocs(
   remotes=nothing,
   format=Documenter.HTML(
     prettyurls=get(ENV, "CI", nothing) == "true",
-    canonical="https://pbelmans.github.io/PartialFlagVarieties.jl",
+    canonical="https://homogeneous.tools/PartialFlagVarieties.jl",
+    repolink="https://github.com/HomogeneousTools/PartialFlagVarieties.jl",
+    edit_link="main",
     assets=String[],
   ),
   modules=[PartialFlagVarieties],
@@ -40,6 +42,6 @@ makedocs(
 )
 
 deploydocs(
-  repo="github.com/pbelmans/PartialFlagVarieties.jl.git",
+  repo="github.com/HomogeneousTools/PartialFlagVarieties.jl.git",
   devbranch="main",
 )
