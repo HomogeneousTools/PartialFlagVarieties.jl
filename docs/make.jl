@@ -2,11 +2,11 @@ using Documenter
 using Lie
 using PartialFlagVarieties
 
-makedocs(
+makedocs(;
   sitename="PartialFlagVarieties.jl",
   authors="Pieter Belmans",
   remotes=nothing,
-  format=Documenter.HTML(
+  format=Documenter.HTML(;
     prettyurls=get(ENV, "CI", nothing) == "true",
     canonical="https://homogeneous.tools/PartialFlagVarieties.jl",
     repolink="https://github.com/HomogeneousTools/PartialFlagVarieties.jl",
@@ -41,7 +41,7 @@ makedocs(
   doctest=true,
 )
 
-deploydocs(
+deploydocs(;
   repo="github.com/HomogeneousTools/PartialFlagVarieties.jl.git",
   devbranch="main",
 )
