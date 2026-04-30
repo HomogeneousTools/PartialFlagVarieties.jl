@@ -526,7 +526,10 @@ function cohomology_on_restriction(
   if is_calabi_yau_candidate(Z.defining_bundle)
     if det_dual
       # Apply Serre duality: H^k(Z, F) = H^{d-k}(Z, F*)
-      entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
+      entries = Vector{BigInt}(undef, d_Z + 1)
+      for k in 0:d_Z
+        entries[k + 1] = H_dual[d_Z - k]
+      end
       return (Cohomology{BigInt}(entries, d_Z), true)
     end
 
@@ -534,23 +537,19 @@ function cohomology_on_restriction(
     # Cross-validate: if both numeric results satisfy the Euler characteristic
     # constraint AND are Serre-dual to each other, the pair is consistent with
     # all available constraints and the result can be trusted.
-    dim_ambient = koszul_cohos[1].dim_variety
     chi_exact = sum(
-      ((-1)^(i - 1)) *
-      sum((-1)^k * koszul_cohos[i][k] for k in 0:dim_ambient; init=BigInt(0))
-      for i in 1:length(koszul_cohos);
+      (isodd(i) ? 1 : -1) * euler_characteristic(koszul_cohos[i]) for
+      i in eachindex(koszul_cohos);
       init=BigInt(0),
     )
-    chi_numeric = sum((-1)^k * H[k] for k in 0:d_Z; init=BigInt(0))
+    chi_numeric = euler_characteristic(H)
 
-    dim_ambient_dual = koszul_cohos_dual[1].dim_variety
     chi_exact_dual = sum(
-      ((-1)^(i - 1)) *
-      sum((-1)^k * koszul_cohos_dual[i][k] for k in 0:dim_ambient_dual; init=BigInt(0))
-      for i in 1:length(koszul_cohos_dual);
+      (isodd(i) ? 1 : -1) * euler_characteristic(koszul_cohos_dual[i]) for
+      i in eachindex(koszul_cohos_dual);
       init=BigInt(0),
     )
-    chi_numeric_dual = sum((-1)^k * H_dual[k] for k in 0:d_Z; init=BigInt(0))
+    chi_numeric_dual = euler_characteristic(H_dual)
 
     serre_consistent = all(H[k] == H_dual[d_Z - k] for k in 0:d_Z)
 
