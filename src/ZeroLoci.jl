@@ -97,6 +97,9 @@ end
 Construct the zero locus of a regular section of the equivariant
 bundle ``E``.  Requires ``\\mathrm{rank}(E) \\le \\dim(X)``.
 
+This constructor assumes such a regular section exists; it does not try to
+prove existence or regularity.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties

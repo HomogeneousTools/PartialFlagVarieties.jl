@@ -12,6 +12,10 @@ export marked_type, marked_dynkin_type, marked_nodes
 
 User-facing wrapper for a partial flag variety ``G/P``, storing its runtime
 [`MarkedDynkinType`](@ref) together with an optional display name.
+
+Most users should create these through the named constructors (`Gr`, `quadric`,
+`cayley_plane`, ...) or via [`partial_flag_variety`](@ref), rather than by
+assembling a `MarkedDynkinType` manually.
 """
 struct PartialFlagVariety
   name::String
@@ -30,6 +34,9 @@ Pass either a Dynkin type `DT` such as `TypeA{4}` or a Dynkin-type string such
 as `"A4"` or `"A2xB3"`. The marked nodes may be given as a single integer, a
 tuple, or a vector; vector input is sorted and converted to `Int`. The optional
 `name` is only used for display.
+
+The convention is that **marked nodes are the crossed-out / nonparabolic
+nodes** of the Dynkin diagram.
 
 For a convenience alias, `PartialFlagVariety("A3", [2])` is equivalent to
 `partial_flag_variety("A3", [2])`.
@@ -95,7 +102,12 @@ PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_
   parse_dynkin_type(s), Vector{Int}(marked)
 )
 
-"""Construct the full flag variety ``G/B`` of type `DT`."""
+"""
+    full_flag_variety(::Type{DT}, name="") -> PartialFlagVariety
+
+Construct the full flag variety ``G/B`` of type `DT`, i.e. the case where every
+simple root is marked.
+"""
 function full_flag_variety(::Type{DT}, name::String="") where {DT<:DynkinType}
   partial_flag_variety(DT, Tuple(1:rank(DT)), name)
 end
@@ -113,7 +125,8 @@ end
     marked_dynkin_type(X::PartialFlagVariety) -> MarkedDynkinType
 
 Return the runtime [`MarkedDynkinType`](@ref) attached to the variety `X`.
-`marked_type` is the short alias.
+`marked_type` is the short alias and is the preferred way to pass `X` into the
+lower-level APIs that operate on marked Dynkin data directly.
 """
 marked_type(X::PartialFlagVariety) = X.mdt
 marked_dynkin_type(X::PartialFlagVariety) = X.mdt
@@ -161,6 +174,8 @@ Return the Betti numbers of `X` in even degrees, i.e.
 Since ``G/P`` has no odd cohomology this completely describes ``\\mathrm{H}^*(X, \\mathbb{Z})``.
 Computed from the ratio of the Poincaré polynomials of the Weyl groups
 ``W_G`` and ``W_L``.
+
+The entry at index `p + 1` is ``b_{2p}``.
 """
 function betti_numbers(X::PartialFlagVariety)
   degs_G = collect(degrees_fundamental_invariants(dynkin_type(X)))
@@ -339,6 +354,8 @@ marked_dynkin_diagram(X::PartialFlagVariety) = marked_dynkin_diagram(marked_dynk
 Return the coefficients ``(a_1, \\ldots, a_r)`` of the anticanonical
 divisor ``-\\mathrm{K}_X = \\sum_j a_j [D_j]`` in the marked-node basis of
 ``\\operatorname{Pic}(X)``.
+
+The basis is ordered by [`marked_nodes(X)`](@ref).
 
 Computed via the formula
 ``a_j = \\langle 2(\\rho_G - \\rho_P),\\, \\alpha_j^\\vee \\rangle``

@@ -21,7 +21,8 @@ export flag_variety
 
 The Grassmannian ``\\mathrm{Gr}(k, n)`` of ``k``-planes in ``\\mathbb{C}^n``.
 
-Encodes as ``A_{n-1}`` with node ``k`` marked.
+It is the generalized Grassmannian ``A_{n-1}/P_k``, encoded by marking node
+``k`` in the Dynkin diagram of type ``A_{n-1}``.
 
 # Examples
 ```jldoctest
@@ -74,9 +75,13 @@ function projective_space(n::Integer)
 end
 
 """
-    flag_variety(n, marking::NTuple) -> PartialFlagVariety
+    flag_variety(n, marking) -> PartialFlagVariety
 
-A partial flag variety of type ``A_{n-1}``.
+The type-``A`` partial flag variety
+``\\mathrm{Fl}(d_1, \\ldots, d_r; n) = A_{n-1}/P_{\\{d_1,\\ldots,d_r\\}}``.
+
+Here `marking = (d_1, ..., d_r)` records the crossed-out nodes, equivalently the
+dimensions in the partial flag.
 
 # Examples
 ```jldoctest
@@ -113,6 +118,10 @@ For ``n = 2m + 1`` (odd): type ``B_m``, mark node ``k``.
 For ``n = 2m`` (even) and ``k < m``: type ``D_m``, mark node ``k``.
 For ``n = 2m`` and ``k = m``: this is the spinor variety ``\\mathrm{OGr}_+(m, 2m)``,
 type ``D_m`` mark node ``m``.
+
+When ``n = 2m`` and ``k = m``, the maximal orthogonal Grassmannian has two
+connected components. `OGr(m, 2m)` picks the component corresponding to node
+``m``; the other component is ``D_m/P_{m-1}``.
 
 # Examples
 ```jldoctest
@@ -194,7 +203,8 @@ end
 """
     IGr(k, n) -> PartialFlagVariety
 
-Synonym for [`OGr`](@ref) — isotropic Grassmannian for an orthogonal form.
+Synonym for [`OGr`](@ref), used to emphasize that the planes are isotropic for
+an orthogonal form.
 """
 IGr(k::Integer, n::Integer) = OGr(k, n)
 
@@ -205,6 +215,9 @@ The smooth quadric hypersurface ``Q_n \\subset \\mathbb{P}^{n+1}``.
 
 For odd ``n = 2m - 1``: ``\\mathrm{OGr}(1, 2m + 1)`` = ``B_m / P_1``.
 For even ``n = 2m - 2``: ``\\mathrm{OGr}(1, 2m)`` = ``D_m / P_1``.
+
+Equivalently, `quadric(n)` is the isotropic-line Grassmannian
+``\\mathrm{OGr}(1, n+2)``.
 
 # Examples
 ```jldoctest
@@ -290,7 +303,10 @@ end
 """
     adjoint_variety(::Type{DT}) -> PartialFlagVariety
 
-The adjoint variety of type `DT` (projectivization of the minimal nilpotent orbit).
+The adjoint variety of a **simple** Dynkin type `DT`, i.e. the projectivisation
+of the minimal nilpotent orbit.
+
+The marked node is the adjoint node, determined by the highest root of `DT`.
 
 # Examples
 ```jldoctest
@@ -327,7 +343,10 @@ end
 """
     coadjoint_variety(::Type{DT}) -> PartialFlagVariety
 
-The coadjoint variety of type `DT`.
+The coadjoint variety of a **simple** Dynkin type `DT`.
+
+For simply laced types it agrees with the adjoint variety. For nonsimply laced
+types it is determined by the highest short root.
 
 # Examples
 ```jldoctest
