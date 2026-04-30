@@ -23,9 +23,7 @@ The universal (tautological) subbundle ``\\mathcal{U}`` on a Grassmannian
 ``\\mathrm{Gr}(k, n)``.
 
 On ``\\mathrm{Gr}(k, n) = A_{n-1}/P_k``, this is the irreducible equivariant
-bundle corresponding to the standard representation of the Levi factor
-(the defining representation at node ``k``), i.e., the weight ``\\omega_k``.
-It has rank ``k``.
+bundle corresponding to the standard representation of the Levi factor.
 
 For orthogonal and symplectic Grassmannians, this returns the isotropic
 tautological subbundle.
@@ -113,6 +111,7 @@ function universal_quotient_bundle(X::PartialFlagVariety)
   mdt = marked_dynkin_type(X)
   DT = dynkin_type(mdt)
 
+  marked = marked_nodes(mdt)[1]
   R = rank(DT)
 
   if DT <: TypeA
@@ -124,9 +123,18 @@ function universal_quotient_bundle(X::PartialFlagVariety)
     return CompletelyReducibleBundle(X, [rep])
   end
 
-  # For non-type-A: fall back to dual of subbundle
-  # (This may not match the algebraic-geometric quotient bundle in general)
-  dual(universal_subbundle(X))
+  if DT <: TypeC && marked != R
+    rep = IrrepLevi(mdt, fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked))
+    return CompletelyReducibleBundle(X, [rep])
+  end
+  if DT <: TypeB &&  !(marked in (R,R-1)) 
+    rep = IrrepLevi(mdt, fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked))
+    return CompletelyReducibleBundle(X, [rep])
+  end
+
+  error(
+    "universal_quotient_bundle is not yet implemented for Dynkin type $(DT) with marked node $(marked). "
+  )
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
