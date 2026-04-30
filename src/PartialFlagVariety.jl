@@ -22,8 +22,40 @@ PartialFlagVariety(mdt::MarkedDynkinType, name::String="") = PartialFlagVariety(
 
 """
     partial_flag_variety(DT::Type{<:DynkinType}, marked, name="") -> PartialFlagVariety
+    partial_flag_variety(s::AbstractString, marked, name="") -> PartialFlagVariety
 
-Construct the partial flag variety ``G/P_I`` of type `DT` with marked nodes `marked`.
+Construct the partial flag variety ``G/P_I`` with marked nodes `marked`.
+
+Pass either a Dynkin type `DT` such as `TypeA{4}` or a Dynkin-type string such
+as `"A4"` or `"A2xB3"`. The marked nodes may be given as a single integer, a
+tuple, or a vector; vector input is sorted and converted to `Int`. The optional
+`name` is only used for display.
+
+For a convenience alias, `PartialFlagVariety("A3", [2])` is equivalent to
+`partial_flag_variety("A3", [2])`.
+
+!!! note
+    The one-argument constructor `PartialFlagVariety("31")` is different: it
+    decodes a ZeroLocus62 label rather than parsing a Dynkin type string.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = partial_flag_variety(TypeA{4}, (2,));
+
+julia> dimension(X)
+6
+
+julia> marked_nodes(partial_flag_variety("A4", 2))
+(2,)
+
+julia> marked_nodes(partial_flag_variety("A3", [1, 3]))
+(1, 3)
+
+julia> marked_nodes(PartialFlagVariety("A3", [2]))
+(2,)
+```
 """
 function partial_flag_variety(
   ::Type{DT}, marked::Tuple, name::String=""
@@ -49,6 +81,16 @@ function partial_flag_variety(s::AbstractString, marked::Integer, name::String="
   partial_flag_variety(parse_dynkin_type(s), Int(marked), name)
 end
 
+"""
+    PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) -> PartialFlagVariety
+
+Convenience alias for [`partial_flag_variety(s, marked)`](@ref).
+
+This two-argument form parses `s` as a Dynkin-type string such as `"A3"` or
+`"A2xB3"`. It is distinct from the one-argument constructor
+[`PartialFlagVariety(label::AbstractString)`](@ref), which decodes a
+ZeroLocus62 label.
+"""
 PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_variety(
   parse_dynkin_type(s), Vector{Int}(marked)
 )

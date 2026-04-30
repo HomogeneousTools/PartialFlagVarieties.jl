@@ -8,6 +8,34 @@ Euler characteristic, Betti numbers, and classification predicates.
 
 ## Constructors
 
+If a variety already has a standard name, prefer the [named constructors](constructions.md)
+such as `Gr`, `quadric`, or `cayley_plane`.
+
+For an arbitrary partial flag variety, use `partial_flag_variety` directly with
+either a Dynkin type or a Dynkin-type string:
+
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = partial_flag_variety(TypeA{3}, (1, 3));
+
+julia> picard_rank(X)
+2
+
+julia> dimension(partial_flag_variety("D5", 5))
+10
+
+julia> marked_nodes(PartialFlagVariety("A3", [2]))
+(2,)
+```
+
+The two-argument form `PartialFlagVariety("A3", [2])` is just a convenience
+alias for `partial_flag_variety("A3", [2])`.
+
+!!! note
+    The one-argument constructor `PartialFlagVariety("31")` is different: it
+    decodes a ZeroLocus62 label rather than parsing a Dynkin-type string.
+
 ```@docs
 PartialFlagVariety
 partial_flag_variety

@@ -46,6 +46,10 @@ dimension(V)            # 16
 euler_characteristic(V) # 27
 ```
 
+For varieties without a named constructor, use
+[`partial_flag_variety`](api/partial_flag_variety.md) directly, for example
+`partial_flag_variety("A3", [1, 3])` or `partial_flag_variety("D5", 5)`.
+
 ## Design
 
 Each partial flag variety ``G/P`` is encoded as a
