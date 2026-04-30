@@ -8,6 +8,12 @@ are needed to resolve symbolic variables, how Euler characteristic constraints s
 the Serre cross-constraints, and the distinction between ample and nef anticanonical bundles
 in the Fano vanishing check.
 
+There are two rather different regimes:
+
+- for homogeneous varieties ``X = G/P``, Hodge-theoretic output is numerical;
+- for zero loci ``Z``, the package may return symbolic affine expressions when
+  the long exact sequences do not force all connecting-map ranks.
+
 ## Hodge numbers
 
 ```@docs
@@ -23,6 +29,9 @@ The Hochschild–Kostant–Rosenberg decomposition gives
 ```math
 \mathrm{HH}^n(X) = \bigoplus_{p+q=n} H^q(X, \bigwedge^p T_X)
 ```
+
+The result is stored in a [`PolyvectorParallelogram`](@ref), which uses
+0-based `(p, q)` access: `P[p, q] = h^q(X, \bigwedge^p T_X)`.
 
 ```@docs
 hochschild_cohomology

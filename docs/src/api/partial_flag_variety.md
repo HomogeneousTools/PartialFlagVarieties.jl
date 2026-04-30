@@ -6,10 +6,14 @@ A `PartialFlagVariety` wraps a [`MarkedDynkinType`](@ref) and provides the
 high-level API for computing invariants of ``G/P``: dimension, Picard rank,
 Euler characteristic, Betti numbers, and classification predicates.
 
+For the package conventions behind the constructors and invariants on this
+page, see [Conventions & Notation](../conventions.md).
+
 ## Constructors
 
-If a variety already has a standard name, prefer the [named constructors](constructions.md)
-such as `Gr`, `quadric`, or `cayley_plane`.
+If a variety already has a standard name, prefer the
+[named constructors](constructions.md) such as `Gr`, `quadric`, or
+`cayley_plane`.
 
 For an arbitrary partial flag variety, use `partial_flag_variety` directly with
 either a Dynkin type or a Dynkin-type string:
@@ -34,7 +38,8 @@ alias for `partial_flag_variety("A3", [2])`.
 
 !!! note
     The one-argument constructor `PartialFlagVariety("31")` is different: it
-    decodes a ZeroLocus62 label rather than parsing a Dynkin-type string.
+    decodes a ZeroLocus62 label rather than parsing a Dynkin-type string. See
+    [Labels](labels.md).
 
 ```@docs
 PartialFlagVariety

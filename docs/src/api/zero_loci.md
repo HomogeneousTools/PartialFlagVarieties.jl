@@ -17,10 +17,18 @@ sequence in cohomology, one recovers ``H^*(Z, F|_Z)`` from computable data on
 cohomology of restrictions, Hodge numbers, Hilbert polynomials, and the
 Calabi–Yau / Fano classification.
 
+The package takes the geometric point of view that a **regular section has been
+chosen**. The constructor `zero_locus(E)` therefore studies the geometry that
+would result from a regular section of `E`; it does not prove existence of such
+a section.
+
 See the [mathematical background](../math.md#Koszul-resolution-and-zero-loci)
 for details on the Koszul resolution and the
 [conormal filtration](../math.md#The-conormal-filtration) that reduces Hodge
 number computations to data on the ambient variety.
+
+If you need compact serialization for datasets or classifications, see
+[Labels](labels.md).
 
 !!! warning "Lefschetz caveat for higher-rank bundles"
     The **Lefschetz hyperplane theorem** guarantees ``\mathrm{Pic}(X) \xrightarrow{\sim} \mathrm{Pic}(Z)``
