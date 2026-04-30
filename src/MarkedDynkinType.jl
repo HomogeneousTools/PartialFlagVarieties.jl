@@ -83,7 +83,7 @@ struct _MarkedDynkinData
 end
 
 const _marked_dynkin_cache = let b = _default_cache_budget()
-  LRU{MarkedDynkinType,_MarkedDynkinData}(
+  LRU{MarkedDynkinType,_MarkedDynkinData}(;
     maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.4),
     by=Base.summarysize,
   )

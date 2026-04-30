@@ -387,13 +387,13 @@ end
 # fresh CompletelyReducibleBundle wrappers are created with the correct parent.
 
 const _tangent_reps_cache = let b = _default_cache_budget()
-  LRU{MarkedDynkinType,Vector{IrrepLevi}}(
+  LRU{MarkedDynkinType,Vector{IrrepLevi}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.3),
     by=Base.summarysize,
   )
 end
 const _cotangent_reps_cache = let b = _default_cache_budget()
-  LRU{MarkedDynkinType,Vector{IrrepLevi}}(
+  LRU{MarkedDynkinType,Vector{IrrepLevi}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.3),
     by=Base.summarysize,
   )
@@ -806,7 +806,7 @@ function _combine_group_results!(result::Vector{IrrepLevi}, group_results)
         append!(result, comps)
       end
     end
-    return
+    return nothing
   end
 
   # Iteratively combine groups

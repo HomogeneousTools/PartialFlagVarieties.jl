@@ -154,7 +154,7 @@ _pp_zero(::Type{AffineExpr}) = AffineExpr(0)
 
 Return ``h^q(X, \\bigwedge^p T_X)``. Uses 0-based indexing.
 """
-function Base.getindex(P::PolyvectorParallelogram{T}, p::Int, q::Int) where T
+function Base.getindex(P::PolyvectorParallelogram{T}, p::Int, q::Int) where {T}
   0 <= p <= P.dim || return _pp_zero(T)
   0 <= q <= P.dim || return _pp_zero(T)
   P.data[p + 1, q + 1]
@@ -166,7 +166,7 @@ end
 Compute the Euler characteristic of Hochschild cohomology:
 ``\\chi(\\mathrm{HH}^*) = \\sum_{p,q} (-1)^{p+q} h^q(X, \\bigwedge^p T_X)``
 """
-function euler_characteristic(P::PolyvectorParallelogram{T}) where T
+function euler_characteristic(P::PolyvectorParallelogram{T}) where {T}
   result = _pp_zero(T)
   for p in 0:P.dim
     for q in 0:P.dim
@@ -181,7 +181,7 @@ end
 
 Compute ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} h^q(X, \\bigwedge^p T_X)``.
 """
-function hochschild_dimension(P::PolyvectorParallelogram{T}, n::Int) where T
+function hochschild_dimension(P::PolyvectorParallelogram{T}, n::Int) where {T}
   result = _pp_zero(T)
   for p in 0:P.dim
     q = n - p

@@ -68,7 +68,7 @@ function _mdt_to_factors(mdt::MarkedDynkinType)
     mask == 0 && throw(
       ArgumentError(
         "Factor $(_simple_dynkin_family(sf))$r has no marked nodes; " *
-        "ZeroLocus62 requires at least one marked node per factor."
+        "ZeroLocus62 requires at least one marked node per factor.",
       ),
     )
     push!(factors, Factor(_simple_dynkin_family(sf), r, mask))

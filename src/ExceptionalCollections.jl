@@ -115,7 +115,9 @@ julia> is_strong_exceptional_pair(O0, O1)
 true
 ```
 """
-function is_strong_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+function is_strong_exceptional_pair(
+  E::CompletelyReducibleBundle, F::CompletelyReducibleBundle
+)
   # Check RHom(F, E) = 0
   is_exceptional_pair(E, F) || return false
   # Check Ext^{>0}(E, F) = 0, i.e., H^i(E^∨ ⊗ F) = 0 for i > 0
@@ -261,12 +263,16 @@ true
 function beilinson_collection(X::PartialFlagVariety)
   DT = dynkin_type(X)
   Marked = marked_nodes(X)
-  DT <: TypeA || throw(ArgumentError(
-    "beilinson_collection requires projective space (type A with one marked node)"
-  ))
-  length(Marked) == 1 || throw(ArgumentError(
-    "beilinson_collection requires a generalized Grassmannian (one marked node)"
-  ))
+  DT <: TypeA || throw(
+    ArgumentError(
+      "beilinson_collection requires projective space (type A with one marked node)"
+    ),
+  )
+  length(Marked) == 1 || throw(
+    ArgumentError(
+      "beilinson_collection requires a generalized Grassmannian (one marked node)"
+    ),
+  )
   n = dimension(X)   # = rank(DT) = n for ℙⁿ
   [line_bundle(X, k) for k in 0:n]
 end
@@ -298,12 +304,16 @@ true
 function beilinson_collection_dual(X::PartialFlagVariety)
   DT = dynkin_type(X)
   Marked = marked_nodes(X)
-  DT <: TypeA || throw(ArgumentError(
-    "beilinson_collection_dual requires projective space (type A with one marked node)"
-  ))
-  length(Marked) == 1 || throw(ArgumentError(
-    "beilinson_collection_dual requires a generalized Grassmannian (one marked node)"
-  ))
+  DT <: TypeA || throw(
+    ArgumentError(
+      "beilinson_collection_dual requires projective space (type A with one marked node)"
+    ),
+  )
+  length(Marked) == 1 || throw(
+    ArgumentError(
+      "beilinson_collection_dual requires a generalized Grassmannian (one marked node)"
+    ),
+  )
   n = dimension(X)
   Ω = cotangent_bundle(X)
   result = CompletelyReducibleBundle[]
@@ -435,9 +445,11 @@ function schur_functor(
   DT <: TypeA || throw(ArgumentError(
     "schur_functor is only implemented for Type A Grassmannians"
   ))
-  length(Marked) == 1 || throw(ArgumentError(
-    "schur_functor requires a generalized Grassmannian (one marked node)"
-  ))
+  length(Marked) == 1 || throw(
+    ArgumentError(
+      "schur_functor requires a generalized Grassmannian (one marked node)"
+    ),
+  )
 
   k = Int(Marked[1])     # Gr(k, n) → marked node k
   n = rank(DT) + 1       # = n  (since rank(A_{n-1}) = n-1)
@@ -450,13 +462,15 @@ function schur_functor(
   end
 
   # Validate
-  issorted(α, rev=true) || throw(ArgumentError(
+  issorted(α; rev=true) || throw(ArgumentError(
     "Partition must be weakly decreasing, got $partition"
   ))
   all(>=(0), α) || throw(ArgumentError("Partition entries must be ≥ 0"))
-  α[1] <= nk || throw(ArgumentError(
-    "Partition $(partition) does not fit in a $k × $nk box (max row length = $(α[1]) > $nk)"
-  ))
+  α[1] <= nk || throw(
+    ArgumentError(
+      "Partition $(partition) does not fit in a $k × $nk box (max row length = $(α[1]) > $nk)"
+    ),
+  )
 
   # Compute ambient weight using the GL(k) Schur functor formula.
   # The Levi of P_k in A_{n-1} has semisimple part A_{k-1} sitting at nodes 1,...,k-1,
@@ -543,16 +557,18 @@ julia> euler_characteristic(X)
 ```
 """
 function kapranov_bundles_grassmannian(
-  X::PartialFlagVariety,
+  X::PartialFlagVariety
 )
   DT = dynkin_type(X)
   Marked = marked_nodes(X)
   DT <: TypeA || throw(ArgumentError(
     "kapranov_bundles_grassmannian requires a Type-A Grassmannian"
   ))
-  length(Marked) == 1 || throw(ArgumentError(
-    "kapranov_bundles_grassmannian requires a generalized Grassmannian"
-  ))
+  length(Marked) == 1 || throw(
+    ArgumentError(
+      "kapranov_bundles_grassmannian requires a generalized Grassmannian"
+    ),
+  )
 
   k = Int(Marked[1])
   n = rank(DT) + 1
@@ -585,7 +601,7 @@ function _partitions_in_box_helper!(
 )
   if remaining == 0
     push!(result, copy(current))
-    return
+    return nothing
   end
   for v in 0:max_val
     push!(current, v)
@@ -713,4 +729,3 @@ function is_strong_exceptional_sequence(
   end
   true
 end
-

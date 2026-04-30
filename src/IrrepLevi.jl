@@ -219,7 +219,7 @@ end
 # ─── Cached tensor product ──────────────────────────────────────────────────
 
 const _TENSOR_PRODUCT_CACHE = let b = _default_cache_budget()
-  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}(
+  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_TENSOR_FRAC),
     by=Base.summarysize,
   )

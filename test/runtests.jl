@@ -1226,8 +1226,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test ambient_variety(Z) == ambient
     @test dimension(Z) == dimension(Z12) + dimension(Z3)
     @test codimension(Z) == codimension(Z12) + codimension(Z3)
-    @test rank_bundle(defining_bundle(Z)) == rank_bundle(defining_bundle(Z12)) +
-      rank_bundle(defining_bundle(Z3))
+    @test rank_bundle(defining_bundle(Z)) ==
+      rank_bundle(defining_bundle(Z12)) +
+          rank_bundle(defining_bundle(Z3))
     @test zerolocus62_label(defining_bundle(Z)) == zerolocus62_label(expected_bundle)
   end
 
@@ -1383,7 +1384,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     test_k3_model("g = 5: (2,2,2) in P^5", 3 * line_bundle(projective_space(5), 2))
 
     let X = Gr(2, 5)
-      test_k3_model("g = 6: (2,1,1,1) on Gr(2,5)", line_bundle(X, 2) + 3 * line_bundle(X, 1))
+      test_k3_model(
+        "g = 6: (2,1,1,1) on Gr(2,5)", line_bundle(X, 2) + 3 * line_bundle(X, 1)
+      )
     end
 
     let X = OGr(5, 10)
@@ -1742,8 +1745,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # 2·Sym²(U^∨) on Gr(2,8): a 6-dimensional zero locus.
     # Some entries are undetermined by Koszul + symmetry constraints;
     # those carry symbolic variables and are NOT defaulted to 0.
-    let X = Gr(2, 8), U = universal_subbundle(X),
-      E = 2 * symmetric_power(dual(U), 2),
+    let X = Gr(2, 8), U = universal_subbundle(X), E = 2 * symmetric_power(dual(U), 2),
       Z = zero_locus(E)
 
       @test dimension(Z) == 6
@@ -1837,9 +1839,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # CI(2,3) in ℙ⁴ — K3 surface
-    let X = projective_space(4),
-      Z = zero_locus(line_bundle(X, 2) + line_bundle(X, 3))
-
+    let X = projective_space(4), Z = zero_locus(line_bundle(X, 2) + line_bundle(X, 3))
       P = hochschild_cohomology(Z)
       @test P.dim == 2
       @test P[0, 0] == 1
@@ -1877,15 +1877,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
     end
 
-    let X = Gr(2, 5), S = universal_subbundle(X),
-      Z = zero_locus(symmetric_power(S, 2))
-
+    let X = Gr(2, 5), S = universal_subbundle(X), Z = zero_locus(symmetric_power(S, 2))
       @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
     end
 
-    let X = Gr(2, 7), S = universal_subbundle(X),
-      Z = zero_locus(2 * symmetric_power(S, 2))
-
+    let X = Gr(2, 7), S = universal_subbundle(X), Z = zero_locus(2 * symmetric_power(S, 2))
       h1 = hodge_numbers(Z)
       h2 = hodge_numbers_symbolic(Z)
       d = dimension(Z)
@@ -1909,13 +1905,16 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     let Z = zero_locus("2044.5m")
       x0 = symbolic_variable(0)
-      expected = map(x -> x isa AffineExpr ? x : AffineExpr(x), [
-        1 0 0 0 0
-        0 3 + x0 x0 0 0
-        0 x0 7 + 2 * x0 x0 0
-        0 0 x0 3 + x0 0
-        0 0 0 0 1
-      ])
+      expected = map(
+        x -> x isa AffineExpr ? x : AffineExpr(x),
+        [
+          1 0 0 0 0
+          0 3 + x0 x0 0 0
+          0 x0 7 + 2 * x0 x0 0
+          0 0 x0 3 + x0 0
+          0 0 0 0 1
+        ],
+      )
       H = hodge_numbers_symbolic(Z)
       @test H == expected
       @test hodge_numbers_les(Z) == expected
@@ -1955,13 +1954,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       end
 
       # (P^1)^5
-      let DT = ProductDynkinType{Tuple{
-            ProductDynkinType{Tuple{
-              ProductDynkinType{Tuple{
-                ProductDynkinType{Tuple{TypeA{1},TypeA{1}}},
-                TypeA{1}}},
-              TypeA{1}}},
-            TypeA{1}}}
+      let DT = ProductDynkinType{
+          Tuple{
+            ProductDynkinType{
+              Tuple{
+                ProductDynkinType{
+                  Tuple{
+                    ProductDynkinType{Tuple{TypeA{1},TypeA{1}}},
+                    TypeA{1}},
+                },
+                TypeA{1}},
+            },
+            TypeA{1}},
+        }
         X = partial_flag_variety(DT, Tuple(1:5))
         @test zerolocus62_label(X) == "11111"
       end
@@ -2011,11 +2016,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # ─── Ambient decoding / round-trip ────────────────────────────────────
     @testset "ambient decoding" begin
       @test marked_dynkin_type(PartialFlagVariety("1")) ==
-            marked_dynkin_type(projective_space(1))
+        marked_dynkin_type(projective_space(1))
       @test marked_dynkin_type(PartialFlagVariety("30")) ==
-            marked_dynkin_type(projective_space(3))
+        marked_dynkin_type(projective_space(3))
       @test marked_dynkin_type(PartialFlagVariety("31")) ==
-            marked_dynkin_type(Gr(2, 4))
+        marked_dynkin_type(Gr(2, 4))
       @test dimension(PartialFlagVariety("53")) == dimension(Gr(3, 6))
       @test dimension(PartialFlagVariety("H0")) == dimension(quadric(5))
     end
@@ -2082,5 +2087,4 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test_throws ArgumentError zero_locus("")
     end
   end
-
 end  # @testset "PartialFlagVarieties.jl"

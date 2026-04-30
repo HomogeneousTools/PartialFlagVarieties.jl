@@ -267,7 +267,7 @@ end
 # Cache: (a, b) → [(degree, dimension), ...] from BWB applied to tensor_product(a, b).
 # Populated lazily; avoids repeated borel_weil_bott + degree calls.
 const _BWB_PAIR_CACHE = let b = _default_cache_budget()
-  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}(
+  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC),
     by=Base.summarysize,
   )
@@ -358,7 +358,7 @@ end
 Dict-accepting overload: skips CRB construction entirely.
 """
 function _koszul_dimensions(
-  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int},
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}
 )
   d = dimension(Z.ambient)
 
@@ -674,13 +674,13 @@ the alternating-sum LES equations.
 Falls back to the numeric path when fully determined.
 """
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int},
+  Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int}
 )
   _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter)
 end
 
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int},
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int}
 )
   d_Z = dimension(Z)
 
@@ -753,7 +753,7 @@ function _restrict_to_zero_locus_les(
 end
 
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, var_counter::Ref{Int},
+  Z::ZeroLocus, var_counter::Ref{Int}
 )
   _restrict_to_zero_locus_les(Z, structure_sheaf(Z.ambient), var_counter)
 end
@@ -1114,13 +1114,17 @@ function hodge_numbers_les(Z::ZeroLocus)
     for p in 1:half
       if is_determined(hodge[1, p + 1])
         constraint_changed =
-          _apply_hodge_constraint!(hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d) ||
+          _apply_hodge_constraint!(
+            hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d
+          ) ||
           constraint_changed
       end
       dp = d - p
       if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
         constraint_changed =
-          _apply_hodge_constraint!(hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d) ||
+          _apply_hodge_constraint!(
+            hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d
+          ) ||
           constraint_changed
       end
     end
