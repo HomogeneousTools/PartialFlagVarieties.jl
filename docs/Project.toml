@@ -7,5 +7,11 @@ PartialFlagVarieties = "b2c3d4e5-f6a7-8901-bcde-f23456789012"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
 
+[sources]
+Base62 = {url = "https://github.com/HomogeneousTools/Base62"}
+Lie = {url = "https://github.com/HomogeneousTools/Lie.jl"}
+PartialFlagVarieties = {path = ".."}
+ZeroLocus62 = {url = "https://github.com/HomogeneousTools/ZeroLocus62", subdir = "julia"}
+
 [extras]
 Lie = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"

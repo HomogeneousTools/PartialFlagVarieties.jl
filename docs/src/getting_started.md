@@ -7,9 +7,16 @@ mathematical conventions behind the API, see [Conventions & Notation](convention
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")
-Pkg.add(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl")
+Pkg.add([
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Base62"),
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"),
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
+])
 ```
+
+This is currently necessary because `Base62`, `ZeroLocus62`, and `Lie.jl` are
+not available from the General registry.
 
 ## The three basic objects
 
