@@ -65,7 +65,6 @@ jobs:
               PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"),
               PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"),
               PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia"),
-              PackageSpec(path="."),
             ])
             Pkg.instantiate()
           '
