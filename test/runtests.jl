@@ -1322,16 +1322,65 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test chi[2] == chi[4]
   end
 
-  @testset "ZeroLocus: quartic K3 Hodge" begin
-    X = projective_space(3)
-    Z = zero_locus(line_bundle(X, 4))
-    @test dimension(Z) == 2
-    h = hodge_numbers(Z)
-    @test h[1, 1] == 1   # h^{0,0}
-    @test h[2, 2] == 20  # h^{1,1}
-    @test h[1, 3] == 1   # h^{0,2}
-    @test h[3, 1] == 1   # h^{2,0}
-    @test h[3, 3] == 1   # h^{2,2} = h^{0,0}
+  @testset "ZeroLocus: Mukai K3 surfaces" begin
+    k3_hodge = [1 0 1; 0 20 0; 1 0 1]
+
+    function test_k3_model(label, E)
+      @testset "$label" begin
+        Z = zero_locus(E)
+        @test dimension(Z) == 2
+        @test hodge_numbers(Z) == k3_hodge
+      end
+    end
+
+    test_k3_model("g = 3: quartic in P^3", line_bundle(projective_space(3), 4))
+
+    let X = projective_space(4)
+      test_k3_model("g = 4: (2,3) in P^4", line_bundle(X, 2) + line_bundle(X, 3))
+    end
+
+    test_k3_model("g = 5: (2,2,2) in P^5", 3 * line_bundle(projective_space(5), 2))
+
+    let X = Gr(2, 5)
+      test_k3_model("g = 6: (2,1,1,1) on Gr(2,5)", line_bundle(X, 2) + 3 * line_bundle(X, 1))
+    end
+
+    let X = OGr(5, 10)
+      # Mukai writes the generator as O(1/2); in this package it is line_bundle(X, 1).
+      test_k3_model("g = 7: O(1/2)^8 on OGr+(5,10)", 8 * line_bundle(X, 1))
+    end
+
+    test_k3_model("g = 8: O(1)^6 on Gr(2,6)", 6 * line_bundle(Gr(2, 6), 1))
+
+    let X = Gr(3, 6), U = universal_subbundle(X)
+      test_k3_model("g = 9: ∧²U* + O(1)^4 on Gr(3,6)",
+        exterior_power(dual(U), 2) + 4 * line_bundle(X, 1))
+    end
+
+    let X = Gr(2, 7), Q = universal_quotient_bundle(X)
+      test_k3_model("g = 10: Q*(1) + O(1)^3 on Gr(2,7)",
+        twist(dual(Q), 1) + 3 * line_bundle(X, 1))
+    end
+
+    let X = Gr(3, 7), U = universal_subbundle(X)
+      test_k3_model("g = 12: (∧²U*)^3 + O(1) on Gr(3,7)",
+        3 * exterior_power(dual(U), 2) + line_bundle(X, 1))
+    end
+
+    let X = Gr(3, 7), U = universal_subbundle(X), Q = universal_quotient_bundle(X)
+      test_k3_model("g = 13: (∧²U*)^2 + ∧³Q on Gr(3,7)",
+        2 * exterior_power(dual(U), 2) + exterior_power(Q, 3))
+    end
+
+    let X = OGr(3, 9)
+      # This is the rank-2 irreducible bundle of highest weight ω₄.
+      F = CompletelyReducibleBundle(X, [0, 0, 0, 1])
+      test_k3_model("g = 18: F^5 on OGr(3,9)", 5 * F)
+    end
+
+    let X = Gr(4, 9), U = universal_subbundle(X)
+      test_k3_model("g = 20: (∧²U*)^3 on Gr(4,9)", 3 * exterior_power(dual(U), 2))
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1803,6 +1852,34 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         @test h1[p + 1, q + 1] == h2[p + 1, q + 1]
       end
     end
+
+    let Z = zero_locus("44.07")
+      expected = AffineExpr.([
+        1 0 0 0 0
+        0 2 0 0 0
+        0 0 2 0 0
+        0 0 0 2 0
+        0 0 0 0 1
+      ])
+      @test hodge_numbers(Z) == expected
+      @test hodge_numbers_symbolic(Z) == expected
+      @test hodge_numbers_les(Z) == expected
+    end
+
+    let Z = zero_locus("2044.5m")
+      x0 = symbolic_variable(0)
+      expected = map(x -> x isa AffineExpr ? x : AffineExpr(x), [
+        1 0 0 0 0
+        0 3 + x0 x0 0 0
+        0 x0 7 + 2 * x0 x0 0
+        0 0 x0 3 + x0 0
+        0 0 0 0 1
+      ])
+      H = hodge_numbers_symbolic(Z)
+      @test H == expected
+      @test hodge_numbers_les(Z) == expected
+      @test all(!is_determined(e) || e.constant >= 0 for e in H)
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1853,24 +1930,24 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @testset "bundle encoding" begin
       # O(1) on P^1
       let X = projective_space(1)
-        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "1.21"
+        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "1.0"
       end
 
       # O ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
       let X = projective_space(1)
         E = direct_sum(structure_sheaf(X), line_bundle(X, 1))
-        @test zerolocus62_label(E) == "1.2021"
+        @test zerolocus62_label(E) == "1.0x1"
       end
 
       # O(1) ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
       let X = projective_space(1)
         E = direct_sum(line_bundle(X, 1), line_bundle(X, 1))
-        @test zerolocus62_label(E) == "1.2121"
+        @test zerolocus62_label(E) == "1.00"
       end
 
       # O(1) on P^3
       let X = projective_space(3)
-        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "30.24"
+        @test zerolocus62_label(zero_locus(line_bundle(X, 1))) == "30.0"
       end
 
       # O(1,0) ⊕ O(0,1) on P^1 × P^1
@@ -1879,14 +1956,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         L1 = line_bundle(X, [1, 0])
         L2 = line_bundle(X, [0, 1])
         E = direct_sum(L1, L2)
-        @test zerolocus62_label(E) == "11.2122"
+        @test zerolocus62_label(E) == "11.01"
       end
 
       # O(1,1) on P^1 × P^1
       let DT = ProductDynkinType{Tuple{TypeA{1},TypeA{1}}}
         X = partial_flag_variety(DT, (1, 2))
         L = line_bundle(X, [1, 1])
-        @test zerolocus62_label(zero_locus(L)) == "11.23"
+        @test zerolocus62_label(zero_locus(L)) == "11.E"
       end
     end
 
@@ -1923,19 +2000,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # ─── Zero locus decoding ─────────────────────────────────────────────
     @testset "zero locus decoding" begin
       # O(1) on P^1
-      let Z = zero_locus("1.21")
+      let Z = zero_locus("1.0")
         @test dimension(ambient_variety(Z)) == 1
         @test rank_bundle(defining_bundle(Z)) == 1
       end
 
       # O(1) on P^3
-      let Z = zero_locus("30.24")
+      let Z = zero_locus("30.0")
         @test dimension(ambient_variety(Z)) == 3
         @test dimension(Z) == 2
       end
 
       # O(1,1) on P^1 × P^1
-      let Z = zero_locus("11.23")
+      let Z = zero_locus("11.E")
         @test dimension(ambient_variety(Z)) == 2
         @test rank_bundle(defining_bundle(Z)) == 1
       end

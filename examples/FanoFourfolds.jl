@@ -4,8 +4,8 @@
 #  Reads the dataset of Fano fourfold zero loci in products of type A
 #  flag varieties (from Fatighenti–Mongardi et al.), constructs each
 #  ambient variety and equivariant bundle in PartialFlagVarieties.jl,
-#  computes Hodge numbers via the Koszul complex, and compares with the
-#  reference values.
+#  computes Hodge numbers via the Koszul complex and the HKR polyvector
+#  parallelogram, and compares Hodge numbers with the reference values.
 #
 #  For entries with indeterminate Hodge numbers, the computation returns
 #  symbolic AffineExpr values (x_0, x_1, ...) which are compared with the
@@ -18,6 +18,9 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 using Distributed
+using Printf
+using PartialFlagVarieties
+using Lie
 
 # Add worker processes before loading packages on them
 const NWORKERS = parse(Int, get(ENV, "JULIA_NUM_PROCS", "8"))
@@ -25,10 +28,23 @@ if nworkers() < NWORKERS
   addprocs(NWORKERS - nworkers() + 1)
 end
 
+const KEEP_MISMATCH_DETAILS = get(ENV, "FANO4_KEEP_MISMATCH_DETAILS", "0") == "1"
+const BATCH_SIZE = parse(Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * max(1, NWORKERS)))))
+
 @everywhere begin
   using PartialFlagVarieties
   using Lie
   using JSON
+
+  const WORKER_GC_EVERY = parse(Int, get(ENV, "FANO4_WORKER_GC_EVERY", "16"))
+  const WORKER_KEEP_MISMATCH_DETAILS = get(ENV, "FANO4_KEEP_MISMATCH_DETAILS", "0") == "1"
+
+  function clear_worker_caches!()
+    Lie.clear_all_caches!()
+    PartialFlagVarieties.clear_caches!()
+    GC.gc(true)
+    nothing
+  end
 
   # =============================================================================
   #  GL(n) weight -> omega coordinates (general flag)
@@ -395,11 +411,26 @@ end
     if is_empty_bundle
       d == 4 || return (status=:dim_error, idx=idx, msg="ambient dim $d != 4",
         is_symbolic=is_sym, hodge=nothing, ref=ref_hodge,
-        matches=false, mapping=Dict{Int,Int}())
+        matches=false, mapping=Dict{Int,Int}(),
+        hodge_elapsed=0.0, polyvector_elapsed=0.0, hh0=nothing)
+
+      t_hodge = time_ns()
       H = ambient_hodge_numbers(X)
+      hodge_elapsed = (time_ns() - t_hodge) / 1e9
+
+      # Compute polyvector parallelogram immediately after Hodge numbers so
+      # both use warmed JIT/caches for the same ambient/zero-locus data.
+      t_poly = time_ns()
+      P = hochschild_cohomology(X)
+      hh0 = hochschild_dimension(P, 0)
+      polyvector_elapsed = (time_ns() - t_poly) / 1e9
+      P = nothing
+
       (matches, mapping) = find_variable_mapping(H, ref_hodge)
       return (status=:ok, idx=idx, hodge=H, ref=ref_hodge,
-        matches=matches, mapping=mapping, is_symbolic=is_sym)
+        matches=matches, mapping=mapping, is_symbolic=is_sym,
+        hodge_elapsed=hodge_elapsed, polyvector_elapsed=polyvector_elapsed,
+        hh0=hh0)
     end
 
     E = build_bundle(X, factors, bundle_data)
@@ -408,30 +439,57 @@ end
     if d - r != 4
       return (status=:dim_error, idx=idx, msg="dim(Z) = $(d-r) != 4",
         is_symbolic=is_sym, hodge=nothing, ref=ref_hodge,
-        matches=false, mapping=Dict{Int,Int}())
+        matches=false, mapping=Dict{Int,Int}(),
+        hodge_elapsed=0.0, polyvector_elapsed=0.0, hh0=nothing)
     end
 
     Z = zero_locus(E)
+
+    t_hodge = time_ns()
     H = hodge_numbers_symbolic(Z)
+    hodge_elapsed = (time_ns() - t_hodge) / 1e9
+
+    # Keep immediately adjacent to Hodge computation to benefit from warmed
+    # kernels and cached intermediate representation-theoretic data.
+    t_poly = time_ns()
+    P = hochschild_cohomology(Z)
+    hh0 = hochschild_dimension(P, 0)
+    polyvector_elapsed = (time_ns() - t_poly) / 1e9
+    P = nothing
+    Z = nothing
+    E = nothing
+    X = nothing
+
     (matches, mapping) = find_variable_mapping(H, ref_hodge)
 
     return (status=:ok, idx=idx, hodge=H, ref=ref_hodge,
-      matches=matches, mapping=mapping, is_symbolic=is_sym)
+      matches=matches, mapping=mapping, is_symbolic=is_sym,
+      hodge_elapsed=hodge_elapsed, polyvector_elapsed=polyvector_elapsed,
+      hh0=hh0)
   end
 
   function process_entry(entry_with_idx)
     t0 = time_ns()
     r = _process_entry(entry_with_idx)
     elapsed = (time_ns() - t0) / 1e9
-    merge(r, (elapsed=elapsed,))
+    clear_worker_caches!()
+    if WORKER_GC_EVERY > 0
+      _, idx = entry_with_idx
+      if idx % WORKER_GC_EVERY == 0
+        GC.gc(true)
+      end
+    end
+    result = merge(r, (elapsed=elapsed,))
+    if result.status == :ok && (!WORKER_KEEP_MISMATCH_DETAILS || result.matches)
+      result = merge(result, (hodge=nothing, ref=nothing, mapping=Dict{Int,Int}()))
+    end
+    result
   end
 end  # @everywhere
 
 # =============================================================================
 #  Pretty-print helpers
 # =============================================================================
-
-using Printf
 
 function format_hodge_matrix(H::Matrix{AffineExpr})
   d = size(H, 1) - 1
@@ -498,11 +556,26 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   println("  Processing $n_run entries (sorted by bundle rank).")
   println("  Using $(nworkers()) worker process(es).\n")
 
-  # Process in parallel with pmap, measuring wall time
+  # Process in parallel in bounded batches to limit retained memory on both
+  # master and workers during the full run.
   entries_with_indices = collect(zip(data, 1:n_run))
+  results = Any[]
   wall_time = @elapsed begin
-    results = pmap(process_entry, entries_with_indices)
+    for batch_start in 1:BATCH_SIZE:n_run
+      batch_stop = min(batch_start + BATCH_SIZE - 1, n_run)
+      batch = entries_with_indices[batch_start:batch_stop]
+      append!(results, pmap(process_entry, batch))
+      Lie.clear_all_caches!()
+      PartialFlagVarieties.clear_caches!()
+      GC.gc(false)
+      for pid in workers()
+        remotecall_wait(GC.gc, pid, false)
+      end
+      @printf("  Completed %4d/%4d entries\r", batch_stop, n_run)
+      flush(stdout)
+    end
   end
+  println(" " ^ 40)
 
   # Categorize results
   ok_numeric = []
@@ -537,15 +610,29 @@ function main(; datafile=nothing, max_entries=typemax(Int))
 
   if !isempty(mismatch_numeric)
     println("\n-- Numeric mismatches --")
-    for r in mismatch_numeric
-      print_discrepancy(r)
+    if any(r -> r.hodge !== nothing && r.ref !== nothing, mismatch_numeric)
+      for r in mismatch_numeric
+        if r.hodge !== nothing && r.ref !== nothing
+          print_discrepancy(r)
+        end
+      end
+    else
+      println("  Details omitted to reduce memory pressure.")
+      println("  Set FANO4_KEEP_MISMATCH_DETAILS=1 to print mismatch matrices.")
     end
   end
 
   if !isempty(mismatch_symbolic)
     println("\n-- Symbolic mismatches --")
-    for r in mismatch_symbolic
-      print_discrepancy(r)
+    if any(r -> r.hodge !== nothing && r.ref !== nothing, mismatch_symbolic)
+      for r in mismatch_symbolic
+        if r.hodge !== nothing && r.ref !== nothing
+          print_discrepancy(r)
+        end
+      end
+    else
+      println("  Details omitted to reduce memory pressure.")
+      println("  Set FANO4_KEEP_MISMATCH_DETAILS=1 to print mismatch matrices.")
     end
   end
 
@@ -559,6 +646,9 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   # Timing statistics
   times = sort([r.elapsed for r in results])
   n = length(times)
+  hodge_times = sort([r.hodge_elapsed for r in results if r.status == :ok])
+  polyvector_times = sort([r.polyvector_elapsed for r in results if r.status == :ok])
+  n_ok = length(hodge_times)
   println()
   println("=" ^ 60)
   println("  TIMING")
@@ -571,6 +661,12 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   @printf("  Median per-entry:     %8.3f s\n", times[(n + 1) ÷ 2])
   @printf("  p90 per-entry:        %8.3f s\n", times[max(1, ceil(Int, 0.90 * n))])
   @printf("  p99 per-entry:        %8.3f s\n", times[max(1, ceil(Int, 0.99 * n))])
+  if n_ok > 0
+    @printf("  Sum hodge time:       %8.2f s\n", sum(hodge_times))
+    @printf("  Sum polyvector time:  %8.2f s\n", sum(polyvector_times))
+    @printf("  Mean hodge/entry:     %8.3f s\n", sum(hodge_times) / n_ok)
+    @printf("  Mean polyvector/entry:%8.3f s\n", sum(polyvector_times) / n_ok)
+  end
   println("=" ^ 60)
 
   println()

@@ -610,18 +610,17 @@ function cohomology_on_restriction_symbolic(
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Alternative Koszul restriction (output-variable LES)
+#  Alternative Koszul restriction
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
     _restrict_to_zero_locus_les(Z, F, var_counter) -> Vector{AffineExpr}
 
-Compute ``H^*(Z, F|_Z)`` using the output-variable LES approach.
+Compute ``H^*(Z, F|_Z)`` using the alternative LES solver.
 
 Instead of parametrising connecting-map ranks (``\\delta``-variables),
 creates a fresh symbolic variable for each output entry and applies
-the alternating-sum LES equations.  This mirrors the Macaulay2
-`shortExactSequenceCoker` / `longExactSequence` pipeline.
+the alternating-sum LES equations.
 
 Falls back to the numeric path when fully determined.
 """
@@ -1004,25 +1003,21 @@ function fano_index(Z::ZeroLocus)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Alternative Hodge numbers (output-variable LES pipeline)
+#  Alternative Hodge numbers
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
     hodge_numbers_les(Z::ZeroLocus) -> Matrix{AffineExpr}
 
-Compute the symbolic Hodge diamond using the Macaulay2-style
-output-variable LES approach.
+Compute the symbolic Hodge diamond using the alternative LES solver.
 
 For each row ``p``, the conormal terms
 ``H^*(Z, \\mathrm{Sym}^{p-j}(E^*) \\otimes \\Omega^j_X|_Z)``
 are computed via `_restrict_to_zero_locus_les` (alternative inner Koszul),
 then chained via `long_exact_sequence_cokernel` (alternative outer conormal).
 
-This is an independent implementation from `hodge_numbers_symbolic`,
-matching the alternative `shortExactSequenceCoker`/`longExactSequence` pipeline
-nearly verbatim.  The free parameters in the output represent genuine
-degrees of freedom that cannot be resolved from the Koszul complex and
-symmetry constraints alone.
+The free parameters in the output represent genuine degrees of freedom that
+cannot be resolved from the Koszul complex and symmetry constraints alone.
 """
 function hodge_numbers_les(Z::ZeroLocus)
   d = dimension(Z)
@@ -1155,34 +1150,27 @@ function _apply_hodge_constraint!(
   delta = target - expr.constant
   hodge[pi, qi] = AffineExpr(target)
 
-  # Compensate the alternating sum χ = Σ (-1)^q h^{p,q} by adjusting an
-  # undetermined entry in the same row.  If no undetermined entry exists,
-  # pick the entry with the most symbolic variables (most likely to absorb
-  # the correction).  The correction Δ at column q must satisfy:
-  #   (-1)^(qi-1) * delta + (-1)^(comp_col-1) * Δ = 0
-  # ⟹ Δ = -delta * (-1)^(qi - comp_col)
+  # Preserve the row Euler characteristic immediately, but bias the correction
+  # toward the diagonal entry. This avoids injecting the shift into an arbitrary
+  # symbolic off-diagonal term, which can create impossible negative Hodge
+  # numbers once the remaining symmetry constraints are applied.
   q_forced = qi - 1  # 0-based column index
-
-  # Try to find an undetermined entry (best candidate for correction)
-  comp_col = -1
-  for q in 0:d
-    q == q_forced && continue
-    !is_determined(hodge[pi, q + 1]) && (comp_col = q; break)
+  p_idx = pi - 1  # 0-based
+  comp_col = p_idx == q_forced ? -1 : p_idx
+  if comp_col < 0
+    for q in 0:d
+      q == q_forced && continue
+      if !is_determined(hodge[pi, q + 1])
+        comp_col = q
+        break
+      end
+    end
   end
+  comp_col < 0 && (comp_col = q_forced == 0 ? d : 0)
 
-  if comp_col >= 0
-    # Adjust undetermined entry: cancel the χ imbalance
-    correction = -delta * (iseven(q_forced - comp_col) ? 1 : -1)
-    e = hodge[pi, comp_col + 1]
-    hodge[pi, comp_col + 1] = AffineExpr(e.constant + correction, copy(e.coeffs))
-  else
-    # All entries are determined.  Find the diagonal entry h^{p,p} (most
-    # internal) and adjust it, since the χ constraint will be satisfied.
-    p_idx = pi - 1  # 0-based
-    correction = -delta * (iseven(q_forced - p_idx) ? 1 : -1)
-    e = hodge[pi, p_idx + 1]
-    hodge[pi, p_idx + 1] = AffineExpr(e.constant + correction)
-  end
+  correction = -delta * (iseven(q_forced - comp_col) ? 1 : -1)
+  e = hodge[pi, comp_col + 1]
+  hodge[pi, comp_col + 1] = AffineExpr(e.constant + correction, copy(e.coeffs))
   true
 end
 
@@ -1218,187 +1206,6 @@ function _apply_hodge_pair!(
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Symbolic Hodge numbers  (concrete hodge_numbers is in Hodge.jl)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    hodge_numbers_symbolic(Z::ZeroLocus) -> Matrix{AffineExpr}
-
-Symbolic version of `hodge_numbers`.  When the long exact sequence does
-not uniquely determine a Hodge number, the entry is an `AffineExpr`
-involving symbolic variables ``x_0, x_1, \\ldots``.
-
-The matrix is ``(d+1) \\times (d+1)`` with ``[p+1, q+1] = \\mathrm{h}^{p,q}``.
-
-After computing the ``p = 1`` row via the conormal short exact sequence,
-Hodge symmetry (``h^{1,0} = h^{0,1}``), Serre duality
-(``h^{1,d} = h^{0,d-1}``), and the exact ``\\chi(\\Omega^1_Z)`` are used
-to eliminate up to three symbolic variables.
-
-!!! warning "Lefschetz hyperplane theorem does not apply to higher-rank zero loci"
-    The Lefschetz hyperplane theorem guarantees ``\\mathrm{Pic}(X) \\xrightarrow{\\sim}
-    \\mathrm{Pic}(Z)`` only when ``Z`` is an ample *hypersurface* (codimension 1).
-    For a zero locus of a rank-``r`` bundle with ``r > 1``, the Picard rank of
-    ``Z`` can strictly exceed that of the ambient ``X``, so ``h^{1,1}(Z) > b_2(X)``
-    is possible and may be left as a free symbolic variable by this function.
-    Do **not** assume ``h^{1,1}(Z) = \\mathrm{picard\\_rank}(X)``.
-    Example: ``b9 = (\\mathrm{Sym}^2 S^*)^{\\oplus 2}`` on ``\\mathrm{Gr}(2,7)``
-    has ``h^{1,1} = 8`` even though ``\\mathrm{Pic}(\\mathrm{Gr}(2,7)) \\cong \\mathbb{Z}``.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(4);
-
-julia> Z = zero_locus(line_bundle(X, 5));
-
-julia> H = hodge_numbers_symbolic(Z);
-
-julia> is_determined(H[2, 2])  # h^{1,1} fully determined
-true
-
-julia> H[2, 2].constant
-1
-
-julia> H[3, 2].constant  # h^{2,1}
-101
-```
-
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = Gr(2, 6);
-
-julia> E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:4]);
-
-julia> Z = zero_locus(E);
-
-julia> H = hodge_numbers_symbolic(Z);
-
-julia> all(is_determined(H[p+1, q+1]) for p in 0:4, q in 0:4)
-true
-
-julia> H[2, 2].constant  # h^{1,1}
-1
-
-julia> H[3, 3].constant  # h^{2,2}
-8
-```
-"""
-function hodge_numbers_symbolic(Z::ZeroLocus)
-  d = dimension(Z)
-  X = Z.ambient
-  E = Z.defining_bundle
-  E_dual = dual(E)
-  var_counter = Ref(0)
-
-  hodge = Matrix{AffineExpr}(undef, d + 1, d + 1)
-  for i in eachindex(hodge)
-    hodge[i] = AffineExpr(0)
-  end
-
-  # ── Precompute Sym^k(E*) and Ω^k_X for k = 0..⌊d/2⌋ ─────────────────
-  half = d ÷ 2
-  syms = CompletelyReducibleBundle[symmetric_power(E_dual, k) for k in 0:half]
-  omegas = CompletelyReducibleBundle[exterior_power(cotangent_bundle(X), k) for k in 0:half]
-
-  # ── Compute rows p = 0..⌊d/2⌋ via the conormal filtration ────────────
-  for p in 0:half
-    if p == 0
-      Hp = cohomology_on_restriction_symbolic(Z, var_counter)
-    else
-      cohos = Cohomology[]
-      for j in 0:p
-        F = tensor_product(syms[p - j + 1], omegas[j + 1])
-        Hj = cohomology_on_restriction_symbolic(Z, F, var_counter)
-        push!(cohos, Hj)
-      end
-      Hp = cohos[1]
-      for k in 2:length(cohos)
-        Hp = solve_ses_cohomology_symbolic(Hp, cohos[k], var_counter)
-      end
-      # Truncate to zero locus dimension
-      Hp = Cohomology{AffineExpr}(AffineExpr[Hp[i] for i in 0:d], d)
-    end
-    for q in 0:d
-      hodge[p + 1, q + 1] = Hp[q]
-    end
-  end
-
-  # ── Apply all symmetry constraints, iterating until convergence ─────
-  # Precompute χ(Ω^p_Z) once (these are exact and don't change).
-  chi_vals = BigInt[_chi_omega_p_conormal(Z, p) for p in 0:half]
-
-  constraint_changed = true
-  while constraint_changed
-    constraint_changed = false
-
-    # Hodge corner constraints: h^{p,0} = h^{0,p}, h^{p,d} = h^{0,d-p}
-    for p in 1:half
-      if is_determined(hodge[1, p + 1])
-        constraint_changed =
-          _apply_hodge_constraint!(hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d) ||
-          constraint_changed
-      end
-      dp = d - p
-      if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
-        constraint_changed =
-          _apply_hodge_constraint!(hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d) ||
-          constraint_changed
-      end
-    end
-
-    # χ(Ω^p_Z) constraint
-    for p in 0:half
-      alt_sum = sum((-1)^q * hodge[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
-      constraint_changed =
-        _apply_equation!(hodge, alt_sum - AffineExpr(chi_vals[p + 1])) ||
-        constraint_changed
-    end
-
-    # Cross-row Hodge symmetry: h^{p,q} = h^{q,p} for p,q ∈ 0..half
-    for p in 0:half, q in 0:half
-      p == q && continue
-      constraint_changed =
-        _apply_hodge_pair!(hodge, p + 1, q + 1, q + 1, p + 1, chi_vals, d) ||
-        constraint_changed
-    end
-
-    # Middle-row Serre: h^{half,q} = h^{half,d-q}
-    if d % 2 == 0
-      p = half
-      for q in 0:(d ÷ 2 - 1)
-        constraint_changed =
-          _apply_hodge_pair!(hodge, p + 1, q + 1, p + 1, d - q + 1, chi_vals, d) ||
-          constraint_changed
-      end
-    end
-
-    # Combined Hodge–Serre: h^{p,q} = h^{d-q,d-p}
-    # Only apply when both (p) and (d-q) are in the computed range 0..half.
-    for p in 0:half, q in 0:d
-      dq = d - q
-      dp = d - p
-      (0 <= dq <= half) || continue
-      (0 <= dp <= d) || continue
-      (p == dq && q == dp) && continue  # skip trivial self-links
-      constraint_changed =
-        _apply_hodge_pair!(hodge, p + 1, q + 1, dq + 1, dp + 1, chi_vals, d) ||
-        constraint_changed
-    end
-  end
-
-  # ── Fill rows p > ⌊d/2⌋ via Serre duality ────────────────────────────
-  for p in (half + 1):d
-    for q in 0:d
-      hodge[p + 1, q + 1] = hodge[d - p + 1, d - q + 1]
-    end
-  end
-
-  _renumber_variables!(hodge)
-end
-
 """
 Compute ``\\chi(\\Omega^p_Z)`` using the conormal recursion.
 

@@ -7,6 +7,24 @@ export to_ambient_weight, fiber_dimension, p_dominant_weight
 
 An irreducible representation of the Levi factor attached to `mdt`, stored by
 its ambient ``P``-dominant weight together with its central and semisimple Levi
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(3, 6);
+
+julia> rep = IrrepLevi(marked_dynkin_type(X), [0, 1, -1, 0, 0]);
+
+julia> rep == only(components(universal_subbundle(X)))
+true
+
+julia> semisimple_part(rep)
+ω2
+
+julia> fiber_dimension(rep)
+3
+```
 coordinates.
 """
 struct IrrepLevi
@@ -335,6 +353,17 @@ function symmetric_power(rep::IrrepLevi, k::Integer)
     end
   end
   result
+end
+
+"""
+    IrrepLevi(mdt::MarkedDynkinType, coeffs::AbstractVector{<:Integer})
+
+Convenience constructor: build an irreducible Levi representation from a
+vector of fundamental-weight coefficients ``(\\lambda_1, \\ldots, \\lambda_r)``
+in the ambient weight lattice.
+"""
+function IrrepLevi(mdt::MarkedDynkinType, coeffs::AbstractVector{<:Integer})
+  IrrepLevi(mdt, WeightLatticeElem(dynkin_type(mdt), Vector{Int}(coeffs)))
 end
 
 Base.:(==)(a::IrrepLevi, b::IrrepLevi) =
