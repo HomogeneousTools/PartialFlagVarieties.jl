@@ -56,14 +56,12 @@ function spectral_sequence(F::FilteredBundle)
   d = dimension(variety(F))
   DT = dynkin_type(variety(F))
   R = rank(variety(F))
-  E = Dict{Tuple{Int, Int}, WeylCharacter{DT,R}}()
   zero_character = WeylCharacter(DT)
+  E = Dict{Tuple{Int, Int}, WeylCharacter{DT,R}}()
   for q in 0:n-1
     H = cohomology(bundles[q+1])
     for i in 0:d
-      if H[i] != zero_character
-        E[(-q+i,q)] = H[i]
-      end
+      H[i] != zero_character && (E[(-q+i,q)] = H[i])
     end
   end
   return SpectralSequence{WeylCharacter{DT,R}}(E)
@@ -83,22 +81,21 @@ Each isotypical component is a spectral sequence where the entry at position `(p
 multiplicity of the weight in the character at that position (or 0 if the weight does not appear).
 """
 function isotypical_components(S::SpectralSequence{WeylCharacter{DT,R}}) where {DT, R}
-  result = Dict{WeightLatticeElem{DT,R}, SpectralSequence{Int}}()
-  weights = Set{WeightLatticeElem{DT,R}}()
-  for char in values(S.E1)
-    union!(weights, keys(char.terms))
+  # Accumulate components in a single pass through E1
+  iso_dict = Dict{WeightLatticeElem{DT,R}, Dict{Tuple{Int,Int}, Int}}()
+  
+  for (pos, char) in S.E1
+    for (weight, mult) in char.terms
+      if !haskey(iso_dict, weight)
+        iso_dict[weight] = Dict{Tuple{Int,Int}, Int}()
+      end
+      iso_dict[weight][pos] = mult
+    end
   end
   
-  for weight in weights
-    E_iso = Dict{Tuple{Int, Int}, Int}()
-    for (pos, char) in S.E1
-      if haskey(char.terms, weight)
-        E_iso[pos] = char.terms[weight]
-      end
-    end
-    result[weight] = SpectralSequence{Int}(E_iso)
-  end
-  return result
+  # Convert accumulated dicts to SpectralSequence objects
+  return Dict(weight => SpectralSequence{Int}(E_iso) 
+              for (weight, E_iso) in iso_dict)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -117,14 +114,9 @@ The function checks for the existence of pairs of positions `(p₁, q₁)` and `
 """
 function does_E1_degenerate(S::SpectralSequence{Int})
   E = E1_page(S)
-  for pos_1 in keys(E)
-    for pos_2 in keys(E)
-      if pos_1[1] + pos_1[2] == pos_2[1] + pos_2[2] - 1 && pos_1[2] < pos_2[2]
-        return false
-      end
-    end
-  end
-  return true
+  return !any(pos_1[1] + pos_1[2] == pos_2[1] + pos_2[2] - 1 && pos_1[2] < pos_2[2] 
+              for pos_1 in keys(E) 
+              for pos_2 in keys(E))
 end
 
 """

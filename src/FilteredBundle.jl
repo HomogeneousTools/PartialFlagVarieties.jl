@@ -467,16 +467,8 @@ TODO
 bundle has no higher cohomology.
 """
 function has_higher_cohomology(F::FilteredBundle)
-  S = spectral_sequence(F)
-  iso_comp = isotypical_components(S)
-  for S_iso in values(iso_comp)
-    if does_E1_degenerate(S_iso)
-      for pos in keys(E1_page(S_iso))
-        if pos[1] + pos[2] != 0 #This condition ensure higher cohomology is nonzero.
-          return true
-        end
-      end
-    end
-  end
-  return false
+  iso_comp = isotypical_components(spectral_sequence(F))
+  return any(does_E1_degenerate(S_iso) && 
+             any(pos[1] + pos[2] != 0 for pos in keys(E1_page(S_iso)))
+             for S_iso in values(iso_comp))
 end
