@@ -4,8 +4,9 @@
 #  Reads the dataset of Fano fourfold zero loci in products of type A
 #  flag varieties (from Fatighenti–Mongardi et al.), constructs each
 #  ambient variety and equivariant bundle in PartialFlagVarieties.jl,
-#  computes Hodge numbers via the Koszul complex and the HKR polyvector
-#  parallelogram, and compares Hodge numbers with the reference values.
+#  computes Hodge numbers via the Koszul complex and compares them with the
+#  reference values. The optional HKR polyvector/Hochschild pass can be enabled
+#  separately when needed.
 #
 #  For entries with indeterminate Hodge numbers, the computation returns
 #  symbolic AffineExpr values (x_0, x_1, ...) which are compared with the
@@ -15,6 +16,7 @@
 #
 #  Usage:
 #    julia --project=. examples/FanoFourfolds.jl [data.json path] [max_entries]
+#    FANO4_COMPUTE_POLYVECTOR=1 julia --project=. examples/FanoFourfolds.jl
 # ═══════════════════════════════════════════════════════════════════════════════
 
 using Distributed
@@ -23,13 +25,16 @@ using PartialFlagVarieties
 using Lie
 
 # Add worker processes before loading packages on them
-const NWORKERS = parse(Int, get(ENV, "JULIA_NUM_PROCS", "8"))
+const NWORKERS = parse(Int, get(ENV, "JULIA_NUM_PROCS", "4"))
 if nworkers() < NWORKERS
   addprocs(NWORKERS - nworkers() + 1)
 end
 
+const COMPUTE_POLYVECTOR = get(ENV, "FANO4_COMPUTE_POLYVECTOR", "0") == "1"
 const KEEP_MISMATCH_DETAILS = get(ENV, "FANO4_KEEP_MISMATCH_DETAILS", "0") == "1"
-const BATCH_SIZE = parse(Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * max(1, NWORKERS)))))
+const BATCH_SIZE = parse(
+  Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * max(1, NWORKERS))))
+)
 
 @everywhere begin
   using PartialFlagVarieties
@@ -37,6 +42,7 @@ const BATCH_SIZE = parse(Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * ma
   using JSON
 
   const WORKER_GC_EVERY = parse(Int, get(ENV, "FANO4_WORKER_GC_EVERY", "16"))
+  const WORKER_COMPUTE_POLYVECTOR = get(ENV, "FANO4_COMPUTE_POLYVECTOR", "0") == "1"
   const WORKER_KEEP_MISMATCH_DETAILS = get(ENV, "FANO4_KEEP_MISMATCH_DETAILS", "0") == "1"
 
   function clear_worker_caches!()
@@ -44,6 +50,18 @@ const BATCH_SIZE = parse(Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * ma
     PartialFlagVarieties.clear_caches!()
     GC.gc(true)
     nothing
+  end
+
+  function maybe_compute_polyvector(Y)
+    WORKER_COMPUTE_POLYVECTOR || return (polyvector_elapsed=0.0, hh0=nothing)
+
+    t_poly = time_ns()
+    P = hochschild_cohomology(Y)
+    hh0 = hochschild_dimension(P, 0)
+    polyvector_elapsed = (time_ns() - t_poly) / 1e9
+    P = nothing
+
+    (polyvector_elapsed=polyvector_elapsed, hh0=hh0)
   end
 
   # =============================================================================
@@ -418,19 +436,13 @@ const BATCH_SIZE = parse(Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * ma
       H = ambient_hodge_numbers(X)
       hodge_elapsed = (time_ns() - t_hodge) / 1e9
 
-      # Compute polyvector parallelogram immediately after Hodge numbers so
-      # both use warmed JIT/caches for the same ambient/zero-locus data.
-      t_poly = time_ns()
-      P = hochschild_cohomology(X)
-      hh0 = hochschild_dimension(P, 0)
-      polyvector_elapsed = (time_ns() - t_poly) / 1e9
-      P = nothing
+      polyvector = maybe_compute_polyvector(X)
 
       (matches, mapping) = find_variable_mapping(H, ref_hodge)
       return (status=:ok, idx=idx, hodge=H, ref=ref_hodge,
         matches=matches, mapping=mapping, is_symbolic=is_sym,
-        hodge_elapsed=hodge_elapsed, polyvector_elapsed=polyvector_elapsed,
-        hh0=hh0)
+        hodge_elapsed=hodge_elapsed, polyvector_elapsed=polyvector.polyvector_elapsed,
+        hh0=polyvector.hh0)
     end
 
     E = build_bundle(X, factors, bundle_data)
@@ -449,13 +461,7 @@ const BATCH_SIZE = parse(Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * ma
     H = hodge_numbers_symbolic(Z)
     hodge_elapsed = (time_ns() - t_hodge) / 1e9
 
-    # Keep immediately adjacent to Hodge computation to benefit from warmed
-    # kernels and cached intermediate representation-theoretic data.
-    t_poly = time_ns()
-    P = hochschild_cohomology(Z)
-    hh0 = hochschild_dimension(P, 0)
-    polyvector_elapsed = (time_ns() - t_poly) / 1e9
-    P = nothing
+    polyvector = maybe_compute_polyvector(Z)
     Z = nothing
     E = nothing
     X = nothing
@@ -464,8 +470,8 @@ const BATCH_SIZE = parse(Int, get(ENV, "FANO4_BATCH_SIZE", string(max(16, 4 * ma
 
     return (status=:ok, idx=idx, hodge=H, ref=ref_hodge,
       matches=matches, mapping=mapping, is_symbolic=is_sym,
-      hodge_elapsed=hodge_elapsed, polyvector_elapsed=polyvector_elapsed,
-      hh0=hh0)
+      hodge_elapsed=hodge_elapsed, polyvector_elapsed=polyvector.polyvector_elapsed,
+      hh0=polyvector.hh0)
   end
 
   function process_entry(entry_with_idx)
@@ -555,6 +561,7 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   n_run = length(data)
   println("  Processing $n_run entries (sorted by bundle rank).")
   println("  Using $(nworkers()) worker process(es).\n")
+  println("  Polyvector/Hochschild: $(COMPUTE_POLYVECTOR ? "enabled" : "disabled")\n")
 
   # Process in parallel in bounded batches to limit retained memory on both
   # master and workers during the full run.
@@ -647,7 +654,6 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   times = sort([r.elapsed for r in results])
   n = length(times)
   hodge_times = sort([r.hodge_elapsed for r in results if r.status == :ok])
-  polyvector_times = sort([r.polyvector_elapsed for r in results if r.status == :ok])
   n_ok = length(hodge_times)
   println()
   println("=" ^ 60)
@@ -663,9 +669,14 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   @printf("  p99 per-entry:        %8.3f s\n", times[max(1, ceil(Int, 0.99 * n))])
   if n_ok > 0
     @printf("  Sum hodge time:       %8.2f s\n", sum(hodge_times))
-    @printf("  Sum polyvector time:  %8.2f s\n", sum(polyvector_times))
     @printf("  Mean hodge/entry:     %8.3f s\n", sum(hodge_times) / n_ok)
-    @printf("  Mean polyvector/entry:%8.3f s\n", sum(polyvector_times) / n_ok)
+    if COMPUTE_POLYVECTOR
+      polyvector_times = sort([r.polyvector_elapsed for r in results if r.status == :ok])
+      @printf("  Sum polyvector time:  %8.2f s\n", sum(polyvector_times))
+      @printf("  Mean polyvector/entry:%8.3f s\n", sum(polyvector_times) / n_ok)
+    else
+      println("  Polyvector timing:    disabled")
+    end
   end
   println("=" ^ 60)
 
