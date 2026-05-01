@@ -272,6 +272,19 @@ const _BWB_PAIR_CACHE = let b = _default_cache_budget()
     by=Base.summarysize,
   )
 end
+const _COTANGENT_POWER_CACHE = let b = _default_cache_budget()
+  LRU{Tuple{MarkedDynkinType,Int},CompletelyReducibleBundle}(;
+    maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.1),
+    by=Base.summarysize,
+  )
+end
+
+function _cotangent_power(X::PartialFlagVariety, j::Int)
+  mdt = marked_dynkin_type(X)
+  get!(_COTANGENT_POWER_CACHE, (mdt, j)) do
+    exterior_power(cotangent_bundle(X), j)
+  end
+end
 
 """
 Compute and cache the BWB contributions `[(deg, dim), ...]` for
@@ -1075,7 +1088,7 @@ function hodge_numbers_les(Z::ZeroLocus)
 
   half = d ÷ 2
   syms = CompletelyReducibleBundle[symmetric_power(E_dual, k) for k in 0:half]
-  omegas = CompletelyReducibleBundle[exterior_power(cotangent_bundle(X), k) for k in 0:half]
+  omegas = CompletelyReducibleBundle[_cotangent_power(X, k) for k in 0:half]
 
   hodge = Matrix{AffineExpr}(undef, d + 1, d + 1)
   for i in eachindex(hodge)
@@ -1358,7 +1371,7 @@ function _chi_omega_tensor_counts(
   end
 
   X = Z.ambient
-  Ωj_X = exterior_power(cotangent_bundle(X), j)
+  Ωj_X = _cotangent_power(X, j)
   ω_counts = _to_counts(Ωj_X)
   r = length(_koszul_wedges!(Z)) - 1
 
