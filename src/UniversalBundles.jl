@@ -13,7 +13,7 @@ export spinor_bundle
 export tautological_bundles, quotient_bundles
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Type A: Grassmannians Gr(k, n) = A_{n-1}/P_k
+#  Generalized Grassmannians: universal, quotient and residual bundle
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
