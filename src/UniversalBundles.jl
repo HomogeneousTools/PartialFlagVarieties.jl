@@ -77,9 +77,6 @@ end
 """
     universal_quotient_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The universal quotient bundle ``\\mathcal{Q}`` on a Grassmannian
-``\\mathrm{Gr}(k, n)``.
-
 On type A, this is the equivariant bundle with weight ``\\omega_{n-1}``.
 For isotropic Grassmannians (types B, C, D), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
 via the bilinear form.
@@ -89,8 +86,6 @@ Only the type-``A`` case should be read as the literal geometric quotient
 ``\\mathbb{C}^n / \\mathcal{U}``. For the isotropic cases the implementation
 returns the dual of the tautological bundle as the natural equivariant
 replacement.
-
-TODO: implement in other types
 
 # Examples
 ```jldoctest
@@ -129,19 +124,42 @@ function universal_quotient_bundle(X::PartialFlagVariety)
   R = rank(DT)
 
   if DT <: TypeA
-    # On Gr(k, n) = A_{n-1}/P_k, the quotient bundle Q = C^n/U corresponds
-    # to the last fundamental weight ω_{n-1} of the ambient A_{n-1}.
-    # Under the Levi A_{k-1} × A_{n-k-1}, this has fiber dimension n-k.
     return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
+  else
+    #TODO treat cases where residual bundle is 0 and return completely reducible bundle instead of filtered bundle
+    # U = universal_subbundle(X), R = residual_bundle(X). In this case the quotient Q bundle fits into the s.e.s
+    # 0 -> U -> Q -> R -> 0
+    # So, the code returns a filetered bundle with subbundle U and quotient R.
+    return FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)])
   end
-
-  throw(
-    ArgumentError(
-      "universal_quotient_bundle is currently only implemented for type A Grassmannians"
-    )
-  )
 end
+"""
+    residual_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
+For types B, C, D, the residual bundle is the completely reducible bundle corresponding to U^⟂ / U.
+
+# Examples:
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = OGr(3, 9);
+
+julia> R = residual_bundle(X);
+
+julia> rank_bundle(R)
+3
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = SGr(3, 8);
+
+julia> rank_bundle(residual_bundle(X)) + rank_bundle(universal_subbundle(X)) == rank_bundle(universal_quotient_bundle(X))
+true
+```
+
+"""
 function residual_bundle(X)
   is_generalized_grassmannian(X) || throw(
     ArgumentError(
@@ -155,23 +173,40 @@ function residual_bundle(X)
   )
 
   DT = dynkin_type(mdt)
-  marked = marked_nodes(mdt)
+  marked = marked_nodes(mdt)[1]
   R = rank(DT)
 
-  if DT <: TypeB && !(marked[1] in (R, R - 1))
-    return CompletelyReducibleBundle(
-      X,
-      fundamental_weight(DT, marked[1] + 1) - fundamental_weight(DT, marked[1]),
-    )
+  marked == 1 && throw(
+    ArgumentError("not implemented for marked node 1")
+  )
+  if DT <: TypeA
+    throw(ArgumentError("type A do not have a well-defined residual bundle"))
+  elseif DT <: TypeB
+    if marked == R
+      ω = WeightLatticeElem(DT)
+    elseif marked == R - 1
+      ω = 2 * fundamental_weight(DT, R) - fundamental_weight(DT, R - 1)
+    else
+      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+    end
+  elseif DT <: TypeC
+    if marked == R
+      throw(ArgumentError("not implemented for marked node R in type C")) # TODO this bundle should be 0 bundle
+    else
+      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+    end
+  elseif DT <: TypeD
+    if marked in (R, R-1)
+      throw(ArgumentError("not implemented for marked node R or R-1 in type D")) # TODO this bundle should be 0 bundle
+    elseif marked == R - 2
+      ω =
+        fundamental_weight(DT, R) + fundamental_weight(DT, R - 1) -
+        fundamental_weight(DT, R - 2)
+    else
+      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+    end
   end
-
-    if DT <: TypeC && marked[1] != R
-    return CompletelyReducibleBundle(
-      X,
-      fundamental_weight(DT, marked[1] + 1) - fundamental_weight(DT, marked[1]),
-    )
-  end
-  throw(ArgumentError("residual_bundle: unsupported type or marked node"))
+  return CompletelyReducibleBundle(X, ω)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
