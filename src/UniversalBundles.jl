@@ -8,7 +8,7 @@
 #  - Tautological bundles on partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-export universal_subbundle, universal_quotient_bundle
+export universal_subbundle, universal_quotient_bundle, residual_bundle
 export spinor_bundle
 export tautological_bundles, quotient_bundles
 
@@ -117,32 +117,57 @@ function universal_quotient_bundle(X::PartialFlagVariety)
   )
 
   mdt = marked_dynkin_type(X)
-  DT = dynkin_type(mdt)
+  is_exceptional(mdt) && throw(
+    ArgumentError("exceptional types do not have a well-defined universal quotient bundle")
+  )
 
-  marked = marked_nodes(mdt)[1]
+  DT = dynkin_type(mdt)
   R = rank(DT)
 
   if DT <: TypeA
     # On Gr(k, n) = A_{n-1}/P_k, the quotient bundle Q = C^n/U corresponds
     # to the last fundamental weight ω_{n-1} of the ambient A_{n-1}.
     # Under the Levi A_{k-1} × A_{n-k-1}, this has fiber dimension n-k.
-    ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(mdt, ω)
-    return CompletelyReducibleBundle(X, [rep])
+    return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   end
 
-  if DT <: TypeC && marked != R
-    rep = IrrepLevi(mdt, fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked))
-    return CompletelyReducibleBundle(X, [rep])
-  end
-  if DT <: TypeB &&  !(marked in (R,R-1)) 
-    rep = IrrepLevi(mdt, fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked))
-    return CompletelyReducibleBundle(X, [rep])
-  end
-
-  error(
-    "universal_quotient_bundle is not yet implemented for Dynkin type $(DT) with marked node $(marked). "
+  throw(
+    ArgumentError(
+      "universal_quotient_bundle is currently only implemented for type A Grassmannians"
+    )
   )
+end
+
+function residual_bundle(X)
+  is_generalized_grassmannian(X) || throw(
+    ArgumentError(
+      "residual_bundle requires a generalized Grassmannian (1 marked node)"
+    ),
+  )
+
+  mdt = marked_dynkin_type(X)
+  is_exceptional(mdt) && throw(
+    ArgumentError("exceptional types do not have a well-defined residual bundle")
+  )
+
+  DT = dynkin_type(mdt)
+  marked = marked_nodes(mdt)
+  R = rank(DT)
+
+  if DT <: TypeB && !(marked[1] in (R, R - 1))
+    return CompletelyReducibleBundle(
+      X,
+      fundamental_weight(DT, marked[1] + 1) - fundamental_weight(DT, marked[1]),
+    )
+  end
+
+    if DT <: TypeC && marked[1] != R
+    return CompletelyReducibleBundle(
+      X,
+      fundamental_weight(DT, marked[1] + 1) - fundamental_weight(DT, marked[1]),
+    )
+  end
+  throw(ArgumentError("residual_bundle: unsupported type or marked node"))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
