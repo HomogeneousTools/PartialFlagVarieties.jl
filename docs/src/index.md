@@ -3,66 +3,80 @@
 A Julia package for computing with **partial flag varieties** ``G/P`` using
 [Lie.jl](https://github.com/HomogeneousTools/Lie.jl).
 
-The three main capabilities are:
+The package is designed for three closely related tasks:
 
-1. **Equivariant vector bundles and sheaf cohomology.**  Construct completely
-   reducible equivariant bundles (line bundles, tangent/cotangent, exterior
-   and symmetric powers, tensor products, …) and compute their sheaf cohomology
-   via the Borel–Weil–Bott theorem.
+1. **Model homogeneous spaces ``G/P``.** Construct partial flag varieties from
+   Dynkin data or from named families such as Grassmannians, quadrics, and
+   exceptional varieties.
+2. **Compute with equivariant bundles.** Build semisimplified equivariant
+   bundles and compute their sheaf cohomology via Borel–Weil–Bott.
+3. **Study zero loci.** Form the zero locus of a regular section, run its
+   Koszul resolution, and extract Hodge, Hochschild, Calabi–Yau, and Fano data.
 
-2. **Hodge numbers and Hochschild cohomology.**  Compute the full Hodge diamond
-   of homogeneous varieties and their zero loci, including symbolic Hodge
-   computation when the Koszul long exact sequences leave degrees of freedom.
+## Start here
 
-3. **Zero loci of sections.**  Given a section of an equivariant bundle, form
-   the zero locus, run its Koszul complex, compute Euler characteristics and
-   Hodge numbers, and detect Calabi–Yau or Fano geometry.
+Different readers want different kinds of documentation:
 
-## Quick start
+| If you want to... | Start with... |
+|:------------------|:--------------|
+| get a first computation running | [Getting Started](getting_started.md) |
+| understand the package conventions | [Conventions & Notation](conventions.md) |
+| find a task-oriented example | [Common Workflows](workflows.md) |
+| understand the mathematics behind the algorithms | [Mathematical Background](math.md) |
+| look up a specific type or function | the pages under **API Reference** |
+
+The API is intentionally layered. Most users should begin with:
+
+- [`PartialFlagVariety`](@ref) and the [named constructors](api/constructions.md),
+- [`CompletelyReducibleBundle`](@ref) together with `line_bundle`,
+  `tangent_bundle`, `direct_sum`, `exterior_power`, and `twist`,
+- [`cohomology`](@ref) / [`dimensions`](@ref),
+- [`ZeroLocus`](@ref), [`hodge_numbers`](@ref), and [`hochschild_cohomology`](@ref).
+
+Types such as [`IrrepLevi`](@ref) and the symbolic Koszul solvers are
+documented because they matter for advanced use and for understanding the
+internals, but they are not the recommended entry point.
+
+## Quick taste
 
 ```julia
 using PartialFlagVarieties
 
-# The Grassmannian Gr(2, 5)
-V = Gr(2, 5)
-dimension(V)            # 6
-euler_characteristic(V) # 10
-betti_numbers(V)        # [1, 1, 1, 1, 1, 1, 1]
-
-# Sheaf cohomology on ℙ⁴
-X = projective_space(4)
-L = line_bundle(X, 1)
-H = dimensions(cohomology(L))
-H[0]                    # 5 = dim H⁰(ℙ⁴, 𝒪(1))
-
-# Zero loci
 X = Gr(2, 5)
-Z = zero_locus(line_bundle(X, 1))
-dimension(Z)            # 5
+T = tangent_bundle(X)
 
-# The Cayley plane
-V = cayley_plane()
-dimension(V)            # 16
-euler_characteristic(V) # 27
+dimension(X)              # 6
+dimensions(T)[0]          # h^0(X, T_X)
+
+Z = zero_locus(line_bundle(X, 1))
+hodge_numbers(Z)
 ```
 
-## Design
+The most important indexing convention is that [`Cohomology`](@ref) objects are
+**0-indexed**: `H[0]` means ``H^0``.
 
-Each partial flag variety ``G/P`` is encoded as a
-`PartialFlagVariety{MDT}` wrapping a `MarkedDynkinType` that stores the
-Lie type and marked nodes as **runtime values**. Derived structural
-invariants (Cartan matrices, Levi decomposition, Betti numbers,
-decomposition matrices) are **cached on demand**.
+## Mental model
 
-Bundle operations use the Levi decomposition: each equivariant bundle
-decomposes as a direct sum of irreducible Levi representations
-`IrrepLevi`, each with a central part (character of the center
-``\operatorname{Z}(L)^\circ``) and a semisimple part (highest weight of ``[L,L]``).
+At the user level, most computations follow this pattern:
+
+1. Construct the ambient variety `X::PartialFlagVariety`.
+2. Build a bundle `E::CompletelyReducibleBundle` on `X`.
+3. Compute either:
+   - cohomology on `X`,
+   - or geometry/cohomology of `zero_locus(E)`.
+
+Internally, each `PartialFlagVariety` wraps a [`MarkedDynkinType`](@ref) with
+runtime Dynkin data and cached structural invariants. Equivariant bundles are
+handled through the Levi factor, so the main bundle type stores the
+**semisimplification** as a direct sum of irreducible Levi representations.
 
 ## Contents
 
 ```@contents
 Pages = [
+  "getting_started.md",
+  "conventions.md",
+  "workflows.md",
   "math.md",
   "api/marked_dynkin_type.md",
   "api/partial_flag_variety.md",
@@ -75,6 +89,8 @@ Pages = [
   "api/zero_loci.md",
   "api/koszul.md",
   "api/constructions.md",
+  "api/labels.md",
   "api/exceptional_collections.md",
+  "api/cache_config.md",
 ]
 ```

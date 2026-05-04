@@ -117,12 +117,12 @@ function total_bundle(F::FilteredBundle)
 end
 
 """
-    rank_bundle(F::FilteredBundle) -> BigInt
+    rank_bundle(F::FilteredBundle) -> Int
 
 Return the total rank of the filtered bundle.
 """
 function rank_bundle(F::FilteredBundle)
-  sum(rank_bundle(p) for p in F.pieces; init=BigInt(0))
+  sum(rank_bundle(p) for p in F.pieces; init=0)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

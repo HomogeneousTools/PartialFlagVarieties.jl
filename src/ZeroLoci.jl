@@ -97,6 +97,9 @@ end
 Construct the zero locus of a regular section of the equivariant
 bundle ``E``.  Requires ``\\mathrm{rank}(E) \\le \\dim(X)``.
 
+This constructor assumes such a regular section exists; it does not try to
+prove existence or regularity.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -118,6 +121,52 @@ function zero_locus(E::CompletelyReducibleBundle)
   ))
   ZeroLocus(X, E, nothing)
 end
+
+"""
+    _product_zero_locus(Z1, Z2) -> ZeroLocus
+
+Construct the product of two zero loci by taking the product ambient and the
+direct sum of the defining bundles lifted from the two factors.
+"""
+function _product_zero_locus(Z1::ZeroLocus, Z2::ZeroLocus)
+  X1 = ambient_variety(Z1)
+  X2 = ambient_variety(Z2)
+  X = product(X1, X2)
+  E1 = _lift_bundle_to_product(X, defining_bundle(Z1), 0)
+  E2 = _lift_bundle_to_product(X, defining_bundle(Z2), rank(X1))
+  zero_locus(direct_sum(E1, E2))
+end
+
+"""
+    product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...) -> ZeroLocus
+
+Construct the product of zero loci.
+
+If `Z_i ⊂ X_i` is cut out by a regular section of `E_i`, then the product is
+realized as the zero locus in `X_1 × X_2 × ...` of the direct sum of the
+lifted bundles pulled back from each factor. This is also available through the
+`*` operator.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = product(zero_locus(line_bundle(projective_space(1), 1)),
+                   zero_locus(line_bundle(projective_space(2), 1)));
+
+julia> dimension(Z)
+1
+```
+"""
+function product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...)
+  Z = _product_zero_locus(Z1, Z2)
+  for W in Zs
+    Z = _product_zero_locus(Z, W)
+  end
+  Z
+end
+
+Base.:*(Z1::ZeroLocus, Z2::ZeroLocus) = product(Z1, Z2)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Accessors
@@ -157,14 +206,14 @@ defining_bundle(Z::ZeroLocus) = Z.defining_bundle
 
 Return the codimension of ``Z`` in ``X``, equal to ``\\mathrm{rank}(E)``.
 """
-codimension(Z::ZeroLocus) = Int(rank_bundle(Z.defining_bundle))
+codimension(Z::ZeroLocus)::Int = rank_bundle(Z.defining_bundle)
 
 """
     dimension(Z::ZeroLocus) -> Int
 
 Return the dimension of the zero locus ``Z = \\dim X - \\mathrm{rank}(E)``.
 """
-dimension(Z::ZeroLocus) = dimension(Z.ambient) - codimension(Z)
+dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 
 """
     normal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
@@ -218,7 +267,7 @@ end
 # Cache: (a, b) → [(degree, dimension), ...] from BWB applied to tensor_product(a, b).
 # Populated lazily; avoids repeated borel_weil_bott + degree calls.
 const _BWB_PAIR_CACHE = let b = _default_cache_budget()
-  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}(
+  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC),
     by=Base.summarysize,
   )
@@ -309,7 +358,7 @@ end
 Dict-accepting overload: skips CRB construction entirely.
 """
 function _koszul_dimensions(
-  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int},
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}
 )
   d = dimension(Z.ambient)
 
@@ -477,7 +526,10 @@ function cohomology_on_restriction(
   if is_calabi_yau_candidate(Z.defining_bundle)
     if det_dual
       # Apply Serre duality: H^k(Z, F) = H^{d-k}(Z, F*)
-      entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
+      entries = Vector{BigInt}(undef, d_Z + 1)
+      for k in 0:d_Z
+        entries[k + 1] = H_dual[d_Z - k]
+      end
       return (Cohomology{BigInt}(entries, d_Z), true)
     end
 
@@ -485,23 +537,19 @@ function cohomology_on_restriction(
     # Cross-validate: if both numeric results satisfy the Euler characteristic
     # constraint AND are Serre-dual to each other, the pair is consistent with
     # all available constraints and the result can be trusted.
-    dim_ambient = koszul_cohos[1].dim_variety
     chi_exact = sum(
-      ((-1)^(i - 1)) *
-      sum((-1)^k * koszul_cohos[i][k] for k in 0:dim_ambient; init=BigInt(0))
-      for i in 1:length(koszul_cohos);
+      (isodd(i) ? 1 : -1) * euler_characteristic(koszul_cohos[i]) for
+      i in eachindex(koszul_cohos);
       init=BigInt(0),
     )
-    chi_numeric = sum((-1)^k * H[k] for k in 0:d_Z; init=BigInt(0))
+    chi_numeric = euler_characteristic(H)
 
-    dim_ambient_dual = koszul_cohos_dual[1].dim_variety
     chi_exact_dual = sum(
-      ((-1)^(i - 1)) *
-      sum((-1)^k * koszul_cohos_dual[i][k] for k in 0:dim_ambient_dual; init=BigInt(0))
-      for i in 1:length(koszul_cohos_dual);
+      (isodd(i) ? 1 : -1) * euler_characteristic(koszul_cohos_dual[i]) for
+      i in eachindex(koszul_cohos_dual);
       init=BigInt(0),
     )
-    chi_numeric_dual = sum((-1)^k * H_dual[k] for k in 0:d_Z; init=BigInt(0))
+    chi_numeric_dual = euler_characteristic(H_dual)
 
     serre_consistent = all(H[k] == H_dual[d_Z - k] for k in 0:d_Z)
 
@@ -625,13 +673,13 @@ the alternating-sum LES equations.
 Falls back to the numeric path when fully determined.
 """
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int},
+  Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int}
 )
   _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter)
 end
 
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int},
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int}
 )
   d_Z = dimension(Z)
 
@@ -704,7 +752,7 @@ function _restrict_to_zero_locus_les(
 end
 
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, var_counter::Ref{Int},
+  Z::ZeroLocus, var_counter::Ref{Int}
 )
   _restrict_to_zero_locus_les(Z, structure_sheaf(Z.ambient), var_counter)
 end
@@ -1065,13 +1113,17 @@ function hodge_numbers_les(Z::ZeroLocus)
     for p in 1:half
       if is_determined(hodge[1, p + 1])
         constraint_changed =
-          _apply_hodge_constraint!(hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d) ||
+          _apply_hodge_constraint!(
+            hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d
+          ) ||
           constraint_changed
       end
       dp = d - p
       if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
         constraint_changed =
-          _apply_hodge_constraint!(hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d) ||
+          _apply_hodge_constraint!(
+            hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d
+          ) ||
           constraint_changed
       end
     end

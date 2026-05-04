@@ -198,18 +198,18 @@ function to_ambient_weight(mdt::MarkedDynkinType, rep::IrrepLevi)
 end
 
 """
-    fiber_dimension(rep::IrrepLevi) -> BigInt
+    fiber_dimension(rep::IrrepLevi) -> Int
 
 Return the dimension of the fiber of the equivariant bundle defined by `rep`,
 i.e., the dimension of the irreducible representation of the semisimple Levi
 factor given by the Weyl dimension formula.
 """
-function fiber_dimension(rep::IrrepLevi)
-  is_borel(marked_dynkin_type(rep)) && return BigInt(1)
+function fiber_dimension(rep::IrrepLevi)::Int
+  is_borel(marked_dynkin_type(rep)) && return 1
   ss = semisimple_part(rep)
-  iszero(ss) && return BigInt(1)
-  is_dominant(ss) || return BigInt(0)
-  degree(ss)
+  iszero(ss) && return 1
+  is_dominant(ss) || return 0
+  Int(degree(ss))
 end
 
 function Base.show(io::IO, rep::IrrepLevi)
@@ -219,7 +219,7 @@ end
 # ─── Cached tensor product ──────────────────────────────────────────────────
 
 const _TENSOR_PRODUCT_CACHE = let b = _default_cache_budget()
-  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}(
+  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_TENSOR_FRAC),
     by=Base.summarysize,
   )

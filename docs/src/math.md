@@ -1,5 +1,10 @@
 # Mathematical Background
 
+This page explains the mathematics used by the package. It is written as a
+conceptual reference, not as the best first introduction to the API. If you
+want to start using the package immediately, begin with
+[Getting Started](getting_started.md) and [Common Workflows](workflows.md).
+
 ## Partial flag varieties
 
 A **partial flag variety** is a homogeneous space ``G/P`` where:

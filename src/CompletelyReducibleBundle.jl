@@ -88,7 +88,7 @@ corresponding to the Levi representation of highest weight `λ`.
 """
 function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
   mdt = marked_dynkin_type(X)
-  CompletelyReducibleBundle(X, IrrepLevi[IrrepLevi(mdt, λ)])
+  CompletelyReducibleBundle(X, [IrrepLevi(mdt, λ)])
 end
 
 """
@@ -142,11 +142,8 @@ julia> rank_bundle(E)
 function CompletelyReducibleBundle(
   X::PartialFlagVariety, coeffs_list::AbstractVector{<:AbstractVector{<:Integer}}
 )
-  components = IrrepLevi[]
   mdt = marked_dynkin_type(X)
-  for coeffs in coeffs_list
-    push!(components, IrrepLevi(mdt, coeffs))
-  end
+  components = [IrrepLevi(mdt, coeffs) for coeffs in coeffs_list]
   CompletelyReducibleBundle(X, components)
 end
 
@@ -160,7 +157,7 @@ Return the partial flag variety on which this bundle lives.
 variety(E::CompletelyReducibleBundle) = E.variety
 
 """
-    components(E::CompletelyReducibleBundle) -> Vector{IrrepLevi}
+    components(E::CompletelyReducibleBundle) -> Vector{<:IrrepLevi}
 
 Return the irreducible summands.
 """
@@ -174,7 +171,7 @@ Return the number of irreducible summands.
 n_components(E::CompletelyReducibleBundle) = length(E.components)
 
 """
-    rank_bundle(E::CompletelyReducibleBundle) -> BigInt
+    rank_bundle(E::CompletelyReducibleBundle) -> Int
 
 Return the total rank (fiber dimension) of the bundle.
 
@@ -189,7 +186,7 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 function rank_bundle(E::CompletelyReducibleBundle)
-  sum(fiber_dimension(c) for c in E.components; init=BigInt(0))
+  sum(fiber_dimension(component) for component in E.components; init=0)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -315,19 +312,85 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
   CompletelyReducibleBundle(X, λ)
 end
 
+"""
+    _product_factor_range(total_rank, factor_rank, offset) -> UnitRange{Int}
+
+Return the block of ambient coordinates occupied by a factor embedded into a
+product ambient of rank `total_rank`.
+"""
+function _product_factor_range(total_rank::Int, factor_rank::Int, offset::Int)
+  0 <= offset <= total_rank || throw(ArgumentError("Offset $offset is out of range."))
+
+  last_index = offset + factor_rank
+  last_index <= total_rank || throw(
+    ArgumentError(
+      "A factor of rank $factor_rank does not fit in an ambient rank $total_rank at offset $offset."
+    ),
+  )
+  (offset + 1):last_index
+end
+
+"""
+    _embed_ambient_weight(DT, λ, offset) -> WeightLatticeElem
+
+Embed the weight `λ` into the ambient weight lattice of `DT` by placing its
+coefficients into the coordinate block determined by `offset`.
+"""
+function _embed_ambient_weight(
+  ::Type{DT}, λ::WeightLatticeElem, offset::Int
+) where {DT<:DynkinType}
+  weight_coefficients = collect(Int, coefficients(λ))
+  coordinate_range = _product_factor_range(rank(DT), length(weight_coefficients), offset)
+  ambient_coefficients = zeros(Int, rank(DT))
+  ambient_coefficients[coordinate_range] = weight_coefficients
+  WeightLatticeElem(DT, ambient_coefficients)
+end
+
+"""
+    _lift_irrep_to_product(X, rep, offset) -> IrrepLevi
+
+Lift an irreducible Levi representation from a factor ambient into the product
+ambient `X` by embedding its ambient highest weight at the specified offset.
+"""
+function _lift_irrep_to_product(
+  X::PartialFlagVariety, representation::IrrepLevi, offset::Int
+)
+  weight = _embed_ambient_weight(
+    dynkin_type(X), p_dominant_weight(representation), offset
+  )
+  IrrepLevi(marked_dynkin_type(X), weight)
+end
+
+"""
+    _lift_bundle_to_product(X, E, offset) -> CompletelyReducibleBundle
+
+Lift a completely reducible bundle from one factor of a product ambient into the
+product ambient `X`, embedding each irreducible summand into the coordinate
+block starting at `offset`.
+"""
+function _lift_bundle_to_product(
+  X::PartialFlagVariety, E::CompletelyReducibleBundle, offset::Int
+)
+  _product_factor_range(rank(X), rank(variety(E)), offset)
+  lifted_components = map(components(E)) do component
+    _lift_irrep_to_product(X, component, offset)
+  end
+  CompletelyReducibleBundle(X, lifted_components)
+end
+
 # ─── Type-level caches for tangent/cotangent rep lists ───────────────────────
 # These avoid repeatedly computing tangent_weights + IrrepLevi decomposition
 # for the same MDT.  The caches store only the IrrepLevi component vectors;
 # fresh CompletelyReducibleBundle wrappers are created with the correct parent.
 
 const _tangent_reps_cache = let b = _default_cache_budget()
-  LRU{MarkedDynkinType,Vector{IrrepLevi}}(
+  LRU{MarkedDynkinType,Vector{IrrepLevi}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.3),
     by=Base.summarysize,
   )
 end
 const _cotangent_reps_cache = let b = _default_cache_budget()
-  LRU{MarkedDynkinType,Vector{IrrepLevi}}(
+  LRU{MarkedDynkinType,Vector{IrrepLevi}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.3),
     by=Base.summarysize,
   )
@@ -740,7 +803,7 @@ function _combine_group_results!(result::Vector{IrrepLevi}, group_results)
         append!(result, comps)
       end
     end
-    return
+    return nothing
   end
 
   # Iteratively combine groups

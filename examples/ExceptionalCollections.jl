@@ -25,20 +25,20 @@ println("=" ^ 70)
 
 X = projective_space(3)
 bundles = [
-  ("O",     structure_sheaf(X)),
-  ("O(1)",  line_bundle(X, 1)),
-  ("O(2)",  line_bundle(X, 2)),
+  ("O", structure_sheaf(X)),
+  ("O(1)", line_bundle(X, 1)),
+  ("O(2)", line_bundle(X, 2)),
   ("O(-1)", line_bundle(X, -1)),
-  ("T",     tangent_bundle(X)),
-  ("Ω",     cotangent_bundle(X)),
+  ("T", tangent_bundle(X)),
+  ("Ω", cotangent_bundle(X)),
 ]
 
 data = [Any[name, is_exceptional(E)] for (name, E) in bundles]
 data_matrix = permutedims(hcat(data...), (2, 1))
 pretty_table(
   data_matrix;
-  column_labels = ["Bundle", "is_exceptional"],
-  alignment = [:l, :c],
+  column_labels=["Bundle", "is_exceptional"],
+  alignment=[:l, :c],
 )
 
 # ─── 2. Beilinson collection on ℙ⁴ ─────────────────────────────────────────
@@ -88,8 +88,8 @@ for (i, n) in enumerate([3, 4, 5])
 end
 pretty_table(
   quadric_data;
-  column_labels = ["Variety", "χ", "length", "full exc.", "strong exc."],
-  alignment = [:l, :c, :c, :c, :c],
+  column_labels=["Variety", "χ", "length", "full exc.", "strong exc."],
+  alignment=[:l, :c, :c, :c, :c],
 )
 
 # ─── 5. Schur functor ranks on Gr(k,n) ──────────────────────────────────────
@@ -100,15 +100,17 @@ println("=" ^ 70)
 
 X25 = Gr(2, 5)
 partitions25 = [[a, b] for a in 0:3 for b in 0:a]
-schur_data = [begin
-  E = schur_functor(X25, α)
-  [string(α), rank_bundle(E), is_exceptional(E)]
-end for α in partitions25]
+schur_data = [
+  begin
+    E = schur_functor(X25, α)
+    [string(α), rank_bundle(E), is_exceptional(E)]
+  end for α in partitions25
+]
 schur_matrix = permutedims(hcat(schur_data...), (2, 1))
 pretty_table(
   schur_matrix;
-  column_labels = ["partition α", "rank(Σ^α U^∨)", "is_exceptional"],
-  alignment = [:l, :c, :c],
+  column_labels=["partition α", "rank(Σ^α U^∨)", "is_exceptional"],
+  alignment=[:l, :c, :c],
 )
 
 # ─── 6. Kapranov–Orlov collection on Grassmannians ──────────────────────────
@@ -129,6 +131,6 @@ for (i, (k, n)) in enumerate([(2, 4), (2, 5), (2, 6), (3, 6)])
 end
 pretty_table(
   grass_data;
-  column_labels = ["Variety", "χ", "length", "full exc.", "strong exc."],
-  alignment = [:l, :c, :c, :c, :c],
+  column_labels=["Variety", "χ", "length", "full exc.", "strong exc."],
+  alignment=[:l, :c, :c, :c, :c],
 )

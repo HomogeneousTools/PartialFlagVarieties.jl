@@ -28,6 +28,11 @@ bundle corresponding to the standard representation of the Levi factor.
 For orthogonal and symplectic Grassmannians, this returns the isotropic
 tautological subbundle.
 
+This function is intended for **generalized Grassmannians** (one marked node).
+For multi-step flags, use [`tautological_bundles`](@ref) instead; those are
+convenient completely reducible building blocks rather than a geometric flag of
+subbundles.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -79,6 +84,11 @@ On type A, this is the equivariant bundle with weight ``\\omega_{n-1}``.
 For isotropic Grassmannians (types B, C, D), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
 via the bilinear form.
 It has rank ``n - k`` on ``\\mathrm{Gr}(k, n)``.
+
+Only the type-``A`` case should be read as the literal geometric quotient
+``\\mathbb{C}^n / \\mathcal{U}``. For the isotropic cases the implementation
+returns the dual of the tautological bundle as the natural equivariant
+replacement.
 
 # Examples
 ```jldoctest
@@ -156,6 +166,8 @@ half-spinor bundles ``\\Sigma^+`` and ``\\Sigma^-`` of rank ``2^{m-2}``,
 corresponding to ``\\omega_{m-1}`` and ``\\omega_m`` respectively.
 Call `spinor_bundle(X, :plus)` or `spinor_bundle(X, :minus)` to select one.
 Without a `half` argument on an even quadric, both are returned as a direct sum.
+
+This function is only defined on quadrics, i.e. on ``B_m/P_1`` or ``D_m/P_1``.
 
 # Examples
 ```jldoctest
@@ -257,12 +269,17 @@ end
 The chain of tautological subbundles on a partial flag variety.
 
 For ``\\mathrm{Fl}(d_1, \\ldots, d_k; n) = A_{n-1}/P_{\\{d_1,\\ldots,d_k\\}}``,
-returns the chain ``\\mathcal{U}_1 \\subset \\mathcal{U}_2 \\subset \\cdots \\subset \\mathcal{U}_k``
-where ``\\mathcal{U}_i`` has rank ``d_i`` and corresponds to the weight
-``\\omega_{d_i}``.
+returns one completely reducible bundle attached to each marked node
+``d_i``, corresponding to the ambient fundamental weight ``\\omega_{d_i}``.
 
 For a Grassmannian (one marked node), this returns a single-element vector
-containing the universal subbundle.
+containing the universal subbundle and agrees with the geometric tautological
+bundle.
+
+For multi-step flags, these are **not** the literal geometric tautological
+subbundles ``\\mathcal{U}_i`` inside a nested flag. The geometric bundles are
+filtered objects, while this function returns the completely reducible pieces
+that are most useful for representation-theoretic computations.
 
 # Examples
 ```jldoctest
@@ -274,18 +291,13 @@ julia> Us = tautological_bundles(X);
 
 julia> length(Us)
 2
-
-julia> rank_bundle(Us[1])
-1
-
-julia> rank_bundle(Us[2])
-1
 ```
 
 !!! note
     On partial flag varieties with multiple marked nodes, the irreducible
     equivariant bundles ``E_{\\omega_m}`` are **not** the geometric tautological
-    subbundles (which are filtered extensions, not completely reducible).
+    subbundles, which are filtered extensions rather than completely reducible
+    bundles.
 """
 function tautological_bundles(X::PartialFlagVariety)
   # For type A flags Fl(d₁,...,dₖ; n) = A_{n-1}/P_{d₁,...,dₖ},
@@ -311,6 +323,10 @@ The dual of each tautological bundle at each marked node.
 For a Grassmannian, use [`universal_quotient_bundle`](@ref) instead, which
 gives the geometrically correct quotient ``\\mathbb{C}^n / \\mathcal{U}``.
 
+For multi-step flags this should again be interpreted as a collection of
+convenient completely reducible bundles attached to the marked nodes, not as
+the literal successive quotients of a tautological flag.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -320,9 +336,6 @@ julia> X = Gr(2, 5);
 julia> Qs = quotient_bundles(X);
 
 julia> length(Qs)
-1
-
-julia> rank_bundle(Qs[1])
 1
 ```
 """

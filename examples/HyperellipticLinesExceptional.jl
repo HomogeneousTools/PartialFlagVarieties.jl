@@ -187,6 +187,6 @@ println("=" ^ 70)
 data = permutedims(hcat(results...), (2, 1))
 pretty_table(
   data;
-  column_labels = ["Case", "Ambient", "# objects", "exceptional", "strong"],
-  alignment = [:l, :c, :c, :c, :c],
+  column_labels=["Case", "Ambient", "# objects", "exceptional", "strong"],
+  alignment=[:l, :c, :c, :c, :c],
 )

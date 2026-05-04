@@ -81,7 +81,9 @@ twist ``j``.
 
 Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = h^q(X, \\Omega^p(j))``.
 
-Requires ``X`` to be a generalized Grassmannian (Picard rank 1).
+Here `j` means tensoring by the generator of ``\\operatorname{Pic}(X)``. This
+therefore requires ``X`` to have Picard rank 1, equivalently to be a
+generalized Grassmannian.
 
 # Examples
 ```jldoctest
@@ -132,6 +134,9 @@ The type parameter `T` is `BigInt` when all entries are determined and
 [`AffineExpr`](@ref) when some entries depend on undetermined connecting-map
 ranks from long exact sequences (typically for zero loci).
 
+Access the mathematically labelled entry with `P[p, q]`, which uses 0-based
+polyvector degree `p` and cohomological degree `q`.
+
 # Fields
 - `data::Matrix{T}`: the HKR decomposition matrix
 - `dim::Int`: the dimension of the variety
@@ -149,7 +154,7 @@ _pp_zero(::Type{AffineExpr}) = AffineExpr(0)
 
 Return ``h^q(X, \\bigwedge^p T_X)``. Uses 0-based indexing.
 """
-function Base.getindex(P::PolyvectorParallelogram{T}, p::Int, q::Int) where T
+function Base.getindex(P::PolyvectorParallelogram{T}, p::Int, q::Int) where {T}
   0 <= p <= P.dim || return _pp_zero(T)
   0 <= q <= P.dim || return _pp_zero(T)
   P.data[p + 1, q + 1]
@@ -161,7 +166,7 @@ end
 Compute the Euler characteristic of Hochschild cohomology:
 ``\\chi(\\mathrm{HH}^*) = \\sum_{p,q} (-1)^{p+q} h^q(X, \\bigwedge^p T_X)``
 """
-function euler_characteristic(P::PolyvectorParallelogram{T}) where T
+function euler_characteristic(P::PolyvectorParallelogram{T}) where {T}
   result = _pp_zero(T)
   for p in 0:P.dim
     for q in 0:P.dim
@@ -176,7 +181,7 @@ end
 
 Compute ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} h^q(X, \\bigwedge^p T_X)``.
 """
-function hochschild_dimension(P::PolyvectorParallelogram{T}, n::Int) where T
+function hochschild_dimension(P::PolyvectorParallelogram{T}, n::Int) where {T}
   result = _pp_zero(T)
   for p in 0:P.dim
     q = n - p
@@ -232,6 +237,7 @@ Compute the Hochschild cohomology of ``X`` via the HKR decomposition:
 ``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} H^q(X, \\bigwedge^p T_X)``
 
 Returns a [`PolyvectorParallelogram`](@ref) encoding the full decomposition.
+Use `P[p, q]` to read the entry ``h^q(X, \\bigwedge^p T_X)``.
 
 # Examples
 ```jldoctest
@@ -279,6 +285,9 @@ Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^
 Entries that are fully determined are plain integers (wrapped in `AffineExpr`);
 entries that cannot be resolved from Koszul + symmetry constraints contain
 symbolic variables.
+
+As throughout the zero-locus API, this assumes that `Z` is the smooth zero
+locus of a regular section.
 
 # Examples
 ```jldoctest
@@ -505,6 +514,9 @@ Returns a ``(d+1) \\times (d+1)`` matrix of `AffineExpr` entries where
 Fully determined entries display as integers; use `is_determined(M[p+1,q+1])`
 to check.
 
+The bundle `L` is given on the ambient variety; the computation is for its
+restriction to `Z`.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -534,7 +546,9 @@ end
 Compute the twisted Hodge numbers ``h^q(Z, \\Omega^p_Z(j))`` where the
 twist is by ``\\mathcal{O}_X(j)|_Z``.
 
-Requires the ambient variety to have Picard rank 1.
+Here `j` denotes the integer power of the Picard-rank-1 generator on the
+ambient variety. This therefore requires the ambient variety to have Picard
+rank 1.
 
 # Examples
 ```jldoctest
@@ -586,6 +600,9 @@ not assumed.
 Returns a [`PolyvectorParallelogram`](@ref) with `AffineExpr` entries:
 fully determined entries display as integers, undetermined entries
 contain symbolic variables.
+
+As for the homogeneous case, use `P[p, q]` for the entry
+``h^q(Z, \\bigwedge^p T_Z)``.
 
 # Examples
 ```jldoctest

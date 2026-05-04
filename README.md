@@ -152,11 +152,21 @@ julia --project=. examples/BottVanishing.jl
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/HomogeneousTools/Lie.jl")
-Pkg.add(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl")
+Pkg.add([
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Base62"),
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"),
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
+])
 ```
 
-Requires Julia ≥ 1.9.
+`Base62`, `ZeroLocus62`, and `Lie.jl` are not currently available from the
+General registry, so they must be added explicitly in a clean environment.
+Listing them in `Project.toml` records the dependency graph, but it does not
+teach `Pkg.add(url=...)` where to fetch unregistered dependencies when
+`PartialFlagVarieties.jl` is installed into another environment.
+
+Requires Julia ≥ 1.10.
 
 ## Documentation
 
@@ -166,4 +176,19 @@ Full documentation at [homogeneous.tools](https://homogeneous.tools).
 
 ```sh
 julia --project=. -e 'using Pkg; Pkg.test()'
+```
+
+## Doctests
+
+```sh
+julia --project=docs -e 'using Pkg; Pkg.instantiate(); using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties)'
+```
+
+## Formatting
+
+This repository uses [JuliaFormatter.jl](https://github.com/domluna/JuliaFormatter.jl)
+with the Blue style configured in `.JuliaFormatter.toml`.
+
+```sh
+julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'
 ```
