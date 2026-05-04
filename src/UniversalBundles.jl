@@ -69,9 +69,7 @@ function universal_subbundle(X::PartialFlagVariety)
   # tautological subbundle (it has global sections = the standard
   # representation, whereas U has none).  The universal subbundle is
   # therefore the dual of this bundle.
-  ω = fundamental_weight(dynkin_type(mdt), 1)
-  rep = IrrepLevi(mdt, ω)
-  CompletelyReducibleBundle(X, [dual(rep)])
+  dual(CompletelyReducibleBundle(X, fundamental_weight(dynkin_type(mdt), 1)))
 end
 
 """

@@ -491,9 +491,7 @@ function schur_functor(
   end
 
   λ = WeightLatticeElem(DT, coeffs)
-  mdt = marked_type(X)
-  rep = IrrepLevi(mdt, λ)
-  CompletelyReducibleBundle(X, [rep])
+  CompletelyReducibleBundle(X, λ)
 end
 
 """
