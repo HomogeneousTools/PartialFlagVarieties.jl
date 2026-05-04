@@ -2,7 +2,8 @@
 #  SpectralSequence.jl — Spectral Sequences
 # ═══════════════════════════════════════════════════════════════════════════════
 
-export SpectralSequence, spectral_sequence, E1_page, isotypical_components, does_E1_degenerate
+export SpectralSequence,
+  spectral_sequence, E1_page, isotypical_components, does_E1_degenerate
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Types
@@ -21,9 +22,11 @@ A spectral sequence represented by its first page (E₁-page).
   to entries of type `T`. Position `(p, q)` represents total degree `p + q` with vertical degree `q`.
 """
 
-struct SpectralSequence{T <: Union{Int, WeylCharacter}}
-  E1::Dict{Tuple{Int, Int}, T}
-  function SpectralSequence{T}(E1::Dict{Tuple{Int, Int}, T}) where {T <: Union{Int, WeylCharacter}}
+struct SpectralSequence{T<:Union{Int,WeylCharacter}}
+  E1::Dict{Tuple{Int,Int},T}
+  function SpectralSequence{T}(
+    E1::Dict{Tuple{Int,Int},T}
+  ) where {T<:Union{Int,WeylCharacter}}
     new{T}(E1)
   end
 end
@@ -57,11 +60,11 @@ function spectral_sequence(F::FilteredBundle)
   DT = dynkin_type(variety(F))
   R = rank(variety(F))
   zero_character = WeylCharacter(DT)
-  E = Dict{Tuple{Int, Int}, WeylCharacter{DT,R}}()
-  for q in 0:n-1
-    H = cohomology(bundles[q+1])
+  E = Dict{Tuple{Int,Int},WeylCharacter{DT,R}}()
+  for q in 0:(n - 1)
+    H = cohomology(bundles[q + 1])
     for i in 0:d
-      H[i] != zero_character && (E[(-q+i,q)] = H[i])
+      H[i] != zero_character && (E[(-q+i, q)] = H[i])
     end
   end
   return SpectralSequence{WeylCharacter{DT,R}}(E)
@@ -80,21 +83,21 @@ new spectral sequence with integer entries. This decomposition respects the bide
 Each isotypical component is a spectral sequence where the entry at position `(p, q)` is the
 multiplicity of the weight in the character at that position (or 0 if the weight does not appear).
 """
-function isotypical_components(S::SpectralSequence{WeylCharacter{DT,R}}) where {DT, R}
+function isotypical_components(S::SpectralSequence{WeylCharacter{DT,R}}) where {DT,R}
   # Accumulate components in a single pass through E1
-  iso_dict = Dict{WeightLatticeElem{DT,R}, Dict{Tuple{Int,Int}, Int}}()
-  
+  iso_dict = Dict{WeightLatticeElem{DT,R},Dict{Tuple{Int,Int},Int}}()
+
   for (pos, char) in S.E1
     for (weight, mult) in char.terms
       if !haskey(iso_dict, weight)
-        iso_dict[weight] = Dict{Tuple{Int,Int}, Int}()
+        iso_dict[weight] = Dict{Tuple{Int,Int},Int}()
       end
       iso_dict[weight][pos] = mult
     end
   end
-  
+
   # Convert accumulated dicts to SpectralSequence objects
-  return Dict(weight => SpectralSequence{Int}(E_iso) 
+  return Dict(weight => SpectralSequence{Int}(E_iso)
               for (weight, E_iso) in iso_dict)
 end
 
@@ -114,9 +117,11 @@ The function checks for the existence of pairs of positions `(p₁, q₁)` and `
 """
 function does_E1_degenerate(S::SpectralSequence{Int})
   E = E1_page(S)
-  return !any(pos_1[1] + pos_1[2] == pos_2[1] + pos_2[2] - 1 && pos_1[2] < pos_2[2] 
-              for pos_1 in keys(E) 
-              for pos_2 in keys(E))
+  return !any(
+    pos_1[1] + pos_1[2] == pos_2[1] + pos_2[2] - 1 && pos_1[2] < pos_2[2]
+    for pos_1 in keys(E)
+    for pos_2 in keys(E)
+  )
 end
 
 """
@@ -147,7 +152,7 @@ julia> does_E1_degenerate(S_2)
 false
 ```
 """
-function does_E1_degenerate(S::SpectralSequence{WeylCharacter{DT,R}}) where {DT, R}
+function does_E1_degenerate(S::SpectralSequence{WeylCharacter{DT,R}}) where {DT,R}
   iso = isotypical_components(S)
   return all(does_E1_degenerate, values(iso))
 end
