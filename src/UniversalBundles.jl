@@ -19,9 +19,6 @@ export tautological_bundles, quotient_bundles
 """
     universal_subbundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The universal (tautological) subbundle ``\\mathcal{U}`` on a Grassmannian
-``\\mathrm{Gr}(k, n)``.
-
 On ``\\mathrm{Gr}(k, n) = A_{n-1}/P_k``, this is the irreducible equivariant
 bundle corresponding to the standard representation of the Levi factor.
 
@@ -48,7 +45,7 @@ julia> rank_bundle(U)
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = Gr(3, 7);
+julia> X = OGr(3, 7);
 
 julia> U = universal_subbundle(X);
 
