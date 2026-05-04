@@ -2,7 +2,7 @@ export PartialFlagVariety
 export partial_flag_variety, full_flag_variety, product
 export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
-export is_generalized_grassmannian, is_cominuscule, is_minuscule
+export is_generalized_grassmannian, is_cominuscule, is_minuscule, is_exceptional_type
 export is_adjoint, is_coadjoint, is_full_flag_variety
 export anticanonical_degrees
 export marked_type, marked_dynkin_type, marked_nodes
@@ -397,6 +397,25 @@ function is_adjoint(X::PartialFlagVariety)
   false
 end
 
+"""
+    is_exceptional_type(X::PartialFlagVariety) -> Bool
+
+Return `true` if the ambient Dynkin type is one of the exceptional types
+``E_6``, ``E_7``, ``E_8``, ``F_4``, or ``G_2``.
+
+TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be considered exceptional.
+
+#Examples:
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = partial_flag_variety("E6", 2);
+
+julia> is_exceptional_type(X)
+true
+```
+"""
+is_exceptional_type(X::PartialFlagVariety) = is_exceptional_type(dynkin_type(X))
 """
     is_coadjoint(X::PartialFlagVariety) -> Bool
 

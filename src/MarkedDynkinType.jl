@@ -5,7 +5,7 @@ export central_scaling_factor
 export decomposition_matrix, decomposition_matrix_inv
 export levi_permutation
 export marked_dynkin_diagram
-export is_exceptional
+export is_exceptional_type
 
 """
     MarkedDynkinType(DT::Type{<:DynkinType}, marked)
@@ -400,7 +400,27 @@ Base.:(==)(a::MarkedDynkinType, b::MarkedDynkinType) =
 Base.hash(mdt::MarkedDynkinType, h::UInt) = hash((dynkin_type(mdt), marked_nodes(mdt)), h)
 
 """
-    is_exceptional(mdt::MarkedDynkinType) -> Bool
+    is_exceptional_type(DT: DynkinType) -> Bool
+
+Return `true` if the Dynkin type is one of the exceptional types
+``E_6``, ``E_7``, ``E_8``, ``F_4``, or ``G_2``.
+
+TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be considered exceptional.
+
+#Examples:
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> DT = TypeE{6};
+
+julia> is_exceptional(DT)
+true
+```
+"""
+is_exceptional_type(DT::DynkinType) = DT <: Union{TypeE,TypeF4,TypeG2}
+
+"""
+    is_exceptional_type(mdt::MarkedDynkinType) -> Bool
 
 Return `true` if the ambient Dynkin type of `mdt` is one of the exceptional types
 ``E_6``, ``E_7``, ``E_8``, ``F_4``, or ``G_2``.
@@ -417,4 +437,4 @@ julia> is_exceptional(mdt)
 true
 ```
 """
-is_exceptional(mdt::MarkedDynkinType) = dynkin_type(mdt) <: Union{TypeE,TypeF4,TypeG2}
+is_exceptional_type(mdt::MarkedDynkinType) = is_exceptional_type(dynkin_type(mdt))
