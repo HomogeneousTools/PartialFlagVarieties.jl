@@ -64,7 +64,9 @@ function universal_subbundle(X::PartialFlagVariety)
   )
 
   mdt = marked_dynkin_type(X)
-
+  is_exceptional(mdt) && throw(
+    ArgumentError("exceptional types do not have a well-defined universal subbundle")
+  )
   # The equivariant bundle with weight ω₁ is the dual U^∨ of the
   # tautological subbundle (it has global sections = the standard
   # representation, whereas U has none).  The universal subbundle is
@@ -87,6 +89,8 @@ Only the type-``A`` case should be read as the literal geometric quotient
 ``\\mathbb{C}^n / \\mathcal{U}``. For the isotropic cases the implementation
 returns the dual of the tautological bundle as the natural equivariant
 replacement.
+
+TODO: implement in other types
 
 # Examples
 ```jldoctest
