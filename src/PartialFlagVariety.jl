@@ -1,5 +1,5 @@
 export PartialFlagVariety
-export partial_flag_variety, full_flag_variety
+export partial_flag_variety, full_flag_variety, product
 export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule
@@ -12,6 +12,10 @@ export marked_type, marked_dynkin_type, marked_nodes
 
 User-facing wrapper for a partial flag variety ``G/P``, storing its runtime
 [`MarkedDynkinType`](@ref) together with an optional display name.
+
+Most users should create these through the named constructors (`Gr`, `quadric`,
+`cayley_plane`, ...) or via [`partial_flag_variety`](@ref), rather than by
+assembling a `MarkedDynkinType` manually.
 """
 struct PartialFlagVariety
   name::String
@@ -22,8 +26,43 @@ PartialFlagVariety(mdt::MarkedDynkinType, name::String="") = PartialFlagVariety(
 
 """
     partial_flag_variety(DT::Type{<:DynkinType}, marked, name="") -> PartialFlagVariety
+    partial_flag_variety(s::AbstractString, marked, name="") -> PartialFlagVariety
 
-Construct the partial flag variety ``G/P_I`` of type `DT` with marked nodes `marked`.
+Construct the partial flag variety ``G/P_I`` with marked nodes `marked`.
+
+Pass either a Dynkin type `DT` such as `TypeA{4}` or a Dynkin-type string such
+as `"A4"` or `"A2xB3"`. The marked nodes may be given as a single integer, a
+tuple, or a vector; vector input is sorted and converted to `Int`. The optional
+`name` is only used for display.
+
+The convention is that **marked nodes are the crossed-out / nonparabolic
+nodes** of the Dynkin diagram.
+
+For a convenience alias, `PartialFlagVariety("A3", [2])` is equivalent to
+`partial_flag_variety("A3", [2])`.
+
+!!! note
+    The one-argument constructor `PartialFlagVariety("31")` is different: it
+    decodes a ZeroLocus62 label rather than parsing a Dynkin type string.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = partial_flag_variety(TypeA{4}, (2,));
+
+julia> dimension(X)
+6
+
+julia> marked_nodes(partial_flag_variety("A4", 2))
+(2,)
+
+julia> marked_nodes(partial_flag_variety("A3", [1, 3]))
+(1, 3)
+
+julia> marked_nodes(PartialFlagVariety("A3", [2]))
+(2,)
+```
 """
 function partial_flag_variety(
   ::Type{DT}, marked::Tuple, name::String=""
@@ -49,14 +88,108 @@ function partial_flag_variety(s::AbstractString, marked::Integer, name::String="
   partial_flag_variety(parse_dynkin_type(s), Int(marked), name)
 end
 
+"""
+    PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) -> PartialFlagVariety
+
+Convenience alias for [`partial_flag_variety(s, marked)`](@ref).
+
+This two-argument form parses `s` as a Dynkin-type string such as `"A3"` or
+`"A2xB3"`. It is distinct from the one-argument constructor
+[`PartialFlagVariety(label::AbstractString)`](@ref), which decodes a
+ZeroLocus62 label.
+"""
 PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_variety(
   parse_dynkin_type(s), Vector{Int}(marked)
 )
 
-"""Construct the full flag variety ``G/B`` of type `DT`."""
+"""
+    full_flag_variety(::Type{DT}, name="") -> PartialFlagVariety
+
+Construct the full flag variety ``G/B`` of type `DT`, i.e. the case where every
+simple root is marked.
+"""
 function full_flag_variety(::Type{DT}, name::String="") where {DT<:DynkinType}
   partial_flag_variety(DT, Tuple(1:rank(DT)), name)
 end
+
+"""
+    _flatten_dynkin_factors(DT::Type{<:DynkinType}) -> Vector{DataType}
+
+Flatten a simple or nested product Dynkin type into its ordered simple factors.
+"""
+function _flatten_dynkin_factors(::Type{DT}) where {DT<:SimpleDynkinType}
+  DataType[DT]
+end
+
+function _flatten_dynkin_factors(::Type{DT}) where {DT<:ProductDynkinType}
+  result = DataType[]
+  for factor in DT.parameters[1].parameters
+    append!(result, _flatten_dynkin_factors(factor))
+  end
+  result
+end
+
+"""
+    _combine_dynkin_factors(factors) -> Type{<:DynkinType}
+
+Rebuild a Dynkin type from an ordered list of simple factors, preserving the
+left-associated product nesting used elsewhere in the package.
+"""
+function _combine_dynkin_factors(factors::AbstractVector{<:DataType})
+  isempty(factors) && throw(ArgumentError("Need at least one Dynkin factor."))
+  foldl(Iterators.drop(factors, 1); init=first(factors)) do left, right
+    ProductDynkinType{Tuple{left,right}}
+  end
+end
+
+"""
+    _product_marked_dynkin_type(varieties...) -> MarkedDynkinType
+
+Construct the marked Dynkin type of a product ambient by concatenating the
+simple factors of each variety and shifting marked nodes by cumulative rank.
+"""
+function _product_marked_dynkin_type(varieties::Vararg{PartialFlagVariety,N}) where {N}
+  factor_types = DataType[]
+  marked = Int[]
+  offset = 0
+  for X in varieties
+    append!(factor_types, _flatten_dynkin_factors(dynkin_type(X)))
+    append!(marked, (offset + m for m in marked_nodes(X)))
+    offset += rank(X)
+  end
+  DT = _combine_dynkin_factors(factor_types)
+  MarkedDynkinType(DT, Tuple(marked))
+end
+
+"""
+    product(X::PartialFlagVariety, Y::PartialFlagVariety, Zs::PartialFlagVariety...) -> PartialFlagVariety
+
+Construct the product of partial flag varieties.
+
+The ambient Dynkin factors are concatenated in order, and the marked nodes of
+later factors are shifted by the cumulative ranks of the earlier factors.
+This is also available through the `*` operator.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = product(projective_space(1), projective_space(2));
+
+julia> dimension(X)
+3
+
+julia> picard_rank(X)
+2
+```
+"""
+function product(
+  X::PartialFlagVariety, Y::PartialFlagVariety, Zs::PartialFlagVariety...
+)
+  PartialFlagVariety(_product_marked_dynkin_type(X, Y, Zs...))
+end
+
+Base.:*(X::PartialFlagVariety, Y::PartialFlagVariety) = product(X, Y)
 
 function Base.show(io::IO, X::PartialFlagVariety)
   if X.name != ""
@@ -71,7 +204,8 @@ end
     marked_dynkin_type(X::PartialFlagVariety) -> MarkedDynkinType
 
 Return the runtime [`MarkedDynkinType`](@ref) attached to the variety `X`.
-`marked_type` is the short alias.
+`marked_type` is the short alias and is the preferred way to pass `X` into the
+lower-level APIs that operate on marked Dynkin data directly.
 """
 marked_type(X::PartialFlagVariety) = X.mdt
 marked_dynkin_type(X::PartialFlagVariety) = X.mdt
@@ -119,6 +253,8 @@ Return the Betti numbers of `X` in even degrees, i.e.
 Since ``G/P`` has no odd cohomology this completely describes ``\\mathrm{H}^*(X, \\mathbb{Z})``.
 Computed from the ratio of the Poincaré polynomials of the Weyl groups
 ``W_G`` and ``W_L``.
+
+The entry at index `p + 1` is ``b_{2p}``.
 """
 function betti_numbers(X::PartialFlagVariety)
   degs_G = collect(degrees_fundamental_invariants(dynkin_type(X)))
@@ -297,6 +433,8 @@ marked_dynkin_diagram(X::PartialFlagVariety) = marked_dynkin_diagram(marked_dynk
 Return the coefficients ``(a_1, \\ldots, a_r)`` of the anticanonical
 divisor ``-\\mathrm{K}_X = \\sum_j a_j [D_j]`` in the marked-node basis of
 ``\\operatorname{Pic}(X)``.
+
+The basis is ordered by [`marked_nodes(X)`](@ref).
 
 Computed via the formula
 ``a_j = \\langle 2(\\rho_G - \\rho_P),\\, \\alpha_j^\\vee \\rangle``

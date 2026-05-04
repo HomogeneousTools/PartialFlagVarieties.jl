@@ -123,15 +123,18 @@ function run_benchmarks(; n_runs::Int=N_RUNS)
       status, fmt_time(mn), fmt_time(med),
       join([fmt_time(t) for t in times], ", "))
 
-    push!(results, Dict(
-      "name" => name,
-      "filename" => filename,
-      "times_s" => times,
-      "min_s" => mn,
-      "median_s" => med,
-      "exit_codes" => exit_codes,
-      "status" => status,
-    ))
+    push!(
+      results,
+      Dict(
+        "name" => name,
+        "filename" => filename,
+        "times_s" => times,
+        "min_s" => mn,
+        "median_s" => med,
+        "exit_codes" => exit_codes,
+        "status" => status,
+      ),
+    )
   end
 
   results
@@ -160,7 +163,10 @@ function save_results(results; tag::String=TAG)
       println(io, "    {")
       println(io, "      \"name\": $(repr(r["name"])),")
       println(io, "      \"filename\": $(repr(r["filename"])),")
-      println(io, "      \"times_s\": [$(join([@sprintf("%.3f", t) for t in r["times_s"]], ", "))],")
+      println(
+        io,
+        "      \"times_s\": [$(join([@sprintf("%.3f", t) for t in r["times_s"]], ", "))],",
+      )
       println(io, "      \"min_s\": $(@sprintf("%.3f", r["min_s"])),")
       println(io, "      \"median_s\": $(@sprintf("%.3f", r["median_s"])),")
       println(io, "      \"exit_codes\": [$(join(r["exit_codes"], ", "))],")

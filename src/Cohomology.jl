@@ -69,6 +69,9 @@ Entries are 0-indexed: `H[i]` returns ``H^i(G/P, E)``.
 - `T = WeylCharacter{DT,R}`: entries are virtual characters of ``G``
 - `T = BigInt`: entries are dimensions
 
+The object behaves like a vector indexed by cohomological degree rather than by
+Julia's usual `1:length(H)` convention.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties, Lie
@@ -201,6 +204,7 @@ Returns character-valued cohomology: each ``H^i`` is a virtual character
 (Weyl character) of the ambient group ``G``.
 
 The partial flag variety is inferred from `E`.
+The result is a 0-indexed [`Cohomology`](@ref) object.
 
 # Algorithm
 For each irreducible Levi component ``V_\\lambda`` of ``E``:
@@ -314,7 +318,12 @@ end
 """
     dimensions(E::CompletelyReducibleBundle) -> Cohomology{BigInt}
 
-Compute dimension-valued cohomology directly.
+Compute dimension-valued cohomology directly, without first materializing the
+character-valued result.
+
+This is usually the most convenient entry point when only the dimensions of the
+cohomology groups matter. As for all [`Cohomology`](@ref) objects, the result is
+0-indexed: `H[0]` means ``H^0``.
 """
 function dimensions(E::CompletelyReducibleBundle)
   d = dimension(E.variety)

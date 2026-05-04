@@ -9,6 +9,19 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
+  format:
+    name: JuliaFormatter
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v5.0.1
+      - uses: julia-actions/setup-julia@v3.0.1
+        with:
+          version: '1'
+      - name: Check formatting
+        run: |
+          julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'
+          git --no-pager diff --exit-code -- '*.jl'
+
   test:
     name: Julia ${{ matrix.version }} — ${{ matrix.os }}
     runs-on: self-hosted
@@ -52,7 +65,6 @@ jobs:
               PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"),
               PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"),
               PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia"),
-              PackageSpec(path="."),
             ])
             Pkg.instantiate()
           '

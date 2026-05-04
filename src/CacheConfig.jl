@@ -27,7 +27,7 @@ Supported preferences (set via `Preferences.set_preferences!`):
 """
 function _apply_cache_preferences!()
   budget = @load_preference("cache_budget_bytes", nothing)
-  budget === nothing && return
+  budget === nothing && return nothing
 
   budget = Int(budget)
   tf = Float64(@load_preference("tensor_product_cache_fraction", _DEFAULT_TENSOR_FRAC))

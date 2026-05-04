@@ -68,7 +68,7 @@ function _mdt_to_factors(mdt::MarkedDynkinType)
     mask == 0 && throw(
       ArgumentError(
         "Factor $(_simple_dynkin_family(sf))$r has no marked nodes; " *
-        "ZeroLocus62 requires at least one marked node per factor."
+        "ZeroLocus62 requires at least one marked node per factor.",
       ),
     )
     push!(factors, Factor(_simple_dynkin_family(sf), r, mask))
@@ -156,6 +156,9 @@ end
 
 Encode a partial flag variety as a ZeroLocus62 label (ambient-only, no bundle).
 
+This is the label-level counterpart of the ordinary constructor
+[`PartialFlagVariety(label::AbstractString)`](@ref).
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -183,6 +186,9 @@ Encode a zero locus (ambient variety + defining bundle) as a ZeroLocus62 label.
 Each irreducible summand of the defining bundle contributes one summand row
 whose entries are the fundamental-weight coefficients of its ``P``-dominant weight,
 split by ambient factor.
+
+The label records the ambient variety and defining bundle only. It does not
+encode any proof that the corresponding bundle admits a regular section.
 
 # Examples
 ```jldoctest
@@ -250,6 +256,11 @@ end
 Construct a partial flag variety from a ZeroLocus62 label. Any bundle part
 in the label is ignored.
 
+This constructor is intentionally different from
+[`partial_flag_variety(s, marked)`](@ref): there, the string `s` is a Dynkin
+type such as `"A4"`, whereas here `label` is a compact serialized object such
+as `"31"` or `"31.210"`.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -271,6 +282,10 @@ end
 
 Construct a zero locus from a ZeroLocus62 label. The label must contain a
 bundle part (i.e. include a `.` separator).
+
+As with [`zero_locus(E)`](@ref), this assumes that the decoded bundle defines a
+regular section; the label itself is only a serialization of the ambient
+variety and bundle data.
 
 # Examples
 ```jldoctest

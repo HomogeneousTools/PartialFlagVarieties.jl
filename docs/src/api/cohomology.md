@@ -11,6 +11,11 @@ nonzero. The result is a [`Cohomology`](@ref) object indexed from ``0``
 See the [mathematical background](../math.md#The-Borel–Weil–Bott-theorem) for
 the theorem statement.
 
+!!! note "0-based indexing"
+    `Cohomology` objects are one of the few user-facing types in the package
+    that do not follow ordinary Julia 1-based indexing. This is deliberate:
+    `H[0]`, `H[1]`, ... mirror the mathematical notation ``H^0``, ``H^1``, ...
+
 ## Type
 
 ```@docs
@@ -24,6 +29,10 @@ borel_weil_bott
 ```
 
 ## Computation
+
+In practice, [`dimensions(E)`](@ref) is often the most convenient entry point
+when you only need numerical cohomology, while [`cohomology(E)`](@ref) keeps
+the full ambient representation in each cohomology group.
 
 ```@docs
 cohomology
