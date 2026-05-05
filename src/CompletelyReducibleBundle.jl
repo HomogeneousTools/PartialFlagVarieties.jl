@@ -85,6 +85,18 @@ end
 
 Construct the equivariant bundle on the partial flag variety `X``
 corresponding to the Levi representation of highest weight `λ`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(3, 6);
+
+julia> E = CompletelyReducibleBundle(X, [0, 1, -1, 0, 0]);
+
+julia> components(E) == components(universal_subbundle(X))
+true
+```
 """
 function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
   mdt = marked_dynkin_type(X)
@@ -234,6 +246,21 @@ structure_sheaf(X::PartialFlagVariety) = O(X)
     zero_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
 The zero bundle on `X` (the empty direct sum).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(2, 4);
+
+julia> E = zero_bundle(X);
+
+julia> rank_bundle(E)
+0
+
+julia> n_components(E)
+0
+```
 """
 function zero_bundle(X::PartialFlagVariety)
   CompletelyReducibleBundle(X, IrrepLevi[])
