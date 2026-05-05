@@ -53,9 +53,9 @@ end
 Resize all LRU caches according to the given total memory budget and per-cache
 fractions. The budget is in bytes; fractions should sum to ≤ 1.0.
 
-The structural fraction is split among the marked-Dynkin, tangent-reps,
-cotangent-reps, and cached cotangent exterior powers (40%, 25%, 25%, 10%
-respectively).
+ The structural fraction is split among the marked-Dynkin, tangent-reps,
+ cotangent-reps, and cached cotangent exterior powers (40%, 25%, 25%, 10%
+ respectively).
 
 # Examples
 ```julia

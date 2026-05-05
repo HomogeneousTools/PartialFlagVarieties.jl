@@ -238,11 +238,7 @@ function solve_koszul_filtration(
 
   # Apply the Euler characteristic constraint: χ(F|_Z) = Σ_i (-1)^i χ(K_i).
   # χ(K_i) is computed exactly from the ambient Koszul terms.
-  chi_exact = BigInt(0)
-  for (i, K) in enumerate(koszul_cohos)
-    chi_K = sum((-1)^k * K[k] for k in 0:dim_ambient; init=BigInt(0))
-    chi_exact += ((-1)^(i - 1)) * chi_K
-  end
+  chi_exact = _alternating_euler_characteristic(koszul_cohos)
 
   # Re-use mat from above (restricted to 0..dim_zero_locus)
   mat2 = Matrix{AffineExpr}(undef, 1, dim_zero_locus + 1)
@@ -251,7 +247,7 @@ function solve_koszul_filtration(
   end
 
   # Apply: Σ_k (-1)^k H^k(F|_Z) = chi_exact
-  alt_sum = sum((-1)^k * mat2[1, k + 1] for k in 0:dim_zero_locus; init=AffineExpr(0))
+  alt_sum = _alternating_sum(mat2, 1, dim_zero_locus)
   _apply_equation!(mat2, alt_sum - AffineExpr(chi_exact))
 
   # Apply non-negativity propagation: if a symbolic entry equals a determined value,
@@ -264,7 +260,7 @@ function solve_koszul_filtration(
         continue
       end
       # Re-apply χ constraint in case new substitutions freed things
-      alt_sum2 = sum((-1)^j * mat2[1, j + 1] for j in 0:dim_zero_locus; init=AffineExpr(0))
+      alt_sum2 = _alternating_sum(mat2, 1, dim_zero_locus)
       changed = _apply_equation!(mat2, alt_sum2 - AffineExpr(chi_exact)) || changed
     end
   end
@@ -311,6 +307,17 @@ is_determined(e::AffineExpr) = isempty(e.coeffs)
 """Check whether the expression is identically zero."""
 is_zero_expr(e::AffineExpr) = e.constant == 0 && isempty(e.coeffs)
 
+function _determined_bigints(entries::Vector{AffineExpr})
+  BigInt[e.constant for e in entries]
+end
+
+function _numeric_les_cokernel(a::Vector{BigInt}, b::Vector{BigInt})
+  d = length(a) - 1
+  c, determined = solve_ses_cohomology(Cohomology{BigInt}(a, d), Cohomology{BigInt}(b, d))
+  determined || return nothing
+  AffineExpr[AffineExpr(c[i]) for i in 0:d]
+end
+
 # ─── Arithmetic ──────────────────────────────────────────────────────────────
 
 function _merge_coeffs(op, a::Dict{Int,BigInt}, b::Dict{Int,BigInt})
@@ -323,23 +330,36 @@ function _merge_coeffs(op, a::Dict{Int,BigInt}, b::Dict{Int,BigInt})
 end
 
 function Base.:+(a::AffineExpr, b::AffineExpr)
-  AffineExpr(a.constant + b.constant, _merge_coeffs(+, a.coeffs, b.coeffs))
+  constant = a.constant + b.constant
+  isempty(a.coeffs) && isempty(b.coeffs) && return AffineExpr(constant)
+  isempty(a.coeffs) && return AffineExpr(constant, copy(b.coeffs))
+  isempty(b.coeffs) && return AffineExpr(constant, copy(a.coeffs))
+  AffineExpr(constant, _merge_coeffs(+, a.coeffs, b.coeffs))
 end
 
 function Base.:-(a::AffineExpr, b::AffineExpr)
-  AffineExpr(a.constant - b.constant, _merge_coeffs(-, a.coeffs, b.coeffs))
+  constant = a.constant - b.constant
+  isempty(a.coeffs) && isempty(b.coeffs) && return AffineExpr(constant)
+  isempty(b.coeffs) && return AffineExpr(constant, copy(a.coeffs))
+  isempty(a.coeffs) &&
+    return AffineExpr(constant, Dict{Int,BigInt}(k => -v for (k, v) in b.coeffs))
+  AffineExpr(constant, _merge_coeffs(-, a.coeffs, b.coeffs))
 end
 
 function Base.:-(a::AffineExpr)
+  isempty(a.coeffs) && return AffineExpr(-a.constant)
   AffineExpr(-a.constant, Dict{Int,BigInt}(k => -v for (k, v) in a.coeffs))
 end
 
 function Base.:*(c::Integer, a::AffineExpr)
   c == 0 && return AffineExpr(0)
+  c == 1 && return isempty(a.coeffs) ? AffineExpr(a.constant) : AffineExpr(a.constant, copy(a.coeffs))
+  c == -1 && return -a
   AffineExpr(
     BigInt(c) * a.constant, Dict{Int,BigInt}(k => BigInt(c) * v for (k, v) in a.coeffs)
   )
 end
+
 Base.:*(a::AffineExpr, c::Integer) = c * a
 
 function Base.:(==)(a::AffineExpr, b::AffineExpr)
@@ -349,9 +369,30 @@ Base.:(==)(a::AffineExpr, c::Integer) = is_determined(a) && a.constant == c
 Base.:(==)(c::Integer, a::AffineExpr) = a == c
 
 Base.:+(a::AffineExpr, c::Integer) = a + AffineExpr(c)
-Base.:+(c::Integer, a::AffineExpr) = AffineExpr(c) + a
+Base.:+(c::Integer, a::AffineExpr) = a + c
 Base.:-(a::AffineExpr, c::Integer) = a - AffineExpr(c)
 Base.:-(c::Integer, a::AffineExpr) = AffineExpr(c) - a
+
+function _alternating_sum(entries::AbstractVector{AffineExpr})
+  total = AffineExpr(0)
+  add_term = true
+  for entry in entries
+    total = add_term ? total + entry : total - entry
+    add_term = !add_term
+  end
+  total
+end
+
+function _alternating_sum(mat::AbstractMatrix{AffineExpr}, row::Int, dim::Int)
+  total = AffineExpr(0)
+  add_term = true
+  for k in 0:dim
+    entry = mat[row, k + 1]
+    total = add_term ? total + entry : total - entry
+    add_term = !add_term
+  end
+  total
+end
 
 # ─── Display ─────────────────────────────────────────────────────────────────
 
@@ -825,6 +866,13 @@ function les_cokernel(
   n = length(a)
   @assert length(b) == n
 
+  all(is_zero_expr, a) && return copy(b)
+
+  if all(is_determined, a) && all(is_determined, b)
+    numeric = _numeric_les_cokernel(_determined_bigints(a), _determined_bigints(b))
+    numeric !== nothing && return numeric
+  end
+
   # Create fresh variables for c
   c = Vector{AffineExpr}(undef, n)
   for i in 1:n
@@ -846,7 +894,7 @@ function les_cokernel(
   for entry in les
     if is_zero_expr(entry)
       if !isempty(subseq)
-        alt = sum((-1)^(k - 1) * subseq[k] for k in 1:length(subseq); init=AffineExpr(0))
+        alt = _alternating_sum(subseq)
         push!(equations, alt)
         subseq = AffineExpr[]
       end
@@ -855,7 +903,7 @@ function les_cokernel(
     end
   end
   if !isempty(subseq)
-    alt = sum((-1)^(k - 1) * subseq[k] for k in 1:length(subseq); init=AffineExpr(0))
+    alt = _alternating_sum(subseq)
     push!(equations, alt)
   end
 
@@ -872,11 +920,30 @@ function les_cokernel(
   a::Vector{BigInt}, b::Vector{BigInt},
   var_counter::Ref{Int},
 )
+  all(iszero, a) && return AffineExpr[AffineExpr(x) for x in b]
+
+  numeric = _numeric_les_cokernel(a, b)
+  numeric !== nothing && return numeric
+
   les_cokernel(
     AffineExpr[AffineExpr(x) for x in a],
     AffineExpr[AffineExpr(x) for x in b],
     var_counter,
   )
+end
+
+function les_cokernel(
+  a::Vector{AffineExpr}, b::Vector{BigInt},
+  var_counter::Ref{Int},
+)
+  all(is_zero_expr, a) && return AffineExpr[AffineExpr(x) for x in b]
+
+  if all(is_determined, a)
+    numeric = _numeric_les_cokernel(_determined_bigints(a), b)
+    numeric !== nothing && return numeric
+  end
+
+  les_cokernel(a, AffineExpr[AffineExpr(x) for x in b], var_counter)
 end
 
 """
@@ -900,9 +967,7 @@ function long_exact_sequence_cokernel(
 
   # Subsequent steps: A is AffineExpr, B is BigInt
   for j in 3:length(terms)
-    b_expr = AffineExpr[AffineExpr(x) for x in terms[j]
-    ]
-    current = les_cokernel(current, b_expr, var_counter)
+    current = les_cokernel(current, terms[j], var_counter)
   end
 
   current

@@ -1215,6 +1215,16 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test c[1] == 0
     @test det == true
 
+    var_counter = Ref(0)
+    c_expr = PartialFlagVarieties.les_cokernel([AffineExpr(1), AffineExpr(0)], [AffineExpr(2), AffineExpr(0)], var_counter)
+    @test c_expr == [AffineExpr(1), AffineExpr(0)]
+    @test var_counter[] == 0
+
+    var_counter = Ref(0)
+    c_zero = PartialFlagVarieties.les_cokernel([AffineExpr(0), AffineExpr(0)], [AffineExpr(3), AffineExpr(5)], var_counter)
+    @test c_zero == [AffineExpr(3), AffineExpr(5)]
+    @test var_counter[] == 0
+
     # Case with connecting homomorphism ambiguity
     # H*(A) = [0,0,1], H*(B) = [0,0,0] on dim=2 variety
     a2 = Cohomology{BigInt}(BigInt[0, 0, 1], 2)
