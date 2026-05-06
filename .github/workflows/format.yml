@@ -1,0 +1,23 @@
+name: Formatting
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  format:
+    name: JuliaFormatter
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v5.0.1
+      - uses: julia-actions/setup-julia@v3.0.1
+        with:
+          version: '1'
+      - name: Check formatting
+        run: |
+          julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'
+          git --no-pager diff --exit-code -- '*.jl'

@@ -1,27 +1,16 @@
-name: CI
+name: Tests
 
 on:
   push:
   pull_request:
+  repository_dispatch:
+    types: [lie-jl-updated, zerolocus62-updated]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  format:
-    name: JuliaFormatter
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v5.0.1
-      - uses: julia-actions/setup-julia@v3.0.1
-        with:
-          version: '1'
-      - name: Check formatting
-        run: |
-          julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'
-          git --no-pager diff --exit-code -- '*.jl'
-
   test:
     name: Julia ${{ matrix.version }} — ${{ matrix.os }}
     runs-on: self-hosted
@@ -33,14 +22,13 @@ jobs:
         include:
           - version: '1'
             os: macos-latest
-
     steps:
       - uses: actions/checkout@v5.0.1
       - uses: julia-actions/setup-julia@v3.0.1
         with:
           version: ${{ matrix.version }}
-      #- uses: julia-actions/cache@v2.1.0
-      - name: Resolve dependencies
+      - uses: julia-actions/cache@v2.1.0
+      - name: Resolve test dependencies
         run: |
           rm -f Manifest.toml
           julia --project=. -e 'using Pkg; Pkg.add([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia")]); Pkg.instantiate()'
@@ -55,8 +43,8 @@ jobs:
       - uses: julia-actions/setup-julia@v3.0.1
         with:
           version: '1'
-      #- uses: julia-actions/cache@v2.1.0
-      - name: Install dependencies
+      - uses: julia-actions/cache@v2.1.0
+      - name: Install docs dependencies
         run: |
           rm -f docs/Manifest.toml
           julia --project=docs -e '
@@ -81,13 +69,9 @@ jobs:
           - BottVanishing.jl
           - CICY3-1606.04076.jl
           - CICY3-1607.07821.jl
-          # this one is rather slow, so we skip it for now
-          #- FanoFourfolds.jl
           - FanoFourfoldsK3.jl
           - FanoFourfoldsQuiverZeroLoci.jl
           - FanoThreefolds.jl
-          # this one is rather slow, so we skip it for now
-          #- HochschildAffine.jl
           - Hyperkaehler.jl
           - HyperellipticLinesExceptional.jl
           - Kuechle.jl
@@ -97,8 +81,8 @@ jobs:
       - uses: julia-actions/setup-julia@v3.0.1
         with:
           version: '1'
-      #- uses: julia-actions/cache@v2.1.0
-      - name: Resolve dependencies
+      - uses: julia-actions/cache@v2.1.0
+      - name: Resolve example dependencies
         run: |
           rm -f Manifest.toml
           julia --project=. -e 'using Pkg; Pkg.add([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia")]); Pkg.add("JSON"); Pkg.instantiate()'
