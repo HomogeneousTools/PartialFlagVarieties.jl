@@ -386,7 +386,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     E_sum = CompletelyReducibleBundle(X, [[0, 1, -1, 0, 0], [0, 0, 0, 0, 0]])
     O = structure_sheaf(X)
     Y = Gr(2, 5)
-    bad_component = IrrepLevi(marked_dynkin_type(Y), WeightLatticeElem(dynkin_type(Y), [1, 0, 0, 0]))
+    bad_component = IrrepLevi(
+      marked_dynkin_type(Y), WeightLatticeElem(dynkin_type(Y), [1, 0, 0, 0])
+    )
 
     @test variety(E_weight) === X
     @test components(E_weight) == components(universal_subbundle(X))
@@ -1918,7 +1920,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       end
     end
 
-    let Z = zero_locus("44.07")
+    let Z = zero_locus("44.70")
       expected = AffineExpr.([
         1 0 0 0 0
         0 2 0 0 0
@@ -2010,7 +2012,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       # O ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
       let X = projective_space(1)
         E = direct_sum(structure_sheaf(X), line_bundle(X, 1))
-        @test zerolocus62_label(E) == "1.0x1"
+        @test zerolocus62_label(E) == "1.x10"
       end
 
       # O(1) ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
@@ -2030,7 +2032,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         L1 = line_bundle(X, [1, 0])
         L2 = line_bundle(X, [0, 1])
         E = direct_sum(L1, L2)
-        @test zerolocus62_label(E) == "11.01"
+        @test zerolocus62_label(E) == "11.10"
       end
 
       # O(1,1) on P^1 × P^1

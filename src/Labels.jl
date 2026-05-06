@@ -229,7 +229,7 @@ julia> using PartialFlagVarieties
 julia> X = projective_space(1);
 
 julia> zerolocus62_label(direct_sum(structure_sheaf(X), line_bundle(X, 1)))
-"1.0x1"
+"1.x10"
 ```
 """
 function zerolocus62_label(E::CompletelyReducibleBundle)
