@@ -163,8 +163,8 @@ function residual_bundle(X)
     ArgumentError("exceptional types do not have a well-defined residual bundle")
   )
 
-  DT = dynkin_type(mdt)
-  marked = marked_nodes(mdt)[1]
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)[1]
   R = rank(DT)
 
   marked == 1 && throw(
@@ -182,13 +182,13 @@ function residual_bundle(X)
     end
   elseif DT <: TypeC
     if marked == R
-      throw(ArgumentError("not implemented for marked node R in type C")) # TODO this bundle should be 0 bundle
+      return zero_bundle(X)
     else
       ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
     end
   elseif DT <: TypeD
     if marked in (R, R-1)
-      throw(ArgumentError("not implemented for marked node R or R-1 in type D")) # TODO this bundle should be 0 bundle
+      return zero_bundle(X)
     elseif marked == R - 2
       ω =
         fundamental_weight(DT, R) + fundamental_weight(DT, R - 1) -
