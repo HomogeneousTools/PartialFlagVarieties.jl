@@ -417,8 +417,7 @@ julia> is_exceptional(DT)
 true
 ```
 """
-is_exceptional_type(DT::DynkinType) = DT <: Union{TypeE,TypeF4,TypeG2}
-
+is_exceptional_type(DT::Type{<:DynkinType}) = DT <: Union{TypeE,TypeF4,TypeG2}
 """
     is_exceptional_type(mdt::MarkedDynkinType) -> Bool
 
