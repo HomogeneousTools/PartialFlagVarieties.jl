@@ -1062,29 +1062,39 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "Universal bundles" begin
     # Gr(2, 5): U has rank 2, Q has rank 3
-    X = Gr(2, 5)
-    U = universal_subbundle(X)
-    Q = universal_quotient_bundle(X)
-    @test rank_bundle(U) == 2
-    @test rank_bundle(Q) == 3
+    X1 = Gr(2, 5)
+    @test rank_bundle(universal_subbundle(X1)) == 2
+    @test rank_bundle(universal_quotient_bundle(X1)) == 3
 
-    # Gr(3, 7)
-    X2 = Gr(3, 7)
+    # OGr(3, 7)
+    X2 = OGr(3, 9)
     @test rank_bundle(universal_subbundle(X2)) == 3
-    @test rank_bundle(universal_quotient_bundle(X2)) == 4
+    @test rank_bundle(residual_bundle(X2)) == 3
 
     # ℙ^4 = Gr(1, 5)
     X3 = projective_space(4)
     @test rank_bundle(universal_subbundle(X3)) == 1
     @test rank_bundle(universal_quotient_bundle(X3)) == 4
 
+    # SGr(3,10)
+    X4 = SGr(3, 10)
+    @test rank_bundle(universal_subbundle(X4)) == 3
+    @test rank_bundle(residual_bundle(X4)) == 7
+    @test rank_bundle(universal_quotient_bundle(X4)) == 4
+
+    #OGr(4,12)
+    X5 = OGr(4, 12)
+    @test rank_bundle(universal_subbundle(X5)) == 4
+    @test rank_bundle(residual_bundle(X5)) == 4
+    @test rank_bundle(universal_quotient_bundle(X5)) == 4
+
     # Tautological bundles on partial flag
     # On Fl(1,2;4) = A₃/P_{1,2}, the irreducible equivariant bundles
     # E_{ω₁} and E_{ω₂} have fiber dimensions 1 and 1 respectively.
     # (These are NOT the geometric tautological subbundles V₁, V₂;
     #  the latter are filtered, not completely reducible.)
-    X4 = flag_variety(4, (1, 2))
-    Us = tautological_bundles(X4)
+    X6 = flag_variety(4, (1, 2))
+    Us = tautological_bundles(X6)
     @test length(Us) == 2
     @test rank_bundle(Us[1]) == 1
     @test rank_bundle(Us[2]) == 1
