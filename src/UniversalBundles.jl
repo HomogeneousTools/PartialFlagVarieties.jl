@@ -59,9 +59,7 @@ function universal_subbundle(X::PartialFlagVariety)
       "universal_subbundle requires a generalized Grassmannian (1 marked node)"
     ),
   )
-
-  mdt = marked_dynkin_type(X)
-  is_exceptional(mdt) && throw(
+  is_exceptional_type(X) && throw(
     ArgumentError("exceptional types do not have a well-defined universal subbundle")
   )
   # The equivariant bundle with weight ω₁ is the dual U^∨ of the
@@ -111,9 +109,7 @@ function universal_quotient_bundle(X::PartialFlagVariety)
       "universal_quotient_bundle requires a generalized Grassmannian (1 marked node)"
     ),
   )
-
-  mdt = marked_dynkin_type(X)
-  is_exceptional(mdt) && throw(
+  is_exceptional_type(X) && throw(
     ArgumentError("exceptional types do not have a well-defined universal quotient bundle")
   )
 
@@ -163,9 +159,7 @@ function residual_bundle(X)
       "residual_bundle requires a generalized Grassmannian (1 marked node)"
     ),
   )
-
-  mdt = marked_dynkin_type(X)
-  is_exceptional(mdt) && throw(
+  is_exceptional_type(X) && throw(
     ArgumentError("exceptional types do not have a well-defined residual bundle")
   )
 
