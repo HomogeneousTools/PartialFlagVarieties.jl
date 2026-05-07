@@ -66,11 +66,11 @@ function universal_subbundle(X::PartialFlagVariety)
   # tautological subbundle (it has global sections = the standard
   # representation, whereas U has none).  The universal subbundle is
   # therefore the dual of this bundle.
-  dual(CompletelyReducibleBundle(X, fundamental_weight(dynkin_type(mdt), 1)))
+  dual(CompletelyReducibleBundle(X, fundamental_weight(dynkin_type(X), 1)))
 end
 
 """
-    universal_quotient_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
+    universal_quotient_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle || FilteredBundle
 
 On type A, this is the equivariant bundle with weight ``\\omega_{n-1}``.
 For isotropic Grassmannians (types B, C, D), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
@@ -113,17 +113,17 @@ function universal_quotient_bundle(X::PartialFlagVariety)
     ArgumentError("exceptional types do not have a well-defined universal quotient bundle")
   )
 
-  DT = dynkin_type(mdt)
+  DT = dynkin_type(X)
   R = rank(DT)
 
   if DT <: TypeA
     return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   else
-    #TODO treat cases where residual bundle is 0 and return completely reducible bundle instead of filtered bundle
-    # U = universal_subbundle(X), R = residual_bundle(X). In this case the quotient Q bundle fits into the s.e.s
-    # 0 -> U -> Q -> R -> 0
-    # So, the code returns a filetered bundle with subbundle U and quotient R.
-    return FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)])
+    if rank_bundle(residual_bundle(X)) == 0
+      return dual(universal_subbundle(X))
+    else
+      return dual(FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)]))
+    end
   end
 end
 """
