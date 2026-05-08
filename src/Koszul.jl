@@ -353,7 +353,11 @@ end
 
 function Base.:*(c::Integer, a::AffineExpr)
   c == 0 && return AffineExpr(0)
-  c == 1 && return isempty(a.coeffs) ? AffineExpr(a.constant) : AffineExpr(a.constant, copy(a.coeffs))
+  c == 1 && return if isempty(a.coeffs)
+    AffineExpr(a.constant)
+  else
+    AffineExpr(a.constant, copy(a.coeffs))
+  end
   c == -1 && return -a
   AffineExpr(
     BigInt(c) * a.constant, Dict{Int,BigInt}(k => BigInt(c) * v for (k, v) in a.coeffs)

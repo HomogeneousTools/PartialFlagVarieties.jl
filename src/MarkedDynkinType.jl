@@ -424,4 +424,6 @@ end
 Base.:(==)(a::MarkedDynkinType, b::MarkedDynkinType) =
   dynkin_type(a) == dynkin_type(b) && marked_nodes(a) == marked_nodes(b)
 
-Base.hash(mdt::MarkedDynkinType, h::UInt) = hash(marked_nodes(mdt), hash(dynkin_type(mdt), h))
+Base.hash(mdt::MarkedDynkinType, h::UInt) = hash(
+  marked_nodes(mdt), hash(dynkin_type(mdt), h)
+)

@@ -1100,7 +1100,9 @@ function hodge_numbers_les(Z::ZeroLocus)
   restriction_wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
   for p in 0:half
     if p == 0
-      Hp = _restrict_to_zero_locus_les(Z, _to_counts(structure_sheaf(Z.ambient)), var_counter, restriction_wedge_counts)
+      Hp = _restrict_to_zero_locus_les(
+        Z, _to_counts(structure_sheaf(Z.ambient)), var_counter, restriction_wedge_counts
+      )
     else
       # Conormal terms: H*(Z, Sym^{p-j}(E*) ⊗ Ω^j_X |_Z) for j = 0..p
       conormal_cohos = Vector{AffineExpr}[]
@@ -1427,10 +1429,14 @@ function _chi_omega_tensor_counts(
   Z::ZeroLocus, j::Int, g_counts::Dict{IrrepLevi,Int},
   memo::Dict{Tuple{Int,UInt},BigInt}=Dict{Tuple{Int,UInt},BigInt}(),
 )
-  omegas_counts = Dict{IrrepLevi,Int}[_to_counts(_cotangent_power(Z.ambient, k)) for k in 0:j]
+  omegas_counts = Dict{IrrepLevi,Int}[
+    _to_counts(_cotangent_power(Z.ambient, k)) for k in 0:j
+  ]
   wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
   tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
-  _chi_omega_tensor_counts_cached(Z, j, g_counts, memo, omegas_counts, wedge_counts, tp_memo)
+  _chi_omega_tensor_counts_cached(
+    Z, j, g_counts, memo, omegas_counts, wedge_counts, tp_memo
+  )
 end
 
 """

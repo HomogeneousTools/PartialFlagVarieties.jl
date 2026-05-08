@@ -705,8 +705,9 @@ function _has_no_positive_exts(
   true
 end
 
-_sequence_status_key(Es::Vector{<:CompletelyReducibleBundle}, Z::ZeroLocus) =
-  (objectid(Es), objectid(Z))
+_sequence_status_key(Es::Vector{<:CompletelyReducibleBundle}, Z::ZeroLocus) = (
+  objectid(Es), objectid(Z)
+)
 
 function _exceptional_sequence_status(
   Es::Vector{<:CompletelyReducibleBundle},
