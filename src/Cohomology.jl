@@ -21,6 +21,15 @@ export borel_weil_bott
 #  Borel–Weil–Bott theorem
 # ═══════════════════════════════════════════════════════════════════════════════
 
+function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
+  DT = typeof(λ).parameters[1]
+  ρ = Lie.weyl_vector(DT)
+  μ = λ + ρ
+  μ_dom, d = Lie.conjugate_dominant_weight_with_length(μ)
+  any(==(0), μ_dom.vec) && return nothing
+  (d, μ_dom - ρ)
+end
+
 """
     borel_weil_bott(λ::WeightLatticeElem{DT,R}) -> Union{Nothing, Tuple{Int, WeightLatticeElem{DT,R}}}
 
@@ -46,15 +55,6 @@ julia> borel_weil_bott(-Lie.weyl_vector(TypeA{2})) === nothing
 true
 ```
 """
-function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
-  DT = typeof(λ).parameters[1]
-  ρ = Lie.weyl_vector(DT)
-  μ = λ + ρ
-  μ_dom, d = Lie.conjugate_dominant_weight_with_length(μ)
-  any(==(0), μ_dom.vec) && return nothing
-  (d, μ_dom - ρ)
-end
-
 function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
   _borel_weil_bott_generic(λ)
 end
