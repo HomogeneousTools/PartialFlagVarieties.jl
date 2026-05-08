@@ -1063,7 +1063,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Universal bundles" begin
     # Gr(2, 5): U has rank 2, Q has rank 3
     X1 = Gr(2, 5)
-    @test rank_bundle(universal_subbundle(X1)) == 2
+    @test rank_bundle(universal_subbundles(X1)[1]) == 2
     @test rank_bundle(universal_quotient_bundle(X1)) == 3
 
     # OGr(3, 7)
@@ -1078,26 +1078,35 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # SGr(3,10)
     X4 = SGr(3, 10)
-    @test rank_bundle(universal_subbundle(X4)) == 3
-    @test rank_bundle(residual_bundle(X4)) == 7
-    @test rank_bundle(universal_quotient_bundle(X4)) == 4
+    U = universal_subbundle(X4)
+    R = residual_bundle(X4)
+    @test rank_bundle(U) == 3
+    @test rank_bundle(R) == 4
+    @test rank_bundle(universal_quotient_bundle(X4)) == 7
+    @test dimensions(cohomology(dual(R) ⊗ U))[1] == 1
 
     #OGr(4,12)
     X5 = OGr(4, 12)
-    @test rank_bundle(universal_subbundle(X5)) == 4
-    @test rank_bundle(residual_bundle(X5)) == 4
-    @test rank_bundle(universal_quotient_bundle(X5)) == 4
+    U = universal_subbundle(X5, 1)
+    R = residual_bundle(X5)
+    @test rank_bundle(U) == 4
+    @test rank_bundle(R) == 4
+    @test rank_bundle(universal_quotient_bundle(X5)) == 8
+    @test dimensions(cohomology(dual(R) ⊗ U))[1] == 1
 
-    # Tautological bundles on partial flag
-    # On Fl(1,2;4) = A₃/P_{1,2}, the irreducible equivariant bundles
-    # E_{ω₁} and E_{ω₂} have fiber dimensions 1 and 1 respectively.
-    # (These are NOT the geometric tautological subbundles V₁, V₂;
-    #  the latter are filtered, not completely reducible.)
-    X6 = flag_variety(4, (1, 2))
-    Us = tautological_bundles(X6)
-    @test length(Us) == 2
+    # Fl(1,2,4; 5)
+    X6 = flag_variety(5, (1, 2, 4))
+    τ = tautological_bundles(X6)
+    Us = universal_subbundles(X6)
+    @test length(τ) == 3
+    @test rank_bundle(τ[1]) == 1
+    @test rank_bundle(τ[2]) == 1
+    @test rank_bundle(τ[3]) == 2
+    @test dimensions(cohomology(dual(τ[3]) ⊗ τ[2]))[1] == 1
+    @test dimensions(cohomology(dual(τ[2]) ⊗ τ[1]))[1] == 1
     @test rank_bundle(Us[1]) == 1
-    @test rank_bundle(Us[2]) == 1
+    @test rank_bundle(universal_subbundles(X6)[3]) == 4
+    @test dimensions(cohomology(dual(τ[3]) ⊗ Us[2].pieces[2]))[1] == 1
   end
 
   @testset "Spinor bundles" begin
