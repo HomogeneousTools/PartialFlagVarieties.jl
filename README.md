@@ -1,6 +1,8 @@
 # PartialFlagVarieties.jl
 
-[![CI](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/CI.yml)
+[![Tests](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/test.yml/badge.svg)](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/test.yml)
+[![Docs](https://img.shields.io/badge/docs-homogeneous.tools/PartialFlagVarieties.jl-blue)](https://homogeneous.tools/PartialFlagVarieties.jl)
+[![Release](https://img.shields.io/github/v/release/HomogeneousTools/PartialFlagVarieties.jl?color=green)](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/releases)
 
 A Julia package for computing with **partial flag varieties** $G/P$:
 equivariant vector bundles, sheaf cohomology via the Borel–Weil–Bott theorem,
