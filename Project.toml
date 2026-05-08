@@ -28,7 +28,7 @@ PrettyTables = "3.2.3"
 ProgressMeter = "1.11.0"
 StaticArrays = "1"
 ZeroLocus62 = "3"
-julia = "1.10"
+julia = "1.11"
 
 [sources]
 Base62 = {rev = "main", url = "https://github.com/HomogeneousTools/Base62.jl"}
