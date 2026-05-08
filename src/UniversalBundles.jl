@@ -15,7 +15,6 @@ export tautological_bundles, universal_subbundles
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Generalized Grassmannians: universal, quotient and residual bundle
 # ═══════════════════════════════════════════════════════════════════════════════
-
 """
     universal_subbundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
@@ -61,7 +60,7 @@ function universal_subbundle(X::PartialFlagVariety, n::Int=1)
   R = rank(DT)
   if n==1
     return dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1)))
-  else
+  else #TODO: If n==2 and X is isotropic Grassmannian, return the dual of the quotient bundle.
     (n < 1 || n > R) &&
       throw(ArgumentError("n must be between 1 and the rank of the variety"))
     return universal_subbundles(X)[n]
