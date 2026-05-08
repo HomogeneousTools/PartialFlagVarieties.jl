@@ -306,14 +306,42 @@ function tangent_weights(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
   RS = RootSystem(DT)
   nonpar_roots = positive_nonparabolic_roots(mdt)
-  simple_par = [simple_root(RS, i) for i in unmarked_nodes(mdt)]
-  nonpar_set = Set(coefficients(α) for α in nonpar_roots)
-
-  highest = filter(nonpar_roots) do α
-    !any(s -> (coefficients(α) + coefficients(s)) in nonpar_set, simple_par)
+  unmarked = unmarked_nodes(mdt)
+  if isempty(unmarked)
+    simple_par = typeof(simple_root(RS, 1))[]
+  else
+    simple_par = Vector{typeof(simple_root(RS, first(unmarked)))}(undef, length(unmarked))
+    for (idx, i) in enumerate(unmarked)
+      simple_par[idx] = simple_root(RS, i)
+    end
   end
 
-  [WeightLatticeElem(α) for α in highest]
+  nonpar_set = Set{typeof(coefficients(first(nonpar_roots)))}()
+  for α in nonpar_roots
+    push!(nonpar_set, coefficients(α))
+  end
+
+  highest = eltype(nonpar_roots)[]
+  for α in nonpar_roots
+    is_highest = true
+    α_coeffs = coefficients(α)
+    for s in simple_par
+      if (α_coeffs + coefficients(s)) in nonpar_set
+        is_highest = false
+        break
+      end
+    end
+    is_highest && push!(highest, α)
+  end
+
+  isempty(highest) && return WeightLatticeElem[]
+  first_weight = WeightLatticeElem(first(highest))
+  result = Vector{typeof(first_weight)}(undef, length(highest))
+  result[1] = first_weight
+  for i in 2:length(highest)
+    result[i] = WeightLatticeElem(highest[i])
+  end
+  result
 end
 
 _ambient_type(mdt::MarkedDynkinType) = dynkin_type(mdt)
@@ -396,4 +424,4 @@ end
 Base.:(==)(a::MarkedDynkinType, b::MarkedDynkinType) =
   dynkin_type(a) == dynkin_type(b) && marked_nodes(a) == marked_nodes(b)
 
-Base.hash(mdt::MarkedDynkinType, h::UInt) = hash((dynkin_type(mdt), marked_nodes(mdt)), h)
+Base.hash(mdt::MarkedDynkinType, h::UInt) = hash(marked_nodes(mdt), hash(dynkin_type(mdt), h))

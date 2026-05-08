@@ -395,17 +395,19 @@ function _twisted_hodge_symbolic(
 )
   X = Z.ambient
   E = Z.defining_bundle
+  E_dual = dual(E)
   d = dimension(Z)
 
   # Precompute Sym^k(E*) and Ω^j_X as multiplicity dicts for k,j = 0..d.
   # The _to_counts representation (Dict{IrrepLevi,Int}) deduplicates
   # identical summands, avoiding redundant tensor-product calls.
   syms_counts = Dict{IrrepLevi,Int}[
-    _to_counts(symmetric_power(dual(E), k)) for k in 0:d
+    _to_counts(symmetric_power(E_dual, k)) for k in 0:d
   ]
   omegas_counts = Dict{IrrepLevi,Int}[
-    _to_counts(exterior_power(cotangent_bundle(X), j)) for j in 0:d
+    _to_counts(_cotangent_power(X, j)) for j in 0:d
   ]
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
 
   # ω_Z lifted to X (before restriction), as a multiplicity dict for the
   # p = d branch (Ω^d_Z = ω_Z).
@@ -421,7 +423,7 @@ function _twisted_hodge_symbolic(
     if p == d
       # Ω^d_Z ⊗ L = (ω_Z ⊗ L)|_Z — use the precomputed ω_Z counts.
       f_counts = _tensor_product_counts(omega_Z_counts, l_counts)
-      Hp = _restrict_to_zero_locus_les(Z, f_counts, var_counter)
+      Hp = _restrict_to_zero_locus_les(Z, f_counts, var_counter, wedge_counts)
     else
       # ── Conormal filtration ─────────────────────────────────────────
       # For 0 < p < d, Ω^p_Z is intrinsic to Z — it is NOT the
@@ -444,7 +446,7 @@ function _twisted_hodge_symbolic(
           _tensor_product_counts(syms_counts[p - j + 1], omegas_counts[j + 1]),
           l_counts,
         )
-        Hj = _restrict_to_zero_locus_les(Z, f_counts, var_counter)
+        Hj = _restrict_to_zero_locus_les(Z, f_counts, var_counter, wedge_counts)
         push!(conormal_cohomologies, Hj)
       end
       # les_cokernel(A, B) solves 0 → A → B → C → 0 for H*(C).
@@ -488,9 +490,12 @@ function _twisted_hodge_symbolic(
   # ── χ constraint per row ─────────────────────────────────────────────
   # Σ_q (-1)^q h^q(Ω^p_Z ⊗ L) = χ(Ω^p_Z ⊗ L), exact from the Koszul complex.
   chi_memo = Dict{Tuple{Int,UInt},BigInt}()
+  chi_tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
   for p in 0:d
-    chi_p = _chi_omega_tensor_counts(Z, p, l_counts, chi_memo)
-    alt_sum = sum((-1)^q * M[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
+    chi_p = _chi_omega_tensor_counts_cached(
+      Z, p, l_counts, chi_memo, omegas_counts, wedge_counts, chi_tp_memo
+    )
+    alt_sum = _alternating_sum(M, p + 1, d)
     eq = alt_sum - AffineExpr(chi_p)
     !isempty(eq.coeffs) && _apply_equation!(M, eq)
   end
@@ -728,9 +733,16 @@ function hochschild_cohomology(Z::ZeroLocus)
 
     # 2. χ(∧^p T_Z) = exact value from conormal recursion
     chi_memo = Dict{Tuple{Int,UInt},BigInt}()
+    chi_tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
+    chi_omegas_counts = Dict{IrrepLevi,Int}[
+      _to_counts(_cotangent_power(X, j)) for j in 0:d
+    ]
+    wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
     for p in 0:d
-      chi_p = _chi_omega_tensor_counts(Z, d - p, l_anti_counts, chi_memo)
-      alt_sum = sum((-1)^q * data[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
+      chi_p = _chi_omega_tensor_counts_cached(
+        Z, d - p, l_anti_counts, chi_memo, chi_omegas_counts, wedge_counts, chi_tp_memo
+      )
+      alt_sum = _alternating_sum(data, p + 1, d)
       eq = alt_sum - AffineExpr(chi_p)
       if !isempty(eq.coeffs)
         constraint_changed = _apply_equation!(data, eq) || constraint_changed

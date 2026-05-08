@@ -26,6 +26,13 @@ export beilinson_collection, beilinson_collection_dual
 export kapranov_collection
 export schur_functor, kapranov_bundles_grassmannian
 
+const _SEQUENCE_STATUS_CACHE = let b = _default_cache_budget()
+  LRU{Tuple{UInt,UInt},Tuple{Bool,Bool}}(;
+    maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.1),
+    by=Base.summarysize,
+  )
+end
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Exceptionality predicates
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -121,12 +128,16 @@ function is_strong_exceptional_pair(
   # Check RHom(F, E) = 0
   is_exceptional_pair(E, F) || return false
   # Check Ext^{>0}(E, F) = 0, i.e., H^i(E^∨ ⊗ F) = 0 for i > 0
+  _has_no_positive_exts(E, F)
+end
+
+function _has_no_positive_exts(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   EvF = dual(E) ⊗ F
   H = dimensions(cohomology(EvF))
   for i in 1:H.dim_variety
     H[i] == 0 || return false
   end
-  return true
+  true
 end
 
 """
@@ -676,6 +687,14 @@ function is_strong_exceptional_pair(
   Z::ZeroLocus,
 )
   is_exceptional_pair(E, F, Z) || return false
+  _has_no_positive_exts(E, F, Z)
+end
+
+function _has_no_positive_exts(
+  E::CompletelyReducibleBundle,
+  F::CompletelyReducibleBundle,
+  Z::ZeroLocus,
+)
   EvF = dual(E) ⊗ F
   (H, det) = cohomology_on_restriction(Z, EvF)
   det || @warn "cohomology_on_restriction underdetermined for strong pair"
@@ -684,6 +703,39 @@ function is_strong_exceptional_pair(
     H[i] == 0 || return false
   end
   true
+end
+
+_sequence_status_key(Es::Vector{<:CompletelyReducibleBundle}, Z::ZeroLocus) =
+  (objectid(Es), objectid(Z))
+
+function _exceptional_sequence_status(
+  Es::Vector{<:CompletelyReducibleBundle},
+  Z::ZeroLocus,
+)
+  get!(_SEQUENCE_STATUS_CACHE, _sequence_status_key(Es, Z)) do
+    _exceptional_sequence_status_uncached(Es, Z)
+  end
+end
+
+function _exceptional_sequence_status_uncached(
+  Es::Vector{<:CompletelyReducibleBundle},
+  Z::ZeroLocus,
+)
+  n = length(Es)
+  for i in 1:n
+    is_exceptional(Es[i], Z) || return (false, false)
+  end
+  for i in 1:n
+    for j in (i + 1):n
+      is_exceptional_pair(Es[i], Es[j], Z) || return (false, false)
+    end
+  end
+  for i in 1:n
+    for j in (i + 1):n
+      _has_no_positive_exts(Es[i], Es[j], Z) || return (true, false)
+    end
+  end
+  (true, true)
 end
 
 """
@@ -696,16 +748,7 @@ function is_exceptional_sequence(
   Es::Vector{<:CompletelyReducibleBundle},
   Z::ZeroLocus,
 )
-  n = length(Es)
-  for i in 1:n
-    is_exceptional(Es[i], Z) || return false
-  end
-  for i in 1:n
-    for j in (i + 1):n
-      is_exceptional_pair(Es[i], Es[j], Z) || return false
-    end
-  end
-  true
+  first(_exceptional_sequence_status(Es, Z))
 end
 
 """
@@ -718,14 +761,5 @@ function is_strong_exceptional_sequence(
   Es::Vector{<:CompletelyReducibleBundle},
   Z::ZeroLocus,
 )
-  n = length(Es)
-  for i in 1:n
-    is_exceptional(Es[i], Z) || return false
-  end
-  for i in 1:n
-    for j in (i + 1):n
-      is_strong_exceptional_pair(Es[i], Es[j], Z) || return false
-    end
-  end
-  true
+  last(_exceptional_sequence_status(Es, Z))
 end

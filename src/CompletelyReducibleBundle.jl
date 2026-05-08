@@ -426,7 +426,11 @@ end
 function _tangent_reps(mdt::MarkedDynkinType)
   get!(_tangent_reps_cache, mdt) do
     tw = tangent_weights(mdt)
-    IrrepLevi[IrrepLevi(mdt, w) for w in tw]
+    result = Vector{IrrepLevi}(undef, length(tw))
+    for i in eachindex(tw)
+      result[i] = IrrepLevi(mdt, tw[i])
+    end
+    result
   end
 end
 
@@ -752,10 +756,7 @@ function exterior_power(E::CompletelyReducibleBundle, k::Integer)
         any(α[j] > r for j in 1:m) && continue
 
         # Check if this is a canonical (sorted) representative
-        sorted_α = sort(collect(α); rev=true)
-        if collect(α) != sorted_α
-          continue  # skip non-canonical permutations
-        end
+        issorted(α; rev=true) || continue
 
         # Multinomial coefficient: m! / prod(count_i!)
         multinomial = _multinomial_coeff(α)
@@ -808,15 +809,21 @@ where cᵢ counts occurrences of each distinct value.
 """
 function _multinomial_coeff(α)
   n = length(α)
-  counts = Dict{Int,Int}()
-  for v in α
-    counts[v] = get(counts, v, 0) + 1
+  # α is sorted (callers ensure issorted(α; rev=true)); count run-lengths
+  result = factorial(big(n))
+  i = 1
+  @inbounds while i <= n
+    j = i
+    while j < n && α[j + 1] == α[i]
+      j += 1
+    end
+    c = j - i + 1
+    if c > 1
+      result = div(result, factorial(big(c)))
+    end
+    i = j + 1
   end
-  result = factorial(n)
-  for c in values(counts)
-    result = div(result, factorial(c))
-  end
-  result
+  Int(result)
 end
 
 """
@@ -913,10 +920,7 @@ function symmetric_power(E::CompletelyReducibleBundle, k::Integer)
       group_terms = Pair{Vector{IrrepLevi},Int}[]
       for α in multiexponents(m, ga)
         # Check if this is a canonical (sorted) representative
-        sorted_α = sort(collect(α); rev=true)
-        if collect(α) != sorted_α
-          continue  # skip non-canonical permutations
-        end
+        issorted(α; rev=true) || continue
 
         # Multinomial coefficient: m! / prod(count_i!)
         multinomial = _multinomial_coeff(α)
