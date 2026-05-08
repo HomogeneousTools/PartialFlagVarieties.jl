@@ -27,7 +27,7 @@ jobs:
       - uses: julia-actions/setup-julia@v3.0.1
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v2.1.0
+      #- uses: julia-actions/cache@v2.1.0
       - name: Resolve test dependencies
         run: |
           rm -f Manifest.toml
@@ -43,7 +43,7 @@ jobs:
       - uses: julia-actions/setup-julia@v3.0.1
         with:
           version: '1'
-      - uses: julia-actions/cache@v2.1.0
+      #- uses: julia-actions/cache@v2.1.0
       - name: Install docs dependencies
         run: |
           rm -f docs/Manifest.toml
@@ -81,7 +81,7 @@ jobs:
       - uses: julia-actions/setup-julia@v3.0.1
         with:
           version: '1'
-      - uses: julia-actions/cache@v2.1.0
+      #- uses: julia-actions/cache@v2.1.0
       - name: Resolve example dependencies
         run: |
           rm -f Manifest.toml
