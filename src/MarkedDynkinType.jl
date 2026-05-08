@@ -359,7 +359,7 @@ the marked nodes highlighted (enclosed in square brackets).
 function marked_dynkin_diagram(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
   marked = marked_nodes(mdt)
-  diagram = dynkin_diagram(DT)
+  diagram = string(dynkin_diagram(DT))
   lines = split(diagram, '\n')
   marked_set = Set(marked)
 
