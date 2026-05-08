@@ -2,7 +2,7 @@
 Base62 = "212a889c-07c6-4e8f-8766-fb0aa2ea40c2"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 LRUCache = "8ac3fa9e-de4c-5943-b1dc-09c6b5f20637"
-Lie = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+Lie = "c99f5fee-6cdb-4bf1-806f-d7690e6ee6f7"
 PartialFlagVarieties = "b2c3d4e5-f6a7-8901-bcde-f23456789012"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
@@ -14,4 +14,4 @@ PartialFlagVarieties = {path = ".."}
 ZeroLocus62 = {rev = "main", subdir = "julia", url = "https://github.com/HomogeneousTools/ZeroLocus62"}
 
 [extras]
-Lie = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+Lie = "c99f5fee-6cdb-4bf1-806f-d7690e6ee6f7"
