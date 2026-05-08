@@ -119,6 +119,9 @@ function universal_quotient_bundle(X::PartialFlagVariety)
   if DT <: TypeA
     return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   else
+    # U = universal_subbundle(X), R = residual_bundle(X). In this case the quotient Q^* = U^⟂ bundle fits into the s.e.s
+    # 0 -> U -> U^⟂ -> R -> 0
+    # So, the code returns the dual of a filtered bundle with subbundle U and quotient R.
     if rank_bundle(residual_bundle(X)) == 0
       return dual(universal_subbundle(X))
     else
