@@ -29,6 +29,11 @@ StaticArrays = "1"
 ZeroLocus62 = "3"
 julia = "1.10"
 
+[sources]
+Base62 = {rev = "main", url = "https://github.com/HomogeneousTools/Base62.jl"}
+Lie = {rev = "main", url = "https://github.com/HomogeneousTools/Lie.jl"}
+ZeroLocus62 = {rev = "main", subdir = "julia", url = "https://github.com/HomogeneousTools/ZeroLocus62"}
+
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"

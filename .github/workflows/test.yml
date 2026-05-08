@@ -31,7 +31,7 @@ jobs:
       - name: Resolve test dependencies
         run: |
           rm -f Manifest.toml
-          julia --project=. -e 'using Pkg; Pkg.add([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia")]); Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
       - uses: julia-actions/julia-buildpkg@v1.6.0
       - uses: julia-actions/julia-runtest@v1.6.0
 
@@ -47,15 +47,7 @@ jobs:
       - name: Install docs dependencies
         run: |
           rm -f docs/Manifest.toml
-          julia --project=docs -e '
-            using Pkg
-            Pkg.add([
-              PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"),
-              PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"),
-              PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia"),
-            ])
-            Pkg.instantiate()
-          '
+          julia --project=docs -e 'using Pkg; Pkg.instantiate()'
       - name: Run doctests
         run: julia --project=docs -e 'using Documenter, PartialFlagVarieties; doctest(PartialFlagVarieties; manual="docs/src")'
 
@@ -85,7 +77,7 @@ jobs:
       - name: Resolve example dependencies
         run: |
           rm -f Manifest.toml
-          julia --project=. -e 'using Pkg; Pkg.add([PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/Base62.jl", rev="main"), PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", rev="main", subdir="julia")]); Pkg.add("JSON"); Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.add("JSON"); Pkg.instantiate()'
       - uses: julia-actions/julia-buildpkg@v1.6.0
       - name: Run example
         run: |
