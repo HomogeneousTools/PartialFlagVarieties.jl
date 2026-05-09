@@ -247,8 +247,7 @@ end
 function _is_quadric(::Type{DT}, Marked) where {DT}
   length(Marked) == 1 || return false
   Marked[1] == 1 || return false
-  (DT <: TypeB || DT <: TypeD) || return false
-  true
+  DT <: TypeB || DT <: TypeD
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
