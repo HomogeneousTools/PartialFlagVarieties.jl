@@ -98,14 +98,7 @@ function _factors_to_mdt(factors::Vector{Factor})
     _symbol_to_simple_type(_char_to_symbol(f.group), f.rank) for f in factors
   ]
 
-  if length(simple_types) == 1
-    DT = simple_types[1]
-  else
-    DT = simple_types[1]
-    for i in 2:length(simple_types)
-      DT = ProductDynkinType{Tuple{DT,simple_types[i]}}
-    end
-  end
+  DT = _combine_dynkin_factors(simple_types)
 
   global_marked = Int[]
   offset = 0

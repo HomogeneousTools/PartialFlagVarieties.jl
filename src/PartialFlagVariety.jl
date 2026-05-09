@@ -132,14 +132,12 @@ end
 """
     _combine_dynkin_factors(factors) -> Type{<:DynkinType}
 
-Rebuild a Dynkin type from an ordered list of simple factors, preserving the
-left-associated product nesting used elsewhere in the package.
+Rebuild a Dynkin type from an ordered list of simple factors.
 """
 function _combine_dynkin_factors(factors::AbstractVector{<:DataType})
   isempty(factors) && throw(ArgumentError("Need at least one Dynkin factor."))
-  foldl(Iterators.drop(factors, 1); init=first(factors)) do left, right
-    ProductDynkinType{Tuple{left,right}}
-  end
+  length(factors) == 1 && return first(factors)
+  ProductDynkinType{Tuple{factors...}}
 end
 
 """

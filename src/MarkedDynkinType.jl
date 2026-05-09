@@ -35,6 +35,7 @@ struct MarkedDynkinType
 
   function MarkedDynkinType(dynkin::DataType, marked::Tuple{Vararg{Int}})
     dynkin <: DynkinType || throw(ArgumentError("Expected a Dynkin type, got $dynkin"))
+    dynkin = _canonical_dynkin_type(dynkin)
 
     R = rank(dynkin)
     for m in marked
@@ -52,6 +53,21 @@ struct MarkedDynkinType
 
     new(dynkin, marked)
   end
+end
+
+_canonical_dynkin_type(::Type{DT}) where {DT<:SimpleDynkinType} = DT
+
+function _canonical_dynkin_type(::Type{DT}) where {DT<:ProductDynkinType}
+  factors = DataType[]
+  for factor in DT.parameters[1].parameters
+    canonical = _canonical_dynkin_type(factor)
+    if canonical <: SimpleDynkinType
+      push!(factors, canonical)
+    else
+      append!(factors, canonical.parameters[1].parameters)
+    end
+  end
+  ProductDynkinType{Tuple{factors...}}
 end
 
 function MarkedDynkinType(::Type{DT}, marked::Tuple{Vararg{Int}}) where {DT<:DynkinType}
