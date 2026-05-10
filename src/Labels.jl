@@ -300,12 +300,7 @@ function zero_locus(label::AbstractString)
   DT = dynkin_type(mdt)
   X = PartialFlagVariety(mdt)
 
-  irr = IrrepLevi[]
-  for row in result.summands
-    λ = _summand_row_to_weight(row, DT)
-    push!(irr, IrrepLevi(mdt, λ))
-  end
-
-  E = CompletelyReducibleBundle(X, irr)
+  weights = [_summand_row_to_weight(row, DT) for row in result.summands]
+  E = CompletelyReducibleBundle(X, weights)
   zero_locus(E)
 end

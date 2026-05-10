@@ -1,7 +1,13 @@
 # IrrepLevi
 
-Irreducible representations of the Levi subgroup ``L`` of the parabolic
-``P \subseteq G``.
+`IrrepLevi` is the package's internal building block for irreducible Levi
+representations. Most end users should **not** start here: the normal entry
+points are the public bundle constructors such as [`line_bundle`](@ref),
+[`tangent_bundle`](@ref), [`universal_subbundle`](@ref), and
+[`CompletelyReducibleBundle`](@ref).
+
+You will usually see `IrrepLevi` only when inspecting the summands of a bundle
+via [`components`](@ref), or when doing advanced representation-theoretic work.
 
 ## Mathematical background
 
@@ -28,11 +34,17 @@ integers (the character coordinates times the
 ## Design notes
 
 !!! note "Why `IrrepLevi` is an internal type"
-    Users construct equivariant bundles via the public API:
+    Users normally construct equivariant bundles via the public API:
     [`line_bundle`](@ref), [`tangent_bundle`](@ref), [`exterior_power`](@ref),
-    etc. These functions build [`CompletelyReducibleBundle`](@ref) objects
-    whose internal decomposition into `IrrepLevi` components happens
-    automatically.
+    [`universal_subbundle`](@ref), and related helpers. These functions return
+    [`CompletelyReducibleBundle`](@ref) objects whose internal decomposition
+    into `IrrepLevi` components happens automatically.
+
+    In particular, `IrrepLevi` is **not** intended as the default user-facing
+    constructor for bundles. When constructing a bundle directly from ambient
+    weights, prefer [`CompletelyReducibleBundle`](@ref)`(X, coeffs)` or
+    [`CompletelyReducibleBundle`](@ref)`(X, weights)` over manually creating
+    `IrrepLevi` components first.
 
     The situations where a user encounters `IrrepLevi` directly are:
     - Inspecting [`components`](@ref)`(E)` to see the irreducible summands of

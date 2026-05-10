@@ -501,10 +501,7 @@ function schur_functor(
     coeffs[k] = α[k]    # marked node k (central character = α_k · ω_k)
   end
 
-  λ = WeightLatticeElem(DT, coeffs)
-  mdt = marked_type(X)
-  rep = IrrepLevi(mdt, λ)
-  CompletelyReducibleBundle(X, [rep])
+  CompletelyReducibleBundle(X, coeffs)
 end
 
 """

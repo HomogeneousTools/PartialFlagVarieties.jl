@@ -126,8 +126,6 @@ const BATCH_SIZE = parse(
   Build a `CompletelyReducibleBundle` from the `bundle` field and `ambient` factors.
   """
   function build_bundle(X, factors::Vector, bundle_data::Vector)
-    mdt = marked_dynkin_type(X)
-
     factor_ks = Vector{Int}[]
     factor_ns = Int[]
     for f in factors
@@ -136,7 +134,7 @@ const BATCH_SIZE = parse(
       push!(factor_ns, fv[end])
     end
 
-    summands = IrrepLevi[]
+    summands = Vector{Int}[]
     isempty(bundle_data) && return zero_bundle(X)
     ds = bundle_data[1]
     (ds isa Vector && isempty(ds)) && return zero_bundle(X)
@@ -148,8 +146,7 @@ const BATCH_SIZE = parse(
         omega = gl_weight_to_omega_flag(factor_ks[j], factor_ns[j], w)
         append!(omega_coords, omega)
       end
-      lam = WeightLatticeElem(dynkin_type(X), omega_coords)
-      push!(summands, IrrepLevi(mdt, lam))
+      push!(summands, omega_coords)
     end
 
     CompletelyReducibleBundle(X, summands)

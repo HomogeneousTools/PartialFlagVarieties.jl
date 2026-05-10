@@ -381,18 +381,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = Gr(3, 6)
     λ = WeightLatticeElem(dynkin_type(X), [0, 1, -1, 0, 0])
     E_weight = CompletelyReducibleBundle(X, λ)
+    E_weights = CompletelyReducibleBundle(X, [λ, WeightLatticeElem(dynkin_type(X))])
     E_components = CompletelyReducibleBundle(X, copy(components(E_weight)))
     E_coeffs = CompletelyReducibleBundle(X, [0, 1, -1, 0, 0])
     E_sum = CompletelyReducibleBundle(X, [[0, 1, -1, 0, 0], [0, 0, 0, 0, 0]])
     O = structure_sheaf(X)
     Y = Gr(2, 5)
-    bad_component = IrrepLevi(
-      marked_dynkin_type(Y), WeightLatticeElem(dynkin_type(Y), [1, 0, 0, 0])
-    )
+    bad_component = IrrepLevi(marked_dynkin_type(Y), [1, 0, 0, 0])
 
     @test variety(E_weight) === X
     @test components(E_weight) == components(universal_subbundle(X))
     @test rank_bundle(E_weight) == 3
+    @test components(E_weights) == components(E_sum)
     @test components(E_components) == components(E_weight)
     @test components(E_coeffs) == components(E_weight)
     @test components(E_sum) == vcat(components(E_weight), components(O))

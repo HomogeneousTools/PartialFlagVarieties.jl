@@ -130,8 +130,7 @@ function universal_quotient_bundle(X::PartialFlagVariety)
     # to the last fundamental weight ω_{n-1} of the ambient A_{n-1}.
     # Under the Levi A_{k-1} × A_{n-k-1}, this has fiber dimension n-k.
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(mdt, ω)
-    return CompletelyReducibleBundle(X, [rep])
+    return CompletelyReducibleBundle(X, ω)
   end
 
   # For non-type-A: fall back to dual of subbundle
@@ -196,15 +195,12 @@ function spinor_bundle(X::PartialFlagVariety)
   if DT <: TypeB
     # Odd quadric Q^{2m-1}: single spinor bundle at ω_m
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(mdt, ω)
-    CompletelyReducibleBundle(X, [rep])
+    CompletelyReducibleBundle(X, ω)
   elseif DT <: TypeD
     # Even quadric Q^{2m-2}: direct sum of both half-spinors
     ω_plus = fundamental_weight(DT, R - 1)
     ω_minus = fundamental_weight(DT, R)
-    rep_plus = IrrepLevi(mdt, ω_plus)
-    rep_minus = IrrepLevi(mdt, ω_minus)
-    CompletelyReducibleBundle(X, [rep_plus, rep_minus])
+    CompletelyReducibleBundle(X, [ω_plus, ω_minus])
   else
     throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
   end
@@ -224,8 +220,7 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
     half in (:plus, :minus) &&
       @warn "Odd quadric has a single spinor bundle; ignoring half=$half"
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(mdt, ω)
-    return CompletelyReducibleBundle(X, [rep])
+    return CompletelyReducibleBundle(X, ω)
   end
 
   if DT <: TypeD
@@ -236,8 +231,7 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
     else
       throw(ArgumentError("half must be :plus or :minus, got :$half"))
     end
-    rep = IrrepLevi(mdt, ω)
-    return CompletelyReducibleBundle(X, [rep])
+    return CompletelyReducibleBundle(X, ω)
   end
 
   throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
@@ -300,8 +294,7 @@ function tautological_bundles(X::PartialFlagVariety)
   result = CompletelyReducibleBundle[]
   for m in marked_nodes(mdt)
     ω = fundamental_weight(DT, m)
-    rep = IrrepLevi(mdt, ω)
-    push!(result, CompletelyReducibleBundle(X, [rep]))
+    push!(result, CompletelyReducibleBundle(X, ω))
   end
   result
 end

@@ -92,15 +92,44 @@ julia> using PartialFlagVarieties, Lie
 
 julia> X = Gr(3, 6);
 
-julia> E = CompletelyReducibleBundle(X, [0, 1, -1, 0, 0]);
+julia> λ = WeightLatticeElem(dynkin_type(X), [0, 1, -1, 0, 0]);
+
+julia> E = CompletelyReducibleBundle(X, λ);
 
 julia> components(E) == components(universal_subbundle(X))
 true
 ```
 """
 function CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem)
+  CompletelyReducibleBundle(X, [λ])
+end
+
+"""
+    CompletelyReducibleBundle(X::PartialFlagVariety, weights::AbstractVector{<:WeightLatticeElem})
+
+Convenience constructor: build the direct sum of the equivariant bundles on
+`X` corresponding to the ambient highest weights in `weights`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties, Lie
+
+julia> X = Gr(3, 6);
+
+julia> weights = [WeightLatticeElem(dynkin_type(X), [0, 1, -1, 0, 0]), WeightLatticeElem(dynkin_type(X))];
+
+julia> E = CompletelyReducibleBundle(X, weights);
+
+julia> components(E) == vcat(components(universal_subbundle(X)), components(structure_sheaf(X)))
+true
+```
+"""
+function CompletelyReducibleBundle(
+  X::PartialFlagVariety, weights::AbstractVector{<:WeightLatticeElem}
+)
   mdt = marked_dynkin_type(X)
-  CompletelyReducibleBundle(X, [IrrepLevi(mdt, λ)])
+  components = [IrrepLevi(mdt, λ) for λ in weights]
+  CompletelyReducibleBundle(X, components)
 end
 
 """
