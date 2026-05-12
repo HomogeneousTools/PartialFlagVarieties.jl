@@ -1909,6 +1909,40 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  euler_characteristic_tangent_bundle  (issue #15)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "ZeroLocus: euler_characteristic_tangent_bundle" begin
+    # ── Hypersurfaces in ℙ⁴ ─────────────────────────────────────────────────
+    let X = projective_space(4)
+      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 3))) == -10
+      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 4))) == -45
+      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 5))) == -100  # CY3
+    end
+
+    # ── Hypersurfaces in ℙ⁵ ─────────────────────────────────────────────────
+    let X = projective_space(5)
+      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 2))) == 15   # Q⁴
+      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 3))) == -20
+      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 4))) == -90
+      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 5))) == -216
+    end
+
+    # ── Küchle Fano 4-folds ──────────────────────────────────────────────────
+    let X = Gr(2, 5), E = direct_sum(line_bundle(X, 2), line_bundle(X, 2))
+      @test euler_characteristic_tangent_bundle(zero_locus(E)) == -72   # b2
+    end
+
+    let X = Gr(2, 7), E = foldl(direct_sum, [line_bundle(X, 1) for _ in 1:6])
+      @test euler_characteristic_tangent_bundle(zero_locus(E)) == -42   # b7
+    end
+
+    let X = Gr(3, 7), Qd1 = twist(dual(universal_quotient_bundle(X)), 1)
+      @test euler_characteristic_tangent_bundle(zero_locus(direct_sum(Qd1, Qd1))) == -18  # c3
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  hodge_numbers vs hodge_numbers_symbolic agreement
   # ═══════════════════════════════════════════════════════════════════════════
 

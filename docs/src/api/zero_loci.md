@@ -69,18 +69,14 @@ cohomology_on_restriction_symbolic
 euler_characteristic(::ZeroLocus, ::CompletelyReducibleBundle)
 ```
 
-## Hodge numbers
+## Cohomological invariants
 
 ```@docs
 hodge_numbers_symbolic
 hodge_numbers_les
-```
-
-## Derived invariants
-
-```@docs
 hilbert_polynomial(::ZeroLocus)
 fano_index(::ZeroLocus)
+euler_characteristic_tangent_bundle
 ```
 
 ## Classification predicates

@@ -21,6 +21,7 @@ export fano_index
 export hilbert_polynomial
 export hodge_numbers_symbolic
 export hodge_numbers_les
+export euler_characteristic_tangent_bundle
 
 """
 Renumber variables in an `AffineExpr` matrix to use contiguous IDs
@@ -493,6 +494,33 @@ Compute ``\\chi(Z, \\mathcal{O}_Z)``.
 """
 function euler_characteristic(Z::ZeroLocus)
   euler_characteristic(Z, structure_sheaf(Z.ambient))
+end
+
+"""
+    euler_characteristic_tangent_bundle(Z::ZeroLocus) -> BigInt
+
+Compute the topological Euler characteristic of the tangent bundle of ``Z``,
+``\\chi(Z, T_Z) = \\chi(Z, T_X|_Z) - \\chi(Z, N_{Z/X})``,
+via the tangent normal sequence ``0 \\to T_Z \\to T_X|_Z \\to N_{Z/X} \\to 0``.
+
+Both Euler characteristics are computed exactly via Koszul (no long exact
+sequence ambiguity), so the result is always a precise integer.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(4);
+
+julia> Z = zero_locus(line_bundle(X, 5));  # CY3 quintic
+
+julia> euler_characteristic_tangent_bundle(Z)
+-100
+```
+"""
+function euler_characteristic_tangent_bundle(Z::ZeroLocus)
+  X = ambient_variety(Z)
+  euler_characteristic(Z, tangent_bundle(X)) - euler_characteristic(Z, defining_bundle(Z))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
