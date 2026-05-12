@@ -322,7 +322,7 @@ each element corresponds to a tautological subbundle.
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = Fl(1, 2; 4);  # Flag variety Fl(1,2; 4)
+julia> X = flag_variety(4,[1,2]);  # Flag variety Fl(1,2; 4)
 
 julia> τ = tautological_bundles(X);
 
@@ -376,7 +376,7 @@ These form the complete flag filtration:
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = Fl(1, 2; 4);  # Flag variety Fl(1,2; 4)
+julia> X = flag_variety(4,[1,2]);  # Flag variety Fl(1,2; 4)
 
 julia> subs = universal_subbundles(X);
 

@@ -457,7 +457,7 @@ julia> using PartialFlagVarieties, Lie
 
 julia> DT = TypeE{6};
 
-julia> is_exceptional(DT)
+julia> is_exceptional_type(DT)
 true
 ```
 """
@@ -476,7 +476,7 @@ julia> using PartialFlagVarieties, Lie
 
 julia> mdt = MarkedDynkinType(TypeE{6}, (2,));
 
-julia> is_exceptional(mdt)
+julia> is_exceptional_type(mdt)
 true
 ```
 """
