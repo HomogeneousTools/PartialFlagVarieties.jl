@@ -2,7 +2,7 @@
 #  PartialFlagVarieties.jl
 #
 #  A Julia package for computing with partial flag varieties G/P using
-#  runtime marked Dynkin data built on Lie.jl.
+#  runtime marked Dynkin data built on Semisimple.jl.
 #
 #  Provides:
 #   - MarkedDynkinType: runtime encoding of G/P
@@ -15,7 +15,7 @@
 
 module PartialFlagVarieties
 
-using Lie
+using Semisimple
 using LRUCache
 using Preferences
 using PrettyTables
@@ -25,11 +25,11 @@ using Combinatorics
 using PrecompileTools
 using Distributed: myid
 
-# ─── Extend Lie.jl functions (avoids name collisions) ────────────────────────
+# ─── Extend Semisimple.jl functions (avoids name collisions) ─────────────────
 
-import Lie: dimension, dual, tensor_product, exterior_power, symmetric_power
-import Lie: n_components
-import Lie: rank, degree
+import Semisimple: dimension, dual, tensor_product, exterior_power, symmetric_power
+import Semisimple: n_components
+import Semisimple: rank, degree
 
 # ─── Cache budget (computed before any cache is created) ─────────────────────
 
@@ -45,7 +45,7 @@ _cache_maxsize(budget::Int, fraction::Float64) = max(1, round(Int, budget * frac
 
 # ─── Core types and infrastructure ───────────────────────────────────────────
 
-include("Lie.jl")
+include("Semisimple.jl")
 include("MarkedDynkinType.jl")
 include("PartialFlagVariety.jl")
 include("IrrepLevi.jl")
@@ -61,11 +61,11 @@ include("ExceptionalCollections.jl")
 include("Hodge.jl")
 include("CacheConfig.jl")
 
-# ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
+# ─── Reexport commonly used Semisimple.jl types ──────────────────────────────
 
-using Lie: TypeA, TypeB, TypeC, TypeD, TypeE, TypeF4, TypeG2
-using Lie: DynkinType, SimpleDynkinType, ProductDynkinType
-using Lie: WeightLatticeElem, WeylCharacter, fundamental_weight
+using Semisimple: TypeA, TypeB, TypeC, TypeD, TypeE, TypeF4, TypeG2
+using Semisimple: DynkinType, SimpleDynkinType, ProductDynkinType
+using Semisimple: WeightLatticeElem, WeylCharacter, fundamental_weight
 
 export TypeA, TypeB, TypeC, TypeD, TypeE, TypeF4, TypeG2
 export DynkinType, SimpleDynkinType, ProductDynkinType
@@ -135,8 +135,8 @@ end
 # ─── Initialization ──────────────────────────────────────────────────────────
 
 function __init__()
-  # Suppress the Lie.jl startup banner: PartialFlagVarieties will show its own
-  set_preferences!(Lie, "show_banner" => false)
+  # Suppress the Semisimple.jl startup banner: PartialFlagVarieties will show its own
+  set_preferences!(Semisimple, "show_banner" => false)
 
   # Apply any user cache preferences from LocalPreferences.toml
   _apply_cache_preferences!()

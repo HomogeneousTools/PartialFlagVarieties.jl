@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Lie.jl — extensions for inclusion in the Lie.jl package
+#  Semisimple.jl — extensions for inclusion in the Semisimple.jl package
 #
 #  Provides:
 #   - cartan_type_with_ordering: identify a Cartan matrix → Dynkin type + ordering
@@ -15,7 +15,7 @@ export cartan_type, cartan_type_with_ordering
 export parse_dynkin_type
 
 """
-  Lie.WeightLatticeElem(::Type{DT}) -> WeightLatticeElem{DT,R}
+  Semisimple.WeightLatticeElem(::Type{DT}) -> WeightLatticeElem{DT,R}
 
 Construct the zero weight in the weight lattice of `DT`.
 
@@ -25,12 +25,12 @@ julia> WeightLatticeElem(TypeA{2})
 0
 ```
 """
-function Lie.WeightLatticeElem(::Type{DT}) where {DT<:DynkinType}
+function Semisimple.WeightLatticeElem(::Type{DT}) where {DT<:DynkinType}
   R = rank(DT)
   return WeightLatticeElem(DT, zero(SVector{R,Int}))
 end
 
-Base.zero(::Type{Lie.WeightLatticeElem{DT,R}}) where {DT<:DynkinType,R} = WeightLatticeElem(
+Base.zero(::Type{Semisimple.WeightLatticeElem{DT,R}}) where {DT<:DynkinType,R} = WeightLatticeElem(
   DT
 )
 
@@ -223,7 +223,7 @@ function cartan_type(C::AbstractMatrix{<:Integer})
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Conversion: (Symbol, Int) pairs → Lie.jl DynkinType
+#  Conversion: (Symbol, Int) pairs → Semisimple.jl DynkinType
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -245,7 +245,7 @@ end
 """
     _cartan_type_to_dynkin_type(ct::Vector{Tuple{Symbol, Int}}) -> Type{<:DynkinType} or nothing
 
-Convert a vector of `(family, rank)` pairs to a Lie.jl `DynkinType`.
+Convert a vector of `(family, rank)` pairs to a Semisimple.jl `DynkinType`.
 
 Returns a single `SimpleDynkinType` if the vector has one element,
 or a `ProductDynkinType` if it has multiple elements.

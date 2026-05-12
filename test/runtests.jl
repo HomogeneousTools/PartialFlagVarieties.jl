@@ -1,6 +1,6 @@
 using Test
 using PartialFlagVarieties
-using Lie
+using Semisimple
 using StaticArrays
 
 mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
@@ -8,7 +8,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 @testset "PartialFlagVarieties.jl" begin
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  Lie.jl extensions: cartan_type, parse_dynkin_type
+  #  Semisimple.jl extensions: cartan_type, parse_dynkin_type
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "cartan_type" begin

@@ -1,5 +1,5 @@
 using Documenter
-using Lie
+using Semisimple
 using PartialFlagVarieties
 
 makedocs(;

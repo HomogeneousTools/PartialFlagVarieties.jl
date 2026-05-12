@@ -1,7 +1,7 @@
 # PartialFlagVarieties.jl
 
 A Julia package for computing with **partial flag varieties** ``G/P`` using
-[Lie.jl](https://github.com/HomogeneousTools/Lie.jl).
+[Semisimple.jl](https://github.com/HomogeneousTools/Semisimple.jl).
 
 The package is designed for three closely related tasks:
 

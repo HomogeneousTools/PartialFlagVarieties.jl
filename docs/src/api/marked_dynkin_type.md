@@ -57,10 +57,10 @@ tangent_weights
 marked_dynkin_diagram
 ```
 
-## Lie.jl utilities
+## Semisimple.jl utilities
 
 Convenience functions for working with Dynkin types, built on top of
-[Lie.jl](https://github.com/ulsmart/Lie.jl).
+[Semisimple.jl](https://github.com/HomogeneousTools/Semisimple.jl).
 
 ```@docs
 parse_dynkin_type

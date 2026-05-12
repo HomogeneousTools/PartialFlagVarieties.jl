@@ -15,7 +15,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 using PartialFlagVarieties
-using Lie
+using Semisimple
 using PrettyTables
 
 """

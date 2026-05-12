@@ -27,7 +27,7 @@ and tensor algebra, but does not capture filtration data. For the latter, see
     [`filtered_tangent_bundle`](@ref) and its derived operations.
 
     Tensor products and exterior powers of `CompletelyReducibleBundle` are
-    computed by decomposing into Lie.jl character arithmetic, then
+    computed by decomposing into Semisimple.jl character arithmetic, then
     extracting dominant weights. Identical summands are **deduplicated**:
     components that appear with multiplicity are stored once with a
     multiplicity count, keeping the representation compact.

@@ -44,7 +44,7 @@
 
 using PartialFlagVarieties
 using PrettyTables
-using Lie
+using Semisimple
 
 # ─── Summary row data ─────────────────────────────────────────────────────────
 

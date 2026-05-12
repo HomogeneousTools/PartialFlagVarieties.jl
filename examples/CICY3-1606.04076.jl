@@ -24,7 +24,7 @@
 
 using PartialFlagVarieties
 using PrettyTables
-using Lie
+using Semisimple
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Enumeration of completely reducible bundles

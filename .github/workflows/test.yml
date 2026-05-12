@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   repository_dispatch:
-    types: [lie-jl-updated, zerolocus62-updated]
+    types: [semisimple-jl-updated, zerolocus62-updated]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -21,14 +21,14 @@
 #  - Progress bars via ProgressMeter.jl
 #  - Output written to output/D-Pk.txt (e.g. A4-P2.txt)
 #  - Timing per variety
-#  - Cache management: clear Lie.jl caches when > 16 GiB
+#  - Cache management: clear Semisimple.jl caches when > 16 GiB
 #
 #  Usage:
 #    julia --project=. examples/HochschildAffine.jl
 #    julia --project=. -t10 examples/HochschildAffine.jl            # 10 threads
 #    julia --project=. examples/HochschildAffine.jl --include-e8    # include E₈
 #
-#  Note on threading: Lie.jl's internal caches are global Dict objects that are
+#  Note on threading: Semisimple.jl's internal caches are global Dict objects that are
 #  not thread-safe. We serialize cache-mutating calls with a ReentrantLock.
 #  For full parallel speedup, consider Distributed.jl workers instead.
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -37,7 +37,7 @@ using PartialFlagVarieties
 using PartialFlagVarieties:
   fiber_dimension, IrrepLevi, components, n_components,
   to_ambient_weight, marked_type
-using Lie
+using Semisimple
 using PrettyTables
 using ProgressMeter
 using Combinatorics: multiexponents
@@ -162,42 +162,42 @@ function _enumerate_cases(; include_e8::Bool=false, max_rank::Int=8)
 
   for r in 2:max_rank
     for k in 1:r
-      push!(cases, ("A$r", k, Lie.TypeA{r}))
+      push!(cases, ("A$r", k, Semisimple.TypeA{r}))
     end
   end
   for r in 2:max_rank
     for k in 1:r
-      push!(cases, ("B$r", k, Lie.TypeB{r}))
+      push!(cases, ("B$r", k, Semisimple.TypeB{r}))
     end
   end
   for r in 2:max_rank
     for k in 1:r
-      push!(cases, ("C$r", k, Lie.TypeC{r}))
+      push!(cases, ("C$r", k, Semisimple.TypeC{r}))
     end
   end
   for r in 4:max_rank
     for k in 1:r
-      push!(cases, ("D$r", k, Lie.TypeD{r}))
+      push!(cases, ("D$r", k, Semisimple.TypeD{r}))
     end
   end
   for r in 6:min(7, max_rank)
     for k in 1:r
-      push!(cases, ("E$r", k, Lie.TypeE{r}))
+      push!(cases, ("E$r", k, Semisimple.TypeE{r}))
     end
   end
   if include_e8 && max_rank >= 8
     for k in 1:8
-      push!(cases, ("E8", k, Lie.TypeE{8}))
+      push!(cases, ("E8", k, Semisimple.TypeE{8}))
     end
   end
   if max_rank >= 4
     for k in 1:4
-      push!(cases, ("F4", k, Lie.TypeF4))
+      push!(cases, ("F4", k, Semisimple.TypeF4))
     end
   end
   if max_rank >= 2
     for k in 1:2
-      push!(cases, ("G2", k, Lie.TypeG2))
+      push!(cases, ("G2", k, Semisimple.TypeG2))
     end
   end
 
@@ -358,7 +358,7 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
   prog = Progress(n; desc="Computing G/P: ", showspeed=true)
 
   # Process each variety.
-  # Lie.jl caches are not thread-safe; use a lock around all Lie calls.
+  # Semisimple.jl caches are not thread-safe; use a lock around all Semisimple calls.
   for (idx, (label, k, DT)) in enumerate(cases)
     filename = "$(label)-P$(k).txt"
     filepath = joinpath(OUTPUT_DIR, filename)

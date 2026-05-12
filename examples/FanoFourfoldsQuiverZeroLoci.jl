@@ -22,7 +22,7 @@
 
 using PartialFlagVarieties
 using PartialFlagVarieties: AffineExpr, symbolic_variable, is_determined
-using Lie: rank
+using Semisimple: rank
 using Printf
 using Downloads
 using PrettyTables

@@ -19,7 +19,7 @@
 
 using PartialFlagVarieties
 using PrettyTables
-using Lie
+using Semisimple
 
 # ─── GL(n) weight → fundamental weight coordinates ───────────────────────────
 #  Identical to FanoFourfolds.jl.

@@ -14,9 +14,9 @@ using BenchmarkTools
 using Printf
 using Dates
 using PartialFlagVarieties
-using Lie
+using Semisimple
 
-import Lie: borel_weil_bott
+import Semisimple: borel_weil_bott
 
 # ─── CLI ────────────────────────────────────────────────────────────────────
 
@@ -74,9 +74,9 @@ function fmt_bytes(b)
   return @sprintf("%.1f GiB", b / 1024^3)
 end
 
-"""Clear all PartialFlagVarieties + Lie caches for cold benchmarking."""
+"""Clear all PartialFlagVarieties + Semisimple caches for cold benchmarking."""
 function clear_all_pfv_caches!()
-  Lie.clear_all_caches!()
+  Semisimple.clear_all_caches!()
   PartialFlagVarieties.clear_caches!()
   return nothing
 end
@@ -133,7 +133,7 @@ println("  JIT warmup complete.\n")
 header("1. Bundle algebra (cold)")
 
 # Exterior powers of tangent bundle — the core tensor decomposition workload
-# Each ∧ᵖT decomposes via multiexponents into IrrepLevi products calling Lie.jl
+# Each ∧ᵖT decomposes via multiexponents into IrrepLevi products calling Semisimple.jl
 
 function _bench_ext_power_tangent(X, p)
   clear_all_pfv_caches!()
@@ -169,7 +169,7 @@ for (label, X, k) in [
   report(label, b; category="bundle_algebra")
 end
 
-# Tensor product of non-trivial bundles (cold — triggers Lie.jl tensor_product)
+# Tensor product of non-trivial bundles (cold — triggers Semisimple.jl tensor_product)
 function _bench_tensor_product(X)
   clear_all_pfv_caches!()
   S = dual(universal_subbundle(X))

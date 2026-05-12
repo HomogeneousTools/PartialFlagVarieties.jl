@@ -22,7 +22,7 @@
 using Distributed
 using Printf
 using PartialFlagVarieties
-using Lie
+using Semisimple
 
 # Add worker processes before loading packages on them
 const NWORKERS = parse(Int, get(ENV, "JULIA_NUM_PROCS", "4"))
@@ -38,7 +38,7 @@ const BATCH_SIZE = parse(
 
 @everywhere begin
   using PartialFlagVarieties
-  using Lie
+  using Semisimple
   using JSON
 
   const WORKER_GC_EVERY = parse(Int, get(ENV, "FANO4_WORKER_GC_EVERY", "16"))

@@ -52,7 +52,7 @@ integers (the character coordinates times the
     - Advanced computations that need the central/semisimple coordinates
 
 !!! note "Caching of tensor products"
-    Tensor products of `IrrepLevi` decompose via Lie.jl character arithmetic,
+    Tensor products of `IrrepLevi` decompose via Semisimple.jl character arithmetic,
     which involves computing tensor product branching rules from Weyl character
     data. This is the hottest path in the package and is **LRU-cached**: see
     [`PartialFlagVarieties.configure_caches!`](@ref) for tuning the cache budget.

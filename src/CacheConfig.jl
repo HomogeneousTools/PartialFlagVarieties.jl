@@ -89,7 +89,7 @@ end
 """
     clear_caches!()
 
-Empty all PartialFlagVarieties LRU caches (does not affect Lie.jl caches).
+Empty all PartialFlagVarieties LRU caches (does not affect Semisimple.jl caches).
 Resets hit/miss counters.
 """
 function clear_caches!()

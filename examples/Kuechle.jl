@@ -20,7 +20,7 @@
 
 using PartialFlagVarieties
 using PrettyTables
-using Lie
+using Semisimple
 using Printf
 
 # =============================================================================

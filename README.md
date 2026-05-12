@@ -9,7 +9,7 @@ equivariant vector bundles, sheaf cohomology via the Borel–Weil–Bott theorem
 zero loci, Hodge numbers, Hochschild cohomology, exceptional collections,
 and more.
 
-Part of the [HomogeneousTools](https://homogeneous.tools) project, building on [Lie.jl](https://github.com/HomogeneousTools/Lie.jl).
+Part of the [HomogeneousTools](https://homogeneous.tools) project, building on [Semisimple.jl](https://github.com/HomogeneousTools/Semisimple.jl).
 
 ## Features
 
@@ -157,12 +157,12 @@ using Pkg
 Pkg.add([
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Base62"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Lie.jl"),
+  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Semisimple.jl"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
 ])
 ```
 
-`Base62`, `ZeroLocus62`, and `Lie.jl` are not currently available from the
+`Base62`, `ZeroLocus62`, and `Semisimple.jl` are not currently available from the
 General registry, so they must be added explicitly in a clean environment.
 Listing them in `Project.toml` records the dependency graph, but it does not
 teach `Pkg.add(url=...)` where to fetch unregistered dependencies when
