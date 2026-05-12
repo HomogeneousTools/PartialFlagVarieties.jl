@@ -43,7 +43,7 @@ reflecting to the dominant chamber), all cohomology vanishes and
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> borel_weil_bott(fundamental_weight(TypeA{2}, 1))
 (0, ω1)
@@ -79,7 +79,7 @@ Julia's usual `1:length(H)` convention.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -219,7 +219,7 @@ For each irreducible Levi component ``V_\\lambda`` of ``E``:
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -252,7 +252,7 @@ Convert character-valued cohomology to dimension-valued.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -366,7 +366,7 @@ Compute the Euler characteristic ``\\chi(E) = \\sum_i (-1)^i \\dim H^i(G/P, E)``
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -448,7 +448,7 @@ applies the Borel–Weil–Bott theorem, and accumulates
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -489,7 +489,7 @@ Requires the variety to be a generalized Grassmannian (one marked node).
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));  # ℙ⁴
 

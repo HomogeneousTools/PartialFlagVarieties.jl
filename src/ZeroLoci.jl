@@ -996,7 +996,7 @@ which is nef but not ample on ``X`` (its Picard coordinate at node 1 is zero).
 Nevertheless ``(-K_Z)^2 = 4 > 0``, so ``Z`` is weak Fano:
 
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{2}, (1, 2));
 

@@ -325,7 +325,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     par = positive_parabolic_roots(MDT)
 
     # Total = n_positive_roots(A3) = 6
-    @test length(nonpar) + length(par) == Lie.n_positive_roots(TypeA{3})
+    @test length(nonpar) + length(par) == n_positive_roots(TypeA{3})
 
     # dim(G/P) = number of nonparabolic positive roots
     X = partial_flag_variety(TypeA{3}, (2,))

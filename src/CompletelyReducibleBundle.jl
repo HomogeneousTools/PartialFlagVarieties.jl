@@ -50,7 +50,7 @@ encoded by repetition), together with the underlying [`PartialFlagVariety`](@ref
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -88,7 +88,7 @@ corresponding to the Levi representation of highest weight `λ`.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(3, 6);
 
@@ -112,7 +112,7 @@ Convenience constructor: build the direct sum of the equivariant bundles on
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(3, 6);
 
@@ -141,7 +141,7 @@ fundamental-weight coefficients.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(3, 6);
 
@@ -167,7 +167,7 @@ fundamental-weight coefficients in `coeffs_list`.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(3, 6);
 
@@ -218,7 +218,7 @@ Return the total rank (fiber dimension) of the bundle.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -242,7 +242,7 @@ The trivial line bundle ``\\mathcal{O}_{G/P}``.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -261,7 +261,7 @@ The trivial line bundle ``\\mathcal{O}_{G/P}``. Alias for `O`.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -278,7 +278,7 @@ The zero bundle on `X` (the empty direct sum).
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -306,7 +306,7 @@ error — use [`line_bundle(X, degrees)`](@ref) instead.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -335,7 +335,7 @@ degree at the ``j``-th marked node.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{3}, (1, 3));
 
@@ -481,7 +481,7 @@ nonparabolic root class, we get one irreducible Levi summand.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -505,7 +505,7 @@ The cotangent bundle ``\\Omega^1_{G/P} = T^*_{G/P}``.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -533,7 +533,7 @@ without constructing the (co)tangent bundle.  See `anticanonical_degrees`.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = projective_space(1);
 
@@ -572,7 +572,7 @@ See `anticanonical_degrees`.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = projective_space(1);
 
@@ -645,7 +645,7 @@ The dual bundle ``E^*``.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -668,7 +668,7 @@ Uses bilinearity: ``(\\bigoplus_i V_i) \\otimes (\\bigoplus_j W_j) = \\bigoplus_
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -726,7 +726,7 @@ where ``\\alpha`` runs over compositions (multiexponents) of ``k`` in
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -904,7 +904,7 @@ For a direct sum ``E = \\bigoplus_i V_i``, we use:
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
@@ -1003,7 +1003,7 @@ The determinant line bundle ``\\det(E) = \\bigwedge^{\\mathrm{rk}(E)} E``.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
@@ -1054,7 +1054,7 @@ Twist ``E`` by ``\\mathcal{O}(k)`` at the `i`-th marked node:
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 

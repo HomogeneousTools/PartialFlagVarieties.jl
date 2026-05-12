@@ -89,7 +89,7 @@ end
 """
     clear_caches!()
 
-Empty all PartialFlagVarieties LRU caches (does not affect Semisimple.jl caches).
+Empty all PartialFlagVarieties and Semisimple.jl LRU caches.
 Resets hit/miss counters.
 """
 function clear_caches!()
@@ -99,6 +99,7 @@ function clear_caches!()
   empty!(_COTANGENT_POWER_CACHE)
   empty!(_TENSOR_PRODUCT_CACHE)
   empty!(_BWB_PAIR_CACHE)
+  Semisimple.clear_all_caches!()
   nothing
 end
 

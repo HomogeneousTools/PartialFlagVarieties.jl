@@ -19,7 +19,7 @@ For an arbitrary partial flag variety, use `partial_flag_variety` directly with
 either a Dynkin type or a Dynkin-type string:
 
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{3}, (1, 3));
 

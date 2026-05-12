@@ -18,7 +18,7 @@ are cached on first use.
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> mdt = MarkedDynkinType(TypeA{4}, (2,));
 

@@ -10,7 +10,7 @@ its ambient ``P``-dominant weight together with its central and semisimple Levi
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = Gr(3, 6);
 

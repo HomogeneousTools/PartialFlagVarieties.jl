@@ -37,7 +37,6 @@ using PartialFlagVarieties
 using PartialFlagVarieties:
   fiber_dimension, IrrepLevi, components, n_components,
   to_ambient_weight, marked_type
-using Semisimple
 using PrettyTables
 using ProgressMeter
 using Combinatorics: multiexponents
@@ -59,7 +58,7 @@ function _superscript(n::Int)
 end
 
 function _format_weight(λ::WeightLatticeElem)
-  v = Lie.coefficients(λ)
+  v = coefficients(λ)
   parts = String[]
   for (i, c) in enumerate(v)
     c == 0 && continue
@@ -150,8 +149,7 @@ function _maybe_clear_caches!()
   if sz > CACHE_LIMIT_BYTES
     mb = round(sz / 1024^2; digits=1)
     @info "Cache size $(mb) MiB exceeds limit, clearing..."
-    Lie.clear_all_caches!()
-    PartialFlagVarieties.clear_caches!()
+    clear_caches!()
   end
 end
 
@@ -162,42 +160,42 @@ function _enumerate_cases(; include_e8::Bool=false, max_rank::Int=8)
 
   for r in 2:max_rank
     for k in 1:r
-      push!(cases, ("A$r", k, Semisimple.TypeA{r}))
+      push!(cases, ("A$r", k, TypeA{r}))
     end
   end
   for r in 2:max_rank
     for k in 1:r
-      push!(cases, ("B$r", k, Semisimple.TypeB{r}))
+      push!(cases, ("B$r", k, TypeB{r}))
     end
   end
   for r in 2:max_rank
     for k in 1:r
-      push!(cases, ("C$r", k, Semisimple.TypeC{r}))
+      push!(cases, ("C$r", k, TypeC{r}))
     end
   end
   for r in 4:max_rank
     for k in 1:r
-      push!(cases, ("D$r", k, Semisimple.TypeD{r}))
+      push!(cases, ("D$r", k, TypeD{r}))
     end
   end
   for r in 6:min(7, max_rank)
     for k in 1:r
-      push!(cases, ("E$r", k, Semisimple.TypeE{r}))
+      push!(cases, ("E$r", k, TypeE{r}))
     end
   end
   if include_e8 && max_rank >= 8
     for k in 1:8
-      push!(cases, ("E8", k, Semisimple.TypeE{8}))
+      push!(cases, ("E8", k, TypeE{8}))
     end
   end
   if max_rank >= 4
     for k in 1:4
-      push!(cases, ("F4", k, Semisimple.TypeF4))
+      push!(cases, ("F4", k, TypeF4))
     end
   end
   if max_rank >= 2
     for k in 1:2
-      push!(cases, ("G2", k, Semisimple.TypeG2))
+      push!(cases, ("G2", k, TypeG2))
     end
   end
 
@@ -390,8 +388,7 @@ function main(; include_e8::Bool=false, max_rank::Int=8)
 
     # Cache management: always clear after each variety to prevent memory bloat
     lock(LOCK) do
-      Lie.clear_all_caches!()
-      PartialFlagVarieties.clear_caches!()
+      clear_caches!()
     end
 
     next!(

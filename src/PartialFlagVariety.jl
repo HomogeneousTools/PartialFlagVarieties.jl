@@ -47,7 +47,7 @@ For a convenience alias, `PartialFlagVariety("A3", [2])` is equivalent to
 
 # Examples
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (2,));
 
