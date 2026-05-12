@@ -57,7 +57,7 @@ function universal_subbundle(X::PartialFlagVariety, n::Int=1)
   )
   DT = dynkin_type(X)
   R = rank(DT)
-  if n==1
+  if n == 1
     return dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1)))
   else #TODO: If n==2 and X is isotropic Grassmannian, return the dual of the quotient bundle.
     (n < 1 || n > R) &&
@@ -67,7 +67,7 @@ function universal_subbundle(X::PartialFlagVariety, n::Int=1)
 end
 
 """
-    universal_quotient_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle || FilteredBundle
+    universal_quotient_bundle(X::PartialFlagVariety) -> Union{CompletelyReducibleBundle, FilteredBundle}
 
 On type A, this is the equivariant bundle with weight ``\\omega_{n-1}``.
 For isotropic Grassmannians (types B, C, D), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
@@ -116,9 +116,8 @@ function universal_quotient_bundle(X::PartialFlagVariety)
   if DT <: TypeA
     return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   else
-    # U = universal_subbundle(X), R = residual_bundle(X). In this case the quotient Q^* = U^⟂ bundle fits into the s.e.s
-    # 0 -> U -> U^⟂ -> R -> 0
-    # So, the code returns the dual of a filtered bundle with subbundle U and quotient R.
+    # U = universal_subbundle(X), Res = residual_bundle(X). The orthogonal complement U^⟂ fits into
+    # 0 -> U -> U^⟂ -> Res -> 0, so Q = dual(U^⟂) is a filtered bundle with pieces dual(Res) and dual(U).
     if rank_bundle(residual_bundle(X)) == 0
       return dual(universal_subbundle(X))
     else
@@ -126,6 +125,7 @@ function universal_quotient_bundle(X::PartialFlagVariety)
     end
   end
 end
+
 """
     residual_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
@@ -153,7 +153,7 @@ true
 ```
 
 """
-function residual_bundle(X)
+function residual_bundle(X::PartialFlagVariety)
   is_generalized_grassmannian(X) || throw(
     ArgumentError(
       "residual_bundle requires a generalized Grassmannian (1 marked node)"
@@ -178,23 +178,23 @@ function residual_bundle(X)
     elseif marked == R - 1
       ω = 2 * fundamental_weight(DT, R) - fundamental_weight(DT, R - 1)
     else
-      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+      ω = fundamental_weight(DT, marked + 1) - fundamental_weight(DT, marked)
     end
   elseif DT <: TypeC
     if marked == R
       return zero_bundle(X)
     else
-      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+      ω = fundamental_weight(DT, marked + 1) - fundamental_weight(DT, marked)
     end
   elseif DT <: TypeD
-    if marked in (R, R-1)
+    if marked in (R, R - 1)
       return zero_bundle(X)
     elseif marked == R - 2
       ω =
         fundamental_weight(DT, R) + fundamental_weight(DT, R - 1) -
         fundamental_weight(DT, R - 2)
     else
-      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+      ω = fundamental_weight(DT, marked + 1) - fundamental_weight(DT, marked)
     end
   end
   return CompletelyReducibleBundle(X, ω)
@@ -309,7 +309,7 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
-#TODO Change name of tautological_bundles? residual budnles?
+#TODO Change name of tautological_bundles? residual bundles?
 """
     tautological_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
 
@@ -333,7 +333,7 @@ julia> length(τ)
 function tautological_bundles(X::PartialFlagVariety)
   if is_exceptional_type(X)
     throw(
-      ArgumentError("exceptional types do not have a well-defined tautological bundles")
+      ArgumentError("exceptional types do not have well-defined tautological bundles")
     )
   end
   DT = dynkin_type(X)
@@ -367,7 +367,7 @@ Compute the universal subbundles on a partial flag variety as filtered bundles.
 For **type A** partial flags ``Fl(d_1, \\ldots, d_k; n)``, returns a vector of filtered
 bundles where each element represents a nested subbundle. The first element is the
 first universal bundle (rank ``d_1``), and the ``i``-th element is a filtered bundle
-corresponding with the ``i``-th geometric universal subundle.
+corresponding with the ``i``-th geometric universal subbundle.
 
 These form the complete flag filtration:
 ``0 \\subset U_1 \\subset U_2 \\subset \\cdots \\subset U_k``
@@ -389,7 +389,7 @@ julia> rank_bundle(subs[2])
 """
 function universal_subbundles(X::PartialFlagVariety)
   is_exceptional_type(X) && throw(
-    ArgumentError("exceptional types do not have a well-defined universal subbundles")
+    ArgumentError("exceptional types do not have well-defined universal subbundles")
   )
   DT = dynkin_type(X)
   !(DT <: TypeA) && throw(
