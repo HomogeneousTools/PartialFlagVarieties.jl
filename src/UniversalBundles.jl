@@ -17,7 +17,7 @@ export tautological_bundles, universal_subbundles
 """
     universal_subbundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-On ``\\mathrm{Gr}(k, n) = A_{n-1}/P_k``, this is the irreducible equivariant
+On ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/P_k``, this is the irreducible equivariant
 bundle corresponding to the standard representation of the Levi factor.
 
 For orthogonal and symplectic Grassmannians, this returns the isotropic
@@ -69,12 +69,12 @@ end
 """
     universal_quotient_bundle(X::PartialFlagVariety) -> Union{CompletelyReducibleBundle, FilteredBundle}
 
-On type A, this is the equivariant bundle with weight ``\\omega_{n-1}``.
-For isotropic Grassmannians (types B, C, D), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
+On type ``\\mathrm{A}``, this is the equivariant bundle with weight ``\\omega_{n-1}``.
+For isotropic Grassmannians (types ``\\mathrm{B}``, ``\\mathrm{C}``, ``\\mathrm{D}``), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
 via the bilinear form.
 It has rank ``n - k`` on ``\\mathrm{Gr}(k, n)``.
 
-Only the type-``A`` case should be read as the literal geometric quotient
+Only the type-``\\mathrm{A}`` case should be read as the literal geometric quotient
 ``\\mathbb{C}^n / \\mathcal{U}``. For the isotropic cases the implementation
 returns the dual of the tautological bundle as the natural equivariant
 replacement.
@@ -129,9 +129,9 @@ end
 """
     residual_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-For types B, C, D, the residual bundle is the completely reducible bundle corresponding to U^⟂ / U.
+For types ``\\mathrm{B}``, ``\\mathrm{C}``, ``\\mathrm{D}``, the residual bundle is the completely reducible bundle corresponding to ``\\mathcal{U}^\\perp / \\mathcal{U}``.
 
-# Examples:
+# Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
@@ -210,17 +210,17 @@ end
 
 The spinor bundle on a quadric ``Q^n``.
 
-For **odd-dimensional** quadrics ``Q^{2m-1} = B_m/P_1``, there is a single
+For **odd-dimensional** quadrics ``Q^{2m-1} = \\mathrm{B}_m/P_1``, there is a single
 spinor bundle ``\\Sigma`` of rank ``2^{m-1}``, corresponding to the spin
 weight ``\\omega_m``.
 
-For **even-dimensional** quadrics ``Q^{2m-2} = D_m/P_1``, there are two
+For **even-dimensional** quadrics ``Q^{2m-2} = \\mathrm{D}_m/P_1``, there are two
 half-spinor bundles ``\\Sigma^+`` and ``\\Sigma^-`` of rank ``2^{m-2}``,
 corresponding to ``\\omega_{m-1}`` and ``\\omega_m`` respectively.
 Call `spinor_bundle(X, :plus)` or `spinor_bundle(X, :minus)` to select one.
 Without a `half` argument on an even quadric, both are returned as a direct sum.
 
-This function is only defined on quadrics, i.e. on ``B_m/P_1`` or ``D_m/P_1``.
+This function is only defined on quadrics, i.e. on ``\\mathrm{B}_m/P_1`` or ``\\mathrm{D}_m/P_1``.
 
 # Examples
 ```jldoctest
@@ -315,7 +315,7 @@ end
 
 Compute the tautological bundles on a partial flag variety ``Fl(d_1, \\ldots, d_k; n)``.
 
-For **type A** partial flags, returns a vector of completely reducible bundles, where
+For type ``\\mathrm{A}`` partial flags, returns a vector of completely reducible bundles, where
 each element corresponds to a tautological subbundle.
 
 # Examples
@@ -345,7 +345,7 @@ function tautological_bundles(X::PartialFlagVariety)
       push!(
         bundles,
         CompletelyReducibleBundle(
-          X, -fundamental_weight(DT, marked[i]) + fundamental_weight(DT, marked[i]-1)
+          X, -fundamental_weight(DT, marked[i]) + fundamental_weight(DT, marked[i] - 1)
         ),
       )
     end
@@ -364,7 +364,7 @@ end
 
 Compute the universal subbundles on a partial flag variety as filtered bundles.
 
-For **type A** partial flags ``Fl(d_1, \\ldots, d_k; n)``, returns a vector of filtered
+For type ``\\mathrm{A}`` partial flags ``Fl(d_1, \\ldots, d_k; n)``, returns a vector of filtered
 bundles where each element represents a nested subbundle. The first element is the
 first universal bundle (rank ``d_1``), and the ``i``-th element is a filtered bundle
 corresponding with the ``i``-th geometric universal subbundle.

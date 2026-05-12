@@ -398,12 +398,14 @@ end
 """
     is_exceptional_type(X::PartialFlagVariety) -> Bool
 
-Return `true` if the ambient Dynkin type is one of the exceptional types
-``E_6``, ``E_7``, ``E_8``, ``F_4``, or ``G_2``.
+Return `true` if the ambient Dynkin type contains an exceptional simple factor
+(``\\mathrm{E}_6``, ``\\mathrm{E}_7``, ``\\mathrm{E}_8``, ``\\mathrm{F}_4``, or ``\\mathrm{G}_2``).
 
-TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be considered exceptional.
+For product types, returns `true` if **any** component is exceptional. Note that
+``\\mathrm{G}_2/P_1 \\cong Q^5`` geometrically, but is still considered exceptional here since
+the Lie type is ``\\mathrm{G}_2``.
 
-#Examples:
+# Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
@@ -414,6 +416,7 @@ true
 ```
 """
 is_exceptional_type(X::PartialFlagVariety) = is_exceptional_type(dynkin_type(X))
+
 """
     is_coadjoint(X::PartialFlagVariety) -> Bool
 

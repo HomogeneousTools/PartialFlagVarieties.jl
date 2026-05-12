@@ -446,20 +446,27 @@ Base.:(==)(a::MarkedDynkinType, b::MarkedDynkinType) =
 Base.hash(mdt::MarkedDynkinType, h::UInt) = hash((dynkin_type(mdt), marked_nodes(mdt)), h)
 
 """
-    is_exceptional_type(DT: DynkinType) -> Bool
+    is_exceptional_type(DT::Type{<:DynkinType}) -> Bool
 
-Return `true` if the Dynkin type is one of the exceptional types
-``E_6``, ``E_7``, ``E_8``, ``F_4``, or ``G_2``.
+Return `true` if the Dynkin type contains an exceptional simple factor
+(``\\mathrm{E}_6``, ``\\mathrm{E}_7``, ``\\mathrm{E}_8``, ``\\mathrm{F}_4``, or ``\\mathrm{G}_2``).
 
-TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be considered exceptional.
+For product types, returns `true` if **any** component is exceptional.
+See [`is_exceptional_type(X::PartialFlagVariety)`](@ref) for the note on how
+``\\mathrm{G}_2`` varieties are classified.
 
-#Examples:
+# Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> DT = TypeE{6};
+julia> is_exceptional_type(TypeE{6})
+true
+```
 
-julia> is_exceptional_type(DT)
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_exceptional_type(ProductDynkinType{Tuple{TypeA{3}, TypeG2}})
 true
 ```
 """
@@ -467,12 +474,14 @@ is_exceptional_type(DT::Type{<:DynkinType}) = DT <: Union{TypeE,TypeF4,TypeG2}
 """
     is_exceptional_type(mdt::MarkedDynkinType) -> Bool
 
-Return `true` if the ambient Dynkin type of `mdt` is one of the exceptional types
-``E_6``, ``E_7``, ``E_8``, ``F_4``, or ``G_2``.
+Return `true` if the ambient Dynkin type of `mdt` contains an exceptional simple
+factor (``\\mathrm{E}_6``, ``\\mathrm{E}_7``, ``\\mathrm{E}_8``, ``\\mathrm{F}_4``, or ``\\mathrm{G}_2``).
 
-TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be considered exceptional.
+For product types, returns `true` if **any** component is exceptional.
+See [`is_exceptional_type(X::PartialFlagVariety)`](@ref) for the note on how
+``\\mathrm{G}_2`` varieties are classified.
 
-#Examples:
+# Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
