@@ -2,25 +2,20 @@
 #  UniversalBundles — tautological and spinor bundles on G/P
 #
 #  Provides universal (tautological) bundles on classical varieties:
-#  - Universal subbundle U and quotient bundle Q on Gr(k, n)
-#  - Tautological bundles on OGr, SGr, LGr
+#  - Universal subbundle U, quotient bundle Q and residual bundle R on isotropic Grassmannians.
 #  - Spinor bundles on quadrics Q^n
 #  - Tautological bundles on partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-export universal_subbundle, universal_quotient_bundle
+export universal_subbundle, universal_quotient_bundle, residual_bundle
 export spinor_bundle
-export tautological_bundles, quotient_bundles
+export tautological_bundles, universal_subbundles
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Type A: Grassmannians Gr(k, n) = A_{n-1}/P_k
+#  Generalized Grassmannians: universal, quotient and residual bundle
 # ═══════════════════════════════════════════════════════════════════════════════
-
 """
     universal_subbundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
-
-The universal (tautological) subbundle ``\\mathcal{U}`` on a Grassmannian
-``\\mathrm{Gr}(k, n)``.
 
 On ``\\mathrm{Gr}(k, n) = A_{n-1}/P_k``, this is the irreducible equivariant
 bundle corresponding to the standard representation of the Levi factor.
@@ -48,7 +43,7 @@ julia> rank_bundle(U)
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = Gr(3, 7);
+julia> X = OGr(3, 7);
 
 julia> U = universal_subbundle(X);
 
@@ -56,29 +51,23 @@ julia> rank_bundle(U)
 3
 ```
 """
-function universal_subbundle(X::PartialFlagVariety)
-  is_generalized_grassmannian(X) || throw(
-    ArgumentError(
-      "universal_subbundle requires a generalized Grassmannian (1 marked node)"
-    ),
+function universal_subbundle(X::PartialFlagVariety, n::Int=1)
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have a well-defined universal subbundle")
   )
-
-  mdt = marked_dynkin_type(X)
-
-  # The equivariant bundle with weight ω₁ is the dual U^∨ of the
-  # tautological subbundle (it has global sections = the standard
-  # representation, whereas U has none).  The universal subbundle is
-  # therefore the dual of this bundle.
-  ω = fundamental_weight(dynkin_type(mdt), 1)
-  rep = IrrepLevi(mdt, ω)
-  CompletelyReducibleBundle(X, [dual(rep)])
+  DT = dynkin_type(X)
+  R = rank(DT)
+  if n==1
+    return dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1)))
+  else #TODO: If n==2 and X is isotropic Grassmannian, return the dual of the quotient bundle.
+    (n < 1 || n > R) &&
+      throw(ArgumentError("n must be between 1 and the rank of the variety"))
+    return universal_subbundles(X)[n]
+  end
 end
 
 """
-    universal_quotient_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
-
-The universal quotient bundle ``\\mathcal{Q}`` on a Grassmannian
-``\\mathrm{Gr}(k, n)``.
+    universal_quotient_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle || FilteredBundle
 
 On type A, this is the equivariant bundle with weight ``\\omega_{n-1}``.
 For isotropic Grassmannians (types B, C, D), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
@@ -117,33 +106,98 @@ function universal_quotient_bundle(X::PartialFlagVariety)
       "universal_quotient_bundle requires a generalized Grassmannian (1 marked node)"
     ),
   )
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have a well-defined universal quotient bundle")
+  )
 
-  mdt = marked_dynkin_type(X)
-  DT = dynkin_type(mdt)
-
-  marked = marked_nodes(mdt)[1]
+  DT = dynkin_type(X)
   R = rank(DT)
 
   if DT <: TypeA
-    # On Gr(k, n) = A_{n-1}/P_k, the quotient bundle Q = C^n/U corresponds
-    # to the last fundamental weight ω_{n-1} of the ambient A_{n-1}.
-    # Under the Levi A_{k-1} × A_{n-k-1}, this has fiber dimension n-k.
-    ω = fundamental_weight(DT, R)
-    return CompletelyReducibleBundle(X, ω)
+    return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
+  else
+    # U = universal_subbundle(X), R = residual_bundle(X). In this case the quotient Q^* = U^⟂ bundle fits into the s.e.s
+    # 0 -> U -> U^⟂ -> R -> 0
+    # So, the code returns the dual of a filtered bundle with subbundle U and quotient R.
+    if rank_bundle(residual_bundle(X)) == 0
+      return dual(universal_subbundle(X))
+    else
+      return dual(FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)]))
+    end
   end
+end
+"""
+    residual_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-  if DT <: TypeC && marked != R
-    rep = IrrepLevi(mdt, fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked))
-    return CompletelyReducibleBundle(X, [rep])
-  end
-  if DT <: TypeB &&  !(marked in (R,R-1)) 
-    rep = IrrepLevi(mdt, fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked))
-    return CompletelyReducibleBundle(X, [rep])
-  end
+For types B, C, D, the residual bundle is the completely reducible bundle corresponding to U^⟂ / U.
 
-  error(
-    "universal_quotient_bundle is not yet implemented for Dynkin type $(DT) with marked node $(marked). "
+# Examples:
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = OGr(3, 9);
+
+julia> R = residual_bundle(X);
+
+julia> rank_bundle(R)
+3
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = SGr(3, 8);
+
+julia> rank_bundle(residual_bundle(X)) + rank_bundle(universal_subbundle(X)) == rank_bundle(universal_quotient_bundle(X))
+true
+```
+
+"""
+function residual_bundle(X)
+  is_generalized_grassmannian(X) || throw(
+    ArgumentError(
+      "residual_bundle requires a generalized Grassmannian (1 marked node)"
+    ),
   )
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have a well-defined residual bundle")
+  )
+
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)[1]
+  R = rank(DT)
+
+  marked == 1 && throw(
+    ArgumentError("not implemented for marked node 1")
+  )
+  if DT <: TypeA
+    throw(ArgumentError("type A do not have a well-defined residual bundle"))
+  elseif DT <: TypeB
+    if marked == R
+      ω = WeightLatticeElem(DT)
+    elseif marked == R - 1
+      ω = 2 * fundamental_weight(DT, R) - fundamental_weight(DT, R - 1)
+    else
+      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+    end
+  elseif DT <: TypeC
+    if marked == R
+      return zero_bundle(X)
+    else
+      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+    end
+  elseif DT <: TypeD
+    if marked in (R, R-1)
+      return zero_bundle(X)
+    elseif marked == R - 2
+      ω =
+        fundamental_weight(DT, R) + fundamental_weight(DT, R - 1) -
+        fundamental_weight(DT, R - 2)
+    else
+      ω = fundamental_weight(DT, marked+1) - fundamental_weight(DT, marked)
+    end
+  end
+  return CompletelyReducibleBundle(X, ω)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -255,86 +309,100 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
-
+#TODO Change name of tautological_bundles? residual budnles?
 """
     tautological_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
 
-The chain of tautological subbundles on a partial flag variety.
+Compute the tautological bundles on a partial flag variety ``Fl(d_1, \\ldots, d_k; n)``.
 
-For ``\\mathrm{Fl}(d_1, \\ldots, d_k; n) = A_{n-1}/P_{\\{d_1,\\ldots,d_k\\}}``,
-returns one completely reducible bundle attached to each marked node
-``d_i``, corresponding to the ambient fundamental weight ``\\omega_{d_i}``.
-
-For a Grassmannian (one marked node), this returns a single-element vector
-containing the universal subbundle and agrees with the geometric tautological
-bundle.
-
-For multi-step flags, these are **not** the literal geometric tautological
-subbundles ``\\mathcal{U}_i`` inside a nested flag. The geometric bundles are
-filtered objects, while this function returns the completely reducible pieces
-that are most useful for representation-theoretic computations.
+For **type A** partial flags, returns a vector of completely reducible bundles, where
+each element corresponds to a tautological subbundle.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = flag_variety(4, (1, 2));  # Fl(1,2; 4)
+julia> X = Fl(1, 2; 4);  # Flag variety Fl(1,2; 4)
 
-julia> Us = tautological_bundles(X);
+julia> τ = tautological_bundles(X);
 
-julia> length(Us)
+julia> length(τ)
 2
 ```
-
-!!! note
-    On partial flag varieties with multiple marked nodes, the irreducible
-    equivariant bundles ``E_{\\omega_m}`` are **not** the geometric tautological
-    subbundles, which are filtered extensions rather than completely reducible
-    bundles.
 """
 function tautological_bundles(X::PartialFlagVariety)
-  # For type A flags Fl(d₁,...,dₖ; n) = A_{n-1}/P_{d₁,...,dₖ},
-  # the tautological subbundles 𝒰_i have weights corresponding to
-  # ω_{d_i} (the d_i-th fundamental weight of the ambient A_{n-1}).
-  # Each gives 𝒰_i of rank d_i.
-  mdt = marked_dynkin_type(X)
-  DT = dynkin_type(mdt)
-  result = CompletelyReducibleBundle[]
-  for m in marked_nodes(mdt)
-    ω = fundamental_weight(DT, m)
-    push!(result, CompletelyReducibleBundle(X, ω))
+  if is_exceptional_type(X)
+    throw(
+      ArgumentError("exceptional types do not have a well-defined tautological bundles")
+    )
   end
-  result
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)
+  if DT <: TypeA
+    bundles = Vector{CompletelyReducibleBundle}()
+    push!(bundles, dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1))))
+    for i in 2:length(marked)
+      push!(
+        bundles,
+        CompletelyReducibleBundle(
+          X, -fundamental_weight(DT, marked[i]) + fundamental_weight(DT, marked[i]-1)
+        ),
+      )
+    end
+    return bundles
+  else
+    throw(
+      ArgumentError(
+        "tautological_bundles not implemented for non-type A partial flag varieties"
+      ),
+    ) #TODO: Implement for other types.
+  end
 end
 
 """
-    quotient_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
+    universal_subbundles(X::PartialFlagVariety) -> Vector{Bundle}
 
-The dual of each tautological bundle at each marked node.
+Compute the universal subbundles on a partial flag variety as filtered bundles.
 
-For a Grassmannian, use [`universal_quotient_bundle`](@ref) instead, which
-gives the geometrically correct quotient ``\\mathbb{C}^n / \\mathcal{U}``.
+For **type A** partial flags ``Fl(d_1, \\ldots, d_k; n)``, returns a vector of filtered
+bundles where each element represents a nested subbundle. The first element is the
+first universal bundle (rank ``d_1``), and the ``i``-th element is a filtered bundle
+corresponding with the ``i``-th geometric universal subundle.
 
-For multi-step flags this should again be interpreted as a collection of
-convenient completely reducible bundles attached to the marked nodes, not as
-the literal successive quotients of a tautological flag.
+These form the complete flag filtration:
+``0 \\subset U_1 \\subset U_2 \\subset \\cdots \\subset U_k``
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = Gr(2, 5);
+julia> X = Fl(1, 2; 4);  # Flag variety Fl(1,2; 4)
 
-julia> Qs = quotient_bundles(X);
+julia> subs = universal_subbundles(X);
 
-julia> length(Qs)
+julia> rank_bundle(subs[1])
 1
+
+julia> rank_bundle(subs[2])
+2
 ```
 """
-function quotient_bundles(X::PartialFlagVariety)
-  [dual(U) for U in tautological_bundles(X)]
+function universal_subbundles(X::PartialFlagVariety)
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have a well-defined universal subbundles")
+  )
+  DT = dynkin_type(X)
+  !(DT <: TypeA) && throw(
+    ArgumentError(
+      "universal_subbundles currently only implemented for type A partial flag varieties"
+    ),
+  )#TODO: Implement for other types.
+  marked = marked_nodes(X)
+  bundles = Vector{Bundle}()
+  τ = tautological_bundles(X)
+  push!(bundles, τ[1])
+  for i in 2:length(marked)
+    push!(bundles, FilteredBundle(X, τ[1:i]))
+  end
+  return bundles
 end
-
-# ─── Display ─────────────────────────────────────────────────────────────────
-
-# No special display needed; these return CompletelyReducibleBundle
