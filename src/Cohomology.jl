@@ -23,9 +23,9 @@ export borel_weil_bott
 
 function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
   DT = typeof(λ).parameters[1]
-  ρ = Lie.weyl_vector(DT)
+  ρ = weyl_vector(DT)
   μ = λ + ρ
-  μ_dom, d = Lie.conjugate_dominant_weight_with_length(μ)
+  μ_dom, d = conjugate_dominant_weight_with_length(μ)
   any(==(0), μ_dom.vec) && return nothing
   (d, μ_dom - ρ)
 end
@@ -51,7 +51,7 @@ julia> borel_weil_bott(fundamental_weight(TypeA{2}, 1))
 julia> borel_weil_bott(fundamental_weight(TypeA{2}, 1) * 0)
 (0, 0)
 
-julia> borel_weil_bott(-Lie.weyl_vector(TypeA{2})) === nothing
+julia> borel_weil_bott(-weyl_vector(TypeA{2})) === nothing
 true
 ```
 """

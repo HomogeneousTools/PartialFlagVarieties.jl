@@ -65,12 +65,12 @@ include("CacheConfig.jl")
 
 using Semisimple: TypeA, TypeB, TypeC, TypeD, TypeE, TypeF4, TypeG2
 using Semisimple: DynkinType, SimpleDynkinType, ProductDynkinType
-using Semisimple: WeightLatticeElem, WeylCharacter, fundamental_weight
+using Semisimple: WeightLatticeElem, WeylCharacter, fundamental_weight, weyl_vector
 using Semisimple: coefficients
 
 export TypeA, TypeB, TypeC, TypeD, TypeE, TypeF4, TypeG2
 export DynkinType, SimpleDynkinType, ProductDynkinType
-export WeightLatticeElem, WeylCharacter, fundamental_weight
+export WeightLatticeElem, WeylCharacter, fundamental_weight, weyl_vector
 export rank
 export coefficients
 export degree

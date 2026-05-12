@@ -210,7 +210,7 @@ marked_dynkin_type(X::PartialFlagVariety) = X.mdt
 dynkin_type(X::PartialFlagVariety) = dynkin_type(X.mdt)
 marked_nodes(X::PartialFlagVariety) = marked_nodes(X.mdt)
 unmarked_nodes(X::PartialFlagVariety) = unmarked_nodes(X.mdt)
-Lie.rank(X::PartialFlagVariety) = rank(dynkin_type(X))
+rank(X::PartialFlagVariety) = rank(dynkin_type(X))
 
 """
     dimension(X::PartialFlagVariety) -> Int
@@ -444,7 +444,7 @@ function anticanonical_degrees(X::PartialFlagVariety)
   marked = marked_nodes(X)
   unmarked = unmarked_nodes(X)
   n = length(unmarked)
-  C = Lie._cartan_matrix_data(DT)
+  C = Semisimple._cartan_matrix_data(DT)
 
   if n == 0
     return fill(2, length(marked))

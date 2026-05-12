@@ -862,7 +862,7 @@ function _anticanonical_central(mdt::MarkedDynkinType)
   K = length(Marked)
   sf = central_scaling_factor(mdt)
   DT = _ambient_type(mdt)
-  Cinv = Lie.cartan_matrix_inverse(DT)
+  Cinv = cartan_matrix_inverse(DT)
   degs = anticanonical_degrees(PartialFlagVariety(mdt))
 
   # central[i] = Σ_{j=1}^K  round(Int, Cinv[Marked[i], Marked[j]] * sf) * degs[j]

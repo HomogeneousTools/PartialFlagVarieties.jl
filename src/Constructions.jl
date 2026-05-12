@@ -323,9 +323,9 @@ function adjoint_variety(::Type{DT}) where {DT<:SimpleDynkinType}
 
   # Determine the adjoint node
   DT <: TypeA && return _adjoint_A(DT)
-  DT <: TypeB && return partial_flag_variety(DT, (2,), "Adj($(Lie._type_name(DT)))")
-  DT <: TypeC && return partial_flag_variety(DT, (1,), "Adj($(Lie._type_name(DT)))")
-  DT <: TypeD && return partial_flag_variety(DT, (2,), "Adj($(Lie._type_name(DT)))")
+  DT <: TypeB && return partial_flag_variety(DT, (2,), "Adj($(Semisimple._type_name(DT)))")
+  DT <: TypeC && return partial_flag_variety(DT, (1,), "Adj($(Semisimple._type_name(DT)))")
+  DT <: TypeD && return partial_flag_variety(DT, (2,), "Adj($(Semisimple._type_name(DT)))")
   DT <: TypeE{6} && return partial_flag_variety(DT, (2,), "Adj(E₆)")
   DT <: TypeE{7} && return partial_flag_variety(DT, (1,), "Adj(E₇)")
   DT <: TypeE{8} && return partial_flag_variety(DT, (8,), "Adj(E₈)")
@@ -337,7 +337,7 @@ end
 
 function _adjoint_A(::Type{DT}) where {DT<:TypeA}
   R = rank(DT)
-  return partial_flag_variety(DT, (1, R), "Adj($(Lie._type_name(DT)))")
+  return partial_flag_variety(DT, (1, R), "Adj($(Semisimple._type_name(DT)))")
 end
 
 """
@@ -362,9 +362,12 @@ function coadjoint_variety(::Type{DT}) where {DT<:SimpleDynkinType}
   R = rank(DT)
 
   DT <: TypeA && return _adjoint_A(DT)  # self-dual
-  DT <: TypeB && return partial_flag_variety(DT, (1,), "Coadj($(Lie._type_name(DT)))")
-  DT <: TypeC && return partial_flag_variety(DT, (2,), "Coadj($(Lie._type_name(DT)))")
-  DT <: TypeD && return partial_flag_variety(DT, (2,), "Coadj($(Lie._type_name(DT)))")
+  DT <: TypeB &&
+    return partial_flag_variety(DT, (1,), "Coadj($(Semisimple._type_name(DT)))")
+  DT <: TypeC &&
+    return partial_flag_variety(DT, (2,), "Coadj($(Semisimple._type_name(DT)))")
+  DT <: TypeD &&
+    return partial_flag_variety(DT, (2,), "Coadj($(Semisimple._type_name(DT)))")
   DT <: TypeE{6} && return partial_flag_variety(DT, (2,), "Coadj(E₆)")
   DT <: TypeE{7} && return partial_flag_variety(DT, (1,), "Coadj(E₇)")
   DT <: TypeE{8} && return partial_flag_variety(DT, (8,), "Coadj(E₈)")

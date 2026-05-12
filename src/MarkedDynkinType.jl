@@ -41,7 +41,7 @@ struct MarkedDynkinType
     for m in marked
       1 <= m <= R || throw(
         ArgumentError(
-          "Marked node $m is out of range for $(Lie._type_name(dynkin)) (rank $R)"
+          "Marked node $m is out of range for $(Semisimple._type_name(dynkin)) (rank $R)"
         ),
       )
     end
@@ -115,7 +115,7 @@ function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
     levi = nothing
     perm = ()
   else
-    C = Lie._cartan_matrix_data(DT)
+    C = Semisimple._cartan_matrix_data(DT)
     idx = collect(unmarked)
     C_sub = C[idx, idx]
     ct = cartan_type(C_sub)
@@ -124,7 +124,7 @@ function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
     perm = Tuple(ord)
   end
 
-  Cinv = Lie.cartan_matrix_inverse(DT)
+  Cinv = cartan_matrix_inverse(DT)
   sf = 1
   for j in marked
     for k in 1:R
@@ -260,7 +260,7 @@ coordinates.
 @inline decomposition_matrix_inv(mdt::MarkedDynkinType) =
   _mdt_data(mdt).decomposition_matrix_inv
 
-Lie.rank(mdt::MarkedDynkinType) = rank(dynkin_type(mdt))
+rank(mdt::MarkedDynkinType) = rank(dynkin_type(mdt))
 
 """
     dimension(mdt::MarkedDynkinType) -> Int
@@ -363,7 +363,9 @@ end
 _ambient_type(mdt::MarkedDynkinType) = dynkin_type(mdt)
 
 function Base.show(io::IO, mdt::MarkedDynkinType)
-  print(io, "$(Lie._type_name(dynkin_type(mdt))) / P_{$(join(marked_nodes(mdt), ","))}")
+  print(
+    io, "$(Semisimple._type_name(dynkin_type(mdt))) / P_{$(join(marked_nodes(mdt), ","))}"
+  )
 end
 
 """

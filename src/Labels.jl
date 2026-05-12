@@ -120,7 +120,7 @@ end
 Split a weight's coefficient vector into per-factor weight vectors.
 """
 function _weight_to_summand_row(λ::WeightLatticeElem, factor_ranks::Vector{Int})
-  coeffs = Int[c for c in Lie.coefficients(λ)]
+  coeffs = Int[c for c in coefficients(λ)]
   row = Vector{Vector{Int}}()
   offset = 1
   for r in factor_ranks

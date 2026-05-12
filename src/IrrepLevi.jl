@@ -157,7 +157,7 @@ function IrrepLevi(
   end
 
   if !isempty(unmarked)
-    ss_vec = Lie.coefficients(semisimple)
+    ss_vec = coefficients(semisimple)
     LR = length(ss_vec)
     if LR > 0
       perm = levi_permutation(mdt)
@@ -242,14 +242,14 @@ function _tensor_product_terms(a::IrrepLevi, b::IrrepLevi)
   end
 end
 
-_dual_semisimple_generic(@nospecialize(ss::WeightLatticeElem)) = Lie.dual(ss)
+_dual_semisimple_generic(@nospecialize(ss::WeightLatticeElem)) = dual(ss)
 _tensor_product_character_generic(
 @nospecialize(a::WeightLatticeElem), @nospecialize(b::WeightLatticeElem)
-) = Lie.tensor_product(a, b)
-_exterior_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = Lie.exterior_power(
+) = tensor_product(a, b)
+_exterior_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = exterior_power(
   ss, k
 )
-_symmetric_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = Lie.symmetric_power(
+_symmetric_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = symmetric_power(
   ss, k
 )
 
