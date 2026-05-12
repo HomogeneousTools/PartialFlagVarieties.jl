@@ -405,7 +405,7 @@ TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be consi
 
 #Examples:
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety("E6", 2);
 

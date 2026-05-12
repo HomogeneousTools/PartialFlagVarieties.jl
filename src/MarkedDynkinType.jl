@@ -455,7 +455,7 @@ TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be consi
 
 #Examples:
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> DT = TypeE{6};
 
@@ -474,7 +474,7 @@ TODO: do it also for products of dynkin types, e.g. `E_6 × A_1` should be consi
 
 #Examples:
 ```jldoctest
-julia> using PartialFlagVarieties, Lie
+julia> using PartialFlagVarieties
 
 julia> mdt = MarkedDynkinType(TypeE{6}, (2,));
 
