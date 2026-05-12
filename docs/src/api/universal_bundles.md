@@ -4,7 +4,7 @@ Tautological (universal) bundles and spinor bundles on classical varieties.
 
 The geometric meaning is straightforward on generalized Grassmannians and
 quadrics. On multi-step type-A flag varieties, however,
-[`tautological_bundles`](@ref) and [`quotient_bundles`](@ref) should be read as
+[`tautological_bundles`](@ref) and [`universal_subbundles`](@ref) should be read as
 **convenient equivariant building blocks** attached to the marked nodes, not as
 literal filtered subbundles or quotients inside a full tautological flag.
 
@@ -30,5 +30,5 @@ spinor_bundle
 
 ```@docs
 tautological_bundles
-quotient_bundles
+universal_subbundles
 ```

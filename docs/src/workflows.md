@@ -58,7 +58,7 @@ F = direct_sum(E, canonical_bundle(X))
 ```
 
 For multi-step type-A flags, [`tautological_bundles`](@ref) and
-[`quotient_bundles`](@ref) are best thought of as **convenient equivariant
+[`universal_subbundles`](@ref) are best thought of as **convenient equivariant
 building blocks**, not literal geometric tautological flags.
 
 ## Study a zero locus
