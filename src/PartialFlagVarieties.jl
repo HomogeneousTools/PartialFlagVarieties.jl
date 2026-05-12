@@ -60,7 +60,6 @@ include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
 include("CacheConfig.jl")
-include("SpectralSequence.jl")
 
 # ─── Reexport commonly used Lie.jl types ─────────────────────────────────────
 
