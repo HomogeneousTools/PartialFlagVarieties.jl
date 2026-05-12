@@ -1137,6 +1137,53 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(Us[1]) == 1
     @test rank_bundle(universal_subbundles(X6)[3]) == 4
     @test dimensions(cohomology(dual(τ[3]) ⊗ Us[2].pieces[2]))[1] == 1
+
+    # universal_subbundle with explicit n > 1
+    @test rank_bundle(universal_subbundle(X6, 2)) == 2
+    @test rank_bundle(universal_subbundle(X6, 3)) == 4
+
+    # tautological_bundles / universal_subbundles: non-type-A error paths
+    @test_throws ArgumentError tautological_bundles(OGr(2, 5))
+    @test_throws ArgumentError universal_subbundles(OGr(2, 5))
+
+    # residual_bundle: TypeB marked == R (OGr(3,7) = B_3/P_3, rank 7-2*3=1)
+    @test rank_bundle(residual_bundle(OGr(3, 7))) == 1
+
+    # residual_bundle: TypeB else, k < R-1 (OGr(2,9) = B_4/P_2, rank 9-2*2=5)
+    @test rank_bundle(residual_bundle(OGr(2, 9))) == 5
+
+    # residual_bundle: TypeC marked == R (SGr(4,8) = C_4/P_4, Lagrangian)
+    @test rank_bundle(residual_bundle(SGr(4, 8))) == 0
+
+    # residual_bundle: TypeD marked in (R, R-1) (spinor varieties)
+    @test rank_bundle(residual_bundle(OGr(4, 10))) == 0  # D_5/P_4
+    @test rank_bundle(residual_bundle(OGr(5, 10))) == 0  # D_5/P_5
+
+    # residual_bundle: TypeD else, k < R-2 (OGr(2,10) = D_5/P_2, rank 10-2*2=6)
+    @test rank_bundle(residual_bundle(OGr(2, 10))) == 6
+  end
+
+  @testset "is_exceptional_type" begin
+    # Simple exceptional types
+    @test is_exceptional_type(TypeE{6})
+    @test is_exceptional_type(TypeE{7})
+    @test is_exceptional_type(TypeE{8})
+    @test is_exceptional_type(TypeF4)
+    @test is_exceptional_type(TypeG2)
+
+    # Simple classical types (negative cases)
+    @test !is_exceptional_type(TypeA{4})
+    @test !is_exceptional_type(TypeB{4})
+    @test !is_exceptional_type(TypeC{4})
+    @test !is_exceptional_type(TypeD{4})
+
+    # Product types
+    @test is_exceptional_type(ProductDynkinType{Tuple{TypeA{3}, TypeG2}})
+    @test !is_exceptional_type(ProductDynkinType{Tuple{TypeA{3}, TypeB{4}}})
+
+    # Variety level
+    @test is_exceptional_type(partial_flag_variety("E6", 2))
+    @test !is_exceptional_type(Gr(2, 5))
   end
 
   @testset "Spinor bundles" begin
