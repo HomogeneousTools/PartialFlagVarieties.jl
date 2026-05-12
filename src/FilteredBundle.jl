@@ -15,6 +15,7 @@
 
 export FilteredBundle
 export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
 # ═══════════════════════════════════════════════════════════════════════════════
