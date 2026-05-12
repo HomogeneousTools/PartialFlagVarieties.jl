@@ -2,8 +2,7 @@
 #  UniversalBundles — tautological and spinor bundles on G/P
 #
 #  Provides universal (tautological) bundles on classical varieties:
-#  - Universal subbundle U and quotient bundle Q on Gr(k, n)
-#  - Tautological bundles on OGr, SGr, LGr
+#  - Universal subbundle U, quotient bundle Q and residual bundle R on isotropic Grassmannians.
 #  - Spinor bundles on quadrics Q^n
 #  - Tautological bundles on partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -316,7 +315,7 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
-#TODO Change name of tautological_bundles?
+#TODO Change name of tautological_bundles? residual budnles?
 """
     tautological_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
 
@@ -403,7 +402,7 @@ function universal_subbundles(X::PartialFlagVariety)
     ArgumentError(
       "universal_subbundles currently only implemented for type A partial flag varieties"
     ),
-  )
+  )#TODO: Implement for other types.
   marked = marked_nodes(X)
   bundles = Vector{Bundle}()
   τ = tautological_bundles(X)
