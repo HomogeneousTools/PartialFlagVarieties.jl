@@ -24,7 +24,6 @@
 
 using PartialFlagVarieties
 using PrettyTables
-using Semisimple
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Enumeration of completely reducible bundles
@@ -90,8 +89,7 @@ together with their rank and determinant central character.
 """
 function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
   mdt = marked_dynkin_type(X)
-  DT = PartialFlagVarieties._ambient_type(mdt)
-  R = Lie.rank(DT)
+  R = rank(mdt)
   Marked = marked_nodes(mdt)
 
   candidates = Tuple{CompletelyReducibleBundle,BigInt,Vector{Int}}[]

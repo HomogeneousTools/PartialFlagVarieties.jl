@@ -22,7 +22,6 @@
 using Distributed
 using Printf
 using PartialFlagVarieties
-using Semisimple
 
 # Add worker processes before loading packages on them
 const NWORKERS = parse(Int, get(ENV, "JULIA_NUM_PROCS", "4"))
@@ -38,7 +37,6 @@ const BATCH_SIZE = parse(
 
 @everywhere begin
   using PartialFlagVarieties
-  using Semisimple
   using JSON
 
   const WORKER_GC_EVERY = parse(Int, get(ENV, "FANO4_WORKER_GC_EVERY", "16"))
@@ -46,8 +44,7 @@ const BATCH_SIZE = parse(
   const WORKER_KEEP_MISMATCH_DETAILS = get(ENV, "FANO4_KEEP_MISMATCH_DETAILS", "0") == "1"
 
   function clear_worker_caches!()
-    Lie.clear_all_caches!()
-    PartialFlagVarieties.clear_caches!()
+    clear_caches!()
     GC.gc(true)
     nothing
   end
@@ -569,8 +566,7 @@ function main(; datafile=nothing, max_entries=typemax(Int))
       batch_stop = min(batch_start + BATCH_SIZE - 1, n_run)
       batch = entries_with_indices[batch_start:batch_stop]
       append!(results, pmap(process_entry, batch))
-      Lie.clear_all_caches!()
-      PartialFlagVarieties.clear_caches!()
+      clear_caches!()
       GC.gc(false)
       for pid in workers()
         remotecall_wait(GC.gc, pid, false)

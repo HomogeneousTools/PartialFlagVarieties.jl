@@ -36,7 +36,6 @@
 
 using Downloads
 using JSON
-using Semisimple: rank
 using PartialFlagVarieties
 using PrettyTables
 using Printf

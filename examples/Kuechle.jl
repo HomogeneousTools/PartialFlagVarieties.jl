@@ -20,7 +20,6 @@
 
 using PartialFlagVarieties
 using PrettyTables
-using Semisimple
 using Printf
 
 # =============================================================================
