@@ -272,6 +272,19 @@ const _BWB_PAIR_CACHE = let b = _default_cache_budget()
     by=Base.summarysize,
   )
 end
+const _COTANGENT_POWER_CACHE = let b = _default_cache_budget()
+  LRU{Tuple{MarkedDynkinType,Int},CompletelyReducibleBundle}(;
+    maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.1),
+    by=Base.summarysize,
+  )
+end
+
+function _cotangent_power(X::PartialFlagVariety, j::Int)
+  mdt = marked_dynkin_type(X)
+  get!(_COTANGENT_POWER_CACHE, (mdt, j)) do
+    exterior_power(cotangent_bundle(X), j)
+  end
+end
 
 """
 Compute and cache the BWB contributions `[(deg, dim), ...]` for
@@ -280,16 +293,15 @@ acyclic.
 """
 function _bwb_pair(a::IrrepLevi, b::IrrepLevi)
   get!(_BWB_PAIR_CACHE, (a, b)) do
-    tp = tensor_product(a, b)
-    result = Pair{Int,BigInt}[]
-    for c in tp
+    by_degree = Dict{Int,BigInt}()
+    for (c, mult) in _tensor_product_terms(a, b)
       λ = p_dominant_weight(c)
       bwb = borel_weil_bott(λ)
       bwb === nothing && continue
       deg, μ = bwb
-      push!(result, deg => BigInt(degree(μ)))
+      by_degree[deg] = get(by_degree, deg, BigInt(0)) + BigInt(mult) * BigInt(degree(μ))
     end
-    result
+    Pair{Int,BigInt}[deg => dim for (deg, dim) in by_degree]
   end
 end
 
@@ -360,14 +372,19 @@ Dict-accepting overload: skips CRB construction entirely.
 function _koszul_dimensions(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}
 )
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
+  _koszul_dimensions(Z, f_counts, wedge_counts)
+end
+
+function _koszul_dimensions(
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int},
+  wedge_counts::Vector{Dict{IrrepLevi,Int}},
+)
   d = dimension(Z.ambient)
 
-  wedges = _koszul_wedges!(Z)
-  result = Vector{Cohomology{BigInt}}(undef, length(wedges))
+  result = Vector{Cohomology{BigInt}}(undef, length(wedge_counts))
 
-  for (wi, w) in enumerate(wedges)
-    w_counts = _to_counts(w)
-
+  for (wi, w_counts) in enumerate(wedge_counts)
     entries = zeros(BigInt, d + 1)
     for (a, ma) in f_counts
       for (b, mb) in w_counts
@@ -537,18 +554,10 @@ function cohomology_on_restriction(
     # Cross-validate: if both numeric results satisfy the Euler characteristic
     # constraint AND are Serre-dual to each other, the pair is consistent with
     # all available constraints and the result can be trusted.
-    chi_exact = sum(
-      (isodd(i) ? 1 : -1) * euler_characteristic(koszul_cohos[i]) for
-      i in eachindex(koszul_cohos);
-      init=BigInt(0),
-    )
+    chi_exact = _alternating_euler_characteristic(koszul_cohos)
     chi_numeric = euler_characteristic(H)
 
-    chi_exact_dual = sum(
-      (isodd(i) ? 1 : -1) * euler_characteristic(koszul_cohos_dual[i]) for
-      i in eachindex(koszul_cohos_dual);
-      init=BigInt(0),
-    )
+    chi_exact_dual = _alternating_euler_characteristic(koszul_cohos_dual)
     chi_numeric_dual = euler_characteristic(H_dual)
 
     serre_consistent = all(H[k] == H_dual[d_Z - k] for k in 0:d_Z)
@@ -675,16 +684,25 @@ Falls back to the numeric path when fully determined.
 function _restrict_to_zero_locus_les(
   Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int}
 )
-  _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter)
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
+  _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter, wedge_counts)
 end
 
 function _restrict_to_zero_locus_les(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int}
 )
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
+  _restrict_to_zero_locus_les(Z, f_counts, var_counter, wedge_counts)
+end
+
+function _restrict_to_zero_locus_les(
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int},
+  wedge_counts::Vector{Dict{IrrepLevi,Int}},
+)
   d_Z = dimension(Z)
 
   # Compute Koszul cohomologies once (memory-efficient path)
-  koszul_cohos = _koszul_dimensions(Z, f_counts)
+  koszul_cohos = _koszul_dimensions(Z, f_counts, wedge_counts)
   d_ambient = koszul_cohos[1].dim_variety
 
   # Try numeric solve first
@@ -696,7 +714,7 @@ function _restrict_to_zero_locus_les(
   # Try Serre duality fallback before symbolic path
   if is_calabi_yau_candidate(Z.defining_bundle)
     f_dual_counts = _dual_counts(f_counts)
-    koszul_cohos_dual = _koszul_dimensions(Z, f_dual_counts)
+    koszul_cohos_dual = _koszul_dimensions(Z, f_dual_counts, wedge_counts)
     (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
     if det_dual
       entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
@@ -704,22 +722,11 @@ function _restrict_to_zero_locus_les(
     end
 
     # Cross-validation: check if both are consistent
-    chi_exact = sum(
-      ((-1)^(i - 1)) *
-      sum((-1)^k * koszul_cohos[i][k] for k in 0:d_ambient; init=BigInt(0))
-      for i in 1:length(koszul_cohos);
-      init=BigInt(0),
-    )
-    chi_numeric = sum((-1)^k * H_numeric[k] for k in 0:d_Z; init=BigInt(0))
+    chi_exact = _alternating_euler_characteristic(koszul_cohos)
+    chi_numeric = euler_characteristic(H_numeric)
 
-    dim_ambient_dual = koszul_cohos_dual[1].dim_variety
-    chi_exact_dual = sum(
-      ((-1)^(i - 1)) *
-      sum((-1)^k * koszul_cohos_dual[i][k] for k in 0:dim_ambient_dual; init=BigInt(0))
-      for i in 1:length(koszul_cohos_dual);
-      init=BigInt(0),
-    )
-    chi_numeric_dual = sum((-1)^k * H_dual[k] for k in 0:d_Z; init=BigInt(0))
+    chi_exact_dual = _alternating_euler_characteristic(koszul_cohos_dual)
+    chi_numeric_dual = euler_characteristic(H_dual)
 
     serre_consistent = all(H_numeric[k] == H_dual[d_Z - k] for k in 0:d_Z)
 
@@ -832,12 +839,15 @@ function _anticanonical_central(mdt::MarkedDynkinType)
 
   # central[i] = Σ_{j=1}^K  round(Int, Cinv[Marked[i], Marked[j]] * sf) * degs[j]
   # (same formula as _apply_central_ext applied to the anticanonical weight vector)
-  Int[
-    sum(
-      round(Int, Cinv[Marked[i], Marked[j]] * sf) * Int(degs[j])
-      for j in 1:K
-    ) for i in 1:K
-  ]
+  result = Vector{Int}(undef, K)
+  for i in 1:K
+    total = 0
+    for j in 1:K
+      total += round(Int, Cinv[Marked[i], Marked[j]] * sf) * Int(degs[j])
+    end
+    result[i] = total
+  end
+  result
 end
 
 """
@@ -1074,8 +1084,12 @@ function hodge_numbers_les(Z::ZeroLocus)
   var_counter = Ref(0)
 
   half = d ÷ 2
-  syms = CompletelyReducibleBundle[symmetric_power(E_dual, k) for k in 0:half]
-  omegas = CompletelyReducibleBundle[exterior_power(cotangent_bundle(X), k) for k in 0:half]
+  syms_counts = Dict{IrrepLevi,Int}[
+    _to_counts(symmetric_power(E_dual, k)) for k in 0:half
+  ]
+  omegas_counts = Dict{IrrepLevi,Int}[
+    _to_counts(_cotangent_power(X, k)) for k in 0:half
+  ]
 
   hodge = Matrix{AffineExpr}(undef, d + 1, d + 1)
   for i in eachindex(hodge)
@@ -1083,15 +1097,18 @@ function hodge_numbers_les(Z::ZeroLocus)
   end
 
   # ── Compute rows p = 0..⌊d/2⌋ via alternative LES ──────────────────────
+  restriction_wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
   for p in 0:half
     if p == 0
-      Hp = _restrict_to_zero_locus_les(Z, var_counter)
+      Hp = _restrict_to_zero_locus_les(
+        Z, _to_counts(structure_sheaf(Z.ambient)), var_counter, restriction_wedge_counts
+      )
     else
       # Conormal terms: H*(Z, Sym^{p-j}(E*) ⊗ Ω^j_X |_Z) for j = 0..p
       conormal_cohos = Vector{AffineExpr}[]
       for j in 0:p
-        F = tensor_product(syms[p - j + 1], omegas[j + 1])
-        Hj = _restrict_to_zero_locus_les(Z, F, var_counter)
+        f_counts = _tensor_product_counts(syms_counts[p - j + 1], omegas_counts[j + 1])
+        Hj = _restrict_to_zero_locus_les(Z, f_counts, var_counter, restriction_wedge_counts)
         push!(conormal_cohos, Hj)
       end
       # Outer conormal filtration via alternative LES chain
@@ -1103,7 +1120,15 @@ function hodge_numbers_les(Z::ZeroLocus)
   end
 
   # ── Apply symmetry constraints (same loop as hodge_numbers_symbolic) ─
-  chi_vals = BigInt[_chi_omega_p_conormal(Z, p) for p in 0:half]
+  chi_memo = Dict{Tuple{Int,UInt},BigInt}()
+  g_counts = _to_counts(structure_sheaf(Z.ambient))
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
+  chi_tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
+  chi_vals = BigInt[
+    _chi_omega_p_conormal(
+      Z, p, g_counts, chi_memo, omegas_counts, wedge_counts, chi_tp_memo
+    ) for p in 0:half
+  ]
 
   constraint_changed = true
   while constraint_changed
@@ -1130,7 +1155,7 @@ function hodge_numbers_les(Z::ZeroLocus)
 
     # χ(Ω^p_Z) constraint
     for p in 0:half
-      alt_sum = sum((-1)^q * hodge[p + 1, q + 1] for q in 0:d; init=AffineExpr(0))
+      alt_sum = _alternating_sum(hodge, p + 1, d)
       constraint_changed =
         _apply_equation!(hodge, alt_sum - AffineExpr(chi_vals[p + 1])) ||
         constraint_changed
@@ -1266,9 +1291,23 @@ the K-theory relation ``[\\wedge^p \\Omega_X|_Z] = \\sum_i [\\wedge^i E^*|_Z \\o
 \\Omega^{p-i}_Z]`` gives a recursion for ``\\chi(\\Omega^p_Z)`` in terms of
 Koszul-computable Euler characteristics on ``X``.
 """
-function _chi_omega_p_conormal(Z::ZeroLocus, p::Int)
-  g_counts = _to_counts(structure_sheaf(Z.ambient))
-  _chi_omega_tensor_counts(Z, p, g_counts)
+function _chi_omega_p_conormal(
+  Z::ZeroLocus, p::Int,
+  g_counts::Dict{IrrepLevi,Int}=_to_counts(structure_sheaf(Z.ambient)),
+  memo::Dict{Tuple{Int,UInt},BigInt}=Dict{Tuple{Int,UInt},BigInt}(),
+  omegas_counts::Vector{Dict{IrrepLevi,Int}}=Dict{IrrepLevi,Int}[
+    _to_counts(_cotangent_power(Z.ambient, j)) for j in 0:p
+  ],
+  wedge_counts::Vector{Dict{IrrepLevi,Int}}=Dict{IrrepLevi,Int}[
+    _to_counts(w) for w in _koszul_wedges!(Z)
+  ],
+  tp_memo::Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}=Dict{
+    Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}
+  }(),
+)
+  _chi_omega_tensor_counts_cached(
+    Z, p, g_counts, memo, omegas_counts, wedge_counts, tp_memo
+  )
 end
 
 # ─── Dict-based tensor and euler operations for _chi_omega_tensor ────────────
@@ -1293,10 +1332,9 @@ function _tensor_product_counts(
   result = Dict{IrrepLevi,Int}()
   for (a, ma) in a_counts
     for (b, mb) in b_counts
-      tp = tensor_product(a, b)
       total = ma * mb
-      for c in tp
-        result[c] = get(result, c, 0) + total
+      for (c, mult) in _tensor_product_terms(a, b)
+        result[c] = get(result, c, 0) + total * mult
       end
     end
   end
@@ -1312,12 +1350,17 @@ Uses the Koszul spectral sequence:
 function _euler_characteristic_from_counts(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}
 )
-  wedges = _koszul_wedges!(Z)
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
+  _euler_characteristic_from_counts(Z, f_counts, wedge_counts)
+end
+
+function _euler_characteristic_from_counts(
+  Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int},
+  wedge_counts::Vector{Dict{IrrepLevi,Int}},
+)
   result = BigInt(0)
 
-  for (wi, w) in enumerate(wedges)
-    w_counts = _to_counts(w)
-
+  for (wi, w_counts) in enumerate(wedge_counts)
     chi = BigInt(0)
     for (a, ma) in f_counts
       for (b, mb) in w_counts
@@ -1341,9 +1384,12 @@ Works entirely with `Dict{IrrepLevi,Int}` to avoid creating large intermediate
 `CompletelyReducibleBundle` objects.  Results are memoized via `memo` to avoid
 exponential recomputation of shared subtrees.
 """
-function _chi_omega_tensor_counts(
+function _chi_omega_tensor_counts_cached(
   Z::ZeroLocus, j::Int, g_counts::Dict{IrrepLevi,Int},
-  memo::Dict{Tuple{Int,UInt},BigInt}=Dict{Tuple{Int,UInt},BigInt}(),
+  memo::Dict{Tuple{Int,UInt},BigInt},
+  omegas_counts::Vector{Dict{IrrepLevi,Int}},
+  wedge_counts::Vector{Dict{IrrepLevi,Int}},
+  tp_memo::Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}},
 )
   # Use hash of (j, g_counts) as memo key
   g_hash = hash(g_counts)
@@ -1352,27 +1398,45 @@ function _chi_omega_tensor_counts(
   cached !== nothing && return cached
 
   if j == 0
-    result = _euler_characteristic_from_counts(Z, g_counts)
+    result = _euler_characteristic_from_counts(Z, g_counts, wedge_counts)
     memo[memo_key] = result
     return result
   end
 
-  X = Z.ambient
-  Ωj_X = exterior_power(cotangent_bundle(X), j)
-  ω_counts = _to_counts(Ωj_X)
-  r = length(_koszul_wedges!(Z)) - 1
+  ω_counts = omegas_counts[j + 1]
+  r = length(wedge_counts) - 1
 
-  fg_counts = _tensor_product_counts(ω_counts, g_counts)
-  result = _euler_characteristic_from_counts(Z, fg_counts)
+  fg_counts = get!(tp_memo, (g_hash, j, false)) do
+    _tensor_product_counts(ω_counts, g_counts)
+  end
+  result = _euler_characteristic_from_counts(Z, fg_counts, wedge_counts)
 
   for i in 1:min(j, r)
-    w_counts = _to_counts(_koszul_wedges!(Z)[i + 1])
-    gw_counts = _tensor_product_counts(g_counts, w_counts)
-    result -= _chi_omega_tensor_counts(Z, j - i, gw_counts, memo)
+    w_counts = wedge_counts[i + 1]
+    gw_counts = get!(tp_memo, (g_hash, i, true)) do
+      _tensor_product_counts(g_counts, w_counts)
+    end
+    result -= _chi_omega_tensor_counts_cached(
+      Z, j - i, gw_counts, memo, omegas_counts, wedge_counts, tp_memo
+    )
   end
 
   memo[memo_key] = result
   result
+end
+
+function _chi_omega_tensor_counts(
+  Z::ZeroLocus, j::Int, g_counts::Dict{IrrepLevi,Int},
+  memo::Dict{Tuple{Int,UInt},BigInt}=Dict{Tuple{Int,UInt},BigInt}(),
+)
+  omegas_counts = Dict{IrrepLevi,Int}[
+    _to_counts(_cotangent_power(Z.ambient, k)) for k in 0:j
+  ]
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
+  tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
+  _chi_omega_tensor_counts_cached(
+    Z, j, g_counts, memo, omegas_counts, wedge_counts, tp_memo
+  )
 end
 
 """

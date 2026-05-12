@@ -39,12 +39,9 @@ end
 function bundle_from_gl_weights(
   X::PartialFlagVariety, k::Int, n::Int, weights::Vector{Vector{Int}}
 )
-  mdt = marked_dynkin_type(X)
-  summands = IrrepLevi[]
+  summands = Vector{Int}[]
   for w in weights
-    omega = gl_weight_to_omega(k, n, w)
-    lam = WeightLatticeElem(dynkin_type(X), omega)
-    push!(summands, IrrepLevi(mdt, lam))
+    push!(summands, gl_weight_to_omega(k, n, w))
   end
   CompletelyReducibleBundle(X, summands)
 end

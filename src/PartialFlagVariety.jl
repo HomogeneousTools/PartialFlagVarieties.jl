@@ -132,14 +132,12 @@ end
 """
     _combine_dynkin_factors(factors) -> Type{<:DynkinType}
 
-Rebuild a Dynkin type from an ordered list of simple factors, preserving the
-left-associated product nesting used elsewhere in the package.
+Rebuild a Dynkin type from an ordered list of simple factors.
 """
 function _combine_dynkin_factors(factors::AbstractVector{<:DataType})
   isempty(factors) && throw(ArgumentError("Need at least one Dynkin factor."))
-  foldl(Iterators.drop(factors, 1); init=first(factors)) do left, right
-    ProductDynkinType{Tuple{left,right}}
-  end
+  length(factors) == 1 && return first(factors)
+  ProductDynkinType{Tuple{factors...}}
 end
 
 """
@@ -455,7 +453,15 @@ function anticanonical_degrees(X::PartialFlagVariety)
   C_L = Rational{Int}[C[unmarked[p], unmarked[q]] for p in 1:n, q in 1:n]
   x_L = C_L \ ones(Rational{Int}, n)
 
-  Int[round(Int, 2 - 2 * sum(C[i, unmarked[q]] * x_L[q] for q in 1:n)) for i in marked]
+  result = Vector{Int}(undef, length(marked))
+  for (p, i) in enumerate(marked)
+    total = zero(Rational{Int})
+    for q in 1:n
+      total += C[i, unmarked[q]] * x_L[q]
+    end
+    result[p] = round(Int, 2 - 2 * total)
+  end
+  result
 end
 
 Base.:(==)(X₁::PartialFlagVariety, X₂::PartialFlagVariety) =

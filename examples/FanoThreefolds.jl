@@ -69,20 +69,17 @@ end
 #  GL weight vectors (one entry per element of `factors`).
 
 function build_m2_bundle(X, factors, bundle_weights)
-  mdt = marked_dynkin_type(X)
-
   factor_ks = [f[1:(end - 1)] for f in factors]
   factor_ns = [f[end] for f in factors]
 
-  summands = IrrepLevi[]
+  summands = Vector{Int}[]
   for summand in bundle_weights
     omega_coords = Int[]
     for (j, w) in enumerate(summand)
       omega = gl_weight_to_omega_flag(factor_ks[j], factor_ns[j], Int.(w))
       append!(omega_coords, omega)
     end
-    lam = WeightLatticeElem(dynkin_type(X), omega_coords)
-    push!(summands, IrrepLevi(mdt, lam))
+    push!(summands, omega_coords)
   end
   CompletelyReducibleBundle(X, summands)
 end

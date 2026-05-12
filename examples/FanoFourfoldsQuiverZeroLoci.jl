@@ -484,15 +484,15 @@ end
 
 """
 Build a `CompletelyReducibleBundle` on `X` from the GL-weight encoding
-of bundle summands, using `CompletelyReducibleBundle(X, λ)` and `direct_sum`.
+of bundle summands, using the coefficient-list `CompletelyReducibleBundle`
+constructor directly.
 """
 function build_bundle(
   X::PartialFlagVariety,
   factors::Vector{Vector{Int}},
   bundle_data::Vector{Vector{Vector{Int}}},
 )
-  DT = dynkin_type(X)
-  bundles = CompletelyReducibleBundle[]
+  summands = Vector{Int}[]
 
   for summand in bundle_data
     length(summand) == length(factors) || error(
@@ -505,12 +505,11 @@ function build_bundle(
       append!(omega_coords, gl_to_omega(k, n, Int.(weight)))
     end
 
-    λ = WeightLatticeElem(DT, omega_coords)
-    push!(bundles, CompletelyReducibleBundle(X, λ))
+    push!(summands, omega_coords)
   end
 
-  isempty(bundles) && error("Empty bundle data")
-  reduce(direct_sum, bundles)
+  isempty(summands) && error("Empty bundle data")
+  CompletelyReducibleBundle(X, summands)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

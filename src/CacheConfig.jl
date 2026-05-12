@@ -37,8 +37,9 @@ function _apply_cache_preferences!()
   resize!(_TENSOR_PRODUCT_CACHE; maxsize=_cache_maxsize(budget, tf))
   resize!(_BWB_PAIR_CACHE; maxsize=_cache_maxsize(budget, bf))
   resize!(_marked_dynkin_cache; maxsize=_cache_maxsize(budget, sf * 0.4))
-  resize!(_tangent_reps_cache; maxsize=_cache_maxsize(budget, sf * 0.3))
-  resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(budget, sf * 0.3))
+  resize!(_tangent_reps_cache; maxsize=_cache_maxsize(budget, sf * 0.25))
+  resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(budget, sf * 0.25))
+  resize!(_COTANGENT_POWER_CACHE; maxsize=_cache_maxsize(budget, sf * 0.1))
 end
 
 # ─── Public API ───────────────────────────────────────────────────────────────
@@ -52,8 +53,9 @@ end
 Resize all LRU caches according to the given total memory budget and per-cache
 fractions. The budget is in bytes; fractions should sum to ≤ 1.0.
 
-The structural fraction is split among the marked-Dynkin, tangent-reps, and
-cotangent-reps caches (40%, 30%, 30% respectively).
+ The structural fraction is split among the marked-Dynkin, tangent-reps,
+ cotangent-reps, and cached cotangent exterior powers (40%, 25%, 25%, 10%
+ respectively).
 
 # Examples
 ```julia
@@ -78,8 +80,9 @@ function configure_caches!(;
   resize!(_TENSOR_PRODUCT_CACHE; maxsize=_cache_maxsize(b, tf))
   resize!(_BWB_PAIR_CACHE; maxsize=_cache_maxsize(b, bf))
   resize!(_marked_dynkin_cache; maxsize=_cache_maxsize(b, sf * 0.4))
-  resize!(_tangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.3))
-  resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.3))
+  resize!(_tangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.25))
+  resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.25))
+  resize!(_COTANGENT_POWER_CACHE; maxsize=_cache_maxsize(b, sf * 0.1))
   nothing
 end
 
@@ -93,6 +96,7 @@ function clear_caches!()
   empty!(_marked_dynkin_cache)
   empty!(_tangent_reps_cache)
   empty!(_cotangent_reps_cache)
+  empty!(_COTANGENT_POWER_CACHE)
   empty!(_TENSOR_PRODUCT_CACHE)
   empty!(_BWB_PAIR_CACHE)
   nothing
@@ -117,6 +121,7 @@ function cache_info()
     marked_dynkin=LRUCache.cache_info(_marked_dynkin_cache),
     tangent_reps=LRUCache.cache_info(_tangent_reps_cache),
     cotangent_reps=LRUCache.cache_info(_cotangent_reps_cache),
+    cotangent_powers=LRUCache.cache_info(_COTANGENT_POWER_CACHE),
     tensor_product=LRUCache.cache_info(_TENSOR_PRODUCT_CACHE),
     bwb_pair=LRUCache.cache_info(_BWB_PAIR_CACHE),
   )

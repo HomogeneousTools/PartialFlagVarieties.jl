@@ -41,7 +41,12 @@ CompletelyReducibleBundle
 
 ## Constructors
 
+When constructing a bundle manually from ambient highest weights, prefer these
+constructors over assembling `IrrepLevi` summands by hand.
+
 ```@docs
+CompletelyReducibleBundle(::PartialFlagVariety, ::WeightLatticeElem)
+CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:WeightLatticeElem})
 CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:Integer})
 CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:AbstractVector{<:Integer}})
 ```

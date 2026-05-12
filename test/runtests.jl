@@ -377,16 +377,46 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   #  CompletelyReducibleBundle
   # ═══════════════════════════════════════════════════════════════════════════
 
-  @testset "Structure sheaf" begin
+  @testset "CompletelyReducibleBundle constructors" begin
+    X = Gr(3, 6)
+    λ = WeightLatticeElem(dynkin_type(X), [0, 1, -1, 0, 0])
+    E_weight = CompletelyReducibleBundle(X, λ)
+    E_weights = CompletelyReducibleBundle(X, [λ, WeightLatticeElem(dynkin_type(X))])
+    E_components = CompletelyReducibleBundle(X, copy(components(E_weight)))
+    E_coeffs = CompletelyReducibleBundle(X, [0, 1, -1, 0, 0])
+    E_sum = CompletelyReducibleBundle(X, [[0, 1, -1, 0, 0], [0, 0, 0, 0, 0]])
+    O = structure_sheaf(X)
+    Y = Gr(2, 5)
+    bad_component = IrrepLevi(marked_dynkin_type(Y), [1, 0, 0, 0])
+
+    @test variety(E_weight) === X
+    @test components(E_weight) == components(universal_subbundle(X))
+    @test rank_bundle(E_weight) == 3
+    @test components(E_weights) == components(E_sum)
+    @test components(E_components) == components(E_weight)
+    @test components(E_coeffs) == components(E_weight)
+    @test components(E_sum) == vcat(components(E_weight), components(O))
+    @test rank_bundle(E_sum) == 4
+    @test_throws ArgumentError CompletelyReducibleBundle(X, [bad_component])
+  end
+
+  @testset "Structure sheaf and zero bundle" begin
     X = Gr(2, 4)
     O = structure_sheaf(X)
     O2 = PartialFlagVarieties.O(X)
+    Z = zero_bundle(X)
     @test rank_bundle(O) == 1
     @test variety(O2) === X
     @test components(O) == components(O2)
     @test n_components(O) == 1
     @test variety(O) === X
     @test p_dominant_weight(only(components(O))) == WeightLatticeElem(dynkin_type(X))
+    @test rank_bundle(Z) == 0
+    @test isempty(components(Z))
+    @test n_components(Z) == 0
+    @test variety(Z) === X
+    @test components(direct_sum(O, Z)) == components(O)
+    @test components(direct_sum(Z, O)) == components(O)
   end
 
   @testset "Line bundles" begin
@@ -1187,6 +1217,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test c[1] == 0
     @test det == true
 
+    var_counter = Ref(0)
+    c_expr = PartialFlagVarieties.les_cokernel(
+      [AffineExpr(1), AffineExpr(0)], [AffineExpr(2), AffineExpr(0)], var_counter
+    )
+    @test c_expr == [AffineExpr(1), AffineExpr(0)]
+    @test var_counter[] == 0
+
+    var_counter = Ref(0)
+    c_zero = PartialFlagVarieties.les_cokernel(
+      [AffineExpr(0), AffineExpr(0)], [AffineExpr(3), AffineExpr(5)], var_counter
+    )
+    @test c_zero == [AffineExpr(3), AffineExpr(5)]
+    @test var_counter[] == 0
+
     # Case with connecting homomorphism ambiguity
     # H*(A) = [0,0,1], H*(B) = [0,0,0] on dim=2 variety
     a2 = Cohomology{BigInt}(BigInt[0, 0, 1], 2)
@@ -1890,7 +1934,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       end
     end
 
-    let Z = zero_locus("44.07")
+    let Z = zero_locus("44.70")
       expected = AffineExpr.([
         1 0 0 0 0
         0 2 0 0 0
@@ -1982,7 +2026,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       # O ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
       let X = projective_space(1)
         E = direct_sum(structure_sheaf(X), line_bundle(X, 1))
-        @test zerolocus62_label(E) == "1.0x1"
+        @test zerolocus62_label(E) == "1.x10"
       end
 
       # O(1) ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
@@ -2002,7 +2046,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         L1 = line_bundle(X, [1, 0])
         L2 = line_bundle(X, [0, 1])
         E = direct_sum(L1, L2)
-        @test zerolocus62_label(E) == "11.01"
+        @test zerolocus62_label(E) == "11.10"
       end
 
       # O(1,1) on P^1 × P^1
