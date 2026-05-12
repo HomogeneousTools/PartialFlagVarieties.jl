@@ -36,6 +36,7 @@ struct MarkedDynkinType
 
   function MarkedDynkinType(dynkin::DataType, marked::Tuple{Vararg{Int}})
     dynkin <: DynkinType || throw(ArgumentError("Expected a Dynkin type, got $dynkin"))
+    dynkin = _canonical_dynkin_type(dynkin)
 
     R = rank(dynkin)
     for m in marked
@@ -53,6 +54,21 @@ struct MarkedDynkinType
 
     new(dynkin, marked)
   end
+end
+
+_canonical_dynkin_type(::Type{DT}) where {DT<:SimpleDynkinType} = DT
+
+function _canonical_dynkin_type(::Type{DT}) where {DT<:ProductDynkinType}
+  factors = DataType[]
+  for factor in DT.parameters[1].parameters
+    canonical = _canonical_dynkin_type(factor)
+    if canonical <: SimpleDynkinType
+      push!(factors, canonical)
+    else
+      append!(factors, canonical.parameters[1].parameters)
+    end
+  end
+  ProductDynkinType{Tuple{factors...}}
 end
 
 function MarkedDynkinType(::Type{DT}, marked::Tuple{Vararg{Int}}) where {DT<:DynkinType}
@@ -307,14 +323,42 @@ function tangent_weights(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
   RS = RootSystem(DT)
   nonpar_roots = positive_nonparabolic_roots(mdt)
-  simple_par = [simple_root(RS, i) for i in unmarked_nodes(mdt)]
-  nonpar_set = Set(coefficients(α) for α in nonpar_roots)
-
-  highest = filter(nonpar_roots) do α
-    !any(s -> (coefficients(α) + coefficients(s)) in nonpar_set, simple_par)
+  unmarked = unmarked_nodes(mdt)
+  if isempty(unmarked)
+    simple_par = typeof(simple_root(RS, 1))[]
+  else
+    simple_par = Vector{typeof(simple_root(RS, first(unmarked)))}(undef, length(unmarked))
+    for (idx, i) in enumerate(unmarked)
+      simple_par[idx] = simple_root(RS, i)
+    end
   end
 
-  [WeightLatticeElem(α) for α in highest]
+  nonpar_set = Set{typeof(coefficients(first(nonpar_roots)))}()
+  for α in nonpar_roots
+    push!(nonpar_set, coefficients(α))
+  end
+
+  highest = eltype(nonpar_roots)[]
+  for α in nonpar_roots
+    is_highest = true
+    α_coeffs = coefficients(α)
+    for s in simple_par
+      if (α_coeffs + coefficients(s)) in nonpar_set
+        is_highest = false
+        break
+      end
+    end
+    is_highest && push!(highest, α)
+  end
+
+  isempty(highest) && return WeightLatticeElem[]
+  first_weight = WeightLatticeElem(first(highest))
+  result = Vector{typeof(first_weight)}(undef, length(highest))
+  result[1] = first_weight
+  for i in 2:length(highest)
+    result[i] = WeightLatticeElem(highest[i])
+  end
+  result
 end
 
 _ambient_type(mdt::MarkedDynkinType) = dynkin_type(mdt)
@@ -332,7 +376,7 @@ the marked nodes highlighted (enclosed in square brackets).
 function marked_dynkin_diagram(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
   marked = marked_nodes(mdt)
-  diagram = dynkin_diagram(DT)
+  diagram = string(dynkin_diagram(DT))
   lines = split(diagram, '\n')
   marked_set = Set(marked)
 

@@ -112,7 +112,11 @@ end
 
 function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
   unmarked = unmarked_nodes(mdt)
-  λ_ivec = Int[c for c in coefficients(λ)]
+  λ_coeffs = coefficients(λ)
+  λ_ivec = Vector{Int}(undef, length(λ_coeffs))
+  for i in eachindex(λ_coeffs)
+    λ_ivec[i] = λ_coeffs[i]
+  end
   central = _apply_central_ext(mdt, λ_ivec)
 
   if is_borel(mdt)
@@ -121,7 +125,10 @@ function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
     LT = levi_type(mdt)
     LR = rank(LT)
     perm = levi_permutation(mdt)
-    ss_coords = [λ_ivec[unmarked[perm[j]]] for j in 1:LR]
+    ss_coords = Vector{Int}(undef, LR)
+    for j in 1:LR
+      ss_coords[j] = λ_ivec[unmarked[perm[j]]]
+    end
     semisimple = WeightLatticeElem(LT, ss_coords)
   end
 
@@ -170,7 +177,11 @@ function IrrepLevi(
 
   ambient_scaled = _apply_Minv_int(mdt, coords_full)
   sf_sq = sf_total * sf_total
-  λ = WeightLatticeElem(DT, [div(c, sf_sq) for c in ambient_scaled])
+  λ_coords = Vector{Int}(undef, length(ambient_scaled))
+  for i in eachindex(ambient_scaled)
+    λ_coords[i] = div(ambient_scaled[i], sf_sq)
+  end
+  λ = WeightLatticeElem(DT, λ_coords)
 
   IrrepLevi(mdt, λ, Vector{Int}(central), semisimple)
 end
@@ -219,11 +230,28 @@ end
 # ─── Cached tensor product ──────────────────────────────────────────────────
 
 const _TENSOR_PRODUCT_CACHE = let b = _default_cache_budget()
-  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{IrrepLevi}}(;
+  LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{IrrepLevi,Int}}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_TENSOR_FRAC),
     by=Base.summarysize,
   )
 end
+
+function _tensor_product_terms(a::IrrepLevi, b::IrrepLevi)
+  get!(_TENSOR_PRODUCT_CACHE, (a, b)) do
+    _tensor_product_terms_uncached(a, b)
+  end
+end
+
+_dual_semisimple_generic(@nospecialize(ss::WeightLatticeElem)) = Lie.dual(ss)
+_tensor_product_character_generic(
+@nospecialize(a::WeightLatticeElem), @nospecialize(b::WeightLatticeElem)
+) = Lie.tensor_product(a, b)
+_exterior_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = Lie.exterior_power(
+  ss, k
+)
+_symmetric_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = Lie.symmetric_power(
+  ss, k
+)
 
 """
     tensor_product(a::IrrepLevi, b::IrrepLevi) -> Vector{IrrepLevi}
@@ -235,12 +263,18 @@ Results are cached in a thread-safe LRU cache to avoid redundant Lie
 decomposition calls.
 """
 function tensor_product(a::IrrepLevi, b::IrrepLevi)
-  get!(_TENSOR_PRODUCT_CACHE, (a, b)) do
-    _tensor_product_uncached(a, b)
+  terms = _tensor_product_terms(a, b)
+
+  result = IrrepLevi[]
+  for (rep, mult) in terms
+    for _ in 1:mult
+      push!(result, rep)
+    end
   end
+  result
 end
 
-function _tensor_product_uncached(a::IrrepLevi, b::IrrepLevi)
+function _tensor_product_terms_uncached(a::IrrepLevi, b::IrrepLevi)
   marked_dynkin_type(a) == marked_dynkin_type(b) || throw(
     ArgumentError(
       "tensor_product requires Levi representations with the same marked Dynkin type."
@@ -253,21 +287,19 @@ function _tensor_product_uncached(a::IrrepLevi, b::IrrepLevi)
   ss_a = semisimple_part(a)
   ss_b = semisimple_part(b)
   if is_borel(mdt) || (iszero(ss_a) && iszero(ss_b))
-    return [IrrepLevi(mdt, new_central, ss_a)]
+    return Pair{IrrepLevi,Int}[IrrepLevi(mdt, new_central, ss_a) => 1]
   end
   if iszero(ss_a)
-    return [IrrepLevi(mdt, new_central, ss_b)]
+    return Pair{IrrepLevi,Int}[IrrepLevi(mdt, new_central, ss_b) => 1]
   end
   if iszero(ss_b)
-    return [IrrepLevi(mdt, new_central, ss_a)]
+    return Pair{IrrepLevi,Int}[IrrepLevi(mdt, new_central, ss_a) => 1]
   end
 
-  χ = Lie.tensor_product(ss_a, ss_b)
-  result = IrrepLevi[]
+  χ = _tensor_product_character_generic(ss_a, ss_b)
+  result = Pair{IrrepLevi,Int}[]
   for (hw, mult) in χ
-    for _ in 1:mult
-      push!(result, IrrepLevi(mdt, new_central, hw))
-    end
+    push!(result, IrrepLevi(mdt, new_central, hw) => Int(mult))
   end
   result
 end
@@ -284,7 +316,7 @@ function dual(rep::IrrepLevi)
   if is_borel(mdt) || iszero(ss)
     return IrrepLevi(mdt, new_central, ss)
   end
-  IrrepLevi(mdt, new_central, Lie.dual(ss))
+  IrrepLevi(mdt, new_central, _dual_semisimple_generic(ss))
 end
 
 """
@@ -313,7 +345,7 @@ function exterior_power(rep::IrrepLevi, k::Integer)
   dim_ss = Int(degree(ss))
   k > dim_ss && return IrrepLevi[]
 
-  χ = Lie.exterior_power(ss, k)
+  χ = _exterior_power_character_generic(ss, k)
   result = IrrepLevi[]
   for (hw, mult) in χ
     for _ in 1:mult
@@ -345,7 +377,7 @@ function symmetric_power(rep::IrrepLevi, k::Integer)
     return [IrrepLevi(mdt, new_central, ss)]
   end
 
-  χ = Lie.symmetric_power(ss, k)
+  χ = _symmetric_power_character_generic(ss, k)
   result = IrrepLevi[]
   for (hw, mult) in χ
     for _ in 1:mult
@@ -370,4 +402,4 @@ Base.:(==)(a::IrrepLevi, b::IrrepLevi) =
   marked_dynkin_type(a) == marked_dynkin_type(b) &&
   p_dominant_weight(a) == p_dominant_weight(b)
 
-Base.hash(a::IrrepLevi, h::UInt) = hash((a.mdt, a.λ), h)
+Base.hash(a::IrrepLevi, h::UInt) = hash(a.λ, hash(a.mdt, h))

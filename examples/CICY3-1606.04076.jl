@@ -120,9 +120,7 @@ function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
       if i != m
         omega = zeros(Int, R)
         omega[i] = 1
-        λ = WeightLatticeElem(DT, omega)
-        irr = IrrepLevi(mdt, λ)
-        bundle = CompletelyReducibleBundle(X, [irr])
+        bundle = CompletelyReducibleBundle(X, omega)
 
         rk = rank_bundle(bundle)
         det_c = collect(PartialFlagVarieties._determinant_central(bundle))

@@ -4,10 +4,12 @@ version = "0.1.0"
 authors = ["Pieter Belmans <p.belmans@uu.nl>"]
 
 [deps]
+Base62 = "212a889c-07c6-4e8f-8766-fb0aa2ea40c2"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 LRUCache = "8ac3fa9e-de4c-5943-b1dc-09c6b5f20637"
-Lie = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+Lie = "c99f5fee-6cdb-4bf1-806f-d7690e6ee6f7"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
@@ -17,17 +19,23 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
 
 [compat]
+Base62 = "1"
 Combinatorics = "1"
 Distributed = "1"
+JSON = "1"
 LRUCache = "1.6"
-Lie = "0.1.0"
 PrecompileTools = "1"
 Preferences = "1.5.2"
 PrettyTables = "3.2.3"
 ProgressMeter = "1.11.0"
 StaticArrays = "1"
 ZeroLocus62 = "3"
-julia = "1.10"
+julia = "1.11"
+
+[sources]
+Base62 = {rev = "main", url = "https://github.com/HomogeneousTools/Base62.jl"}
+Lie = {rev = "main", url = "https://github.com/HomogeneousTools/Lie.jl"}
+ZeroLocus62 = {rev = "main", subdir = "julia", url = "https://github.com/HomogeneousTools/ZeroLocus62"}
 
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"

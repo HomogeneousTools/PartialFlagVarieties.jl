@@ -29,8 +29,10 @@ Most computations revolve around three kinds of values:
 | `ZeroLocus` | the zero locus of a regular section of such a bundle | `zero_locus(E)` |
 
 If you are new to the package, prefer the **named constructors** and the
-high-level bundle API. Types such as [`IrrepLevi`](@ref) are documented for
-completeness, but they are not the normal starting point.
+high-level bundle API. Types such as [`IrrepLevi`](@ref) are documented mainly
+so you can understand internal bundle decompositions and inspect
+[`components`](@ref)`(E)`, but they are not the normal starting point and most
+users will rarely construct them directly.
 
 ## 1. Construct the ambient variety
 

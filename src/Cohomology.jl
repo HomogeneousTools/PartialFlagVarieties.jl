@@ -21,6 +21,15 @@ export borel_weil_bott
 #  Borel–Weil–Bott theorem
 # ═══════════════════════════════════════════════════════════════════════════════
 
+function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
+  DT = typeof(λ).parameters[1]
+  ρ = Lie.weyl_vector(DT)
+  μ = λ + ρ
+  μ_dom, d = Lie.conjugate_dominant_weight_with_length(μ)
+  any(==(0), μ_dom.vec) && return nothing
+  (d, μ_dom - ρ)
+end
+
 """
     borel_weil_bott(λ::WeightLatticeElem{DT,R}) -> Union{Nothing, Tuple{Int, WeightLatticeElem{DT,R}}}
 
@@ -47,11 +56,7 @@ true
 ```
 """
 function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
-  ρ = Lie.weyl_vector(DT)
-  μ = λ + ρ
-  μ_dom, d = Lie.conjugate_dominant_weight_with_length(μ)
-  any(==(0), μ_dom.vec) && return nothing
-  return (d, μ_dom - ρ)
+  _borel_weil_bott_generic(λ)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -377,6 +382,16 @@ function euler_characteristic(H::Cohomology{BigInt})
     result += (iseven(i) ? 1 : -1) * H[i]
   end
   return result
+end
+
+function _alternating_euler_characteristic(cohos::AbstractVector{<:Cohomology{BigInt}})
+  result = BigInt(0)
+  add_term = true
+  for H in cohos
+    result = add_term ? result + euler_characteristic(H) : result - euler_characteristic(H)
+    add_term = !add_term
+  end
+  result
 end
 
 function euler_characteristic(H::Cohomology{<:WeylCharacter})

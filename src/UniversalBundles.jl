@@ -257,15 +257,12 @@ function spinor_bundle(X::PartialFlagVariety)
   if DT <: TypeB
     # Odd quadric Q^{2m-1}: single spinor bundle at ω_m
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(mdt, ω)
-    CompletelyReducibleBundle(X, [rep])
+    CompletelyReducibleBundle(X, ω)
   elseif DT <: TypeD
     # Even quadric Q^{2m-2}: direct sum of both half-spinors
     ω_plus = fundamental_weight(DT, R - 1)
     ω_minus = fundamental_weight(DT, R)
-    rep_plus = IrrepLevi(mdt, ω_plus)
-    rep_minus = IrrepLevi(mdt, ω_minus)
-    CompletelyReducibleBundle(X, [rep_plus, rep_minus])
+    CompletelyReducibleBundle(X, [ω_plus, ω_minus])
   else
     throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
   end
@@ -285,8 +282,7 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
     half in (:plus, :minus) &&
       @warn "Odd quadric has a single spinor bundle; ignoring half=$half"
     ω = fundamental_weight(DT, R)
-    rep = IrrepLevi(mdt, ω)
-    return CompletelyReducibleBundle(X, [rep])
+    return CompletelyReducibleBundle(X, ω)
   end
 
   if DT <: TypeD
@@ -297,8 +293,7 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
     else
       throw(ArgumentError("half must be :plus or :minus, got :$half"))
     end
-    rep = IrrepLevi(mdt, ω)
-    return CompletelyReducibleBundle(X, [rep])
+    return CompletelyReducibleBundle(X, ω)
   end
 
   throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
@@ -308,8 +303,7 @@ end
 function _is_quadric(::Type{DT}, Marked) where {DT}
   length(Marked) == 1 || return false
   Marked[1] == 1 || return false
-  (DT <: TypeB || DT <: TypeD) || return false
-  true
+  DT <: TypeB || DT <: TypeD
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -245,8 +245,7 @@ function filtered_tangent_bundle(X::PartialFlagVariety)
 
   pieces = CompletelyReducibleBundle[]
   for (h, ws) in height_data
-    reps = [IrrepLevi(mdt, w) for w in ws]
-    push!(pieces, CompletelyReducibleBundle(X, reps))
+    push!(pieces, CompletelyReducibleBundle(X, ws))
   end
 
   FilteredBundle(X, pieces)

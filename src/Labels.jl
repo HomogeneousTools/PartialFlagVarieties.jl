@@ -98,14 +98,7 @@ function _factors_to_mdt(factors::Vector{Factor})
     _symbol_to_simple_type(_char_to_symbol(f.group), f.rank) for f in factors
   ]
 
-  if length(simple_types) == 1
-    DT = simple_types[1]
-  else
-    DT = simple_types[1]
-    for i in 2:length(simple_types)
-      DT = ProductDynkinType{Tuple{DT,simple_types[i]}}
-    end
-  end
+  DT = _combine_dynkin_factors(simple_types)
 
   global_marked = Int[]
   offset = 0
@@ -229,7 +222,7 @@ julia> using PartialFlagVarieties
 julia> X = projective_space(1);
 
 julia> zerolocus62_label(direct_sum(structure_sheaf(X), line_bundle(X, 1)))
-"1.0x1"
+"1.x10"
 ```
 """
 function zerolocus62_label(E::CompletelyReducibleBundle)
@@ -307,12 +300,7 @@ function zero_locus(label::AbstractString)
   DT = dynkin_type(mdt)
   X = PartialFlagVariety(mdt)
 
-  irr = IrrepLevi[]
-  for row in result.summands
-    λ = _summand_row_to_weight(row, DT)
-    push!(irr, IrrepLevi(mdt, λ))
-  end
-
-  E = CompletelyReducibleBundle(X, irr)
+  weights = [_summand_row_to_weight(row, DT) for row in result.summands]
+  E = CompletelyReducibleBundle(X, weights)
   zero_locus(E)
 end
