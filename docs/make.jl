@@ -1,5 +1,4 @@
 using Documenter
-using Semisimple
 using PartialFlagVarieties
 
 makedocs(;
