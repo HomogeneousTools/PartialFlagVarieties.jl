@@ -1178,8 +1178,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test !is_exceptional_type(TypeD{4})
 
     # Product types
-    @test is_exceptional_type(ProductDynkinType{Tuple{TypeA{3}, TypeG2}})
-    @test !is_exceptional_type(ProductDynkinType{Tuple{TypeA{3}, TypeB{4}}})
+    @test is_exceptional_type(ProductDynkinType{Tuple{TypeA{3},TypeG2}})
+    @test !is_exceptional_type(ProductDynkinType{Tuple{TypeA{3},TypeB{4}}})
 
     # Variety level
     @test is_exceptional_type(partial_flag_variety("E6", 2))

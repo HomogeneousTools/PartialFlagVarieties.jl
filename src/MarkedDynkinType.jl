@@ -470,9 +470,10 @@ julia> is_exceptional_type(ProductDynkinType{Tuple{TypeA{3}, TypeG2}})
 true
 ```
 """
-is_exceptional_type(DT::Type{<:SimpleDynkinType}) = DT <: Union{TypeE, TypeF4, TypeG2}
-is_exceptional_type(DT::Type{<:ProductDynkinType}) =
-  any(T -> is_exceptional_type(T), DT.parameters[1].parameters)
+is_exceptional_type(DT::Type{<:SimpleDynkinType}) = DT <: Union{TypeE,TypeF4,TypeG2}
+is_exceptional_type(DT::Type{<:ProductDynkinType}) = any(
+  T -> is_exceptional_type(T), DT.parameters[1].parameters
+)
 
 """
     is_exceptional_type(mdt::MarkedDynkinType) -> Bool
