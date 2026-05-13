@@ -40,9 +40,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 5);
 
-julia> U = universal_subbundle(X);
-
-julia> rank_bundle(U)
+julia> rank_bundle(universal_subbundle(X))
 2
 ```
 
@@ -51,10 +49,20 @@ julia> using PartialFlagVarieties
 
 julia> X = OGr(3, 7);
 
-julia> U = universal_subbundle(X);
-
-julia> rank_bundle(U)
+julia> rank_bundle(universal_subbundle(X))
 3
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
+
+julia> rank_bundle(universal_subbundle(X, 1))
+1
+
+julia> rank_bundle(universal_subbundle(X, 2))
+2
 ```
 """
 function universal_subbundle(X::PartialFlagVariety, i::Int=1)
