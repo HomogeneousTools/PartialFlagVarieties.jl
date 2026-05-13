@@ -326,7 +326,10 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
-#TODO Change name of tautological_bundles? residual bundles?
+# TODO: Extend to isotropic types. For a generalized Grassmannian of type B, C, or D
+# the building blocks are universal_subbundle(X) and residual_bundle(X). For multi-step
+# isotropic flags, compute the graded pieces U_i/U_{i-1} via weight differences
+# analogously to the type A case below.
 """
     tautological_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
 
@@ -372,7 +375,9 @@ function tautological_bundles(X::PartialFlagVariety)
       ArgumentError(
         "tautological_bundles not implemented for non-type A partial flag varieties"
       ),
-    ) #TODO: Implement for other types.
+    ) #TODO: For isotropic types B, C, D, the graded pieces of the tautological filtration are
+    # universal_subbundle(X) and residual_bundle(X) for Grassmannians, and more generally
+    # the U_i/U_{i-1} computed from the weight differences at each marked node.
   end
 end
 
@@ -413,7 +418,9 @@ function universal_subbundles(X::PartialFlagVariety)
     ArgumentError(
       "universal_subbundles currently only implemented for type A partial flag varieties"
     ),
-  )#TODO: Implement for other types.
+  )#TODO: For isotropic Grassmannians (types B, C, D), the filtration steps are
+  # [U] and [U^⊥ = FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)])].
+  # For isotropic partial flags, extend similarly to the type A implementation above.
   marked = marked_nodes(X)
   bundles = Vector{Bundle}()
   τ = tautological_bundles(X)
