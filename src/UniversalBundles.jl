@@ -16,17 +16,23 @@ export tautological_bundles, universal_subbundles
 # ═══════════════════════════════════════════════════════════════════════════════
 """
     universal_subbundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
+    universal_subbundle(X::PartialFlagVariety, i::Int) -> Bundle
 
 On ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/P_k``, this is the irreducible equivariant
 bundle corresponding to the standard representation of the Levi factor.
 
 For orthogonal and symplectic Grassmannians, this returns the isotropic
-tautological subbundle.
+tautological subbundle ``\\mathcal{U}``.
 
 This function is intended for **generalized Grassmannians** (one marked node).
 For multi-step flags, use [`tautological_bundles`](@ref) instead; those are
 convenient completely reducible building blocks rather than a geometric flag of
 subbundles.
+
+The optional argument `i` (default `1`) selects the ``i``-th element from
+[`universal_subbundles`](@ref): `universal_subbundle(X, i)` is equivalent to
+`universal_subbundles(X)[i]` for `i > 1`. Currently, `i > 1` is only supported
+for type ``\\mathrm{A}`` partial flag varieties.
 
 # Examples
 ```jldoctest
@@ -51,18 +57,21 @@ julia> rank_bundle(U)
 3
 ```
 """
-function universal_subbundle(X::PartialFlagVariety, n::Int=1)
+function universal_subbundle(X::PartialFlagVariety, i::Int=1)
   is_exceptional_type(X) && throw(
     ArgumentError("exceptional types do not have a well-defined universal subbundle")
   )
   DT = dynkin_type(X)
   R = rank(DT)
-  if n == 1
+  if i == 1
     return dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1)))
-  else #TODO: If n==2 and X is isotropic Grassmannian, return the dual of the quotient bundle.
-    (n < 1 || n > R) &&
-      throw(ArgumentError("n must be between 1 and the rank of the variety"))
-    return universal_subbundles(X)[n]
+  else
+    # TODO: For isotropic Grassmannians (types B, C, D) with i == 2, return U^⊥ as
+    # dual(universal_quotient_bundle(X)), reflecting 0 → U → U^⊥ → Res → 0.
+    # When Res is zero (Lagrangian/spinor cases), U^⊥ = U, so dual(Q) recovers i == 1.
+    (i < 1 || i > R) &&
+      throw(ArgumentError("i must be between 1 and the rank of the variety"))
+    return universal_subbundles(X)[i]
   end
 end
 

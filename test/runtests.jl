@@ -1138,7 +1138,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(universal_subbundles(X6)[3]) == 4
     @test dimensions(cohomology(dual(τ[3]) ⊗ Us[2].pieces[2]))[1] == 1
 
-    # universal_subbundle with explicit n > 1
+    # universal_subbundle with explicit i > 1
     @test rank_bundle(universal_subbundle(X6, 2)) == 2
     @test rank_bundle(universal_subbundle(X6, 3)) == 4
 
