@@ -27,7 +27,7 @@ end
 _fmt(x) = string(x)
 
 function _hh_dims(P::PolyvectorParallelogram)
-  [hochschild_dimension(P, n) for n in 0:(2 * P.dim)]
+  [P[n] for n in 0:(2 * P.dim)]
 end
 
 function compute_hochschild_family(label, k, n, weights, desc)

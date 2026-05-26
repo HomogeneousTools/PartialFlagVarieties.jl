@@ -36,7 +36,7 @@
 using PartialFlagVarieties
 using PartialFlagVarieties:
   fiber_dimension, IrrepLevi, components, n_components,
-  to_ambient_weight, marked_type
+  to_ambient_weight, marked_dynkin_type
 using PrettyTables
 using ProgressMeter
 using Combinatorics: multiexponents

@@ -31,10 +31,10 @@ The Hochschild–Kostant–Rosenberg decomposition gives
 ```
 
 The result is stored in a [`PolyvectorParallelogram`](@ref), which uses
-0-based `(p, q)` access: `P[p, q] = h^q(X, \bigwedge^p T_X)`.
+0-based access: `P[p, q] = h^q(X, \bigwedge^p T_X)` for individual entries and
+`P[n] = \dim \mathrm{HH}^n(X)` for the total dimension along the anti-diagonal.
 
 ```@docs
 hochschild_cohomology
-hochschild_dimension
 PolyvectorParallelogram
 ```

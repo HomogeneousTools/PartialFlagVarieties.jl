@@ -54,7 +54,7 @@ const BATCH_SIZE = parse(
 
     t_poly = time_ns()
     P = hochschild_cohomology(Y)
-    hh0 = hochschild_dimension(P, 0)
+    hh0 = P[0]
     polyvector_elapsed = (time_ns() - t_poly) / 1e9
     P = nothing
 

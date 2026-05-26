@@ -15,7 +15,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export hodge_numbers, twisted_hodge_numbers
-export hochschild_cohomology, hochschild_dimension
+export hochschild_cohomology
 export PolyvectorParallelogram
 export print_hodge_diamond
 
@@ -177,11 +177,11 @@ function euler_characteristic(P::PolyvectorParallelogram{T}) where {T}
 end
 
 """
-    hochschild_dimension(P::PolyvectorParallelogram, n::Int)
+    getindex(P::PolyvectorParallelogram, n::Int)
 
-Compute ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} h^q(X, \\bigwedge^p T_X)``.
+Return ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} h^q(X, \\bigwedge^p T_X)``.
 """
-function hochschild_dimension(P::PolyvectorParallelogram{T}, n::Int) where {T}
+function Base.getindex(P::PolyvectorParallelogram{T}, n::Int) where {T}
   result = _pp_zero(T)
   for p in 0:P.dim
     q = n - p
