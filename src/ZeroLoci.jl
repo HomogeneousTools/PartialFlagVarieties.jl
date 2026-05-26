@@ -863,7 +863,7 @@ Check whether the zero locus ``Z`` is strongly Fano: the anticanonical bundle
 
 By the adjunction formula ``\\omega_Z^{-1} = (\\omega_X^{-1} \\otimes \\det(E)^{-1})|_Z``,
 this holds when every Picard-basis coordinate of ``\\omega_X^{-1} \\otimes \\det(E)^{-1}``
-is strictly positive.  Strong Fano implies (ordinary) Fano, which implies weak Fano.
+is strictly positive.  Strong Fano implies (ordinary) Fano.
 
 # Examples
 ```jldoctest
