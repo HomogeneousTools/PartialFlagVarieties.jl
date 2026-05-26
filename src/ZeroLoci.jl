@@ -818,15 +818,19 @@ julia> is_calabi_yau(zero_locus(line_bundle(X, 3)))
 false
 ```
 """
-is_calabi_yau(Z::ZeroLocus) = det(Z.defining_bundle) == anticanonical_bundle(Z.ambient)
+function is_calabi_yau(Z::ZeroLocus)
+  dimension(Z) == 0 && return euler_characteristic(Z) == 1
+  det(Z.defining_bundle) == anticanonical_bundle(Z.ambient)
+end
 
 """
     is_strict_calabi_yau(Z::ZeroLocus) -> Bool
 
-Check whether the zero locus ``Z`` is a Calabi–Yau variety:
-1. ``c_1(Z) = 0`` (equivalently ``\\det(E) \\cong \\omega_X^{-1}``)
-2. ``H^i(Z, \\mathcal{O}_Z) = 0`` for ``0 < i < \\dim Z``
-3. ``\\dim Z \\ge 2``
+Check whether the zero locus ``Z`` is a strict Calabi–Yau variety:
+1. ``c_1(Z) = 0`` (equivalently ``\\det(E) \\cong \\omega_X^{-1}``,
+   or trivially when ``\\dim Z = 0``)
+2. ``H^0(Z, \\mathcal{O}_Z) = 1`` (``Z`` is connected)
+3. ``H^i(Z, \\mathcal{O}_Z) = 0`` for ``0 < i < \\dim Z``
 
 # Examples
 ```jldoctest
@@ -842,11 +846,9 @@ false
 ```
 """
 function is_strict_calabi_yau(Z::ZeroLocus)
-  d = dimension(Z)
-  d < 2 && return false
-
   is_calabi_yau(Z) || return false
 
+  d = dimension(Z)
   (H, _) = cohomology_on_restriction(Z)
   H[0] == 1 || return false
   for i in 1:(d - 1)
