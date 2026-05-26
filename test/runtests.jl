@@ -1451,12 +1451,22 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "ZeroLocus: CY detection" begin
     X = projective_space(4)
-    @test is_calabi_yau(zero_locus(line_bundle(X, 5))) == true
-    @test is_calabi_yau(zero_locus(line_bundle(X, 3))) == false
+    @test is_calabi_yau(zero_locus(line_bundle(X, 5))) == true   # det = anticanonical
+    @test is_calabi_yau(zero_locus(line_bundle(X, 3))) == false  # det ≠ anticanonical
+    @test is_strict_calabi_yau(zero_locus(line_bundle(X, 5))) == true
+    @test is_strict_calabi_yau(zero_locus(line_bundle(X, 3))) == false
+
+    # Fano variety of lines is hyperkähler fourfold
+    let X_gr = Gr(2, 6), S = universal_subbundle(X_gr)
+      F = zero_locus(symmetric_power(dual(S), 3))
+      @test is_calabi_yau(F) == true
+      @test is_strict_calabi_yau(F) == false
+    end
 
     X5 = projective_space(5)
     E = direct_sum(line_bundle(X5, 3), line_bundle(X5, 3))
     @test is_calabi_yau(zero_locus(E)) == true
+    @test is_strict_calabi_yau(zero_locus(E)) == true
   end
 
   @testset "ZeroLocus: Hodge numbers (CY3)" begin
