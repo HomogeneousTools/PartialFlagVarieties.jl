@@ -90,7 +90,7 @@ export PolyvectorParallelogram
 export ZeroLocus, zero_locus, ambient_variety, defining_bundle
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction
-export is_calabi_yau, is_calabi_yau_candidate
+export is_calabi_yau, is_strict_calabi_yau, is_strongly_fano
 export solve_ses_cohomology, solve_koszul_filtration
 export AffineExpr, is_determined, is_zero_expr, symbolic_variable
 export solve_ses_cohomology_symbolic, solve_koszul_filtration_symbolic
