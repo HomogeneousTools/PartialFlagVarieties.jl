@@ -83,6 +83,6 @@ euler_characteristic_tangent_bundle
 
 ```@docs
 is_calabi_yau
-is_calabi_yau_candidate
-is_weak_fano
+is_strict_calabi_yau
+is_strongly_fano
 ```
