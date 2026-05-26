@@ -223,7 +223,7 @@ function compute_family(spec::CY3Family)
   bundle_rank == expected_rank || error(
     "No. $(spec.no): rank(E) = $bundle_rank, expected $expected_rank"
   )
-  is_calabi_yau_candidate(E) || error("No. $(spec.no): bundle is not CY-compatible")
+  is_calabi_yau(zero_locus(E)) || error("No. $(spec.no): bundle is not CY-compatible")
 
   print(@sprintf("[%2d/33] Gr(%d,%d)  %-28s", spec.no, spec.k, spec.n, spec.description))
   flush(stdout)

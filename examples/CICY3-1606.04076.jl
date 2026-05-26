@@ -105,7 +105,7 @@ function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
       bundle = line_bundle(X, degrees)
 
       rk = rank_bundle(bundle)
-      det_c = collect(PartialFlagVarieties._determinant_central(bundle))
+      det_c = picard_degrees(det(bundle))
 
       push!(candidates, (bundle, rk, det_c))
     end
@@ -121,7 +121,7 @@ function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
         bundle = CompletelyReducibleBundle(X, omega)
 
         rk = rank_bundle(bundle)
-        det_c = collect(PartialFlagVarieties._determinant_central(bundle))
+        det_c = picard_degrees(det(bundle))
 
         push!(candidates, (bundle, rk, det_c))
       end
@@ -169,7 +169,7 @@ function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Resu
   target_rank = Int(codim)
 
   # Compute anticanonical central character = target determinant
-  antican = collect(PartialFlagVarieties._anticanonical_central(marked_dynkin_type(X)))
+  antican = anticanonical_degrees(X)
 
   # Get candidate irreps
   candidates = get_candidate_bundles(
