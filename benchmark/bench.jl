@@ -109,7 +109,7 @@ let
   is_strong_exceptional_sequence(beilinson_collection(X))
   filtered_tangent_bundle(X)
   schur_functor(X, (2, 1))
-  is_calabi_yau_candidate(line_bundle(X, 4))
+  is_calabi_yau(zero_locus(line_bundle(X, 4)))
   # exceptional types
   Y = cayley_plane()
   betti_numbers(Y)
