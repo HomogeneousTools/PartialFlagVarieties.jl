@@ -1,6 +1,7 @@
 # PartialFlagVarieties.jl
 
 [![Tests](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/test.yml/badge.svg)](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/HomogeneousTools/PartialFlagVarieties.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/HomogeneousTools/PartialFlagVarieties.jl)
 [![Docs](https://img.shields.io/badge/docs-homogeneous.tools/PartialFlagVarieties.jl-blue)](https://homogeneous.tools/PartialFlagVarieties.jl)
 [![Release](https://img.shields.io/github/v/release/HomogeneousTools/PartialFlagVarieties.jl?color=green)](https://github.com/HomogeneousTools/PartialFlagVarieties.jl/releases)
 
