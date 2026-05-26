@@ -13,6 +13,7 @@ export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
 export structure_sheaf, O, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
 export det, determinant
+export picard_degrees
 export fano_index
 
 # Names from Lie, StaticArrays, Combinatorics are available via the parent module.
@@ -370,6 +371,42 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
 
   λ = WeightLatticeElem(dynkin_type(X), coefficients)
   CompletelyReducibleBundle(X, λ)
+end
+
+"""
+    picard_degrees(E::CompletelyReducibleBundle) -> Vector{Int}
+
+Return the Picard-group coordinates of the rank-1 bundle `E`: the
+fundamental-weight degrees at each marked node, i.e. the vector `d` such
+that `E == line_bundle(variety(E), d)`.
+
+Throws an `ArgumentError` if `E` does not have rank 1.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 4);
+
+julia> picard_degrees(anticanonical_bundle(X))
+1-element Vector{Int64}:
+ 4
+
+julia> X2 = partial_flag_variety(TypeA{3}, (1, 3));
+
+julia> picard_degrees(line_bundle(X2, [3, 2]))
+2-element Vector{Int64}:
+ 3
+ 2
+```
+"""
+function picard_degrees(E::CompletelyReducibleBundle)
+  rank_bundle(E) == 1 || throw(
+    ArgumentError("picard_degrees requires a rank-1 bundle, got rank $(rank_bundle(E)).")
+  )
+  X = variety(E)
+  v = p_dominant_weight(only(components(E))).vec
+  Int[v[m] for m in marked_nodes(X)]
 end
 
 """
