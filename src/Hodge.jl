@@ -640,18 +640,6 @@ function _inject_exact!(M::Matrix{AffineExpr}, i::Int, j::Int, val::BigInt)
   end
 end
 
-"""
-Check whether ω_Z⁻¹ is ample on the zero locus Z ⊂ G/P by inspecting the
-ambient Picard coordinates.  Returns `true` if all coordinates of ω_Z⁻¹
-at marked nodes are strictly positive, `false` if any is negative, and
-`nothing` if some coordinate is zero (undetermined).
-"""
-function _is_ample_on_zero_locus(Z::ZeroLocus)
-  # ω_Z⁻¹ = (ω_X⁻¹ ⊗ det(E)⁻¹)|_Z, so its ampleness on G/P is determined
-  # by the Picard coordinates of ω_X⁻¹ ⊗ det(E)⁻¹ at marked nodes.
-  _is_fano_zero_locus(Z)
-end
-
 function hochschild_cohomology(Z::ZeroLocus)
   X = Z.ambient
   E = Z.defining_bundle
@@ -667,7 +655,7 @@ function hochschild_cohomology(Z::ZeroLocus)
   L_anti = tensor_product(anticanonical_bundle(X), dual(det(E)))
   L_can = dual(L_anti)
 
-  is_fano = _is_ample_on_zero_locus(Z)
+  is_fano = is_strongly_fano(Z)
 
   # ── Build two symbolic twisted Hodge matrices ──────────────────────────
   # We compute h^q(Ω^p_Z ⊗ L) for L = ω_Z⁻¹ and L = ω_Z independently,
