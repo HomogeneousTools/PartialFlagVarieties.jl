@@ -50,7 +50,7 @@ full_flag_variety
 ## Accessing the marked data
 
 ```@docs
-marked_type
+marked_dynkin_type
 ```
 
 ## Topological invariants

@@ -5,7 +5,7 @@ export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule, is_exceptional_type
 export is_adjoint, is_coadjoint, is_full_flag_variety
 export anticanonical_degrees
-export marked_type, marked_dynkin_type, marked_nodes
+export marked_dynkin_type, marked_nodes
 
 """
     PartialFlagVariety(mdt::MarkedDynkinType, name="")
@@ -198,14 +198,10 @@ function Base.show(io::IO, X::PartialFlagVariety)
 end
 
 """
-    marked_type(X::PartialFlagVariety) -> MarkedDynkinType
     marked_dynkin_type(X::PartialFlagVariety) -> MarkedDynkinType
 
 Return the runtime [`MarkedDynkinType`](@ref) attached to the variety `X`.
-`marked_type` is the short alias and is the preferred way to pass `X` into the
-lower-level APIs that operate on marked Dynkin data directly.
 """
-marked_type(X::PartialFlagVariety) = X.mdt
 marked_dynkin_type(X::PartialFlagVariety) = X.mdt
 dynkin_type(X::PartialFlagVariety) = dynkin_type(X.mdt)
 marked_nodes(X::PartialFlagVariety) = marked_nodes(X.mdt)
