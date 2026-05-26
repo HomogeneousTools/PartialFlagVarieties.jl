@@ -80,6 +80,10 @@ struct CompletelyReducibleBundle <: Bundle
   end
 end
 
+Base.:(==)(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) =
+  E.variety == F.variety && E.components == F.components
+Base.hash(E::CompletelyReducibleBundle, h::UInt) = hash(E.components, hash(E.variety, h))
+
 """
     CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem) -> CompletelyReducibleBundle
 
