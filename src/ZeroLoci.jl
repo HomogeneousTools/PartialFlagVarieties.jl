@@ -15,8 +15,8 @@ export ZeroLocus
 export zero_locus, ambient_variety, defining_bundle
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction, cohomology_on_restriction_symbolic
-export is_calabi_yau, is_calabi_yau_candidate
-export is_weak_fano
+export is_calabi_yau, is_strict_calabi_yau
+export is_strongly_fano
 export fano_index
 export hilbert_polynomial
 export hodge_numbers_symbolic
@@ -568,7 +568,7 @@ function cohomology_on_restriction(
   # Serre duality is only valid H^k(F) = H^{d-k}(F*) when K_Z ≅ O_Z.
   # Guard all Serre-duality paths by checking that the zero locus is
   # a (candidate) Calabi–Yau (i.e. det(E) ≅ ω_X^{-1}).
-  if is_calabi_yau_candidate(Z.defining_bundle)
+  if is_calabi_yau(Z)
     if det_dual
       # Apply Serre duality: H^k(Z, F) = H^{d-k}(Z, F*)
       entries = Vector{BigInt}(undef, d_Z + 1)
@@ -640,7 +640,7 @@ function cohomology_on_restriction_symbolic(
   # Also try Serre duality fallback (numeric on the dual)
   serre_resolved = false
   H_dual_result = nothing
-  if is_calabi_yau_candidate(Z.defining_bundle)
+  if is_calabi_yau(Z)
     F_dual = dual(F)
     koszul_cohos_dual = _koszul_dimensions(Z, F_dual)
     (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
@@ -740,7 +740,7 @@ function _restrict_to_zero_locus_les(
   end
 
   # Try Serre duality fallback before symbolic path
-  if is_calabi_yau_candidate(Z.defining_bundle)
+  if is_calabi_yau(Z)
     f_dual_counts = _dual_counts(f_counts)
     koszul_cohos_dual = _koszul_dimensions(Z, f_dual_counts, wedge_counts)
     (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
@@ -797,116 +797,13 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    is_calabi_yau_candidate(E::CompletelyReducibleBundle) -> Bool
-
-Quick check: does ``\\det(E) \\cong \\omega_X^{-1}``?  This is the necessary
-condition ``c_1(Z) = 0`` for a zero locus ``Z(s)`` to be Calabi–Yau.
-
-Does not compute cohomology — only checks the determinant condition.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(4);
-
-julia> is_calabi_yau_candidate(line_bundle(X, 5))
-true
-
-julia> is_calabi_yau_candidate(line_bundle(X, 3))
-false
-```
-"""
-function is_calabi_yau_candidate(E::CompletelyReducibleBundle)
-  mdt = marked_dynkin_type(variety(E))
-  det_c1 = _determinant_central(E)
-  antican_c1 = _anticanonical_central(mdt)
-  det_c1 == antican_c1
-end
-
-"""Compute c₁(E) as scaled central character coordinates at the marked nodes."""
-function _determinant_central(E::CompletelyReducibleBundle)
-  Marked = marked_nodes(variety(E))
-  c1 = zeros(Int, length(Marked))
-  for comp in components(E)
-    r = Int(fiber_dimension(comp))
-    for (j, _) in enumerate(Marked)
-      c1[j] += r * comp.central[j]
-    end
-  end
-  c1
-end
-
-"""Compute c₁(E) in the Picard basis (fundamental weight coordinates at marked nodes)."""
-function _determinant_picard(E::CompletelyReducibleBundle)
-  Marked = marked_nodes(variety(E))
-  c1 = zeros(Int, length(Marked))
-  for comp in components(E)
-    r = Int(fiber_dimension(comp))
-    v = p_dominant_weight(comp).vec
-    for (j, m) in enumerate(Marked)
-      c1[j] += r * v[m]
-    end
-  end
-  c1
-end
-
-"""Compute the scaled central character of the anticanonical bundle -K_{G/P}.
-
-Uses `anticanonical_degrees` to obtain the anticanonical ω-coordinates
-at the marked nodes, then converts to the scaled central character used
-internally by `IrrepLevi` (coordinates multiplied by `central_scaling_factor`).
-"""
-function _anticanonical_central(mdt::MarkedDynkinType)
-  Marked = marked_nodes(mdt)
-  K = length(Marked)
-  sf = central_scaling_factor(mdt)
-  DT = _ambient_type(mdt)
-  Cinv = cartan_matrix_inverse(DT)
-  degs = anticanonical_degrees(PartialFlagVariety(mdt))
-
-  # central[i] = Σ_{j=1}^K  round(Int, Cinv[Marked[i], Marked[j]] * sf) * degs[j]
-  # (same formula as _apply_central_ext applied to the anticanonical weight vector)
-  result = Vector{Int}(undef, K)
-  for i in 1:K
-    total = 0
-    for j in 1:K
-      total += round(Int, Cinv[Marked[i], Marked[j]] * sf) * Int(degs[j])
-    end
-    result[i] = total
-  end
-  result
-end
-
-"""
-Three-valued test for whether the zero locus has ample anticanonical bundle
-(Fano) as seen from the ambient ``G/P``.
-
-- `true`    — all central-coordinate differences ``(\\omega_X^{-1} - \\det E)_j > 0``:
-              ``\\omega_Z^{-1}`` is ample on the ambient, hence ample on ``Z`` (Fano).
-- `false`   — some difference is ``< 0``: ``\\omega_Z^{-1}`` is not nef on the ambient,
-              hence ``Z`` is not weak Fano.
-- `nothing` — all differences are ``\\ge 0`` but some equal zero: ``\\omega_Z^{-1}`` is
-              nef but not ample on the ambient; Fano-ness of ``Z`` itself cannot be
-              determined from the ambient Picard coordinates alone.
-"""
-function _is_fano_zero_locus(Z::ZeroLocus)::Union{Bool,Nothing}
-  E = Z.defining_bundle
-  mdt = marked_dynkin_type(Z.ambient)
-  det_c1 = _determinant_central(E)
-  antican_c1 = _anticanonical_central(mdt)
-  diffs = [antican_c1[j] - det_c1[j] for j in eachindex(det_c1)]
-  any(<(0), diffs) && return false
-  all(>(0), diffs) ? true : nothing
-end
-
-"""
     is_calabi_yau(Z::ZeroLocus) -> Bool
 
-Check whether the zero locus ``Z`` is a Calabi–Yau variety:
-1. ``c_1(Z) = 0`` (equivalently ``\\det(E) \\cong \\omega_X^{-1}``)
-2. ``H^i(Z, \\mathcal{O}_Z) = 0`` for ``0 < i < \\dim Z``
-3. ``\\dim Z \\ge 2``
+Check whether the zero locus ``Z`` has trivial (anti)canonical bundle:
+``\\det(E) \\cong \\omega_X^{-1}``, equivalently ``c_1(Z) = 0``.
+
+This is a necessary condition for ``Z`` to be Calabi–Yau.  For the full
+Calabi–Yau check (including cohomology vanishing), see [`is_strict_calabi_yau`](@ref).
 
 # Examples
 ```jldoctest
@@ -921,11 +818,34 @@ julia> is_calabi_yau(zero_locus(line_bundle(X, 3)))
 false
 ```
 """
-function is_calabi_yau(Z::ZeroLocus)
+is_calabi_yau(Z::ZeroLocus) = det(Z.defining_bundle) == anticanonical_bundle(Z.ambient)
+
+"""
+    is_strict_calabi_yau(Z::ZeroLocus) -> Bool
+
+Check whether the zero locus ``Z`` is a Calabi–Yau variety:
+1. ``c_1(Z) = 0`` (equivalently ``\\det(E) \\cong \\omega_X^{-1}``)
+2. ``H^i(Z, \\mathcal{O}_Z) = 0`` for ``0 < i < \\dim Z``
+3. ``\\dim Z \\ge 2``
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(4);
+
+julia> is_strict_calabi_yau(zero_locus(line_bundle(X, 5)))
+true
+
+julia> is_strict_calabi_yau(zero_locus(line_bundle(X, 3)))
+false
+```
+"""
+function is_strict_calabi_yau(Z::ZeroLocus)
   d = dimension(Z)
   d < 2 && return false
 
-  is_calabi_yau_candidate(Z.defining_bundle) || return false
+  is_calabi_yau(Z) || return false
 
   (H, _) = cohomology_on_restriction(Z)
   H[0] == 1 || return false
@@ -936,99 +856,31 @@ function is_calabi_yau(Z::ZeroLocus)
 end
 
 """
-    is_weak_fano(Z::ZeroLocus) -> Bool
+    is_strongly_fano(Z::ZeroLocus) -> Bool
 
-Check whether the zero locus ``Z`` is weak Fano: the anticanonical bundle
-``\\omega_Z^{-1}`` is big and nef.
+Check whether the zero locus ``Z`` is strongly Fano: the anticanonical bundle
+``\\omega_Z^{-1}`` is ample on the ambient ``G/P``.
 
-The anticanonical class of ``Z`` is computed via adjunction,
-
-```math
-\\omega_Z^{-1} = \\bigl(\\omega_X^{-1} \\otimes \\det(E)^{-1}\\bigr)\\big|_Z,
-```
-
-with Picard-basis coordinates ``\\lambda_Z[j] = d_j(-K_X) - c_1(E)[j]`` for
-each marked node ``j``.
-
-**Nef** is checked by ``\\lambda_Z[j] \\geq 0`` for all ``j``.  **Big** is
-checked by verifying that the leading coefficient of the Hilbert polynomial
-
-```math
-P(t) = \\chi\\bigl(Z,\\, (\\omega_Z^{-1})^{\\otimes t}\\bigr)
-```
-
-is strictly positive, which is equivalent to ``(-K_Z)^{\\dim Z} > 0``.
-
-This is strictly weaker than ampleness of ``\\omega_Z^{-1}``.  In particular,
-a zero locus whose anticanonical class is nef on the ambient ``G/P`` — meaning
-all Picard coordinates are non-negative but some are zero — can still be weak
-Fano when the volume ``(-K_Z)^d`` is positive.
+By the adjunction formula ``\\omega_Z^{-1} = (\\omega_X^{-1} \\otimes \\det(E)^{-1})|_Z``,
+this holds when every Picard-basis coordinate of ``\\omega_X^{-1} \\otimes \\det(E)^{-1}``
+is strictly positive.  Strong Fano implies (ordinary) Fano, which implies weak Fano.
 
 # Examples
-
-A degree-3 hypersurface ``Z \\subset \\mathbb{P}^4`` is Fano and therefore also
-weak Fano:
-
 ```jldoctest
 julia> using PartialFlagVarieties
 
 julia> X = projective_space(4);
 
-julia> is_weak_fano(zero_locus(line_bundle(X, 3)))
+julia> is_strongly_fano(zero_locus(line_bundle(X, 3)))  # -K_Z = O(2), ample on ℙ⁴
 true
-```
 
-A Calabi–Yau quintic ``Z \\subset \\mathbb{P}^4`` has ``\\omega_Z^{-1}
-\\cong \\mathcal{O}_Z`` (nef but volume zero, hence not big):
-
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(4);
-
-julia> is_weak_fano(zero_locus(line_bundle(X, 5)))
+julia> is_strongly_fano(zero_locus(line_bundle(X, 5)))  # -K_Z = O(0), not ample
 false
 ```
-
-The complete flag variety ``X = A_2/B`` has ``\\omega_X^{-1} = \\mathcal{O}(2,2)``.
-The zero locus of ``\\mathcal{O}(2,0)`` has ``\\omega_Z^{-1} = \\mathcal{O}(0,2)|_Z``,
-which is nef but not ample on ``X`` (its Picard coordinate at node 1 is zero).
-Nevertheless ``(-K_Z)^2 = 4 > 0``, so ``Z`` is weak Fano:
-
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = partial_flag_variety(TypeA{2}, (1, 2));
-
-julia> Z = zero_locus(line_bundle(X, [2, 0]));
-
-julia> is_weak_fano(Z)
-true
-```
 """
-function is_weak_fano(Z::ZeroLocus)
-  d = dimension(Z)
-  d < 1 && return false
-
-  # Short-circuit: if ω_Z^{-1} is ample on the ambient G/P, Z is Fano,
-  # hence also weak Fano — no further computation needed.
-  _is_fano_zero_locus(Z) === true && return true
-
-  X = Z.ambient
-
-  # Picard-basis coordinates of ω_Z^{-1} = (ω_X^{-1} ⊗ det(E)^{-1})|_Z
-  antican_Z = anticanonical_degrees(X) .- _determinant_picard(Z.defining_bundle)
-
-  # Nef: all Picard-basis coordinates ≥ 0
-  all(>=(0), antican_Z) || return false
-
-  # Big: leading coefficient of χ(Z, (ω_Z^{-1})^⊗t) as polynomial in t is > 0
-  values = Rational{BigInt}[]
-  for t in 0:(d + 2)
-    push!(values, Rational{BigInt}(euler_characteristic(Z, line_bundle(X, t .* antican_Z))))
-  end
-  coeffs = _lagrange_interpolation(values)
-  length(coeffs) >= d + 1 && coeffs[d + 1] > 0
+function is_strongly_fano(Z::ZeroLocus)
+  antican_Z = tensor_product(anticanonical_bundle(Z.ambient), dual(det(Z.defining_bundle)))
+  all(>(0), picard_degrees(antican_Z))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
