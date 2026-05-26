@@ -505,13 +505,75 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(det_T) == 1
 
     L = line_bundle(X, 3)
-    @test p_dominant_weight(only(components(det(L)))) ==
-      p_dominant_weight(only(components(L)))
+    @test det(L) == L                              # det of a line bundle is itself
 
     M = line_bundle(X, 2)
-    det_sum = det(direct_sum(L, M))
-    @test p_dominant_weight(only(components(det_sum))) ==
-      p_dominant_weight(only(components(L))) + p_dominant_weight(only(components(M)))
+    @test det(direct_sum(L, M)) == tensor_product(L, M)  # det(L⊕M) = L⊗M
+  end
+
+  @testset "det(tangent_bundle) == anticanonical_bundle" begin
+    det_tangent_is_anticanonical(X) = det(tangent_bundle(X)) == anticanonical_bundle(X)
+
+    @test det_tangent_is_anticanonical(projective_space(1))
+    @test det_tangent_is_anticanonical(projective_space(2))
+    @test det_tangent_is_anticanonical(projective_space(4))
+    @test det_tangent_is_anticanonical(Gr(2, 4))
+    @test det_tangent_is_anticanonical(Gr(2, 5))
+    @test det_tangent_is_anticanonical(Gr(2, 6))
+    @test det_tangent_is_anticanonical(Gr(3, 6))
+    @test det_tangent_is_anticanonical(Gr(3, 7))
+    @test det_tangent_is_anticanonical(Gr(4, 8))
+    @test det_tangent_is_anticanonical(flag_variety(4, (1, 2)))
+    @test det_tangent_is_anticanonical(flag_variety(5, (1, 2)))
+    @test det_tangent_is_anticanonical(flag_variety(5, (2, 3)))
+    @test det_tangent_is_anticanonical(flag_variety(5, (1, 4)))
+    @test det_tangent_is_anticanonical(flag_variety(6, (2, 4)))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeA{2}))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeA{3}))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeA{4}))
+    @test det_tangent_is_anticanonical(quadric(3))
+    @test det_tangent_is_anticanonical(quadric(5))
+    @test det_tangent_is_anticanonical(quadric(7))
+    @test det_tangent_is_anticanonical(OGr(2, 7))
+    @test det_tangent_is_anticanonical(OGr(3, 7))
+    @test det_tangent_is_anticanonical(OGr(2, 9))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeB{4}, [1, 3]))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeB{4}, [2, 4]))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeB{3}))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeB{4}))
+    @test det_tangent_is_anticanonical(SGr(1, 4))
+    @test det_tangent_is_anticanonical(LGr(2))
+    @test det_tangent_is_anticanonical(LGr(3))
+    @test det_tangent_is_anticanonical(LGr(4))
+    @test det_tangent_is_anticanonical(SGr(2, 6))
+    @test det_tangent_is_anticanonical(SGr(1, 8))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeC{4}, [2, 4]))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeC{4}, [1, 3]))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeC{3}))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeC{4}))
+    @test det_tangent_is_anticanonical(quadric(4))
+    @test det_tangent_is_anticanonical(quadric(6))
+    @test det_tangent_is_anticanonical(quadric(8))
+    @test det_tangent_is_anticanonical(OGr(3, 6))
+    @test det_tangent_is_anticanonical(OGr(4, 8))
+    @test det_tangent_is_anticanonical(OGr(2, 8))
+    @test det_tangent_is_anticanonical(OGr(3, 8))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeD{5}, [2, 4]))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeD{5}, [1, 5]))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeD{4}))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeD{5}))
+    @test det_tangent_is_anticanonical(adjoint_variety(TypeG2))
+    @test det_tangent_is_anticanonical(coadjoint_variety(TypeG2))
+    @test det_tangent_is_anticanonical(full_flag_variety(TypeG2))
+    @test det_tangent_is_anticanonical(adjoint_variety(TypeF4))
+    @test det_tangent_is_anticanonical(coadjoint_variety(TypeF4))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeF4, [1, 3]))
+    @test det_tangent_is_anticanonical(cayley_plane())
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeE{6}, 2))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeE{6}, [1, 3]))
+    @test det_tangent_is_anticanonical(freudenthal_variety())
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeE{7}, 1))
+    @test det_tangent_is_anticanonical(partial_flag_variety(TypeE{8}, 8))
   end
 
   @testset "Canonical and anticanonical bundles" begin
@@ -1389,18 +1451,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "ZeroLocus: CY detection" begin
     X = projective_space(4)
-
-    # Quintic in P^4: CY candidate and CY
-    @test is_calabi_yau_candidate(line_bundle(X, 5)) == true
     @test is_calabi_yau(zero_locus(line_bundle(X, 5))) == true
+    @test is_calabi_yau(zero_locus(line_bundle(X, 3))) == false
 
-    # Cubic in P^4: NOT CY candidate (degree 3 ≠ index 5)
-    @test is_calabi_yau_candidate(line_bundle(X, 3)) == false
-
-    # Two cubics in P^5: CY candidate and CY
     X5 = projective_space(5)
     E = direct_sum(line_bundle(X5, 3), line_bundle(X5, 3))
-    @test is_calabi_yau_candidate(E) == true
     @test is_calabi_yau(zero_locus(E)) == true
   end
 
