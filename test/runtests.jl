@@ -87,6 +87,24 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test marked_nodes(mdt3) == (5,)
   end
 
+  @testset "is_borel" begin
+    @test is_borel(marked_dynkin_type(full_flag_variety(TypeA{3}))) == true
+    @test is_borel(marked_dynkin_type(full_flag_variety(TypeB{3}))) == true
+    @test is_borel(marked_dynkin_type(full_flag_variety(TypeG2))) == true
+    @test is_borel(marked_dynkin_type(Gr(2, 4))) == false
+    @test is_borel(marked_dynkin_type(projective_space(3))) == false
+    @test is_borel(marked_dynkin_type(adjoint_variety(TypeG2))) == false
+  end
+
+  @testset "central_scaling_factor" begin
+    @test central_scaling_factor(marked_dynkin_type(projective_space(3))) == 4
+    @test central_scaling_factor(marked_dynkin_type(projective_space(4))) == 5
+    @test central_scaling_factor(marked_dynkin_type(Gr(2, 4))) == 2
+
+    @test central_scaling_factor(marked_dynkin_type(flag_variety(4, (1, 3)))) > 0
+    @test central_scaling_factor(marked_dynkin_type(quadric(5))) > 0
+  end
+
   # ═══════════════════════════════════════════════════════════════════════════
   #  Levi type identification
   # ═══════════════════════════════════════════════════════════════════════════
@@ -350,6 +368,25 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test λ_back == ω₁
   end
 
+  @testset "fiber_dimension" begin
+    X = Gr(2, 5)
+    S_rep = only(components(universal_subbundle(X)))
+    @test fiber_dimension(S_rep) == 2
+
+    Q_rep = only(components(universal_quotient_bundle(X)))
+    @test fiber_dimension(Q_rep) == 3
+
+    O_rep = only(components(structure_sheaf(X)))
+    @test fiber_dimension(O_rep) == 1
+
+    L_rep = only(components(line_bundle(X, 3)))
+    @test fiber_dimension(L_rep) == 1
+
+    X_flag = full_flag_variety(TypeA{2})
+    L_full = only(components(line_bundle(X_flag, [1, 2])))
+    @test fiber_dimension(L_full) == 1
+  end
+
   @testset "IrrepLevi round-trip" begin
     MDT = mdt(TypeA{4}, (2,))
 
@@ -521,7 +558,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test picard_degrees(line_bundle(X_flag, [1, -2])) == [1, -2]
 
     P3 = projective_space(3)
-    @test_throws ArgumentError picard_degrees(direct_sum(line_bundle(P3, 1), line_bundle(P3, 2)))
+    @test_throws ArgumentError picard_degrees(
+      direct_sum(line_bundle(P3, 1), line_bundle(P3, 2))
+    )
     @test_throws ArgumentError picard_degrees(tangent_bundle(P3))
   end
 
@@ -713,6 +752,36 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test euler_characteristic(line_bundle(X, 1)) == 5
   end
 
+  @testset "Cohomology: higher-rank bundles" begin
+    X = Gr(2, 5)
+    S = universal_subbundle(X)
+    Sym2 = symmetric_power(dual(S), 2)
+    H = dimensions(cohomology(Sym2))
+    @test H[0] == 15
+    for i in 1:6
+      @test H[i] == 0
+    end
+    @test euler_characteristic(Sym2) == 15
+
+    X4 = Gr(2, 4)
+    S4 = universal_subbundle(X4)
+    Q4 = universal_quotient_bundle(X4)
+    T = tensor_product(dual(S4), Q4)
+    @test rank_bundle(T) == 4
+    HT = dimensions(cohomology(T))
+    @test HT[0] == 15
+    for i in 1:4
+      @test HT[i] == 0
+    end
+
+    X5 = Gr(2, 5)
+    S5 = universal_subbundle(X5)
+    W = exterior_power(dual(S5), 2)
+    @test rank_bundle(W) == 1
+    HW = dimensions(cohomology(W))
+    @test HW[0] == 10
+  end
+
   @testset "Cohomology: 0-based indexing" begin
     X = projective_space(2)
     O = structure_sheaf(X)
@@ -765,6 +834,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     V = LGr(3)
     @test dimension(V) == 6
+  end
+
+  @testset "IGr (isotropic Grassmannian)" begin
+    # IGr is a synonym of OGr, retained to emphasize the isotropy convention.
+    @test IGr(2, 7) == OGr(2, 7)
+    @test IGr(1, 9) == OGr(1, 9)
+    @test IGr(3, 8) == OGr(3, 8)
   end
 
   @testset "Quadrics" begin
@@ -1320,6 +1396,24 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test H0[4, 4] == 1  # h^3(Ω^3)
   end
 
+  @testset "print_hodge_diamond" begin
+    # P^1: diamond is three rows (1 / 0 0 / 1); apex and base each carry a single "1".
+    out1 = sprint(print_hodge_diamond, hodge_numbers(projective_space(1)))
+    lines1 = filter(!isempty, split(out1, '\n'))
+    @test length(lines1) == 3
+    @test occursin("1", lines1[1])
+    @test occursin("0", lines1[2])
+    @test occursin("1", lines1[end])
+
+    # Gr(2,4): 9 rows; h^{2,2} = b_4 = 2 sits on the middle row.
+    out_gr = sprint(print_hodge_diamond, hodge_numbers(Gr(2, 4)))
+    lines_gr = filter(!isempty, split(out_gr, '\n'))
+    @test length(lines_gr) == 9
+    @test occursin("2", lines_gr[5])
+    @test occursin("1", lines_gr[1])
+    @test occursin("1", lines_gr[end])
+  end
+
   # ═══════════════════════════════════════════════════════════════════════════
   #  Hochschild cohomology
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1342,6 +1436,45 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test P1[1, 0] == 3   # h^0(T_ℙ¹) = dim SL₂ = 3
     @test P1[0, 1] == 0   # h^1(𝒪) = 0
     @test P1[1, 1] == 0   # h^1(T_ℙ¹) = 0
+  end
+
+  @testset "HH^n via P[n]" begin
+    P = hochschild_cohomology(projective_space(3))
+    @test P[0] == 1
+    @test P[1] == 15
+    @test P[-1] == 0
+    total = sum(P[n] for n in 0:6)
+    expected = sum(P[p, q] for p in 0:3, q in 0:3)
+    @test total == expected
+
+    P_gr = hochschild_cohomology(Gr(2, 4))
+    @test P_gr[0] == 1
+    @test P_gr[1] == 15
+  end
+
+  @testset "Twisted Hodge / Hochschild: exceptional types" begin
+    let X = adjoint_variety(TypeG2)
+      H = twisted_hodge_numbers(X, 0)
+      @test H[1, 1] == 1
+      @test H[1, 2] == 0
+      @test H[2, 1] == 0
+      d = dimension(X)
+      for p in 0:d, q in 0:d
+        p == q || @test H[p + 1, q + 1] == 0
+      end
+
+      P = hochschild_cohomology(X)
+      @test P isa PolyvectorParallelogram
+      @test P[0, 0] == 1
+      @test P[1] == 14
+    end
+
+    let X = coadjoint_variety(TypeG2)
+      H = twisted_hodge_numbers(X, 0)
+      @test H[1, 1] == 1
+      P = hochschild_cohomology(X)
+      @test P[0, 0] == 1
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1380,6 +1513,71 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     (c2, det2) = solve_ses_cohomology(a2, b2)
     # χ(C) = χ(B) - χ(A) = 0 - 1 = -1
     @test sum((-1)^i * c2[i] for i in 0:2) == -1
+  end
+
+  @testset "Koszul symbolic solver" begin
+    # AffineExpr arithmetic: a determined constant has no symbolic vars, and
+    # adding/subtracting/scaling commutes with the constant/var split.
+    e0 = AffineExpr(0)
+    e3 = AffineExpr(3)
+    @test is_determined(e0)
+    @test is_determined(e3)
+    @test is_zero_expr(e0)
+    @test !is_zero_expr(e3)
+    @test e3 + AffineExpr(2) == AffineExpr(5)
+    @test e3 - e3 == AffineExpr(0)
+    @test 2 * e3 == AffineExpr(6)
+
+    # symbolic_variable(i) is x_i; subtracting it from itself eliminates the
+    # variable, producing a fully determined zero expression.
+    x1 = symbolic_variable(1)
+    x2 = symbolic_variable(2)
+    @test !is_determined(x1)
+    @test !is_zero_expr(x1)
+    @test is_zero_expr(x1 - x1)
+    @test is_determined(x1 - x1)
+    @test (x1 + x2) - x2 == x1
+    @test 3 * x1 - x1 == 2 * x1
+
+    # SES 0 → A → B → C → 0 with H*(A) = [1, 0], H*(B) = [2, 0] on a curve.
+    # δ_0 ≤ a_1 = 0 forces δ_0 = 0, so C is fully determined and no symbolic
+    # variable is introduced — the symbolic solver agrees with the numeric one.
+    a = Cohomology{BigInt}(BigInt[1, 0], 1)
+    b = Cohomology{BigInt}(BigInt[2, 0], 1)
+    var_counter = Ref(0)
+    c_sym = solve_ses_cohomology_symbolic(a, b, var_counter)
+    @test c_sym isa Cohomology{AffineExpr}
+    @test is_determined(c_sym[0])
+    @test c_sym[0] == AffineExpr(1)
+    @test c_sym[1] == AffineExpr(0)
+    @test var_counter[] == 0
+
+    # H*(A) = H*(B) = [1, 1]: the connecting map H^0(C) → H^1(A) has unknown
+    # rank δ_0 ∈ {0, 1}, so the solver introduces a fresh symbolic variable.
+    # The Euler characteristic is still pinned: χ(C) = χ(B) − χ(A) = 0.
+    a_amb = Cohomology{BigInt}(BigInt[1, 1], 1)
+    b_amb = Cohomology{BigInt}(BigInt[1, 1], 1)
+    var_counter2 = Ref(0)
+    c_amb = solve_ses_cohomology_symbolic(a_amb, b_amb, var_counter2)
+    @test var_counter2[] >= 1
+    @test c_amb[0] - c_amb[1] == AffineExpr(0)
+
+    # Koszul filtration in P^3 for a line (CI of two hyperplanes), encoded as
+    # the ambient cohomologies of the Koszul terms:
+    #   K_0 = O, K_1 = O(−1)^2, K_2 = O(−2).
+    # H*(P^3, K_i) = [0,0,0,0] for i ≥ 1 (negative twists in the BBW gap),
+    # H*(P^3, K_0) = [1,0,0,0]. The Koszul filtration recovers
+    # H*(line, O_line) = [1, 0], unambiguously, and no symbolic vars appear.
+    koszul = [
+      Cohomology{BigInt}(BigInt[1, 0, 0, 0], 3),
+      Cohomology{BigInt}(BigInt[0, 0, 0, 0], 3),
+      Cohomology{BigInt}(BigInt[0, 0, 0, 0], 3),
+    ]
+    var_counter3 = Ref(0)
+    H_sym = solve_koszul_filtration_symbolic(koszul, 1, var_counter3)
+    @test H_sym isa Cohomology{AffineExpr}
+    @test H_sym[0] == AffineExpr(1)
+    @test H_sym[1] == AffineExpr(0)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1481,6 +1679,64 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     E = direct_sum(line_bundle(X5, 3), line_bundle(X5, 3))
     @test is_calabi_yau(zero_locus(E)) == true
     @test is_strict_calabi_yau(zero_locus(E)) == true
+  end
+
+  @testset "ZeroLocus: is_strongly_fano" begin
+    P4 = projective_space(4)
+    @test is_strongly_fano(zero_locus(line_bundle(P4, 3))) == true
+    @test is_strongly_fano(zero_locus(line_bundle(P4, 4))) == true
+    @test is_strongly_fano(zero_locus(line_bundle(P4, 5))) == false
+    @test is_strongly_fano(zero_locus(line_bundle(P4, 6))) == false
+
+    let X = Gr(2, 4), S = universal_subbundle(X)
+      @test is_strongly_fano(zero_locus(symmetric_power(dual(S), 2))) == true
+    end
+    let X = Gr(2, 5), S = universal_subbundle(X)
+      @test is_strongly_fano(zero_locus(symmetric_power(dual(S), 2))) == true
+    end
+
+    let X = projective_space(2) * projective_space(2)
+      @test is_strongly_fano(zero_locus(line_bundle(X, [1, 1]))) == true
+      @test is_strongly_fano(zero_locus(line_bundle(X, [3, 1]))) == false
+    end
+  end
+
+  @testset "ZeroLocus: CY/Fano cross-type" begin
+    Q5 = quadric(5)
+    @test is_strongly_fano(zero_locus(line_bundle(Q5, 1))) == true
+    @test is_strongly_fano(zero_locus(line_bundle(Q5, 5))) == false
+    @test is_calabi_yau(zero_locus(line_bundle(Q5, 5))) == true
+
+    S = SGr(2, 6)
+    @test is_strongly_fano(zero_locus(line_bundle(S, 1))) == true
+
+    D = OGr(2, 8)
+    @test is_strongly_fano(zero_locus(line_bundle(D, 1))) == true
+  end
+
+  @testset "ZeroLocus: zero-dimensional" begin
+    # Four generic hyperplanes in P^4 cut out a single reduced point.
+    # A reduced point has trivial canonical (no dim > 0 entries to twist),
+    # h^0(O) = 1, and -K is trivially ample: so CY, strict CY, and strongly Fano.
+    P4 = projective_space(4)
+    H = line_bundle(P4, 1)
+    Z = zero_locus(reduce(direct_sum, [H for _ in 1:4]))
+    @test dimension(Z) == 0
+    @test euler_characteristic(Z) == 1
+    @test is_calabi_yau(Z) == true
+    @test is_strict_calabi_yau(Z) == true
+    @test is_strongly_fano(Z) == true
+
+    # A single hyperplane and one quadric in P^3 cut out two reduced points.
+    # h^0(O_Z) = 2, so the locus is disconnected and not a strict CY.
+    P3 = projective_space(3)
+    Z2 = zero_locus(
+      reduce(direct_sum, [line_bundle(P3, 1), line_bundle(P3, 1), line_bundle(P3, 2)])
+    )
+    @test dimension(Z2) == 0
+    @test euler_characteristic(Z2) == 2
+    @test is_calabi_yau(Z2) == false
+    @test is_strict_calabi_yau(Z2) == false
   end
 
   @testset "ZeroLocus: Hodge numbers (CY3)" begin
@@ -2309,5 +2565,21 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test_throws ArgumentError zero_locus("1")
       @test_throws ArgumentError zero_locus("")
     end
+  end
+
+  @testset "CacheConfig" begin
+    info0 = PartialFlagVarieties.cache_info()
+    @test info0 isa NamedTuple
+    @test :tensor_product in keys(info0)
+    @test :bwb_pair in keys(info0)
+    @test :marked_dynkin in keys(info0)
+
+    @test PartialFlagVarieties.clear_caches!() === nothing
+
+    PartialFlagVarieties.configure_caches!(budget=64 * 1024 * 1024)
+    info_small = PartialFlagVarieties.cache_info()
+    @test info_small.tensor_product.maxsize > 0
+
+    @test PartialFlagVarieties.configure_caches!() === nothing
   end
 end  # @testset "PartialFlagVarieties.jl"
