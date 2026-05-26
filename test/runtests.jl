@@ -511,6 +511,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test det(direct_sum(L, M)) == tensor_product(L, M)  # det(L⊕M) = L⊗M
   end
 
+  @testset "picard_degrees" begin
+    @test picard_degrees(line_bundle(projective_space(4), 3)) == [3]
+    @test picard_degrees(structure_sheaf(projective_space(4))) == [0]
+    @test picard_degrees(anticanonical_bundle(Gr(2, 5))) == [5]
+    @test picard_degrees(canonical_bundle(Gr(2, 5))) == [-5]
+
+    X_flag = flag_variety(4, (1, 2))
+    @test picard_degrees(line_bundle(X_flag, [1, -2])) == [1, -2]
+
+    P3 = projective_space(3)
+    @test_throws ArgumentError picard_degrees(direct_sum(line_bundle(P3, 1), line_bundle(P3, 2)))
+    @test_throws ArgumentError picard_degrees(tangent_bundle(P3))
+  end
+
   @testset "det(tangent_bundle) == anticanonical_bundle" begin
     det_tangent_is_anticanonical(X) = det(tangent_bundle(X)) == anticanonical_bundle(X)
 
