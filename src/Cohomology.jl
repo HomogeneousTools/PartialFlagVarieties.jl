@@ -510,9 +510,11 @@ function hilbert_polynomial(
   variety(E) == variety(L) || throw(ArgumentError(
     "Polarization L must live on the same variety as E."
   ))
-  rank_bundle(L) == 1 || throw(ArgumentError(
-    "Polarization L must be a line bundle (rank 1), got rank $(rank_bundle(L))."
-  ))
+  rank_bundle(L) == 1 || throw(
+    ArgumentError(
+      "Polarization L must be a line bundle (rank 1), got rank $(rank_bundle(L))."
+    ),
+  )
 
   d = dimension(variety(E))
   n_points = min(d + rank_bundle(E) + 5, max_degree + 1)
@@ -552,9 +554,11 @@ julia> hilbert_polynomial(structure_sheaf(X))
 """
 function hilbert_polynomial(E::CompletelyReducibleBundle; max_degree::Int=20)
   marked = marked_nodes(variety(E))
-  length(marked) == 1 || throw(ArgumentError(
-    "hilbert_polynomial on a Picard rank > 1 variety needs a polarization; pass an ample line bundle as the second argument."
-  ))
+  length(marked) == 1 || throw(
+    ArgumentError(
+      "hilbert_polynomial on a Picard rank > 1 variety needs a polarization; pass an ample line bundle as the second argument."
+    ),
+  )
   hilbert_polynomial(E, line_bundle(variety(E), 1); max_degree=max_degree)
 end
 
