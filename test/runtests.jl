@@ -782,6 +782,30 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test HW[0] == 10
   end
 
+  @testset "hilbert_polynomial" begin
+    # χ(O_{P^3}(t)) = (t+1)(t+2)(t+3)/6 = 1 + 11t/6 + t^2 + t^3/6.
+    P3 = projective_space(3)
+    @test hilbert_polynomial(structure_sheaf(P3)) ==
+      Rational{BigInt}[1, 11 // 6, 1, 1 // 6]
+
+    # χ(O_{P^3}(1)(t)) = (t+2)(t+3)(t+4)/6 = 4 + 13t/3 + 3t^2/2 + t^3/6.
+    @test hilbert_polynomial(line_bundle(P3, 1)) ==
+      Rational{BigInt}[4, 13 // 3, 3 // 2, 1 // 6]
+
+    # Polarization on Picard rank > 1: χ(O(t,t)) = (t+1)^2 on P^1 × P^1.
+    X = projective_space(1) * projective_space(1)
+    @test hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1])) ==
+      Rational{BigInt}[1, 2, 1]
+
+    # No polarization on Picard rank > 1: throws.
+    @test_throws ArgumentError hilbert_polynomial(structure_sheaf(X))
+
+    # Polarization must be a line bundle on the same variety as E.
+    @test_throws ArgumentError hilbert_polynomial(structure_sheaf(P3), tangent_bundle(P3))
+    @test_throws ArgumentError hilbert_polynomial(structure_sheaf(P3),
+      line_bundle(projective_space(2), 1))
+  end
+
   @testset "Cohomology: 0-based indexing" begin
     X = projective_space(2)
     O = structure_sheaf(X)
@@ -882,9 +906,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Marked Dynkin diagram" begin
-    diagram = marked_dynkin_diagram(mdt(TypeA{4}, (2,)))
-    @test occursin("×", diagram)
-    @test occursin("○", diagram)
+    @test marked_dynkin_diagram(marked_dynkin_type(Gr(2, 5))) ==
+      "○───×───○───○\n1   2   3   4"
+
+    @test marked_dynkin_diagram(marked_dynkin_type(OGr(2, 8))) ==
+      "        ○ 4\n       /\n○───×───○\n1   2   3"
+
+    @test marked_dynkin_diagram(marked_dynkin_type(cayley_plane())) ==
+      "        ○ 2\n        |\n×───○───○───○───○\n1   3   4   5   6"
+
+    @test marked_dynkin_diagram(
+      marked_dynkin_type(projective_space(2) * projective_space(2))
+    ) == "A2:\n○───○\n1   2\n\nA2:\n○───○\n1   2\n(marked: 1, 3)"
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1452,6 +1485,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test P_gr[1] == 15
   end
 
+  @testset "PolyvectorParallelogram: show and Euler characteristic" begin
+    P = hochschild_cohomology(projective_space(2))
+    @test euler_characteristic(P) == 3
+
+    P_gr = hochschild_cohomology(Gr(2, 4))
+    @test euler_characteristic(P_gr) == 6
+
+    out = sprint(show, MIME"text/plain"(), P)
+    @test occursin("Polyvector parallelogram", out)
+    @test occursin("dim = 2", out)
+
+    @test sprint(show, P) == "PolyvectorParallelogram(dim=2)"
+  end
+
   @testset "Twisted Hodge / Hochschild: exceptional types" begin
     let X = adjoint_variety(TypeG2)
       H = twisted_hodge_numbers(X, 0)
@@ -1578,6 +1625,56 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test H_sym isa Cohomology{AffineExpr}
     @test H_sym[0] == AffineExpr(1)
     @test H_sym[1] == AffineExpr(0)
+  end
+
+  @testset "AffineExpr show" begin
+    @test sprint(show, AffineExpr(5)) == "5"
+    @test sprint(show, AffineExpr(0)) == "0"
+
+    x1 = symbolic_variable(1)
+    x2 = symbolic_variable(2)
+    @test sprint(show, x1) == "x_1"
+    @test sprint(show, -x1) == "-x_1"
+    @test sprint(show, 2 * x1) == "2 * x_1"
+    @test sprint(show, -3 * x1) == "-3 * x_1"
+    @test sprint(show, AffineExpr(4) + x1) == "4 + x_1"
+    @test sprint(show, x1 + x2) == "x_1 + x_2"
+    @test sprint(show, x1 - x2) == "x_1 - x_2"
+    @test sprint(show, 2 * x1 - x2) == "2 * x_1 - x_2"
+    @test sprint(show, x1 - 2 * x2) == "x_1 - 2 * x_2"
+  end
+
+  @testset "long_exact_sequence_cokernel" begin
+    # Numeric BigInt entry point: r=0 case wraps terms[1] in AffineExpr.
+    var_counter = Ref(0)
+    out0 = PartialFlagVarieties.long_exact_sequence_cokernel(
+      Vector{BigInt}[BigInt[3, 5]], var_counter
+    )
+    @test out0 == AffineExpr[AffineExpr(3), AffineExpr(5)]
+    @test var_counter[] == 0
+
+    # r=1: two BigInt terms, delegates to les_cokernel.
+    out1 = PartialFlagVarieties.long_exact_sequence_cokernel(
+      Vector{BigInt}[BigInt[1, 0], BigInt[2, 0]], Ref(0)
+    )
+    @test out1 == AffineExpr[AffineExpr(1), AffineExpr(0)]
+
+    # r=2: chains two LES solves.
+    out2 = PartialFlagVarieties.long_exact_sequence_cokernel(
+      Vector{BigInt}[BigInt[0, 0], BigInt[1, 0], BigInt[2, 0]], Ref(0)
+    )
+    @test length(out2) == 2
+
+    # AffineExpr-valued entry point.
+    affine_terms = [AffineExpr[AffineExpr(1), AffineExpr(0)],
+      AffineExpr[AffineExpr(2), AffineExpr(0)]]
+    out_aff = PartialFlagVarieties.long_exact_sequence_cokernel(affine_terms, Ref(0))
+    @test out_aff == AffineExpr[AffineExpr(1), AffineExpr(0)]
+
+    # r=0 in the AffineExpr method returns a copy of terms[1].
+    single = [AffineExpr[AffineExpr(7), AffineExpr(0)]]
+    out_single = PartialFlagVarieties.long_exact_sequence_cokernel(single, Ref(0))
+    @test out_single == single[1]
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1737,6 +1834,49 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test euler_characteristic(Z2) == 2
     @test is_calabi_yau(Z2) == false
     @test is_strict_calabi_yau(Z2) == false
+  end
+
+  @testset "ZeroLocus: koszul_terms" begin
+    # Untwisted Koszul resolution of O_Z has rank(E) + 1 terms K_i = ∧^i E^∨.
+    P4 = projective_space(4)
+    Z = zero_locus(line_bundle(P4, 3))
+    terms = koszul_terms(Z)
+    @test length(terms) == 2
+    @test terms[1] == structure_sheaf(P4)
+    @test terms[2] == line_bundle(P4, -3)
+
+    # rank(E) = 2 → 3 terms.
+    E2 = direct_sum(line_bundle(P4, 1), line_bundle(P4, 2))
+    terms2 = koszul_terms(zero_locus(E2))
+    @test length(terms2) == 3
+
+    # Twisted variant: each K_i is tensored by F.
+    twist = line_bundle(P4, 1)
+    terms_tw = koszul_terms(Z, twist)
+    @test length(terms_tw) == 2
+    @test terms_tw[1] == twist
+    @test terms_tw[2] == tensor_product(twist, line_bundle(P4, -3))
+
+    # F must live on the ambient.
+    @test_throws ArgumentError koszul_terms(Z, structure_sheaf(Gr(2, 4)))
+  end
+
+  @testset "ZeroLocus: cohomology_on_restriction_symbolic" begin
+    # Numeric-determined case (quintic CY3): same values as the numeric
+    # restriction, wrapped in AffineExpr.
+    P4 = projective_space(4)
+    Z = zero_locus(line_bundle(P4, 5))
+    H_sym = cohomology_on_restriction_symbolic(Z, Ref(0))
+    @test H_sym isa Cohomology{AffineExpr}
+    @test H_sym[0] == AffineExpr(1)
+    @test H_sym[1] == AffineExpr(0)
+    @test H_sym[2] == AffineExpr(0)
+    @test H_sym[3] == AffineExpr(1)
+    @test all(is_determined(H_sym[i]) for i in 0:3)
+
+    # Twisted variant with explicit bundle argument.
+    H_tw = cohomology_on_restriction_symbolic(Z, structure_sheaf(P4), Ref(0))
+    @test H_tw[0] == AffineExpr(1)
   end
 
   @testset "ZeroLocus: Hodge numbers (CY3)" begin
