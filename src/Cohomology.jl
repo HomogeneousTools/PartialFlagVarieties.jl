@@ -475,55 +475,87 @@ chi(E::CompletelyReducibleBundle) = euler_characteristic(E)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    hilbert_polynomial(E::CompletelyReducibleBundle;
+    hilbert_polynomial(E::CompletelyReducibleBundle,
+                       L::CompletelyReducibleBundle;
                        max_degree::Int=20) -> Vector{Rational{BigInt}}
 
-Compute the Hilbert polynomial of a bundle ``E`` on a generalized Grassmannian.
+Compute the Hilbert polynomial of a bundle ``E`` with respect to the
+polarization ``L``:
+```math
+P(t) = \\chi(E \\otimes L^{\\otimes t}).
+```
 
-For ``\\mathcal{O}(1)`` the Serre twist ``\\chi(E(t)) = \\sum_i (-1)^i \\dim H^i(E \\otimes \\mathcal{L}(t))``.
+The polarization ``L`` must be a line bundle on the same variety as ``E``;
+for the result to be a genuine Hilbert polynomial, ``L`` should be ample.
 
-Returns polynomial coefficients ``[a_0, a_1, ..., a_d]`` such that
-``P(t) = a_0 + a_1 t + ... + a_d t^d``.
-
-Requires the variety to be a generalized Grassmannian (one marked node).
+Returns polynomial coefficients ``[a_0, a_1, \\ldots, a_d]`` such that
+``P(t) = a_0 + a_1 t + \\cdots + a_d t^d``.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = partial_flag_variety(TypeA{4}, (1,));  # ℙ⁴
+julia> X = projective_space(1) * projective_space(1);
 
-julia> coeffs = hilbert_polynomial(structure_sheaf(X));
-
-julia> length(coeffs) > 0
-true
+julia> hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1]))
+3-element Vector{Rational{BigInt}}:
+ 1
+ 2
+ 1
 ```
 """
-function hilbert_polynomial(E::CompletelyReducibleBundle;
-  max_degree::Int=20,
+function hilbert_polynomial(
+  E::CompletelyReducibleBundle, L::CompletelyReducibleBundle; max_degree::Int=20
 )
-  marked = marked_nodes(variety(E))
-  length(marked) == 1 || throw(
-    ArgumentError(
-      "Hilbert polynomial requires a generalized Grassmannian (1 marked node)"
-    ),
-  )
+  variety(E) == variety(L) || throw(ArgumentError(
+    "Polarization L must live on the same variety as E."
+  ))
+  rank_bundle(L) == 1 || throw(ArgumentError(
+    "Polarization L must be a line bundle (rank 1), got rank $(rank_bundle(L))."
+  ))
 
-  d = dimension(E.variety)
-  # By Riemann-Roch-Hirzebruch or direct computation,
-  # evaluate χ(E(t)) at enough integer points to interpolate
-
+  d = dimension(variety(E))
   n_points = min(d + rank_bundle(E) + 5, max_degree + 1)
-  values = Rational{BigInt}[]
-
-  for t in 0:(n_points - 1)
-    Et = twist(E, 1, t)
-    push!(values, Rational{BigInt}(euler_characteristic(Et)))
+  values = Rational{BigInt}[Rational{BigInt}(euler_characteristic(E))]
+  Lt = L
+  for _ in 1:(n_points - 1)
+    push!(values, Rational{BigInt}(euler_characteristic(tensor_product(E, Lt))))
+    Lt = tensor_product(Lt, L)
   end
+  _lagrange_interpolation(values)
+end
 
-  # Lagrange interpolation to recover polynomial
-  coeffs = _lagrange_interpolation(values)
-  return coeffs
+"""
+    hilbert_polynomial(E::CompletelyReducibleBundle;
+                       max_degree::Int=20) -> Vector{Rational{BigInt}}
+
+Compute the Hilbert polynomial of a bundle ``E`` on a generalized Grassmannian
+(Picard rank 1), using the ample generator of ``\\operatorname{Pic}(X)`` as
+the polarization.
+
+For higher Picard rank, pass an explicit polarization line bundle as a second
+argument.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(3);
+
+julia> hilbert_polynomial(structure_sheaf(X))
+4-element Vector{Rational{BigInt}}:
+   1
+ 11//6
+   1
+  1//6
+```
+"""
+function hilbert_polynomial(E::CompletelyReducibleBundle; max_degree::Int=20)
+  marked = marked_nodes(variety(E))
+  length(marked) == 1 || throw(ArgumentError(
+    "hilbert_polynomial on a Picard rank > 1 variety needs a polarization; pass an ample line bundle as the second argument."
+  ))
+  hilbert_polynomial(E, line_bundle(variety(E), 1); max_degree=max_degree)
 end
 
 """
