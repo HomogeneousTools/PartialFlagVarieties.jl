@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Pre-commit hook: verify JuliaFormatter (Blue style) passes on all staged
+# Julia files. Mirrors the "format" job in .github/workflows/format.yml.
+#
+# To skip (e.g. WIP commits):
+#   git commit --no-verify
+
+set -euo pipefail
+
+# Only run if there are staged Julia files
+if ! git diff --cached --name-only | grep -qE '\.jl$'; then
+  exit 0
+fi
+
+echo "── JuliaFormatter check ──────────────────────────────────────────────"
+
+julia -e '
+  using Pkg
+  # Install into the per-process environment so we do not pollute the project.
+  Pkg.activate(temp=true)
+  Pkg.add("JuliaFormatter"; io=devnull)
+  using JuliaFormatter
+  if !format(".", overwrite=false)
+    @error """
+    JuliaFormatter check failed.
+    Run the formatter and stage the result:
+
+        julia -e '"'"'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'"'"'
+        git add -u
+
+    Then re-commit.  To skip this check use: git commit --no-verify
+    """
+    exit(1)
+  end
+  println("  ✓ All Julia files are correctly formatted.")
+'
