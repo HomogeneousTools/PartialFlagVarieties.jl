@@ -401,29 +401,14 @@ julia> rank_bundle.(U)
 ```
 """
 function tautological_bundles(X::PartialFlagVariety)
-  if is_exceptional_type(X)
-    throw(
-      ArgumentError("exceptional types do not have well-defined tautological bundles")
-    )
-  end
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have well-defined tautological bundles")
+  )
   DT = dynkin_type(X)
   marked = marked_nodes(X)
-  if DT <: TypeA
-    bundles = Vector{CompletelyReducibleBundle}()
-    push!(bundles, dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1))))
-    for i in 2:length(marked)
-      push!(
-        bundles,
-        CompletelyReducibleBundle(
-          X, -fundamental_weight(DT, marked[i]) + fundamental_weight(DT, marked[i] - 1)
-        ),
-      )
-    end
-    return bundles
-  else
-    throw(
-      ArgumentError(
-        "tautological_bundles not implemented for non-type A partial flag varieties"
+  # TODO: For isotropic types B, C, D, the graded pieces of the tautological filtration are
+  # universal_subbundle(X) and residual_bundle(X) for Grassmannians, and more generally
+  # the U_i/U_{i-1} computed from the weight differences at each marked node.
   DT <: TypeA || throw(
     ArgumentError(
       "tautological_bundles not implemented for non-type A partial flag varieties"
@@ -434,40 +419,37 @@ function tautological_bundles(X::PartialFlagVariety)
   for i in 2:length(marked)
     push!(
       bundles,
+      CompletelyReducibleBundle(
+        X, -fundamental_weight(DT, marked[i]) + fundamental_weight(DT, marked[i] - 1)
       ),
-    ) #TODO: For isotropic types B, C, D, the graded pieces of the tautological filtration are
-    # universal_subbundle(X) and residual_bundle(X) for Grassmannians, and more generally
-    # the U_i/U_{i-1} computed from the weight differences at each marked node.
+    )
   end
+  return bundles
 end
 
-# TODO: shouldn't this be closer to universal_subbundle?
 """
     universal_subbundles(X::PartialFlagVariety) -> Vector{Bundle}
 
-Compute the universal subbundles on a partial flag variety as filtered bundles.
-
-For type ``\\mathrm{A}`` partial flags ``Fl(d_1, \\ldots, d_k; n)``, returns a vector of filtered
-bundles where each element represents a nested subbundle. The first element is the
-first universal bundle (rank ``d_1``), and the ``i``-th element is a filtered bundle
-corresponding with the ``i``-th geometric universal subbundle.
-
-These form the complete flag filtration:
-``0 \\subset U_1 \\subset U_2 \\subset \\cdots \\subset U_k``
+The full flag of universal subbundles on a partial flag variety
+``\\mathrm{Fl}(d_1, \\ldots, d_k; n)``:
+``0 \\subset \\mathcal{U}_1 \\subset \\cdots \\subset \\mathcal{U}_k``,
+returned as a vector. The first element is the rank-``d_1`` subbundle
+``\\mathcal{U}_1``; the ``i``-th element (for ``i > 1``) is the `FilteredBundle`
+with graded pieces ``\\mathcal{U}_1, \\mathcal{U}_2 / \\mathcal{U}_1, \\ldots,
+\\mathcal{U}_i / \\mathcal{U}_{i-1}``.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = flag_variety(4,[1,2]);  # Flag variety Fl(1,2; 4)
+julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
 
 julia> subs = universal_subbundles(X);
 
-julia> rank_bundle(subs[1])
-1
-
-julia> rank_bundle(subs[2])
-2
+julia> rank_bundle.(subs)
+2-element Vector{Int64}:
+ 1
+ 2
 ```
 """
 function universal_subbundles(X::PartialFlagVariety)
@@ -475,13 +457,14 @@ function universal_subbundles(X::PartialFlagVariety)
     ArgumentError("exceptional types do not have well-defined universal subbundles")
   )
   DT = dynkin_type(X)
-  !(DT <: TypeA) && throw(
+  # TODO: For isotropic Grassmannians (types B, C, D), the filtration steps are
+  # [U] and [U^⊥ = FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)])].
+  # For isotropic partial flags, extend similarly to the type A implementation above.
+  DT <: TypeA || throw(
     ArgumentError(
       "universal_subbundles currently only implemented for type A partial flag varieties"
     ),
-  )#TODO: For isotropic Grassmannians (types B, C, D), the filtration steps are
-  # [U] and [U^⊥ = FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)])].
-  # For isotropic partial flags, extend similarly to the type A implementation above.
+  )
   marked = marked_nodes(X)
   bundles = Vector{Bundle}()
   U = tautological_bundles(X)
