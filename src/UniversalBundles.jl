@@ -142,10 +142,10 @@ end
 """
     residual_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-TODO: recall the SES
-TODO: we need a type BCD Grassmannian for this?
-For types ``\\mathrm{B}``, ``\\mathrm{C}``, ``\\mathrm{D}```,
-the residual bundle is the completely reducible bundle corresponding to ``\\mathcal{U}^\\perp / \\mathcal{U}``.
+For a generalized Grassmannian of type ``\\mathrm{B}``, ``\\mathrm{C}``, or ``\\mathrm{D}``,
+the residual bundle ``\\mathcal{R} = \\mathcal{U}^\\perp / \\mathcal{U}`` is the
+completely reducible bundle fitting into the short exact sequence
+``0 \\to \\mathcal{U} \\to \\mathcal{U}^\\perp \\to \\mathcal{R} \\to 0``.
 
 # Examples
 ```jldoctest
@@ -181,18 +181,18 @@ function residual_bundle(X::PartialFlagVariety)
     ),
   )
   DT = dynkin_type(X)
+  DT <: TypeA &&
+    throw(ArgumentError("type A has no well-defined residual bundle"))
+
   marked = marked_nodes(X)[1]
   R = rank(DT)
 
   marked == 1 && throw(
     ArgumentError("not implemented for marked node 1")
   )
-  # TODO: throw this earlier?
-  if DT <: TypeA
-    throw(ArgumentError("type A do not have a well-defined residual bundle"))
-  # TODO:because then this starts with type B as the truly interesting thing!
-  # TODO: references for these weights?
-  elseif DT <: TypeB
+
+  # Weight formulas: Frassineti–Manivel, arXiv:2605.28712, §1.
+  if DT <: TypeB
     if marked == R
       ω = WeightLatticeElem(DT)
     elseif marked == R - 1
@@ -311,19 +311,12 @@ function spinor_bundle(X::PartialFlagVariety)
   )
   DT = dynkin_type(X)
   R = rank(DT)
-  if DT <: TypeB
-    # OGr(k, 2n+1): single spinor bundle at ω_n.
-    # TODO: note that sometimes we produce \omega, and here we return the bundle directly
-    # is the latter more Julia-esque?
-    CompletelyReducibleBundle(X, fundamental_weight(DT, R))
-    # TODO: this function is now renamed
-    # TODO: use same structure as next function, don't wrap it in an else, but explain like you do now that is must be TypeD for sure
-  else  # DT <: TypeD; guarded by _is_orthogonal_grassmannian.
-    # OGr(k, 2n): direct sum of both half-spinors.
-    CompletelyReducibleBundle(
-      X, [fundamental_weight(DT, R - 1), fundamental_weight(DT, R)]
-    )
-  end
+  # OGr(k, 2n+1): single spinor bundle at ω_n.
+  DT <: TypeB && return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
+  # DT <: TypeD by is_orthogonal_grassmannian; OGr(k, 2n) carries both half-spinors.
+  return CompletelyReducibleBundle(
+    X, [fundamental_weight(DT, R - 1), fundamental_weight(DT, R)]
+  )
 end
 
 function spinor_bundle(X::PartialFlagVariety, half::Symbol)
@@ -341,16 +334,10 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
     return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   end
 
-  # TODO: why not return CompletelyReducibleBundle immediately?
-  # DT <: TypeD, by _is_orthogonal_grassmannian.
-  ω = if half === :plus
-    fundamental_weight(DT, R - 1)
-  elseif half === :minus
-    fundamental_weight(DT, R)
-  else
-    throw(ArgumentError("half must be :plus or :minus, got :$half"))
-  end
-  CompletelyReducibleBundle(X, ω)
+  # DT <: TypeD by is_orthogonal_grassmannian.
+  half === :plus && return CompletelyReducibleBundle(X, fundamental_weight(DT, R - 1))
+  half === :minus && return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
+  throw(ArgumentError("half must be :plus or :minus, got :$half"))
 end
 
 # TODO: put these checks near `    is_generalized_grassmannian(X::PartialFlagVariety) -> Bool
