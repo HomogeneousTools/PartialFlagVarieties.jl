@@ -1327,9 +1327,27 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(universal_subbundle(X6, 2)) == 2
     @test rank_bundle(universal_subbundle(X6, 3)) == 4
 
-    # tautological_bundles / universal_subbundles: non-type-A error paths
-    @test_throws ArgumentError tautological_bundles(OGr(2, 5))
-    @test_throws ArgumentError universal_subbundles(OGr(2, 5))
+    # Isotropic generalized Grassmannian: tautological_bundles = [U, R],
+    # universal_subbundles = [U, U^⊥] (option (b)).
+    @test rank_bundle.(tautological_bundles(OGr(2, 5))) == [2, 1]    # B_2/P_2
+    @test rank_bundle.(universal_subbundles(OGr(2, 5))) == [2, 3]
+    # The two-marked spinorial D_n/P_{n-1, n} also works (gives the natural
+    # (n-1)-isotropic / unique containing max-isotropic flag).
+    @test rank_bundle.(
+      tautological_bundles(partial_flag_variety(TypeD{4}, (3, 4)))
+    ) == [3, 1]
+    @test rank_bundle.(
+      universal_subbundles(partial_flag_variety(TypeD{4}, (3, 4)))
+    ) == [3, 4]
+    # Multi-step isotropic with D spinor-boundary at the last node.
+    @test rank_bundle.(
+      tautological_bundles(partial_flag_variety(TypeD{4}, (1, 3)))
+    ) == [1, 3]    # m_2 = n-1, fix used: ω_n - ω_{n-1}
+    # universal_subbundle(X, 2) on a B/C/D generalized Grassmannian returns U^⊥.
+    @test rank_bundle(universal_subbundle(OGr(3, 9), 2)) == 6    # n-k = 9-3 = 6
+    # Lagrangian / spinor cases: U^⊥ = U.
+    @test rank_bundle(universal_subbundle(SGr(3, 6), 2)) ==
+      rank_bundle(universal_subbundle(SGr(3, 6)))
 
     # residual_bundle: TypeB marked == R (OGr(3,7) = B_3/P_3, rank 7-2*3=1)
     @test rank_bundle(residual_bundle(OGr(3, 7))) == 1

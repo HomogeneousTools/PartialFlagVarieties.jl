@@ -330,23 +330,18 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
-# TODO: Extend to isotropic types. For a generalized Grassmannian of type B, C, or D
-# the building blocks are universal_subbundle(X) and residual_bundle(X). For multi-step
-# isotropic flags, compute the graded pieces U_i/U_{i-1} via weight differences
-# analogously to the type A case below.
 
 """
     universal_subbundle(X::PartialFlagVariety, i::Int) -> Bundle
 
-The ``i``-th universal subbundle ``\\mathcal{U}_i`` on a partial flag variety
-``\\mathrm{Fl}(d_1, \\ldots, d_k; n)``, selected from the filtration
-``0 \\subset \\mathcal{U}_1 \\subset \\cdots \\subset \\mathcal{U}_k``.
+The ``i``-th universal subbundle on a partial flag variety, selected from
+[`universal_subbundles`](@ref). `i == 1` returns
+[`universal_subbundle(X)`](@ref).
 
-`i == 1` returns [`universal_subbundle(X)`](@ref). For `i > 1`, equivalent to
-`universal_subbundles(X)[i]`.
-
-Currently `i > 1` is only supported for type ``\\mathrm{A}`` partial flag
-varieties.
+On an isotropic generalized Grassmannian (one marked node, type
+``\\mathrm{B}``, ``\\mathrm{C}``, or ``\\mathrm{D}``), `i == 2` returns the
+orthogonal complement ``\\mathcal{U}^\\perp`` — there is a canonical second
+subbundle even though only one node is marked.
 
 # Examples
 ```jldoctest
@@ -360,44 +355,75 @@ julia> rank_bundle(universal_subbundle(X, 1))
 julia> rank_bundle(universal_subbundle(X, 2))
 2
 ```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle(universal_subbundle(OGr(3, 9), 2))  # U^⊥, rank n-k = 6
+6
+```
 """
 function universal_subbundle(X::PartialFlagVariety, i::Int)
   i == 1 && return universal_subbundle(X)
   is_exceptional_type(X) && throw(
     ArgumentError("exceptional types do not have a well-defined universal subbundle")
   )
-  # TODO: For isotropic Grassmannians (types B, C, D) with i == 2, return U^⊥ as
-  # dual(universal_quotient_bundle(X)), reflecting 0 → U → U^⊥ → Res → 0.
-  # When Res is zero (Lagrangian/spinor cases), U^⊥ = U, so dual(Q) recovers i == 1.
-  k = length(marked_nodes(X))
-  (1 ≤ i ≤ k) ||
-    throw(ArgumentError("i must be between 1 and length(marked_nodes(X)) = $k"))
-  return universal_subbundles(X)[i]
+  bundles = universal_subbundles(X)
+  (1 <= i <= length(bundles)) || throw(
+    ArgumentError(
+      "i must be between 1 and length(universal_subbundles(X)) = $(length(bundles))"
+    ),
+  )
+  return bundles[i]
 end
 
 """
     tautological_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
 
-The graded pieces ``\\mathcal{U}_1, \\mathcal{U}_2 / \\mathcal{U}_1, \\ldots,
-\\mathcal{U}_k / \\mathcal{U}_{k-1}`` of the tautological filtration on a
-partial flag variety ``\\mathrm{Fl}(d_1, \\ldots, d_k; n)``, returned as a
-vector of completely reducible bundles.
+The graded pieces of the tautological filtration on a partial flag variety.
 
-These are the convenient building blocks; for the filtration steps themselves
-(as `FilteredBundle`s), use [`universal_subbundles`](@ref).
+For ``\\mathrm{Fl}(d_1, \\ldots, d_k; n)`` (type ``\\mathrm{A}``) and
+multi-step isotropic partial flags (type ``\\mathrm{B}``, ``\\mathrm{C}``,
+``\\mathrm{D}``), returns ``k`` pieces
+``\\mathcal{U}_1, \\mathcal{U}_2/\\mathcal{U}_1, \\ldots, \\mathcal{U}_k/\\mathcal{U}_{k-1}``.
+
+For an isotropic **generalized Grassmannian** (one marked node, type
+``\\mathrm{B}``, ``\\mathrm{C}``, or ``\\mathrm{D}``), returns the two graded
+pieces ``[\\mathcal{U}, \\mathcal{R}]`` of the natural filtration
+``0 \\subset \\mathcal{U} \\subset \\mathcal{U}^\\perp``. In Lagrangian /
+spinor cases ``\\mathcal{R}`` is the zero bundle.
+
+The two-marked spin variety ``\\mathrm{D}_n/P_{n-1, n}`` is not supported.
+
+# References
+
+- Pragacz–Ratajski, "Formulas for Lagrangian and orthogonal degeneracy loci",
+  *Compositio Math.* **107** (1997), 11–87 — tautological bundles on
+  isotropic flag varieties.
+- Buch–Kresch–Tamvakis, "Quantum Pieri rules for isotropic Grassmannians",
+  *Invent. Math.* **178** (2009), 345–405.
+- Bourbaki, *Groupes et algèbres de Lie*, Ch. VI, Planche IV — fundamental
+  weights of ``\\mathrm{D}_n``, used in the spinor-boundary correction below.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
+julia> X = flag_variety(4, [1, 2]);  # Fl(1, 2; 4)
 
-julia> U = tautological_bundles(X);
-
-julia> rank_bundle.(U)
+julia> rank_bundle.(tautological_bundles(X))
 2-element Vector{Int64}:
  1
  1
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle.(tautological_bundles(OGr(3, 9)))  # [U, R] on OGr(3, 9)
+2-element Vector{Int64}:
+ 3
+ 3
 ```
 """
 function tautological_bundles(X::PartialFlagVariety)
@@ -406,23 +432,63 @@ function tautological_bundles(X::PartialFlagVariety)
   )
   DT = dynkin_type(X)
   marked = marked_nodes(X)
-  # TODO: For isotropic types B, C, D, the graded pieces of the tautological filtration are
-  # universal_subbundle(X) and residual_bundle(X) for Grassmannians, and more generally
-  # the U_i/U_{i-1} computed from the weight differences at each marked node.
-  DT <: TypeA || throw(
-    ArgumentError(
-      "tautological_bundles not implemented for non-type A partial flag varieties"
-    ),
+
+  if DT <: TypeA
+    return _tautological_pieces_typeA(X, DT, marked)
+  end
+  DT <: Union{TypeB,TypeC,TypeD} || throw(
+    ArgumentError("tautological_bundles not implemented for $(DT) partial flag varieties")
   )
+
+  # Isotropic generalized Grassmannian: the natural filtration is 0 ⊂ U ⊂ U^⊥,
+  # so the graded pieces are [U, R] (Pragacz–Ratajski 1997, §1).
+  is_generalized_grassmannian(X) &&
+    return [universal_subbundle(X), residual_bundle(X)]
+
+  # Multi-step isotropic partial flag: same Levi-rep highest-weight pattern as
+  # type A, with one D-specific correction at the spinor boundary.
+  return _tautological_pieces_isotropic(X, DT, marked)
+end
+
+function _tautological_pieces_typeA(X, DT, marked)
   bundles = Vector{CompletelyReducibleBundle}()
   push!(bundles, dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1))))
   for i in 2:length(marked)
     push!(
       bundles,
       CompletelyReducibleBundle(
-        X, -fundamental_weight(DT, marked[i]) + fundamental_weight(DT, marked[i] - 1)
+        X,
+        -fundamental_weight(DT, marked[i]) + fundamental_weight(DT, marked[i] - 1),
       ),
     )
+  end
+  return bundles
+end
+
+function _tautological_pieces_isotropic(X, DT, marked)
+  R = rank(DT)
+  bundles = Vector{CompletelyReducibleBundle}()
+  push!(bundles, dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1))))
+  for i in 2:length(marked)
+    m = marked[i]
+    # Highest weight of U_{m_i} / U_{m_{i-1}} as a Levi rep. Away from the
+    # type-D spinor boundary, the type-A formula ω_{m-1} - ω_m = L_m
+    # (Bourbaki, Groupes et algèbres de Lie, Ch. VI, Plate IV) gives the
+    # standard rep of the i-th GL Levi factor.
+    #
+    # In type D at m = n - 1, ω_{n-1} = (L_1 + ⋯ + L_{n-1} - L_n)/2 and
+    # ω_n = (L_1 + ⋯ + L_n)/2 are half-sums, so ω_{n-2} - ω_{n-1} is
+    # half-integer and picks up a spinor Levi character with the wrong rank.
+    # The correction ω_n - ω_{n-1} = L_n is the genuine basis-vector weight,
+    # giving rank n - m_{i-1} — matching U_{n-1} = max isotropic of dim n in
+    # the "minus" spinor family (Manivel, SIGMA 5 (2009) 078). At m = n the
+    # type-A formula already produces ω_{n-1} - ω_n = -L_n.
+    ω = if DT <: TypeD && m == R - 1
+      fundamental_weight(DT, R) - fundamental_weight(DT, R - 1)
+    else
+      fundamental_weight(DT, m - 1) - fundamental_weight(DT, m)
+    end
+    push!(bundles, CompletelyReducibleBundle(X, ω))
   end
   return bundles
 end
@@ -430,26 +496,38 @@ end
 """
     universal_subbundles(X::PartialFlagVariety) -> Vector{Bundle}
 
-The full flag of universal subbundles on a partial flag variety
-``\\mathrm{Fl}(d_1, \\ldots, d_k; n)``:
-``0 \\subset \\mathcal{U}_1 \\subset \\cdots \\subset \\mathcal{U}_k``,
-returned as a vector. The first element is the rank-``d_1`` subbundle
-``\\mathcal{U}_1``; the ``i``-th element (for ``i > 1``) is the `FilteredBundle`
-with graded pieces ``\\mathcal{U}_1, \\mathcal{U}_2 / \\mathcal{U}_1, \\ldots,
-\\mathcal{U}_i / \\mathcal{U}_{i-1}``.
+The flag of universal subbundles on a partial flag variety, returned as a
+vector. The first element is the rank-``d_1`` subbundle ``\\mathcal{U}_1``;
+later elements are `FilteredBundle`s built from
+[`tautological_bundles`](@ref).
+
+For type ``\\mathrm{A}`` and multi-step isotropic partial flags this is
+``[\\mathcal{U}_1, \\mathcal{U}_2, \\ldots, \\mathcal{U}_k]``.
+
+For an isotropic generalized Grassmannian (one marked node) the natural
+filtration is ``0 \\subset \\mathcal{U} \\subset \\mathcal{U}^\\perp``, so
+the function returns ``[\\mathcal{U}, \\mathcal{U}^\\perp]`` (two elements).
+In Lagrangian / spinor cases the two pieces coincide.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
+julia> X = flag_variety(4, [1, 2]);  # Fl(1, 2; 4)
 
-julia> subs = universal_subbundles(X);
-
-julia> rank_bundle.(subs)
+julia> rank_bundle.(universal_subbundles(X))
 2-element Vector{Int64}:
  1
  2
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle.(universal_subbundles(OGr(3, 9)))  # [U, U^⊥]
+2-element Vector{Int64}:
+ 3
+ 6
 ```
 """
 function universal_subbundles(X::PartialFlagVariety)
@@ -457,19 +535,13 @@ function universal_subbundles(X::PartialFlagVariety)
     ArgumentError("exceptional types do not have well-defined universal subbundles")
   )
   DT = dynkin_type(X)
-  # TODO: For isotropic Grassmannians (types B, C, D), the filtration steps are
-  # [U] and [U^⊥ = FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)])].
-  # For isotropic partial flags, extend similarly to the type A implementation above.
-  DT <: TypeA || throw(
-    ArgumentError(
-      "universal_subbundles currently only implemented for type A partial flag varieties"
-    ),
+  DT <: Union{TypeA,TypeB,TypeC,TypeD} || throw(
+    ArgumentError("universal_subbundles not implemented for $(DT) partial flag varieties")
   )
-  marked = marked_nodes(X)
   bundles = Vector{Bundle}()
   U = tautological_bundles(X)
   push!(bundles, U[1])
-  for i in 2:length(marked)
+  for i in 2:length(U)
     push!(bundles, FilteredBundle(X, U[1:i]))
   end
   return bundles
