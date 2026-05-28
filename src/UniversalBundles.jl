@@ -121,16 +121,13 @@ julia> rank_bundle(universal_subbundle(X)) + rank_bundle(universal_quotient_bund
 ```
 """
 function universal_quotient_bundle(X::PartialFlagVariety)
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have a well-defined universal quotient bundle")
+  )
   is_generalized_grassmannian(X) || throw(
-    # TODO: are these ArgumentErrors reporting the function they're called for
-    # in the same way as other ArgumentErrors?
     ArgumentError(
       "universal_quotient_bundle requires a generalized Grassmannian (1 marked node)"
     ),
-  )
-  # TODO: put this one first?
-  is_exceptional_type(X) && throw(
-    ArgumentError("exceptional types do not have a well-defined universal quotient bundle")
   )
 
   DT = dynkin_type(X)
@@ -187,16 +184,14 @@ true
 
 """
 function residual_bundle(X::PartialFlagVariety)
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have a well-defined residual bundle")
+  )
   is_generalized_grassmannian(X) || throw(
     ArgumentError(
       "residual_bundle requires a generalized Grassmannian (1 marked node)"
     ),
   )
-  # TODO: first test this?
-  is_exceptional_type(X) && throw(
-    ArgumentError("exceptional types do not have a well-defined residual bundle")
-  )
-
   DT = dynkin_type(X)
   marked = marked_nodes(X)[1]
   R = rank(DT)
