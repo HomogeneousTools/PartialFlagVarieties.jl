@@ -327,18 +327,6 @@ function _check_spinor_domain(X::PartialFlagVariety)
   )
 end
 
-"""
-
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-
-```
-"""
-end
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Partial flag varieties Fl(d₁,...,dₖ; n)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -346,6 +334,47 @@ end
 # the building blocks are universal_subbundle(X) and residual_bundle(X). For multi-step
 # isotropic flags, compute the graded pieces U_i/U_{i-1} via weight differences
 # analogously to the type A case below.
+
+"""
+    universal_subbundle(X::PartialFlagVariety, i::Int) -> Bundle
+
+The ``i``-th universal subbundle ``\\mathcal{U}_i`` on a partial flag variety
+``\\mathrm{Fl}(d_1, \\ldots, d_k; n)``, selected from the filtration
+``0 \\subset \\mathcal{U}_1 \\subset \\cdots \\subset \\mathcal{U}_k``.
+
+`i == 1` returns [`universal_subbundle(X)`](@ref). For `i > 1`, equivalent to
+`universal_subbundles(X)[i]`.
+
+Currently `i > 1` is only supported for type ``\\mathrm{A}`` partial flag
+varieties.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
+
+julia> rank_bundle(universal_subbundle(X, 1))
+1
+
+julia> rank_bundle(universal_subbundle(X, 2))
+2
+```
+"""
+function universal_subbundle(X::PartialFlagVariety, i::Int)
+  i == 1 && return universal_subbundle(X)
+  is_exceptional_type(X) && throw(
+    ArgumentError("exceptional types do not have a well-defined universal subbundle")
+  )
+  # TODO: For isotropic Grassmannians (types B, C, D) with i == 2, return U^⊥ as
+  # dual(universal_quotient_bundle(X)), reflecting 0 → U → U^⊥ → Res → 0.
+  # When Res is zero (Lagrangian/spinor cases), U^⊥ = U, so dual(Q) recovers i == 1.
+  k = length(marked_nodes(X))
+  (1 ≤ i ≤ k) ||
+    throw(ArgumentError("i must be between 1 and length(marked_nodes(X)) = $k"))
+  return universal_subbundles(X)[i]
+end
+
 """
     tautological_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
 
