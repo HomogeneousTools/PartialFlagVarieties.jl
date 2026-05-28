@@ -1366,6 +1366,126 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(residual_bundle(OGr(2, 10))) == 6
   end
 
+  @testset "Orthogonal & symplectic partial flag varieties" begin
+    # tautological_bundles[i] is the i-th graded piece U_{m_i} / U_{m_{i-1}};
+    # universal_subbundles[i] is the i-th subbundle U_{m_i}. In regular cases
+    # rank(U_{m_i}) = m_i. The interesting case is type D at a spinor node
+    # (m_i in {n-1, n}): U_{m_i} has rank n (max isotropic from one family).
+
+    # --- Type B (OGr, odd quadric dim) ---
+    # Generalized Grassmannians (1 marked node): [U, U^⊥].
+    @test rank_bundle.(tautological_bundles(OGr(2, 7))) == [2, 3]    # B_3/P_2
+    @test rank_bundle.(universal_subbundles(OGr(2, 7))) == [2, 5]
+    @test rank_bundle.(tautological_bundles(OGr(3, 7))) == [3, 1]    # B_3/P_3 (max iso)
+    @test rank_bundle.(universal_subbundles(OGr(3, 7))) == [3, 4]
+    # Multi-step B partial flags.
+    @test rank_bundle.(tautological_bundles(
+      partial_flag_variety(TypeB{3}, (1, 2))
+    )) == [1, 1]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeB{3}, (1, 2))
+    )) == [1, 2]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeB{3}, (2, 3))     # last marked at R
+    )) == [2, 3]
+    # Full isotropic flag in B.
+    @test rank_bundle.(
+      universal_subbundles(
+        partial_flag_variety(TypeB{4}, (1, 2, 3, 4))
+      ),
+    ) == [1, 2, 3, 4]
+
+    # --- Type C (symplectic Grassmannian) ---
+    @test rank_bundle.(tautological_bundles(SGr(2, 6))) == [2, 2]    # C_3/P_2
+    @test rank_bundle.(universal_subbundles(SGr(2, 6))) == [2, 4]
+    @test rank_bundle.(tautological_bundles(SGr(3, 6))) == [3, 0]    # Lagrangian: R = 0
+    @test rank_bundle.(universal_subbundles(SGr(3, 6))) == [3, 3]    #   ⇒ U^⊥ = U
+    # Multi-step C partial flags.
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeC{3}, (1, 2))
+    )) == [1, 2]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeC{3}, (2, 3))     # last marked at R (Lagrangian step)
+    )) == [2, 3]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeC{4}, (1, 2, 3))
+    )) == [1, 2, 3]
+
+    # --- Type D (even orthogonal) ---
+    # Non-spinor generalized Grassmannian.
+    @test rank_bundle.(tautological_bundles(OGr(2, 8))) == [2, 4]    # D_4/P_2, R rank 4
+    @test rank_bundle.(universal_subbundles(OGr(2, 8))) == [2, 6]
+    # Spinor varieties: U is max isotropic of dim n, R vanishes.
+    @test rank_bundle.(tautological_bundles(OGr(3, 8))) == [4, 0]    # D_4/P_3 (- family)
+    @test rank_bundle.(universal_subbundles(OGr(3, 8))) == [4, 4]
+    @test rank_bundle.(tautological_bundles(OGr(4, 8))) == [4, 0]    # D_4/P_4 (+ family)
+    # Multi-step D, no spinor node:
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{4}, (1, 2))
+    )) == [1, 2]
+    # Multi-step D, last marked = n-1 (the "minus" spinor): U_{n-1} has rank n.
+    # The Bourbaki-Plate-IV correction ω_n - ω_{n-1} = L_n is required here;
+    # the type-A formula ω_{m-1} - ω_m would give the wrong rank.
+    @test rank_bundle.(tautological_bundles(
+      partial_flag_variety(TypeD{4}, (1, 3))
+    )) == [1, 3]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{4}, (1, 3))
+    )) == [1, 4]
+    # Multi-step D, last marked = n: U_n is max isotropic ("+" family).
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{4}, (1, 4))
+    )) == [1, 4]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{4}, (2, 3))
+    )) == [2, 4]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{4}, (2, 4))
+    )) == [2, 4]
+    # Two-marked spinorial D_n/P_{n-1, n} (= the (n-1)-isotropic Grassmannian,
+    # Picard rank 2). U_{n-1} has rank n-1 here (genuine (n-1)-isotropic) and
+    # U_n the unique containing max isotropic of rank n.
+    @test rank_bundle.(tautological_bundles(
+      partial_flag_variety(TypeD{4}, (3, 4))
+    )) == [3, 1]
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{4}, (3, 4))
+    )) == [3, 4]
+    # 3-step D partial flag, last at n-1 (spinor).
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{5}, (1, 3, 4))
+    )) == [1, 3, 5]
+    # 3-step D partial flag, last at n.
+    @test rank_bundle.(universal_subbundles(
+      partial_flag_variety(TypeD{5}, (1, 3, 5))
+    )) == [1, 3, 5]
+
+    # --- universal_subbundle(X, i): index dispatch ---
+    @test rank_bundle(universal_subbundle(OGr(2, 7), 2)) == 5         # B_3/P_2: U^⊥
+    @test rank_bundle(universal_subbundle(OGr(2, 8), 2)) == 6         # D_4/P_2: U^⊥
+    @test rank_bundle(universal_subbundle(
+      partial_flag_variety(TypeD{4}, (1, 3)), 2
+    )) == 4                                                            # spinor step
+    @test_throws ArgumentError universal_subbundle(OGr(2, 7), 3)       # only 2 slots
+
+    # --- Sanity: subs[k] always == sum of taut piece ranks (telescoping) ---
+    for X in (
+      OGr(2, 7), OGr(3, 7),
+      partial_flag_variety(TypeB{3}, (1, 2)),
+      partial_flag_variety(TypeB{4}, (1, 2, 3)),
+      SGr(2, 6),
+      partial_flag_variety(TypeC{3}, (1, 2)),
+      partial_flag_variety(TypeD{4}, (1, 2)),
+      partial_flag_variety(TypeD{4}, (1, 3)),
+      partial_flag_variety(TypeD{4}, (3, 4)),
+      partial_flag_variety(TypeD{5}, (1, 3, 4)),
+    )
+      taut = tautological_bundles(X)
+      subs = universal_subbundles(X)
+      @test rank_bundle(subs[end]) == sum(rank_bundle.(taut))
+    end
+  end
+
   @testset "is_exceptional_type" begin
     # Simple exceptional types
     @test is_exceptional_type(TypeE{6})
