@@ -15,71 +15,55 @@ export tautological_bundles, universal_subbundles
 #  Generalized Grassmannians: universal, quotient and residual bundle
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# TODO: `universal_subbundle`: need to split documentation for version without and with parameter `i::Int`
 """
     universal_subbundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
-    universal_subbundle(X::PartialFlagVariety, i::Int) -> Bundle
 
-On ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/P_k``, this is the irreducible equivariant
-bundle corresponding to the standard representation of the Levi factor.
+On a generalized Grassmannian ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/P_k``,
+the irreducible equivariant bundle ``\\mathcal{U}`` corresponding to the
+standard representation of the Levi factor — geometrically the tautological
+rank-``k`` subbundle of the trivial bundle ``\\mathbb{C}^n``.
 
-For orthogonal and symplectic Grassmannians, this returns the _isotropic_
-universal subbundle ``\\mathcal{U}``.
+For orthogonal and symplectic Grassmannians, returns the _isotropic_ universal
+subbundle ``\\mathcal{U}``.
 
-This function is intended for **generalized Grassmannians** (one marked node).
-For multi-step flags, use [`tautological_bundles`](@ref) instead; those are
-convenient completely reducible building blocks rather than a geometric flag of
-subbundles.
-
-The optional argument `i` (default `1`) selects the ``i``-th element from
-[`universal_subbundles`](@ref): `universal_subbundle(X, i)` is equivalent to
-`universal_subbundles(X)[i]` for `i > 1`. Currently, `i > 1` is only supported
-for type ``\\mathrm{A}`` partial flag varieties.
+For multi-step partial flag varieties, see [`universal_subbundle(X, i)`](@ref)
+and [`universal_subbundles`](@ref).
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = Gr(2, 5);
-
-julia> rank_bundle(universal_subbundle(X))
+julia> rank_bundle(universal_subbundle(Gr(2, 5)))
 2
 ```
 
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = OGr(3, 7);
-
-julia> rank_bundle(universal_subbundle(X))
+julia> rank_bundle(universal_subbundle(OGr(3, 7)))
 3
 ```
 
+``\\mathcal{U}`` sits inside the trivial bundle, so ``H^0(\\mathcal{U}) = 0``,
+while ``H^0(\\mathcal{U}^\\vee)`` recovers the standard representation of the
+structure group:
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
+julia> U = universal_subbundle(Gr(2, 5));
 
-julia> rank_bundle(universal_subbundle(X, 1))
-1
+julia> degree(cohomology(U)[0])
+0
 
-julia> rank_bundle(universal_subbundle(X, 2))
-2
+julia> degree(cohomology(dual(U))[0])
+5
 ```
 """
-function universal_subbundle(X::PartialFlagVariety, i::Int=1)
+function universal_subbundle(X::PartialFlagVariety)
   is_exceptional_type(X) && throw(
     ArgumentError("exceptional types do not have a well-defined universal subbundle")
   )
-  DT = dynkin_type(X)
-  i == 1 && return dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1)))
-  # TODO: For isotropic Grassmannians (types B, C, D) with i == 2, return U^⊥ as
-  # dual(universal_quotient_bundle(X)), reflecting 0 → U → U^⊥ → Res → 0.
-  # When Res is zero (Lagrangian/spinor cases), U^⊥ = U, so dual(Q) recovers i == 1.
-  k = length(marked_nodes(X))
-  (1 ≤ i ≤ k) ||
-    throw(ArgumentError("i must be between 1 and length(marked_nodes(X)) = $k"))
-  return universal_subbundles(X)[i]
+  return dual(CompletelyReducibleBundle(X, fundamental_weight(dynkin_type(X), 1)))
 end
 
 """
