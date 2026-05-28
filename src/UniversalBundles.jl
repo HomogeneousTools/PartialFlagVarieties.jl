@@ -393,7 +393,9 @@ pieces ``[\\mathcal{U}, \\mathcal{R}]`` of the natural filtration
 ``0 \\subset \\mathcal{U} \\subset \\mathcal{U}^\\perp``. In Lagrangian /
 spinor cases ``\\mathcal{R}`` is the zero bundle.
 
-The two-marked spin variety ``\\mathrm{D}_n/P_{n-1, n}`` is not supported.
+The two-marked spinorial variety ``\\mathrm{D}_n/P_{n-1, n}`` is also
+supported: it returns the two graded pieces of the unique
+``(n-1) \\subset n`` isotropic flag (ranks ``[n-1, 1]``).
 
 # References
 
@@ -497,17 +499,40 @@ end
     universal_subbundles(X::PartialFlagVariety) -> Vector{Bundle}
 
 The flag of universal subbundles on a partial flag variety, returned as a
-vector. The first element is the rank-``d_1`` subbundle ``\\mathcal{U}_1``;
-later elements are `FilteredBundle`s built from
-[`tautological_bundles`](@ref).
+vector. The first element is ``\\mathcal{U}_1`` as a
+`CompletelyReducibleBundle`; later elements are `FilteredBundle`s assembled
+from the graded pieces returned by [`tautological_bundles`](@ref).
 
-For type ``\\mathrm{A}`` and multi-step isotropic partial flags this is
-``[\\mathcal{U}_1, \\mathcal{U}_2, \\ldots, \\mathcal{U}_k]``.
+### Type A
+For ``\\mathrm{Fl}(d_1, \\ldots, d_k; n)`` the returned vector is the
+nested flag of tautological subbundles
+``\\mathcal{U}_1 \\subset \\mathcal{U}_2 \\subset \\cdots \\subset
+\\mathcal{U}_k``, with ``\\mathrm{rank}(\\mathcal{U}_i) = d_i``.
 
-For an isotropic generalized Grassmannian (one marked node) the natural
-filtration is ``0 \\subset \\mathcal{U} \\subset \\mathcal{U}^\\perp``, so
-the function returns ``[\\mathcal{U}, \\mathcal{U}^\\perp]`` (two elements).
-In Lagrangian / spinor cases the two pieces coincide.
+### Isotropic generalized Grassmannian (one marked node, B/C/D)
+The natural filtration is ``0 \\subset \\mathcal{U} \\subset
+\\mathcal{U}^\\perp``, so the function returns
+``[\\mathcal{U}, \\mathcal{U}^\\perp]``. In Lagrangian and spinor cases
+``\\mathcal{R} = 0`` and the two entries coincide.
+
+### Orthogonal / symplectic multi-step partial flag (k ≥ 2 marked nodes)
+The marked nodes ``m_1 < m_2 < \\cdots < m_k`` parameterise nested
+isotropic subspaces; entry ``i`` is the corresponding tautological
+subbundle ``\\mathcal{U}_{m_i}``. In types B and C and in type D away
+from the spinor nodes, ``\\mathrm{rank}(\\mathcal{U}_{m_i}) = m_i``.
+
+In type D, the parabolics ``P_{n-1}`` and ``P_n`` correspond to the two
+families of *maximal* isotropic subspaces (both of dimension ``n``). When a
+last marked node ``m_k \\in \\{n-1, n\\}`` appears in a multi-step flag,
+the corresponding ``\\mathcal{U}_{m_k}`` is the rank-``n`` maximal
+isotropic from that spinor family — *not* a rank-``(n-1)`` subspace. This
+follows the convention of the underlying generalized Grassmannian: e.g.
+`OGr(3, 8) = D_4 / P_3` has `rank_bundle(universal_subbundle(X)) == 4`.
+
+The two-marked spinorial variety ``\\mathrm{D}_n / P_{n-1, n}`` (the
+``(n-1)``-isotropic Grassmannian, Picard rank 2 — see Frassineti–Manivel,
+arXiv:2605.28712, §1) is supported: it returns
+``[\\mathcal{U}_{n-1}, \\mathcal{U}_n]`` with ranks ``[n-1, n]``.
 
 # Examples
 ```jldoctest
@@ -528,6 +553,17 @@ julia> rank_bundle.(universal_subbundles(OGr(3, 9)))  # [U, U^⊥]
 2-element Vector{Int64}:
  3
  6
+```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = partial_flag_variety(TypeD{4}, (1, 3));  # last marked at the spinor node
+
+julia> rank_bundle.(universal_subbundles(X))
+2-element Vector{Int64}:
+ 1
+ 4
 ```
 """
 function universal_subbundles(X::PartialFlagVariety)
