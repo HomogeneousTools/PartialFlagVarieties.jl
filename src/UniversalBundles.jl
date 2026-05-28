@@ -340,8 +340,7 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
   throw(ArgumentError("half must be :plus or :minus, got :$half"))
 end
 
-# TODO: put these checks near `    is_generalized_grassmannian(X::PartialFlagVariety) -> Bool
-` in src/PartialFlagVarieties.jl
+# TODO: move these checks next to `is_generalized_grassmannian` in src/PartialFlagVarieties.jl.
 """
     is_orthogonal_grassmannian(X::PartialFlagVariety) -> Bool
 
