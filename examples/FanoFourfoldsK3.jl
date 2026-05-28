@@ -235,7 +235,7 @@ function fetch_paper_descriptions()
       stop == lastindex(text) && break
       stop = nextind(text, stop)
     end
-    tail = text[m.offset:stop]
+    tail = text[(m.offset):stop]
     formula = extract_formula_line(tail)
     !isempty(formula) && (descs[spec.label] = formula)
   end

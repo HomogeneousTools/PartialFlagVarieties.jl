@@ -436,7 +436,7 @@ end
 
 function Base.show(io::IO, H::Cohomology{AffineExpr})
   parts = String[]
-  for i in 0:H.dim_variety
+  for i in 0:(H.dim_variety)
     v = H[i]
     is_zero_expr(v) && continue
     push!(parts, "H$(_superscript(i)) = $(sprint(show, v))")

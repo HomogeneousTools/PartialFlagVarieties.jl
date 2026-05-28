@@ -244,14 +244,16 @@ end
 
 _dual_semisimple_generic(@nospecialize(ss::WeightLatticeElem)) = dual(ss)
 _tensor_product_character_generic(
-@nospecialize(a::WeightLatticeElem), @nospecialize(b::WeightLatticeElem)
+  @nospecialize(a::WeightLatticeElem), @nospecialize(b::WeightLatticeElem)
 ) = tensor_product(a, b)
-_exterior_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = exterior_power(
-  ss, k
-)
-_symmetric_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) = symmetric_power(
-  ss, k
-)
+_exterior_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) =
+  exterior_power(
+    ss, k
+  )
+_symmetric_power_character_generic(@nospecialize(ss::WeightLatticeElem), k::Int) =
+  symmetric_power(
+    ss, k
+  )
 
 """
     tensor_product(a::IrrepLevi, b::IrrepLevi) -> Vector{IrrepLevi}

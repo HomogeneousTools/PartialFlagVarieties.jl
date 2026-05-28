@@ -81,9 +81,10 @@ function MarkedDynkinType(::Type{DT}, marked::Tuple) where {DT<:DynkinType}
   invoke(MarkedDynkinType, Tuple{DataType,Tuple{Vararg{Int}}}, DT, marked_int)
 end
 
-MarkedDynkinType(::Type{DT}, marked::Vector{<:Integer}) where {DT<:DynkinType} = MarkedDynkinType(
-  DT, Tuple(sort(Int.(marked)))
-)
+MarkedDynkinType(::Type{DT}, marked::Vector{<:Integer}) where {DT<:DynkinType} =
+  MarkedDynkinType(
+    DT, Tuple(sort(Int.(marked)))
+  )
 
 MarkedDynkinType(::Type{DT}, marked::Integer) where {DT<:DynkinType} = MarkedDynkinType(
   DT, (Int(marked),)

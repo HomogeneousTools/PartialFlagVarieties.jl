@@ -378,7 +378,7 @@ julia> euler_characteristic(H)
 """
 function euler_characteristic(H::Cohomology{BigInt})
   result = BigInt(0)
-  for i in 0:H.dim_variety
+  for i in 0:(H.dim_variety)
     result += (iseven(i) ? 1 : -1) * H[i]
   end
   return result
@@ -645,7 +645,7 @@ end
 
 function Base.show(io::IO, H::Cohomology{BigInt})
   parts = String[]
-  for i in 0:H.dim_variety
+  for i in 0:(H.dim_variety)
     v = H[i]
     v == 0 && continue
     push!(parts, "H$(_superscript(i)) = $v")
@@ -659,7 +659,7 @@ end
 
 function Base.show(io::IO, H::Cohomology{<:WeylCharacter})
   parts = String[]
-  for i in 0:H.dim_variety
+  for i in 0:(H.dim_variety)
     v = H[i]
     isempty(v.terms) && continue
     push!(parts, "H$(_superscript(i)) = $(sprint(show, v))")

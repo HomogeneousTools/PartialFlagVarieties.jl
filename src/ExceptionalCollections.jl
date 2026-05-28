@@ -65,7 +65,7 @@ function is_exceptional(E::CompletelyReducibleBundle)
   EE = dual(E) ⊗ E
   H = dimensions(cohomology(EE))
   H[0] == 1 || return false
-  for i in 1:H.dim_variety
+  for i in 1:(H.dim_variety)
     H[i] == 0 || return false
   end
   return true
@@ -134,7 +134,7 @@ end
 function _has_no_positive_exts(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   EvF = dual(E) ⊗ F
   H = dimensions(cohomology(EvF))
-  for i in 1:H.dim_variety
+  for i in 1:(H.dim_variety)
     H[i] == 0 || return false
   end
   true
@@ -376,11 +376,10 @@ true
 ```
 """
 function kapranov_collection(X::PartialFlagVariety)
-  DT = dynkin_type(X)
-  Marked = marked_nodes(X)
-  _is_quadric(DT, Marked) || throw(ArgumentError(
+  is_quadric(X) || throw(ArgumentError(
     "kapranov_collection requires a quadric (B_m/P_1 or D_m/P_1)"
   ))
+  DT = dynkin_type(X)
   n = dimension(X)
   result = CompletelyReducibleBundle[]
 

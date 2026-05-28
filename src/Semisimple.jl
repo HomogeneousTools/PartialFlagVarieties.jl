@@ -30,9 +30,10 @@ function Semisimple.WeightLatticeElem(::Type{DT}) where {DT<:DynkinType}
   return WeightLatticeElem(DT, zero(SVector{R,Int}))
 end
 
-Base.zero(::Type{Semisimple.WeightLatticeElem{DT,R}}) where {DT<:DynkinType,R} = WeightLatticeElem(
-  DT
-)
+Base.zero(::Type{Semisimple.WeightLatticeElem{DT,R}}) where {DT<:DynkinType,R} =
+  WeightLatticeElem(
+    DT
+  )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  cartan_type_with_ordering

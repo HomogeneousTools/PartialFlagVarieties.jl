@@ -103,7 +103,7 @@ function _factors_to_mdt(factors::Vector{Factor})
   global_marked = Int[]
   offset = 0
   for f in factors
-    for node in 1:f.rank
+    for node in 1:(f.rank)
       if ((f.mask >> (node - 1)) & 1) == 1
         push!(global_marked, node + offset)
       end

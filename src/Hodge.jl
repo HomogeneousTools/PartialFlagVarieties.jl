@@ -168,8 +168,8 @@ Compute the Euler characteristic of Hochschild cohomology:
 """
 function euler_characteristic(P::PolyvectorParallelogram{T}) where {T}
   result = _pp_zero(T)
-  for p in 0:P.dim
-    for q in 0:P.dim
+  for p in 0:(P.dim)
+    for q in 0:(P.dim)
       result += (-1)^(p + q) * P[p, q]
     end
   end
@@ -183,7 +183,7 @@ Return ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} h^q(X, \\bigwedge^p T_X)``.
 """
 function Base.getindex(P::PolyvectorParallelogram{T}, n::Int) where {T}
   result = _pp_zero(T)
-  for p in 0:P.dim
+  for p in 0:(P.dim)
     q = n - p
     0 <= q <= P.dim || continue
     result += P[p, q]
