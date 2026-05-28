@@ -426,10 +426,9 @@ julia> using PartialFlagVarieties
 
 julia> X = flag_variety(4,[1,2]);  # Flag variety Fl(1,2; 4)
 
-# TODO: weird choice of variable name; why not U?
-julia> τ = tautological_bundles(X);
+julia> U = tautological_bundles(X);
 
-julia> length(τ)
+julia> length(U)
 2
 ```
 """
@@ -507,11 +506,10 @@ function universal_subbundles(X::PartialFlagVariety)
   # For isotropic partial flags, extend similarly to the type A implementation above.
   marked = marked_nodes(X)
   bundles = Vector{Bundle}()
-  # TODO: don't use this variable name
-  τ = tautological_bundles(X)
-  push!(bundles, τ[1])
+  U = tautological_bundles(X)
+  push!(bundles, U[1])
   for i in 2:length(marked)
-    push!(bundles, FilteredBundle(X, τ[1:i]))
+    push!(bundles, FilteredBundle(X, U[1:i]))
   end
   return bundles
 end
