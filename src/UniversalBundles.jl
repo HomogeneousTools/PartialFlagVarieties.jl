@@ -69,37 +69,32 @@ end
 """
     universal_quotient_bundle(X::PartialFlagVariety) -> Union{CompletelyReducibleBundle, FilteredBundle}
 
-TODO: give better explanation, say that this one is completely reducible
-On type ``\\mathrm{A}``, this is the equivariant bundle with weight ``\\omega_{n-1}``.
-For isotropic Grassmannians (types ``\\mathrm{B}``, ``\\mathrm{C}``, ``\\mathrm{D}``), ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``
-via the bilinear form.
-It has rank ``n - k`` on ``\\mathrm{Gr}(k, n)``.
+The universal quotient bundle ``\\mathcal{Q}`` on a generalized Grassmannian.
 
-Only the type-``\\mathrm{A}`` case should be read as the literal geometric quotient
-``\\mathbb{C}^n / \\mathcal{U}``. For the isotropic cases the implementation
-TODO: what is "natural equivariant replacement"? find better explanation!
-returns the dual of the tautological bundle as the natural equivariant
-replacement.
+On ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/P_k`` (type ``\\mathrm{A}``),
+``\\mathcal{Q}`` is the completely reducible equivariant bundle with highest
+weight ``\\omega_{n-1}`` — geometrically the rank-``(n-k)`` quotient
+``\\mathbb{C}^n / \\mathcal{U}``.
+
+For isotropic Grassmannians (types ``\\mathrm{B}``, ``\\mathrm{C}``,
+``\\mathrm{D}``), there is no literal quotient of the standard representation
+by ``\\mathcal{U}``; instead ``\\mathcal{Q}`` is taken to be
+``(\\mathcal{U}^\\perp)^\\vee``, dual to the orthogonal complement of
+``\\mathcal{U}``. When the residual bundle ``\\mathcal{R}`` vanishes
+(Lagrangian / spinor cases) ``\\mathcal{Q} \\cong \\mathcal{U}^\\vee``;
+otherwise ``\\mathcal{Q}`` is a filtered bundle with graded pieces
+``\\mathcal{R}^\\vee`` and ``\\mathcal{U}^\\vee``.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = Gr(2, 5);
-
-julia> Q = universal_quotient_bundle(X);
+julia> Q = universal_quotient_bundle(Gr(2, 5));
 
 julia> rank_bundle(Q)
 3
-```
 
-TODO: I don't like this doctest, can we make it more useful? say, compute some H^0?
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = Gr(2, 5);
-
-julia> rank_bundle(universal_subbundle(X)) + rank_bundle(universal_quotient_bundle(X))
+julia> degree(cohomology(Q)[0])  # H⁰(Q) is the standard representation of A_4
 5
 ```
 """
@@ -142,17 +137,18 @@ julia> rank_bundle(R)
 3
 ```
 
-TODO: don't write somewhat silly tests like this
-TODO: is there maybe a cohomology computation we can verify? e.g., the Ext^1 of the pieces?
+``\\mathcal{R}`` vanishes on Lagrangian Grassmannians (the spinor / maximal isotropic
+cases), and is acyclic on all isotropic Grassmannians since its highest weights
+are not dominant for the parabolic:
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = SGr(3, 8);
+julia> rank_bundle(residual_bundle(SGr(3, 6)))  # Lagrangian: R vanishes
+0
 
-julia> rank_bundle(residual_bundle(X)) + rank_bundle(universal_subbundle(X)) == rank_bundle(universal_quotient_bundle(X))
-true
+julia> degree(cohomology(residual_bundle(OGr(2, 7)))[0])  # acyclic on OGr(2, 7)
+0
 ```
-
 """
 function residual_bundle(X::PartialFlagVariety)
   is_exceptional_type(X) && throw(
@@ -276,38 +272,29 @@ julia> rank_bundle(Sp)
 2
 ```
 
-TODO: use some cohomology doctests too
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = OGr(3, 10);  # D_5/P_3
+julia> X = quadric(5);  # B_3/P_1
 
-julia> rank_bundle(spinor_bundle(X, :plus))
-2
+julia> degree(cohomology(spinor_bundle(X))[0])  # spin representation of Spin(7)
+8
 ```
 """
 function spinor_bundle(X::PartialFlagVariety)
-  is_orthogonal_grassmannian(X) || throw(
-    ArgumentError(
-      "spinor_bundle requires an orthogonal Grassmannian (B_n/P_k, D_n/P_k, or D_n/P_{n-1,n})"
-    ),
-  )
+  _check_spinor_domain(X)
   DT = dynkin_type(X)
   R = rank(DT)
   # OGr(k, 2n+1): single spinor bundle at ω_n.
   DT <: TypeB && return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
-  # DT <: TypeD by is_orthogonal_grassmannian; OGr(k, 2n) carries both half-spinors.
+  # DT <: TypeD; OGr(k, 2n) and D_n/P_{n-1, n} carry both half-spinors as a direct sum.
   return CompletelyReducibleBundle(
     X, [fundamental_weight(DT, R - 1), fundamental_weight(DT, R)]
   )
 end
 
 function spinor_bundle(X::PartialFlagVariety, half::Symbol)
-  is_orthogonal_grassmannian(X) || throw(
-    ArgumentError(
-      "spinor_bundle requires an orthogonal Grassmannian (B_n/P_k, D_n/P_k, or D_n/P_{n-1,n})"
-    ),
-  )
+  _check_spinor_domain(X)
   DT = dynkin_type(X)
   R = rank(DT)
 
@@ -317,7 +304,6 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
     return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   end
 
-  # DT <: TypeD by is_orthogonal_grassmannian.
   half === :plus && return CompletelyReducibleBundle(X, fundamental_weight(DT, R - 1))
   half === :minus && return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   throw(ArgumentError("half must be :plus or :minus, got :$half"))
