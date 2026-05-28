@@ -9,7 +9,6 @@
 
 export universal_subbundle, universal_quotient_bundle, residual_bundle
 export spinor_bundle
-export is_orthogonal_grassmannian, is_quadric
 export tautological_bundles, universal_subbundles
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -340,68 +339,34 @@ function spinor_bundle(X::PartialFlagVariety, half::Symbol)
   throw(ArgumentError("half must be :plus or :minus, got :$half"))
 end
 
-# TODO: move these checks next to `is_generalized_grassmannian` in src/PartialFlagVarieties.jl.
-"""
-    is_orthogonal_grassmannian(X::PartialFlagVariety) -> Bool
-
-Return `true` if `X` is an orthogonal Grassmannian, i.e. one of:
-
-- a single-marked variety of type ``\\mathrm{B}_n`` or ``\\mathrm{D}_n``,
-  meaning ``\\mathrm{OGr}(k, 2n+1)`` or ``\\mathrm{OGr}(k, 2n)``;
-- the two-marked ``\\mathrm{D}_n/P_{n-1, n} = \\mathrm{OGr}(n-1, 2n)``,
-  the ``(n-1)``-isotropic Grassmannian of Picard rank 2 (see Frassineti–Manivel,
-  arXiv:2605.28712, §1).
-
-This is exactly the class of varieties on which [`spinor_bundle`](@ref) is defined.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> is_orthogonal_grassmannian(OGr(3, 10))
-true
-
-# TODO: is this really an orthogonal Grassmannian?! in the spinor bundle code: maybe add this as a special allowed case, rather than calling it an orthogonal Grassmannian
-julia> is_orthogonal_grassmannian(partial_flag_variety(TypeD{4}, (3, 4)))
-true
-
-julia> is_orthogonal_grassmannian(Gr(2, 5))
-false
-```
-"""
-function is_orthogonal_grassmannian(X::PartialFlagVariety)
+# Spinor bundles are defined on B_n/P_k, D_n/P_k, and the two-marked D_n/P_{n-1, n}.
+# The two-marked case is the (n-1)-isotropic Grassmannian (Picard rank 2) — see
+# Frassineti–Manivel, arXiv:2605.28712, §1.
+function _check_spinor_domain(X::PartialFlagVariety)
+  is_orthogonal_grassmannian(X) && return nothing
   DT = dynkin_type(X)
-  (DT <: TypeB || DT <: TypeD) || return false
-  marked = marked_nodes(X)
-  length(marked) == 1 && return true
   if DT <: TypeD
+    marked = marked_nodes(X)
     R = rank(DT)
-    length(marked) == 2 && Set(marked) == Set((R - 1, R)) && return true
+    length(marked) == 2 && Set(marked) == Set((R - 1, R)) && return nothing
   end
-  return false
+  throw(
+    ArgumentError(
+      "spinor_bundle requires B_n/P_k, D_n/P_k, or D_n/P_{n-1, n}"
+    ),
+  )
 end
 
 """
-    is_quadric(X::PartialFlagVariety) -> Bool
 
-Return `true` if `X` is a smooth quadric hypersurface ``Q^n``, i.e.
-``\\mathrm{B}_m/P_1`` (odd ``n = 2m-1``) or ``\\mathrm{D}_m/P_1`` (even ``n = 2m-2``).
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> is_quadric(quadric(4))
-true
 
-julia> is_quadric(OGr(2, 10))
-false
 ```
 """
-function is_quadric(X::PartialFlagVariety)
-  DT = dynkin_type(X)
-  (DT <: TypeB || DT <: TypeD) || return false
-  marked_nodes(X) == (1,)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

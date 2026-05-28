@@ -4,6 +4,7 @@ export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule, is_exceptional_type
 export is_adjoint, is_coadjoint, is_full_flag_variety
+export is_orthogonal_grassmannian, is_quadric
 export anticanonical_degrees
 export marked_dynkin_type, marked_nodes
 
@@ -311,6 +312,60 @@ is_generalized_grassmannian(X::PartialFlagVariety) = length(marked_nodes(X)) == 
 Return `true` for full flag varieties ``G/B`` (all nodes marked).
 """
 is_full_flag_variety(X::PartialFlagVariety) = is_borel(marked_dynkin_type(X))
+
+"""
+    is_orthogonal_grassmannian(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is a one-marked orthogonal Grassmannian, i.e.
+``\\mathrm{B}_n/P_k = \\mathrm{OGr}(k, 2n+1)`` or
+``\\mathrm{D}_n/P_k = \\mathrm{OGr}(k, 2n)``.
+
+The two-marked ``\\mathrm{D}_n/P_{n-1, n}`` (the ``(n-1)``-isotropic
+Grassmannian, of Picard rank 2) is **not** an orthogonal Grassmannian by this
+predicate; [`spinor_bundle`](@ref) accepts it as a separate special case.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_orthogonal_grassmannian(OGr(3, 10))
+true
+
+julia> is_orthogonal_grassmannian(partial_flag_variety(TypeD{4}, (3, 4)))
+false
+
+julia> is_orthogonal_grassmannian(Gr(2, 5))
+false
+```
+"""
+function is_orthogonal_grassmannian(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  (DT <: TypeB || DT <: TypeD) || return false
+  length(marked_nodes(X)) == 1
+end
+
+"""
+    is_quadric(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is a smooth quadric hypersurface ``Q^n``, i.e.
+``\\mathrm{B}_m/P_1`` (odd ``n = 2m-1``) or ``\\mathrm{D}_m/P_1`` (even ``n = 2m-2``).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_quadric(quadric(4))
+true
+
+julia> is_quadric(OGr(2, 10))
+false
+```
+"""
+function is_quadric(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  (DT <: TypeB || DT <: TypeD) || return false
+  marked_nodes(X) == (1,)
+end
 
 """
     is_cominuscule(X::PartialFlagVariety) -> Bool
