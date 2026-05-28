@@ -378,21 +378,26 @@ end
 """
     tautological_bundles(X::PartialFlagVariety) -> Vector{CompletelyReducibleBundle}
 
-Compute the tautological bundles on a partial flag variety ``Fl(d_1, \\ldots, d_k; n)``.
+The graded pieces ``\\mathcal{U}_1, \\mathcal{U}_2 / \\mathcal{U}_1, \\ldots,
+\\mathcal{U}_k / \\mathcal{U}_{k-1}`` of the tautological filtration on a
+partial flag variety ``\\mathrm{Fl}(d_1, \\ldots, d_k; n)``, returned as a
+vector of completely reducible bundles.
 
-For type ``\\mathrm{A}`` partial flags, returns a vector of completely reducible bundles, where
-each element corresponds to a tautological subbundle.
+These are the convenient building blocks; for the filtration steps themselves
+(as `FilteredBundle`s), use [`universal_subbundles`](@ref).
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> X = flag_variety(4,[1,2]);  # Flag variety Fl(1,2; 4)
+julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
 
 julia> U = tautological_bundles(X);
 
-julia> length(U)
-2
+julia> rank_bundle.(U)
+2-element Vector{Int64}:
+ 1
+ 1
 ```
 """
 function tautological_bundles(X::PartialFlagVariety)
@@ -419,6 +424,16 @@ function tautological_bundles(X::PartialFlagVariety)
     throw(
       ArgumentError(
         "tautological_bundles not implemented for non-type A partial flag varieties"
+  DT <: TypeA || throw(
+    ArgumentError(
+      "tautological_bundles not implemented for non-type A partial flag varieties"
+    ),
+  )
+  bundles = Vector{CompletelyReducibleBundle}()
+  push!(bundles, dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1))))
+  for i in 2:length(marked)
+    push!(
+      bundles,
       ),
     ) #TODO: For isotropic types B, C, D, the graded pieces of the tautological filtration are
     # universal_subbundle(X) and residual_bundle(X) for Grassmannians, and more generally
