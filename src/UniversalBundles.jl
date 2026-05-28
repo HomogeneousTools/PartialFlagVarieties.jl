@@ -12,7 +12,6 @@ export spinor_bundle
 export is_orthogonal_grassmannian, is_quadric
 export tautological_bundles, universal_subbundles
 
-# TODO: Grassmannians only?
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Generalized Grassmannians: universal, quotient and residual bundle
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -74,19 +73,14 @@ function universal_subbundle(X::PartialFlagVariety, i::Int=1)
     ArgumentError("exceptional types do not have a well-defined universal subbundle")
   )
   DT = dynkin_type(X)
-  R = rank(DT)
-  # TODO: document this better, also, make it a shorthand return?
-  if i == 1
-    return dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1)))
-  else
-    # TODO: For isotropic Grassmannians (types B, C, D) with i == 2, return U^⊥ as
-    # dual(universal_quotient_bundle(X)), reflecting 0 → U → U^⊥ → Res → 0.
-    # When Res is zero (Lagrangian/spinor cases), U^⊥ = U, so dual(Q) recovers i == 1.
-    (i < 1 || i > R) &&
-    # TODO: "rank of the variety" must mean something else
-      throw(ArgumentError("i must be between 1 and the rank of the variety"))
-    return universal_subbundles(X)[i]
-  end
+  i == 1 && return dual(CompletelyReducibleBundle(X, fundamental_weight(DT, 1)))
+  # TODO: For isotropic Grassmannians (types B, C, D) with i == 2, return U^⊥ as
+  # dual(universal_quotient_bundle(X)), reflecting 0 → U → U^⊥ → Res → 0.
+  # When Res is zero (Lagrangian/spinor cases), U^⊥ = U, so dual(Q) recovers i == 1.
+  k = length(marked_nodes(X))
+  (1 ≤ i ≤ k) ||
+    throw(ArgumentError("i must be between 1 and length(marked_nodes(X)) = $k"))
+  return universal_subbundles(X)[i]
 end
 
 """
