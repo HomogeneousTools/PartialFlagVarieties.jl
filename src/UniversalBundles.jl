@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-#  UniversalBundles — tautological and spinor bundles on G/P
+#  UniversalBundles — universal and spinor bundles on G/P
 #
 #  Provides universal (tautological) bundles on classical varieties:
 #  - Universal subbundle U, quotient bundle Q and residual bundle R on isotropic Grassmannians.
@@ -9,6 +9,7 @@
 
 export universal_subbundle, universal_quotient_bundle, residual_bundle
 export spinor_bundle
+export is_orthogonal_grassmannian, is_quadric
 export tautological_bundles, universal_subbundles
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -146,7 +147,8 @@ end
 """
     residual_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-For types ``\\mathrm{B}``, ``\\mathrm{C}``, ``\\mathrm{D}``, the residual bundle is the completely reducible bundle corresponding to ``\\mathcal{U}^\\perp / \\mathcal{U}``.
+For types ``\\mathrm{B}``, ``\\mathrm{C}``, ``\\mathrm{D}```,
+the residual bundle is the completely reducible bundle corresponding to ``\\mathcal{U}^\\perp / \\mathcal{U}``.
 
 # Examples
 ```jldoctest
@@ -218,26 +220,54 @@ function residual_bundle(X::PartialFlagVariety)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Spinor bundles on quadrics
+#  Spinor bundles on orthogonal Grassmannians
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
     spinor_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
     spinor_bundle(X::PartialFlagVariety, half::Symbol) -> CompletelyReducibleBundle
 
-The spinor bundle on a quadric ``Q^n``.
+The spinor bundle on an orthogonal Grassmannian ``\\mathrm{OGr}(k, m)``.
 
-For **odd-dimensional** quadrics ``Q^{2m-1} = \\mathrm{B}_m/P_1``, there is a single
-spinor bundle ``\\Sigma`` of rank ``2^{m-1}``, corresponding to the spin
-weight ``\\omega_m``.
+For type ``\\mathrm{B}_n/P_k`` (``\\mathrm{OGr}(k, 2n+1)``) there is a single
+spinor bundle ``\\mathcal{S}`` corresponding to ``\\omega_n``.
 
-For **even-dimensional** quadrics ``Q^{2m-2} = \\mathrm{D}_m/P_1``, there are two
-half-spinor bundles ``\\Sigma^+`` and ``\\Sigma^-`` of rank ``2^{m-2}``,
-corresponding to ``\\omega_{m-1}`` and ``\\omega_m`` respectively.
-Call `spinor_bundle(X, :plus)` or `spinor_bundle(X, :minus)` to select one.
-Without a `half` argument on an even quadric, both are returned as a direct sum.
+For type ``\\mathrm{D}_n/P_k`` (``\\mathrm{OGr}(k, 2n)``) there are two
+half-spinor bundles ``\\mathcal{S}^+`` and ``\\mathcal{S}^-`` corresponding to
+``\\omega_{n-1}`` and ``\\omega_n`` respectively. Call
+`spinor_bundle(X, :plus)` or `spinor_bundle(X, :minus)` to select one. Without
+a `half` argument on type ``\\mathrm{D}``, both are returned as a direct sum.
 
-This function is only defined on quadrics, i.e. on ``\\mathrm{B}_m/P_1`` or ``\\mathrm{D}_m/P_1``.
+For ``k \\le n-2`` (type ``\\mathrm{D}_n``) or ``k \\le n-1`` (type
+``\\mathrm{B}_n``), the spinor bundles are the irreducible homogeneous bundles
+whose fibre at ``[U]`` is a (half-)spin representation of the residual quadratic
+space ``U^\\perp / U``. On the spinor varieties ``\\mathrm{OGr}(n, 2n)``, one
+half-spinor bundle is the hyperplane line bundle of the spinor embedding and
+the other is a twist of the tautological rank-``n`` bundle.
+
+This constructor additionally accepts the two-marked variety
+``\\mathrm{D}_n/P_{n-1,\\,n} = \\mathrm{OGr}(n-1, 2n)`` — the ``(n-1)``-isotropic
+Grassmannian, of Picard rank 2. There ``\\mathcal{S}^{\\pm}`` are the
+pull-backs of the hyperplane line bundles from ``\\mathrm{OGr}(n,2n)_{\\pm}``
+along the embedding
+``\\mathrm{OGr}(n-1, 2n) \\hookrightarrow \\mathrm{OGr}(n, 2n)_+ \\times
+\\mathrm{OGr}(n, 2n)_-`` that sends an ``(n-1)``-isotropic subspace to the
+unique pair of maximal isotropics (one from each family) containing it.
+
+# References
+
+- Ottaviani, "Spinor bundles on quadrics", *Trans. Amer. Math. Soc.* **307**
+  (1988), 301–316 — the case ``k = 1`` (quadrics).
+- Manivel, "On spinor varieties and their secants", *SIGMA* **5** (2009), 078
+  — the spinor varieties ``\\mathrm{OGr}(n, 2n)_\\pm``.
+- Frassineti–Manivel, "Spinorial Fano manifolds", arXiv:2605.28712, §1
+  ("Spin representations and spin bundles") — general ``\\mathrm{OGr}(k, m)``
+  including the ``(n-1)``-isotropic case
+  ``\\mathrm{D}_n/P_{n-1, n} = \\mathrm{OGr}(n-1, 2n)`` (Picard rank 2,
+  the two spinor bundles pulled back from the maximal spinor varieties).
+- Fulton–Harris, *Representation Theory: A First Course*, GTM 129
+  (Springer, 1991), §20 — the underlying spin representations of
+  ``\\mathrm{Spin}_m``.
 
 # Examples
 ```jldoctest
@@ -261,66 +291,121 @@ julia> Sp = spinor_bundle(X, :plus);
 julia> rank_bundle(Sp)
 2
 ```
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = OGr(3, 10);  # D_5/P_3
+
+julia> rank_bundle(spinor_bundle(X, :plus))
+2
+```
 """
 function spinor_bundle(X::PartialFlagVariety)
-  mdt = marked_dynkin_type(X)
-  DT = dynkin_type(mdt)
-  marked = marked_nodes(mdt)
-  _is_quadric(DT, marked) || throw(ArgumentError(
-    "spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"
-  ))
-
+  is_orthogonal_grassmannian(X) || throw(
+    ArgumentError(
+      "spinor_bundle requires an orthogonal Grassmannian (B_n/P_k, D_n/P_k, or D_n/P_{n-1,n})"
+    ),
+  )
+  DT = dynkin_type(X)
   R = rank(DT)
   if DT <: TypeB
-    # Odd quadric Q^{2m-1}: single spinor bundle at ω_m
-    ω = fundamental_weight(DT, R)
-    CompletelyReducibleBundle(X, ω)
-  elseif DT <: TypeD
-    # Even quadric Q^{2m-2}: direct sum of both half-spinors
-    ω_plus = fundamental_weight(DT, R - 1)
-    ω_minus = fundamental_weight(DT, R)
-    CompletelyReducibleBundle(X, [ω_plus, ω_minus])
-  else
-    throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
+    # OGr(k, 2n+1): single spinor bundle at ω_n.
+    CompletelyReducibleBundle(X, fundamental_weight(DT, R))
+  else  # DT <: TypeD; guarded by _is_orthogonal_grassmannian.
+    # OGr(k, 2n): direct sum of both half-spinors.
+    CompletelyReducibleBundle(
+      X, [fundamental_weight(DT, R - 1), fundamental_weight(DT, R)]
+    )
   end
 end
 
 function spinor_bundle(X::PartialFlagVariety, half::Symbol)
-  mdt = marked_dynkin_type(X)
-  DT = dynkin_type(mdt)
-  marked = marked_nodes(mdt)
-  _is_quadric(DT, marked) || throw(ArgumentError(
-    "spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"
-  ))
-
+  is_orthogonal_grassmannian(X) || throw(
+    ArgumentError(
+      "spinor_bundle requires an orthogonal Grassmannian (B_n/P_k, D_n/P_k, or D_n/P_{n-1,n})"
+    ),
+  )
+  DT = dynkin_type(X)
   R = rank(DT)
 
   if DT <: TypeB
     half in (:plus, :minus) &&
-      @warn "Odd quadric has a single spinor bundle; ignoring half=$half"
-    ω = fundamental_weight(DT, R)
-    return CompletelyReducibleBundle(X, ω)
+      @warn "Type B has a single spinor bundle; ignoring half=$half"
+    return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
   end
 
-  if DT <: TypeD
-    if half === :plus
-      ω = fundamental_weight(DT, R - 1)
-    elseif half === :minus
-      ω = fundamental_weight(DT, R)
-    else
-      throw(ArgumentError("half must be :plus or :minus, got :$half"))
-    end
-    return CompletelyReducibleBundle(X, ω)
+  # DT <: TypeD, by _is_orthogonal_grassmannian.
+  ω = if half === :plus
+    fundamental_weight(DT, R - 1)
+  elseif half === :minus
+    fundamental_weight(DT, R)
+  else
+    throw(ArgumentError("half must be :plus or :minus, got :$half"))
   end
-
-  throw(ArgumentError("spinor_bundle requires a quadric (B_m/P_1 or D_m/P_1)"))
+  CompletelyReducibleBundle(X, ω)
 end
 
-"""Check whether DT/P_Marked is a quadric."""
-function _is_quadric(::Type{DT}, Marked) where {DT}
-  length(Marked) == 1 || return false
-  Marked[1] == 1 || return false
-  DT <: TypeB || DT <: TypeD
+"""
+    is_orthogonal_grassmannian(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is an orthogonal Grassmannian, i.e. one of:
+
+- a single-marked variety of type ``\\mathrm{B}_n`` or ``\\mathrm{D}_n``,
+  meaning ``\\mathrm{OGr}(k, 2n+1)`` or ``\\mathrm{OGr}(k, 2n)``;
+- the two-marked ``\\mathrm{D}_n/P_{n-1, n} = \\mathrm{OGr}(n-1, 2n)``,
+  the ``(n-1)``-isotropic Grassmannian of Picard rank 2 (see Frassineti–Manivel,
+  arXiv:2605.28712, §1).
+
+This is exactly the class of varieties on which [`spinor_bundle`](@ref) is defined.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_orthogonal_grassmannian(OGr(3, 10))
+true
+
+julia> is_orthogonal_grassmannian(partial_flag_variety(TypeD{4}, (3, 4)))
+true
+
+julia> is_orthogonal_grassmannian(Gr(2, 5))
+false
+```
+"""
+function is_orthogonal_grassmannian(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  (DT <: TypeB || DT <: TypeD) || return false
+  marked = marked_nodes(X)
+  length(marked) == 1 && return true
+  if DT <: TypeD
+    R = rank(DT)
+    length(marked) == 2 && Set(marked) == Set((R - 1, R)) && return true
+  end
+  return false
+end
+
+"""
+    is_quadric(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is a smooth quadric hypersurface ``Q^n``, i.e.
+``\\mathrm{B}_m/P_1`` (odd ``n = 2m-1``) or ``\\mathrm{D}_m/P_1`` (even ``n = 2m-2``).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_quadric(quadric(4))
+true
+
+julia> is_quadric(OGr(2, 10))
+false
+```
+"""
+function is_quadric(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  (DT <: TypeB || DT <: TypeD) || return false
+  marked_nodes(X) == (1,)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -70,13 +70,16 @@ function partial_flag_variety(
   PartialFlagVariety(MarkedDynkinType(DT, marked), name)
 end
 
-partial_flag_variety(::Type{DT}, marked::Vector{<:Integer}, name::String="") where {DT<:DynkinType} = partial_flag_variety(
+partial_flag_variety(
+  ::Type{DT}, marked::Vector{<:Integer}, name::String=""
+) where {DT<:DynkinType} = partial_flag_variety(
   DT, Tuple(sort(Int.(marked))), name
 )
 
-partial_flag_variety(::Type{DT}, marked::Integer, name::String="") where {DT<:DynkinType} = partial_flag_variety(
-  DT, (Int(marked),), name
-)
+partial_flag_variety(::Type{DT}, marked::Integer, name::String="") where {DT<:DynkinType} =
+  partial_flag_variety(
+    DT, (Int(marked),), name
+  )
 
 function partial_flag_variety(
   s::AbstractString, marked::AbstractVector{<:Integer}, name::String=""
