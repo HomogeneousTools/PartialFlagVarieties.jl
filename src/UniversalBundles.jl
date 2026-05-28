@@ -131,24 +131,12 @@ function universal_quotient_bundle(X::PartialFlagVariety)
   )
 
   DT = dynkin_type(X)
-  # TODO: don't save this to a variable, it's only used once?
-  R = rank(DT)
+  DT <: TypeA && return CompletelyReducibleBundle(X, fundamental_weight(DT, rank(DT)))
 
-  if DT <: TypeA
-    return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
-  else
-    # TODO: use R for residual
-    # TODO: add a reference for what's explained here
-    # U = universal_subbundle(X), Res = residual_bundle(X). The orthogonal complement U^⟂ fits into
-    # 0 -> U -> U^⟂ -> Res -> 0, so Q = dual(U^⟂) is a filtered bundle with pieces dual(Res) and dual(U).
-    # TODO: explain this shortcut
-    # TODO: use more shorthand return
-    if rank_bundle(residual_bundle(X)) == 0
-      return dual(universal_subbundle(X))
-    else
-      return dual(FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)]))
-    end
-  end
+  # 0 → U → U^⟂ → R → 0, so Q ≅ dual(U^⟂) (Frassineti–Manivel, arXiv:2605.28712, §1).
+  # In Lagrangian / spinor cases R = 0 and U^⟂ = U.
+  rank_bundle(residual_bundle(X)) == 0 && return dual(universal_subbundle(X))
+  return dual(FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)]))
 end
 
 """
