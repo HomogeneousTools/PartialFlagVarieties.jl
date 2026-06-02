@@ -71,7 +71,7 @@ Gr(2, 5)                     # Grassmannian
 OGr(2, 7)                    # Orthogonal Grassmannian
 SGr(2, 6)                    # Symplectic Grassmannian
 LGr(3, 6)                    # Lagrangian Grassmannian
-flag_variety(5, (1, 3))      # Fl(1,3; 5)
+flag_variety(5, [1, 3])      # Fl(1,3; 5)
 cayley_plane()               # E₆/P₁
 freudenthal_variety()        # E₇/P₇
 adjoint_variety(TypeE{6})    # E₆/P₂

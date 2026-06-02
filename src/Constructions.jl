@@ -75,33 +75,36 @@ function projective_space(n::Integer)
 end
 
 """
-    flag_variety(n, marking) -> PartialFlagVariety
+    flag_variety(n, dimensions) -> PartialFlagVariety
 
 The type-``A`` partial flag variety
 ``\\mathrm{Fl}(d_1, \\ldots, d_r; n) = A_{n-1}/P_{\\{d_1,\\ldots,d_r\\}}``.
 
-Here `marking = (d_1, ..., d_r)` records the crossed-out nodes, equivalently the
-dimensions in the partial flag.
+Here `dimensions = (d_1, ..., d_r)` are the dimensions of the subspaces in the
+partial flag
+``0 \\subsetneq V_{d_1} \\subsetneq \\cdots \\subsetneq V_{d_r} \\subsetneq \\mathbb{C}^n``;
+they must be distinct, sorted in increasing order, and satisfy ``1 \\leq d_i \\leq n-1``.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> V = flag_variety(4, (1, 2));
+julia> V = flag_variety(4, [1, 2]);
 
 julia> dimension(V)
 5
 ```
 """
-function flag_variety(n::Integer, marking::NTuple{K,Int}) where {K}
+function flag_variety(n::Integer, dimensions::Vector{<:Integer})
   n = Int(n)
-  DT = TypeA{n - 1}
-  marking_str = join(marking, ",")
-  return partial_flag_variety(DT, marking, "Fl($(marking_str); $n)")
-end
-
-function flag_variety(n::Integer, marking::Vector{<:Integer})
-  return flag_variety(Int(n), Tuple(sort(Int.(marking))))
+  all(1 <= d <= n - 1 for d in dimensions) ||
+    throw(ArgumentError("flag_variety($n, $dimensions): need 1 ≤ dᵢ ≤ $(n - 1)"))
+  issorted(dimensions) ||
+    throw(ArgumentError("flag_variety($n, $dimensions): dimensions must be sorted"))
+  allunique(dimensions) ||
+    throw(ArgumentError("flag_variety($n, $dimensions): dimensions must be distinct"))
+  flag = join(dimensions, ",")
+  return partial_flag_variety(TypeA{n - 1}, Tuple(Int.(dimensions)), "Fl($(flag); $n)")
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

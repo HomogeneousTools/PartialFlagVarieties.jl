@@ -101,7 +101,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test central_scaling_factor(marked_dynkin_type(projective_space(4))) == 5
     @test central_scaling_factor(marked_dynkin_type(Gr(2, 4))) == 2
 
-    @test central_scaling_factor(marked_dynkin_type(flag_variety(4, (1, 3)))) > 0
+    @test central_scaling_factor(marked_dynkin_type(flag_variety(4, [1, 3]))) > 0
     @test central_scaling_factor(marked_dynkin_type(quadric(5))) > 0
   end
 
@@ -157,6 +157,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Product type string constructor
     V_prod = PartialFlagVariety("A2xB3", [1, 4])
     @test V_prod isa PartialFlagVariety
+  end
+
+  @testset "flag_variety dimension validation" begin
+    # Valid, sorted, distinct, in-range dimensions work.
+    @test marked_nodes(flag_variety(4, [1, 2])) == (1, 2)
+    # n - 1 is the largest admissible dimension.
+    @test marked_nodes(flag_variety(5, [1, 2, 4])) == (1, 2, 4)
+    # Unsorted, repeated, or out-of-range dimensions are rejected, not silently fixed.
+    @test_throws ArgumentError flag_variety(4, [2, 1])
+    @test_throws ArgumentError flag_variety(4, [1, 1])
+    @test_throws ArgumentError flag_variety(4, [0, 2])
+    @test_throws ArgumentError flag_variety(4, [1, 4])
   end
 
   @testset "PartialFlagVariety products" begin
@@ -573,7 +585,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test picard_degrees(anticanonical_bundle(Gr(2, 5))) == [5]
     @test picard_degrees(canonical_bundle(Gr(2, 5))) == [-5]
 
-    X_flag = flag_variety(4, (1, 2))
+    X_flag = flag_variety(4, [1, 2])
     @test picard_degrees(line_bundle(X_flag, [1, -2])) == [1, -2]
 
     P3 = projective_space(3)
@@ -595,11 +607,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test det_tangent_is_anticanonical(Gr(3, 6))
     @test det_tangent_is_anticanonical(Gr(3, 7))
     @test det_tangent_is_anticanonical(Gr(4, 8))
-    @test det_tangent_is_anticanonical(flag_variety(4, (1, 2)))
-    @test det_tangent_is_anticanonical(flag_variety(5, (1, 2)))
-    @test det_tangent_is_anticanonical(flag_variety(5, (2, 3)))
-    @test det_tangent_is_anticanonical(flag_variety(5, (1, 4)))
-    @test det_tangent_is_anticanonical(flag_variety(6, (2, 4)))
+    @test det_tangent_is_anticanonical(flag_variety(4, [1, 2]))
+    @test det_tangent_is_anticanonical(flag_variety(5, [1, 2]))
+    @test det_tangent_is_anticanonical(flag_variety(5, [2, 3]))
+    @test det_tangent_is_anticanonical(flag_variety(5, [1, 4]))
+    @test det_tangent_is_anticanonical(flag_variety(6, [2, 4]))
     @test det_tangent_is_anticanonical(full_flag_variety(TypeA{2}))
     @test det_tangent_is_anticanonical(full_flag_variety(TypeA{3}))
     @test det_tangent_is_anticanonical(full_flag_variety(TypeA{4}))
@@ -858,7 +870,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "Flag varieties" begin
-    V = flag_variety(4, (1, 2))
+    V = flag_variety(4, [1, 2])
     @test dimension(V) == 5
   end
 
@@ -1329,7 +1341,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test dimensions(cohomology(dual(R) ⊗ U))[1] == 1
 
     # Fl(1,2,4; 5)
-    X6 = flag_variety(5, (1, 2, 4))
+    X6 = flag_variety(5, [1, 2, 4])
     τ = tautological_bundles(X6)
     Us = universal_subbundles(X6)
     @test length(τ) == 3
