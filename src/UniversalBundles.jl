@@ -288,10 +288,12 @@ julia> degree(cohomology(spinor_bundle(X))[0])  # spin representation of Spin(7)
 function spinor_bundle(X::PartialFlagVariety)
   _check_spinor_domain(X)
   DT = dynkin_type(X)
-  DT <: TypeB || throw(ArgumentError(
-    "spinor_bundle(X) is only defined for type B (a single spinor bundle); " *
-    "type D has two half-spinors — use spinor_bundle(X, :plus) or spinor_bundle(X, :minus)",
-  ))
+  DT <: TypeB || throw(
+    ArgumentError(
+      "spinor_bundle(X) is only defined for type B (a single spinor bundle); " *
+      "type D has two half-spinors — use spinor_bundle(X, :plus) or spinor_bundle(X, :minus)",
+    ),
+  )
   # OGr(k, 2n+1): single spinor bundle at ω_n.
   return CompletelyReducibleBundle(X, fundamental_weight(DT, rank(DT)))
 end
@@ -299,10 +301,12 @@ end
 function spinor_bundle(X::PartialFlagVariety, half::Symbol)
   _check_spinor_domain(X)
   DT = dynkin_type(X)
-  DT <: TypeD || throw(ArgumentError(
-    "spinor_bundle(X, half) is only defined for type D (two half-spinors); " *
-    "type B has a single spinor bundle — use spinor_bundle(X)",
-  ))
+  DT <: TypeD || throw(
+    ArgumentError(
+      "spinor_bundle(X, half) is only defined for type D (two half-spinors); " *
+      "type B has a single spinor bundle — use spinor_bundle(X)",
+    ),
+  )
   half in (:plus, :minus) ||
     throw(ArgumentError("half must be :plus or :minus, got :$half"))
   R = rank(DT)
