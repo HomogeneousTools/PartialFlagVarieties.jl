@@ -279,9 +279,11 @@ true
 function beilinson_collection(X::PartialFlagVariety)
   is_projective_space(X) || throw(ArgumentError(
     "beilinson_collection requires a projective space ℙⁿ"))
-  dynkin_type(X) <: TypeA || throw(ArgumentError(
-    "beilinson_collection is only implemented for type-A ℙⁿ; got a non-type-A " *
-    "model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"))
+  dynkin_type(X) <: TypeA || throw(
+    ArgumentError(
+      "beilinson_collection is only implemented for type-A ℙⁿ; got a non-type-A " *
+      "model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"),
+  )
   n = dimension(X)   # = rank(DT) = n for ℙⁿ
   [line_bundle(X, k) for k in 0:n]
 end
@@ -320,9 +322,11 @@ true
 function beilinson_collection_dual(X::PartialFlagVariety)
   is_projective_space(X) || throw(ArgumentError(
     "beilinson_collection_dual requires a projective space ℙⁿ"))
-  dynkin_type(X) <: TypeA || throw(ArgumentError(
-    "beilinson_collection_dual is only implemented for type-A ℙⁿ; got a " *
-    "non-type-A model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"))
+  dynkin_type(X) <: TypeA || throw(
+    ArgumentError(
+      "beilinson_collection_dual is only implemented for type-A ℙⁿ; got a " *
+      "non-type-A model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"),
+  )
   n = dimension(X)
   Ω = cotangent_bundle(X)
   result = CompletelyReducibleBundle[]

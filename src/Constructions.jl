@@ -241,7 +241,8 @@ function quadric(n::Integer)
   n = Int(n)
   n >= 1 || throw(ArgumentError("quadric($n): need n ≥ 1"))
   n == 1 && return partial_flag_variety(TypeA{1}, (1,), "Q$n")
-  n == 2 && return partial_flag_variety(ProductDynkinType{Tuple{TypeA{1}, TypeA{1}}}, (1, 2), "Q$n")
+  n == 2 &&
+    return partial_flag_variety(ProductDynkinType{Tuple{TypeA{1},TypeA{1}}}, (1, 2), "Q$n")
   if isodd(n)
     m = (n + 1) ÷ 2
     return partial_flag_variety(TypeB{m}, (1,), "Q$n")
