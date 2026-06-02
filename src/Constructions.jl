@@ -240,14 +240,14 @@ julia> betti_numbers(V)
 function quadric(n::Integer)
   n = Int(n)
   n >= 1 || throw(ArgumentError("quadric($n): need n ≥ 1"))
+  n == 1 && return partial_flag_variety(TypeA{1}, (1,), "Q$n")
+  n == 2 && return partial_flag_variety(ProductDynkinType{Tuple{TypeA{1}, TypeA{1}}}, (1, 2), "Q$n")
   if isodd(n)
     m = (n + 1) ÷ 2
-    DT = TypeB{m}
-    return partial_flag_variety(DT, (1,), "Q$n")
+    return partial_flag_variety(TypeB{m}, (1,), "Q$n")
   else
     m = n ÷ 2 + 1
-    DT = TypeD{m}
-    return partial_flag_variety(DT, (1,), "Q$n")
+    return partial_flag_variety(TypeD{m}, (1,), "Q$n")
   end
 end
 
