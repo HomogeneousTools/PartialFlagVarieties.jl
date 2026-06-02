@@ -585,6 +585,19 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
+Replace the symbolic AffineExpr in matrix M at (i, j) with the exact
+integer value `val`, propagating the resulting equation into `M`.
+"""
+function _inject_exact!(M::Matrix{AffineExpr}, i::Int, j::Int, val::BigInt)
+  expr = M[i, j]
+  if !is_determined(expr) || expr.constant != val
+    eq = expr - AffineExpr(val)
+    !isempty(eq.coeffs) && _apply_equation!(M, eq)
+    M[i, j] = AffineExpr(val)
+  end
+end
+
+"""
     hochschild_cohomology(Z::ZeroLocus) -> PolyvectorParallelogram{AffineExpr}
 
 Compute the Hochschild cohomology of ``Z`` via the HKR decomposition:
@@ -626,20 +639,6 @@ julia> P[3, 0]  # h⁰(∧³T_Z) = h⁰(ω_Z⁻¹) = 1 (CY3)
 1
 ```
 """
-
-"""
-Replace the symbolic AffineExpr in matrix M at (i, j) with the exact
-integer value `val`, propagating the resulting equation into `M`.
-"""
-function _inject_exact!(M::Matrix{AffineExpr}, i::Int, j::Int, val::BigInt)
-  expr = M[i, j]
-  if !is_determined(expr) || expr.constant != val
-    eq = expr - AffineExpr(val)
-    !isempty(eq.coeffs) && _apply_equation!(M, eq)
-    M[i, j] = AffineExpr(val)
-  end
-end
-
 function hochschild_cohomology(Z::ZeroLocus)
   X = Z.ambient
   E = Z.defining_bundle
