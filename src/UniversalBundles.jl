@@ -207,16 +207,20 @@ end
     spinor_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
     spinor_bundle(X::PartialFlagVariety, half::Symbol) -> CompletelyReducibleBundle
 
-The spinor bundle on an orthogonal Grassmannian ``\\mathrm{OGr}(k, m)``.
+The spinor bundle on an orthogonal Grassmannian ``\\mathrm{OGr}(k, m)``. The two
+methods are mutually exclusive by Dynkin type.
 
 For type ``\\mathrm{B}_n/P_k`` (``\\mathrm{OGr}(k, 2n+1)``) there is a single
-spinor bundle ``\\mathcal{S}`` corresponding to ``\\omega_n``.
+spinor bundle ``\\mathcal{S}`` corresponding to ``\\omega_n``; use the
+one-argument `spinor_bundle(X)`.
 
 For type ``\\mathrm{D}_n/P_k`` (``\\mathrm{OGr}(k, 2n)``) there are two
 half-spinor bundles ``\\mathcal{S}^+`` and ``\\mathcal{S}^-`` corresponding to
-``\\omega_{n-1}`` and ``\\omega_n`` respectively. Call
-`spinor_bundle(X, :plus)` or `spinor_bundle(X, :minus)` to select one. Without
-a `half` argument on type ``\\mathrm{D}``, both are returned as a direct sum.
+``\\omega_{n-1}`` and ``\\omega_n`` respectively; select one with
+`spinor_bundle(X, :plus)` or `spinor_bundle(X, :minus)`.
+
+Calling `spinor_bundle(X)` on type ``\\mathrm{D}``, or `spinor_bundle(X, half)`
+on type ``\\mathrm{B}``, throws an `ArgumentError`.
 
 For ``k \\le n-2`` (type ``\\mathrm{D}_n``) or ``k \\le n-1`` (type
 ``\\mathrm{B}_n``), the spinor bundles are the irreducible homogeneous bundles
@@ -284,29 +288,27 @@ julia> degree(cohomology(spinor_bundle(X))[0])  # spin representation of Spin(7)
 function spinor_bundle(X::PartialFlagVariety)
   _check_spinor_domain(X)
   DT = dynkin_type(X)
-  R = rank(DT)
+  DT <: TypeB || throw(ArgumentError(
+    "spinor_bundle(X) is only defined for type B (a single spinor bundle); " *
+    "type D has two half-spinors — use spinor_bundle(X, :plus) or spinor_bundle(X, :minus)",
+  ))
   # OGr(k, 2n+1): single spinor bundle at ω_n.
-  DT <: TypeB && return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
-  # DT <: TypeD; OGr(k, 2n) and D_n/P_{n-1, n} carry both half-spinors as a direct sum.
-  return CompletelyReducibleBundle(
-    X, [fundamental_weight(DT, R - 1), fundamental_weight(DT, R)]
-  )
+  return CompletelyReducibleBundle(X, fundamental_weight(DT, rank(DT)))
 end
 
 function spinor_bundle(X::PartialFlagVariety, half::Symbol)
   _check_spinor_domain(X)
   DT = dynkin_type(X)
+  DT <: TypeD || throw(ArgumentError(
+    "spinor_bundle(X, half) is only defined for type D (two half-spinors); " *
+    "type B has a single spinor bundle — use spinor_bundle(X)",
+  ))
+  half in (:plus, :minus) ||
+    throw(ArgumentError("half must be :plus or :minus, got :$half"))
   R = rank(DT)
-
-  if DT <: TypeB
-    half in (:plus, :minus) &&
-      @warn "Type B has a single spinor bundle; ignoring half=$half"
-    return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
-  end
-
+  # OGr(k, 2n): ω_{n-1} (plus) and ω_n (minus).
   half === :plus && return CompletelyReducibleBundle(X, fundamental_weight(DT, R - 1))
-  half === :minus && return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
-  throw(ArgumentError("half must be :plus or :minus, got :$half"))
+  return CompletelyReducibleBundle(X, fundamental_weight(DT, R))
 end
 
 # Spinor bundles are defined on B_n/P_k, D_n/P_k, and the two-marked D_n/P_{n-1, n}.

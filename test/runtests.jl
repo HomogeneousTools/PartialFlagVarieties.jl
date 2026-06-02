@@ -1541,14 +1541,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(Sp) == 2
     @test rank_bundle(Sm) == 2
 
-    # Both half-spinors together
-    S4 = spinor_bundle(X4)
-    @test rank_bundle(S4) == 4
-
     # Q^3 = B_2/P_1: single spinor of rank 2
     X3 = quadric(3)
     S3 = spinor_bundle(X3)
     @test rank_bundle(S3) == 2
+
+    # The two methods are mutually exclusive by type.
+    # One-arg form is type B only: type D must pick a half-spinor instead.
+    @test_throws ArgumentError spinor_bundle(X4)
+    # Two-arg form is type D only: type B has a single spinor, use the one-arg form.
+    @test_throws ArgumentError spinor_bundle(X3, :plus)
+    @test_throws ArgumentError spinor_bundle(X3, :minus)
+    # In type D the half symbol must be :plus or :minus.
+    @test_throws ArgumentError spinor_bundle(X4, :other)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
