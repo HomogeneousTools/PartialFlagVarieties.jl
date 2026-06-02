@@ -321,7 +321,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test !is_projective_space(Gr(2, 5))                        # proper Grassmannian
     @test !is_projective_space(quadric(2))                      # ℙ¹ × ℙ¹, not a ℙⁿ
     @test !is_projective_space(quadric(4))                      # D₃/P₁ quadric ≠ ℙ³
-    @test !is_projective_space(LGr(2))                          # C₂/P₂ = Q³
+    @test !is_projective_space(LGr(2, 4))                          # C₂/P₂ = Q³
     @test !is_projective_space(OGr(3, 7))                       # B₃/P₃ spinor variety
 
     # Cominuscule
@@ -626,9 +626,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test det_tangent_is_anticanonical(full_flag_variety(TypeB{3}))
     @test det_tangent_is_anticanonical(full_flag_variety(TypeB{4}))
     @test det_tangent_is_anticanonical(SGr(1, 4))
-    @test det_tangent_is_anticanonical(LGr(2))
-    @test det_tangent_is_anticanonical(LGr(3))
-    @test det_tangent_is_anticanonical(LGr(4))
+    @test det_tangent_is_anticanonical(LGr(2, 4))
+    @test det_tangent_is_anticanonical(LGr(3, 6))
+    @test det_tangent_is_anticanonical(LGr(4, 8))
     @test det_tangent_is_anticanonical(SGr(2, 6))
     @test det_tangent_is_anticanonical(SGr(1, 8))
     @test det_tangent_is_anticanonical(partial_flag_variety(TypeC{4}, [2, 4]))
@@ -887,8 +887,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     V = SGr(2, 6)
     @test dimension(V) == 7
 
-    V = LGr(3)
+    V = LGr(3, 6)
     @test dimension(V) == 6
+    @test LGr(3, 6) == SGr(3, 6)
+    # The second argument is the ambient dimension and must equal 2n.
+    @test_throws ArgumentError LGr(3, 7)
+    @test_throws ArgumentError LGr(3, 5)
   end
 
   @testset "IGr (isotropic Grassmannian)" begin

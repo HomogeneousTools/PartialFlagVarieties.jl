@@ -183,24 +183,27 @@ function SGr(k::Integer, n::Integer)
 end
 
 """
-    LGr(n) -> PartialFlagVariety
+    LGr(n, 2n) -> PartialFlagVariety
 
-The Lagrangian Grassmannian ``\\mathrm{LGr}(n, 2n) = \\mathrm{SGr}(n, 2n)``.
+The Lagrangian Grassmannian ``\\mathrm{LGr}(n, 2n) = \\mathrm{SGr}(n, 2n)`` of
+Lagrangian (maximal isotropic) ``n``-planes in a ``2n``-dimensional symplectic
+space. The second argument must equal ``2n``.
 
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> V = LGr(3);
+julia> V = LGr(3, 6);
 
 julia> dimension(V)
 6
 ```
 """
-function LGr(n::Integer)
-  n = Int(n)
-  n >= 1 || throw(ArgumentError("LGr($n): need n ≥ 1"))
-  return SGr(n, 2n)
+function LGr(n::Integer, m::Integer)
+  n, m = Int(n), Int(m)
+  n >= 1 || throw(ArgumentError("LGr($n, $m): need n ≥ 1"))
+  m == 2n || throw(ArgumentError("LGr($n, $m): second argument must be 2n = $(2n)"))
+  return SGr(n, m)
 end
 
 """
