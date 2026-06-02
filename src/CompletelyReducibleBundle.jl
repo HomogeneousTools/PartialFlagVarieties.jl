@@ -1042,6 +1042,24 @@ end
 
 The determinant line bundle ``\\det(E) = \\bigwedge^{\\mathrm{rk}(E)} E``.
 
+Each summand of `E` is the homogeneous bundle attached to an irreducible
+representation ``V`` of the Levi ``L``, and ``\\det`` distributes over direct
+sums, ``\\det\\bigl(\\bigoplus_i V_i\\bigr) = \\bigotimes_i \\det V_i``, so the
+weights add. For a single ``d``-dimensional irreducible representation ``V`` we
+use the factorisation
+``L = Z(L)\\cdot [L,L]`` of the reductive Levi into its central torus ``Z(L)``
+and semisimple part ``[L,L]``:
+
+- By Schur's lemma ``Z(L)`` acts on ``V`` through a single character ``\\chi``,
+  so it acts on ``\\det V = \\bigwedge^d V`` through ``\\chi^d``; the central
+  charge of ``\\det V`` is therefore that of ``V`` scaled by ``d``.
+- ``[L,L]`` equals its own derived subgroup, so it carries no nontrivial
+  characters. The determinant of any ``[L,L]``-representation is therefore
+  trivial, and the semisimple highest weight of ``\\det V`` vanishes.
+
+Hence ``\\det V`` is the line bundle with central charge ``d\\,\\chi`` and
+trivial semisimple weight, and ``\\det E`` is the sum of these over the summands.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
