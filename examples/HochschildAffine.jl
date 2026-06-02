@@ -37,6 +37,7 @@ using PartialFlagVarieties
 using PartialFlagVarieties:
   fiber_dimension, IrrepLevi, components, n_components,
   to_ambient_weight, marked_dynkin_type
+using Semisimple
 using PrettyTables
 using ProgressMeter
 using Combinatorics: multiexponents
@@ -137,8 +138,8 @@ function _cache_size_bytes()
     :_root_system_cache, :_coset_reps_cache,
     :_longest_element_cache,
   ]
-    if isdefined(Lie, name)
-      total += Base.summarysize(getfield(Lie, name))
+    if isdefined(Semisimple, name)
+      total += Base.summarysize(getfield(Semisimple, name))
     end
   end
   total
