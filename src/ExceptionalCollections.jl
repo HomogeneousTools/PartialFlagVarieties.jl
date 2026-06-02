@@ -254,7 +254,12 @@ The **Beilinson exceptional collection** on projective space ``\\mathbb{P}^n``:
 ``\\langle \\mathcal{O}, \\mathcal{O}(1), \\ldots, \\mathcal{O}(n) \\rangle``
 
 This is a full strong exceptional collection on ``\\mathbb{P}^n``.
-`X` must be a projective space (Picard rank 1 with ambient type ``A_n``).
+
+`X` must be a **type-A** projective space, i.e. ``\\mathrm{A}_n/P_1`` or
+``\\mathrm{A}_n/P_n``. Beilinson's construction is intrinsically type A, so the
+other models of ``\\mathbb{P}^n`` recognised by `is_projective_space`
+(``\\mathrm{C}_n/P_1``, ``\\mathrm{B}_2/P_2``, ``\\mathrm{D}_3/P_2``,
+``\\mathrm{D}_3/P_3``) are rejected.
 
 # Examples
 ```jldoctest
@@ -272,18 +277,11 @@ true
 ```
 """
 function beilinson_collection(X::PartialFlagVariety)
-  DT = dynkin_type(X)
-  Marked = marked_nodes(X)
-  DT <: TypeA || throw(
-    ArgumentError(
-      "beilinson_collection requires projective space (type A with one marked node)"
-    ),
-  )
-  length(Marked) == 1 || throw(
-    ArgumentError(
-      "beilinson_collection requires a generalized Grassmannian (one marked node)"
-    ),
-  )
+  is_projective_space(X) || throw(ArgumentError(
+    "beilinson_collection requires a projective space ℙⁿ"))
+  dynkin_type(X) <: TypeA || throw(ArgumentError(
+    "beilinson_collection is only implemented for type-A ℙⁿ; got a non-type-A " *
+    "model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"))
   n = dimension(X)   # = rank(DT) = n for ℙⁿ
   [line_bundle(X, k) for k in 0:n]
 end
@@ -296,6 +294,13 @@ The **dual Beilinson exceptional collection** on ``\\mathbb{P}^n``:
 ``\\langle \\Omega^n(n), \\Omega^{n-1}(n-1), \\ldots, \\Omega^1(1), \\mathcal{O} \\rangle``
 
 where ``\\Omega^k(k) = \\bigwedge^k \\Omega^1_{\\mathbb{P}^n} \\otimes \\mathcal{O}(k)``.
+
+`X` must be a **type-A** projective space, i.e. ``\\mathrm{A}_n/P_1`` or
+``\\mathrm{A}_n/P_n``. The construction is intrinsically type A: for the other
+models of ``\\mathbb{P}^n`` recognised by `is_projective_space`
+(``\\mathrm{C}_n/P_1``, ``\\mathrm{B}_2/P_2``, ``\\mathrm{D}_3/P_2``,
+``\\mathrm{D}_3/P_3``) the homogeneous cotangent bundle does not reproduce
+``\\Omega^k(k)``, so they are rejected.
 
 # Examples
 ```jldoctest
@@ -313,18 +318,11 @@ true
 ```
 """
 function beilinson_collection_dual(X::PartialFlagVariety)
-  DT = dynkin_type(X)
-  Marked = marked_nodes(X)
-  DT <: TypeA || throw(
-    ArgumentError(
-      "beilinson_collection_dual requires projective space (type A with one marked node)"
-    ),
-  )
-  length(Marked) == 1 || throw(
-    ArgumentError(
-      "beilinson_collection_dual requires a generalized Grassmannian (one marked node)"
-    ),
-  )
+  is_projective_space(X) || throw(ArgumentError(
+    "beilinson_collection_dual requires a projective space ℙⁿ"))
+  dynkin_type(X) <: TypeA || throw(ArgumentError(
+    "beilinson_collection_dual is only implemented for type-A ℙⁿ; got a " *
+    "non-type-A model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"))
   n = dimension(X)
   Ω = cotangent_bundle(X)
   result = CompletelyReducibleBundle[]
