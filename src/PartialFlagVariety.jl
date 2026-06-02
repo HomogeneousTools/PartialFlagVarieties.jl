@@ -4,7 +4,7 @@ export dynkin_type, dimension, picard_rank
 export euler_characteristic, betti_numbers
 export is_generalized_grassmannian, is_cominuscule, is_minuscule, is_exceptional_type
 export is_adjoint, is_coadjoint, is_full_flag_variety
-export is_orthogonal_grassmannian, is_quadric
+export is_orthogonal_grassmannian, is_projective_space, is_quadric
 export anticanonical_degrees
 export marked_dynkin_type, marked_nodes
 
@@ -342,6 +342,52 @@ function is_orthogonal_grassmannian(X::PartialFlagVariety)
   DT = dynkin_type(X)
   (DT <: TypeB || DT <: TypeD) || return false
   length(marked_nodes(X)) == 1
+end
+
+"""
+    is_projective_space(X::PartialFlagVariety) -> Bool
+
+Return `true` if `X` is (isomorphic to) a projective space ``\\mathbb{P}^n``.
+
+In type A these are ``\\mathrm{A}_n/P_1 = \\mathrm{Gr}(1, n+1)`` and its dual
+``\\mathrm{A}_n/P_n = \\mathrm{Gr}(n, n+1)``. The remaining cases are low-rank
+accidental isomorphisms:
+
+- ``\\mathrm{C}_n/P_1 = \\mathbb{P}^{2n-1}`` — every line is isotropic for a
+  symplectic form, so ``\\mathrm{SGr}(1, 2n) = \\mathbb{P}(\\mathbb{C}^{2n})``;
+- ``\\mathrm{B}_2/P_2 = \\mathbb{P}^3`` — the spinor variety ``\\mathrm{OGr}(2, 5)``,
+  via ``\\mathrm{Spin}(5) = \\mathrm{Sp}(4)``;
+- ``\\mathrm{D}_3/P_2 = \\mathrm{D}_3/P_3 = \\mathbb{P}^3`` — the two spinor
+  varieties, via ``\\mathrm{D}_3 = \\mathrm{A}_3``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_projective_space(projective_space(4))
+true
+
+julia> is_projective_space(SGr(1, 6))   # C₃/P₁ = ℙ⁵
+true
+
+julia> is_projective_space(OGr(2, 5))   # B₂/P₂ = ℙ³
+true
+
+julia> is_projective_space(Gr(2, 5))
+false
+```
+"""
+function is_projective_space(X::PartialFlagVariety)
+  DT = dynkin_type(X)
+  marked = marked_nodes(X)
+  length(marked) != 1 && return false
+  m = marked[1]
+  R = rank(X)
+  DT <: TypeA && return (m == 1 || m == R)
+  DT <: TypeC && return m == 1
+  DT <: TypeB && return (R == 2 && m == 2)
+  DT <: TypeD && return (R == 3 && (m == 2 || m == 3))
+  false
 end
 
 """

@@ -298,6 +298,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_full_flag_variety(full_flag_variety(TypeA{2}))
     @test !is_full_flag_variety(Gr(2, 4))
 
+    # Projective space — every model, including accidental isomorphisms
+    @test is_projective_space(projective_space(4))              # A₄/P₁
+    @test is_projective_space(Gr(4, 5))                         # dual ℙ⁴ = A₄/P₄
+    @test is_projective_space(SGr(1, 6))                        # C₃/P₁ = ℙ⁵
+    @test is_projective_space(OGr(2, 5))                        # B₂/P₂ = ℙ³
+    @test is_projective_space(OGr(2, 6))                        # D₃/P₂ = ℙ³
+    @test is_projective_space(OGr(3, 6))                        # D₃/P₃ = ℙ³
+    @test is_projective_space(quadric(1))                       # Q¹ = ℙ¹
+    @test !is_projective_space(Gr(2, 5))                        # proper Grassmannian
+    @test !is_projective_space(quadric(2))                      # ℙ¹ × ℙ¹, not a ℙⁿ
+    @test !is_projective_space(quadric(4))                      # D₃/P₁ quadric ≠ ℙ³
+    @test !is_projective_space(LGr(2))                          # C₂/P₂ = Q³
+    @test !is_projective_space(OGr(3, 7))                       # B₃/P₃ spinor variety
+
     # Cominuscule
     @test is_cominuscule(Gr(2, 5))
     @test is_cominuscule(quadric(8))                            # D5/P1
@@ -2198,6 +2212,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test length(Ed) == 5
     @test is_full_exceptional_sequence(Ed, X)
     @test is_strong_exceptional_sequence(Ed)
+  end
+
+  @testset "Beilinson collection: type-A only" begin
+    # The dual presentation Aₙ/Pₙ is still type A and must work.
+    Xdual = Gr(3, 4)   # = dual ℙ³
+    @test is_full_exceptional_sequence(beilinson_collection(Xdual), Xdual)
+    @test is_full_exceptional_sequence(beilinson_collection_dual(Xdual), Xdual)
+
+    # Beilinson is type-A only: the non-type-A models of ℙⁿ recognised by
+    # is_projective_space must be rejected (their homogeneous bundles do not
+    # reproduce the collection), rather than silently returning a wrong answer.
+    for X in (SGr(1, 4), OGr(2, 5), OGr(2, 6), OGr(3, 6))  # C₂/P₁, B₂/P₂, D₃/P₂,₃
+      @test is_projective_space(X)                # genuinely a ℙⁿ ...
+      @test !(dynkin_type(X) <: TypeA)            # ... but not in type A
+      @test_throws ArgumentError beilinson_collection(X)
+      @test_throws ArgumentError beilinson_collection_dual(X)
+    end
   end
 
   @testset "Kapranov collection on quadrics" begin
