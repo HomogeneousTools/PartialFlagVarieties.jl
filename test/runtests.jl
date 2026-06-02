@@ -205,6 +205,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test dimension(quadric(3)) == 3
     @test dimension(quadric(4)) == 4
 
+    # Low-dimensional quadrics are accidentally isomorphic to (products of) ℙⁿ:
+    #   Q¹ = ℙ¹  and  Q² = ℙ¹ × ℙ¹
+    @test quadric(1) == projective_space(1)
+    @test quadric(2) == projective_space(1) * projective_space(1)
+
     # OGr(5,10) = D5/P5: spinor variety, dim 10
     @test dimension(OGr(5, 10)) == 10
   end
