@@ -54,6 +54,22 @@ julia> borel_weil_bott(fundamental_weight(TypeA{2}, 1) * 0)
 julia> borel_weil_bott(-weyl_vector(TypeA{2})) === nothing
 true
 ```
+
+A *nonzero* singular weight, complementing the ``μ = 0`` example above. Note the
+test is applied to the dominant representative: a *dominant* weight is singular
+exactly when one Dynkin coordinate vanishes. On ``B_2`` the weight ``-ω_2`` has
+``ρ``-shift ``μ = ω_1`` — dominant with one coordinate zero — so its cohomology
+vanishes, while a regular weight lands in a single positive degree:
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> borel_weil_bott(-fundamental_weight(TypeB{2}, 2))              # μ = ω₁, singular
+nothing
+
+julia> borel_weil_bott(WeightLatticeElem(TypeB{2}, [1, -4]))          # regular: degree 2
+(2, 0)
+```
 """
 function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
   _borel_weil_bott_generic(λ)
