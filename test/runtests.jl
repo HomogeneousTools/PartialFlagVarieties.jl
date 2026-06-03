@@ -1069,7 +1069,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  Exterior power ranks (from reference output files)
+  #  Exterior power ranks
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Exterior power ranks: A-types" begin
@@ -1128,11 +1128,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  H⁰ of exterior powers of tangent bundles (from reference output files)
+  #  H⁰ of exterior powers of tangent bundles
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "H⁰(∧ᵏT): A-types" begin
-    # A3/P2 = Gr(2,4), reference: A3-P2.txt
     T = tangent_bundle(Gr(2, 4))
     @test dimensions(exterior_power(T, 0))[0] == 1
     @test dimensions(exterior_power(T, 1))[0] == 15
@@ -1140,21 +1139,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test dimensions(exterior_power(T, 3))[0] == 175
     @test dimensions(exterior_power(T, 4))[0] == 105
 
-    # A4/P2 = Gr(2,5), reference: A4-P2.txt
     T2 = tangent_bundle(Gr(2, 5))
     @test dimensions(exterior_power(T2, 1))[0] == 24
     @test dimensions(exterior_power(T2, 2))[0] == 252
     @test dimensions(exterior_power(T2, 3))[0] == 1248
     @test dimensions(exterior_power(T2, 6))[0] == 1176
 
-    # A7/P3 = Gr(3,8), reference: A7-P3.txt
     T3 = tangent_bundle(Gr(3, 8))
     @test dimensions(exterior_power(T3, 1))[0] == 63
     @test dimensions(exterior_power(T3, 2))[0] == 1890
   end
 
   @testset "H⁰(∧ᵏT): B-types" begin
-    # B3/P1, reference: B3-P1.txt
     T = tangent_bundle(partial_flag_variety(TypeB{3}, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 21
     @test dimensions(exterior_power(T, 2))[0] == 189
@@ -1164,7 +1160,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "H⁰(∧ᵏT): C-types" begin
-    # C3/P1, reference: C3-P1.txt
     T = tangent_bundle(partial_flag_variety(TypeC{3}, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 35
     @test dimensions(exterior_power(T, 2))[0] == 280
@@ -1174,7 +1169,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "H⁰(∧ᵏT): D-types" begin
-    # D4/P1, reference: D4-P1.txt
     T = tangent_bundle(partial_flag_variety(TypeD{4}, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 28
     @test dimensions(exterior_power(T, 2))[0] == 350
@@ -1183,7 +1177,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "H⁰(∧ᵏT): G2" begin
-    # G2/P1, reference: G2-P1.txt
     T = tangent_bundle(partial_flag_variety(TypeG2, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 21
     @test dimensions(exterior_power(T, 2))[0] == 189
