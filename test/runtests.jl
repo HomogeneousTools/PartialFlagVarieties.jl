@@ -9,6 +9,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   # ═══════════════════════════════════════════════════════════════════════════
   #  Semisimple.jl extensions: cartan_type, parse_dynkin_type
+  #
+  #  REMINDER: cartan_type, cartan_type_with_ordering, and parse_dynkin_type are
+  #  defined in src/Semisimple.jl as staging code "for inclusion in the
+  #  Semisimple.jl package" (see that file's header). They are currently owned
+  #  and exported by PartialFlagVarieties, so their tests live here. When these
+  #  functions are upstreamed into Semisimple.jl, the cartan_type and
+  #  parse_dynkin_type testsets below should move into Semisimple.jl's own suite.
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "cartan_type" begin
@@ -45,6 +52,29 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Whitespace tolerance
     @test parse_dynkin_type(" A3 ") === TypeA{3}
+  end
+
+  @testset "parse_dynkin_type: malformed input" begin
+    # Empty or whitespace-only input.
+    @test_throws ArgumentError parse_dynkin_type("")
+    @test_throws ArgumentError parse_dynkin_type("   ")
+    # No rank digits, or digits before the letter.
+    @test_throws ArgumentError parse_dynkin_type("A")
+    @test_throws ArgumentError parse_dynkin_type("3A")
+    # Letter outside the A–G family alphabet.
+    @test_throws ArgumentError parse_dynkin_type("Z9")
+    # Separator with no parseable component on either side.
+    @test_throws ArgumentError parse_dynkin_type("xx")
+    # Well-formed letter+digit, but not a valid Cartan rank for that family.
+    @test_throws ArgumentError parse_dynkin_type("A0")  # A needs rank >= 1
+    @test_throws ArgumentError parse_dynkin_type("B1")  # B needs rank >= 2
+    @test_throws ArgumentError parse_dynkin_type("D3")  # D needs rank >= 4
+    @test_throws ArgumentError parse_dynkin_type("E5")  # E only ranks 6, 7, 8
+    @test_throws ArgumentError parse_dynkin_type("F3")  # F only rank 4
+    @test_throws ArgumentError parse_dynkin_type("G3")  # G only rank 2
+    # The same guard fires when a bad string reaches a variety constructor.
+    @test_throws ArgumentError partial_flag_variety("Q7", 1)
+    @test_throws ArgumentError partial_flag_variety("", 1)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -169,6 +199,36 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test_throws ArgumentError flag_variety(4, [1, 1])
     @test_throws ArgumentError flag_variety(4, [0, 2])
     @test_throws ArgumentError flag_variety(4, [1, 4])
+  end
+
+  @testset "Constructor argument validation" begin
+    # Grassmannian Gr(k, n): need 1 <= k <= n - 1.
+    @test_throws ArgumentError Gr(0, 5)   # k too small
+    @test_throws ArgumentError Gr(5, 5)   # k = n
+    @test_throws ArgumentError Gr(6, 5)   # k > n
+    @test_throws ArgumentError Gr(2, 2)   # k > n - 1
+
+    # Projective space needs n >= 1.
+    @test_throws ArgumentError projective_space(0)
+    @test_throws ArgumentError projective_space(-1)
+
+    # Orthogonal Grassmannian OGr(k, n): k >= 1 and k <= floor(n / 2).
+    @test_throws ArgumentError OGr(0, 7)    # k too small
+    @test_throws ArgumentError OGr(4, 7)    # B_3: need k <= 3
+    @test_throws ArgumentError OGr(6, 10)   # D_5: need k <= 5
+
+    # Symplectic Grassmannian SGr(k, n): n even and 1 <= k <= n / 2.
+    @test_throws ArgumentError SGr(2, 7)    # n odd
+    @test_throws ArgumentError SGr(4, 6)    # C_3: need k <= 3
+
+    # Quadric needs n >= 1.
+    @test_throws ArgumentError quadric(0)
+
+    # Marked nodes must be in range and distinct (validated, not silently fixed).
+    @test_throws ArgumentError partial_flag_variety(TypeA{3}, [4])     # node > rank
+    @test_throws ArgumentError partial_flag_variety(TypeA{3}, [0])     # node < 1
+    @test_throws ArgumentError partial_flag_variety(TypeA{3}, [2, 2])  # repeated node
+    @test_throws ArgumentError partial_flag_variety("B3", [4])         # node > rank
   end
 
   @testset "PartialFlagVariety products" begin
@@ -466,6 +526,17 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test components(E_sum) == vcat(components(E_weight), components(O))
     @test rank_bundle(E_sum) == 4
     @test_throws ArgumentError CompletelyReducibleBundle(X, [bad_component])
+  end
+
+  @testset "Mismatched ambient varieties" begin
+    # Binary bundle operations require both operands on the same variety.
+    E = structure_sheaf(projective_space(2))
+    F = structure_sheaf(projective_space(3))
+    @test_throws ArgumentError tensor_product(E, F)
+    @test_throws ArgumentError direct_sum(E, F)
+
+    # A filtered bundle's pieces must live on its own variety.
+    @test_throws ArgumentError FilteredBundle(Gr(2, 4), [structure_sheaf(projective_space(3))])
   end
 
   @testset "Structure sheaf and zero bundle" begin
