@@ -633,7 +633,7 @@ function cohomology_on_restriction_symbolic(
   # Try numeric solve first
   (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
   if det_numeric
-    entries = AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
+    entries = AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
     return Cohomology{AffineExpr}(entries, d_Z)
   end
 
@@ -652,7 +652,7 @@ function cohomology_on_restriction_symbolic(
 
   if serre_resolved
     # H^k(F) = H^{d-k}(F*) is fully known from Serre duality
-    entries = AffineExpr[AffineExpr(Int(H_dual_result[d_Z - k])) for k in 0:d_Z]
+    entries = AffineExpr[AffineExpr(H_dual_result[d_Z - k]) for k in 0:d_Z]
     return Cohomology{AffineExpr}(entries, d_Z)
   end
 
@@ -736,7 +736,7 @@ function _restrict_to_zero_locus_les(
   # Try numeric solve first
   (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
   if det_numeric
-    return AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
+    return AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
   end
 
   # Try Serre duality fallback before symbolic path
@@ -746,7 +746,7 @@ function _restrict_to_zero_locus_les(
     (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
     if det_dual
       entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
-      return AffineExpr[AffineExpr(Int(e)) for e in entries]
+      return AffineExpr[AffineExpr(e) for e in entries]
     end
 
     # Cross-validation: check if both are consistent
@@ -759,7 +759,7 @@ function _restrict_to_zero_locus_les(
     serre_consistent = all(H_numeric[k] == H_dual[d_Z - k] for k in 0:d_Z)
 
     if chi_numeric == chi_exact && chi_numeric_dual == chi_exact_dual && serre_consistent
-      return AffineExpr[AffineExpr(Int(H_numeric[k])) for k in 0:d_Z]
+      return AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
     end
   end
 
