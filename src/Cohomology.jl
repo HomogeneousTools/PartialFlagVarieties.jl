@@ -64,8 +64,8 @@ vanishes, while a regular weight lands in a single positive degree:
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> borel_weil_bott(-fundamental_weight(TypeB{2}, 2))              # μ = ω₁, singular
-nothing
+julia> borel_weil_bott(-fundamental_weight(TypeB{2}, 2)) === nothing  # μ = ω₁, singular
+true
 
 julia> borel_weil_bott(WeightLatticeElem(TypeB{2}, [1, -4]))          # regular: degree 2
 (2, 0)
