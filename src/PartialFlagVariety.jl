@@ -581,7 +581,7 @@ function anticanonical_degrees(X::PartialFlagVariety)
     for q in 1:n
       total += C[i, unmarked[q]] * x_L[q]
     end
-    result[p] = round(Int, 2 - 2 * total)
+    result[p] = Int(2 - 2 * total)
   end
   result
 end
