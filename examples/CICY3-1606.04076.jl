@@ -243,7 +243,7 @@ function main()
   # ── Lagrangian Grassmannians ───────────────────────────────────────
   println("Lagrangian/Symplectic Grassmannians:")
   for n in 3:4
-    X = LGr(n)
+    X = LGr(n, 2n)
     search_cy3(X, "LGr($n,$(2n))", results)
   end
   println()
