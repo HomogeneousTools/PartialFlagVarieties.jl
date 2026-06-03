@@ -46,7 +46,11 @@ We propagate bounds forward and backward until convergence.
 """
 function solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
   d = a.dim_variety
-  @assert b.dim_variety == d
+  b.dim_variety == d || throw(
+    ArgumentError(
+      "solve_ses_cohomology: a and b must have equal dim_variety, got $d and $(b.dim_variety)"
+    ),
+  )
 
   # Initialize bounds on δ_i for i = -1, 0, ..., d
   # δ_{-1} = 0 (no H^{-1}), δ_d = 0 (no H^{d+1}(A))
@@ -611,7 +615,11 @@ function solve_ses_cohomology_symbolic(
   var_counter::Ref{Int},
 )
   d = a.dim_variety
-  @assert b.dim_variety == d
+  b.dim_variety == d || throw(
+    ArgumentError(
+      "solve_ses_cohomology_symbolic: a and b must have equal dim_variety, got $d and $(b.dim_variety)"
+    ),
+  )
 
   a_vals = BigInt[a[i] for i in 0:d]
   b_vals = BigInt[b[i] for i in 0:d]
@@ -662,7 +670,11 @@ function solve_ses_cohomology_symbolic(
   var_counter::Ref{Int},
 )
   d = a.dim_variety
-  @assert b.dim_variety == d
+  b.dim_variety == d || throw(
+    ArgumentError(
+      "solve_ses_cohomology_symbolic: a and b must have equal dim_variety, got $d and $(b.dim_variety)"
+    ),
+  )
 
   b_vals = BigInt[b[i] for i in 0:d]
 
@@ -723,7 +735,11 @@ function solve_ses_cohomology_symbolic(
   var_counter::Ref{Int},
 )
   d = a.dim_variety
-  @assert b.dim_variety == d
+  b.dim_variety == d || throw(
+    ArgumentError(
+      "solve_ses_cohomology_symbolic: a and b must have equal dim_variety, got $d and $(b.dim_variety)"
+    ),
+  )
 
   # If both are fully determined, delegate to exact method
   if all(is_determined(a[i]) for i in 0:d) && all(is_determined(b[i]) for i in 0:d)
@@ -868,7 +884,9 @@ function les_cokernel(
   var_counter::Ref{Int},
 )
   n = length(a)
-  @assert length(b) == n
+  length(b) == n || throw(
+    ArgumentError("les_cokernel: a and b must have equal length, got $n and $(length(b))")
+  )
 
   all(is_zero_expr, a) && return copy(b)
 

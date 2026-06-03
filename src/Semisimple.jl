@@ -63,7 +63,11 @@ julia> cartan_type_with_ordering([2 -1; -2 2])
 """
 function cartan_type_with_ordering(C::AbstractMatrix{<:Integer})
   rk = size(C, 1)
-  @assert size(C, 1) == size(C, 2) "Cartan matrix must be square"
+  size(C, 1) == size(C, 2) || throw(
+    ArgumentError(
+      "cartan_type_with_ordering: Cartan matrix must be square, got $(size(C, 1))×$(size(C, 2))"
+    ),
+  )
 
   type = Tuple{Symbol,Int}[]
   ord = sizehint!(Int[], rk)
