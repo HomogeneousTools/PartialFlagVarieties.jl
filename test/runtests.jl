@@ -536,7 +536,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test_throws ArgumentError direct_sum(E, F)
 
     # A filtered bundle's pieces must live on its own variety.
-    @test_throws ArgumentError FilteredBundle(Gr(2, 4), [structure_sheaf(projective_space(3))])
+    @test_throws ArgumentError FilteredBundle(
+      Gr(2, 4), [structure_sheaf(projective_space(3))]
+    )
   end
 
   @testset "Structure sheaf and zero bundle" begin
