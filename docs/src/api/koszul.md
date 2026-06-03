@@ -71,7 +71,9 @@ When one of the three sheaves in a short exact sequence
 the connecting maps ``\delta_i`` are forced to be zero, and the
 remaining cohomology groups are uniquely determined.
 
-```julia-repl
+```jldoctest
+julia> using PartialFlagVarieties
+
 julia> A = Cohomology{BigInt}(BigInt[3, 0, 0], 2);  # H⁰=3, H¹=H²=0
 
 julia> B = Cohomology{BigInt}(BigInt[7, 2, 0], 2);  # H⁰=7, H¹=2, H²=0
@@ -90,14 +92,17 @@ return value is `true`.
 When the bounds ``0 \le r_i \le \min(c_i, a_{i+1})`` do not force every
 connecting-map rank, the symbolic solver introduces fresh variables.
 
-```julia-repl
+```jldoctest
+julia> using PartialFlagVarieties
+
 julia> A = Cohomology{BigInt}(BigInt[3, 2, 0], 2);  # H⁰=3, H¹=2, H²=0
 
 julia> B = Cohomology{BigInt}(BigInt[5, 5, 1], 2);  # H⁰=5, H¹=5, H²=1
 
 julia> C, exact = solve_ses_cohomology(A, B)
-(H⁰ = 4
-H¹ = 5, false)
+(H⁰ = 2
+H¹ = 3
+H² = 1, false)
 
 julia> var_counter = Ref(0);
 
@@ -114,7 +119,7 @@ true
 ```
 
 The dimension-valued solver picks *some* valid solution (here
-``r_0 = 0``, giving ``c_0 = 4``), but returns `exact = false` to
+``r_0 = 0``, giving ``c_0 = 2``), but returns `exact = false` to
 indicate the answer is not unique. The symbolic solver instead
 introduces a variable ``x_1 = \mathrm{rk}(\delta_0)`` and expresses
 each ``c_i`` as an affine function of ``x_1``. The variable satisfies
@@ -128,7 +133,9 @@ exact sequence (one twist of the line bundle), which the Lefschetz
 hyperplane theorem forces to be determined. The quintic
 threefold ``Z \subset \mathbb{P}^4`` is the classic example:
 
-```julia-repl
+```jldoctest
+julia> using PartialFlagVarieties
+
 julia> X = projective_space(4);
 
 julia> Z = zero_locus(line_bundle(X, 5));
@@ -152,7 +159,9 @@ multiple short exact sequences whose connecting-map ranks need not be
 forced. Consider the fourfold ``Z`` cut out by two copies of
 ``\mathrm{Sym}^2 \mathcal{S}^*`` on ``\mathrm{Gr}(2,7)``:
 
-```julia-repl
+```jldoctest
+julia> using PartialFlagVarieties
+
 julia> X = Gr(2, 7);
 
 julia> S = universal_subbundle(X);
