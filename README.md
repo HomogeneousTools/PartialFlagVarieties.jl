@@ -169,7 +169,7 @@ Listing them in `Project.toml` records the dependency graph, but it does not
 teach `Pkg.add(url=...)` where to fetch unregistered dependencies when
 `PartialFlagVarieties.jl` is installed into another environment.
 
-Requires Julia ≥ 1.10.
+Requires Julia ≥ 1.11.
 
 ## Documentation
 
