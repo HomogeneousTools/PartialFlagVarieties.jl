@@ -102,7 +102,7 @@ marked node.
 """
 function central_part(rep::IrrepLevi)
   sf = central_scaling_factor(marked_dynkin_type(rep))
-  Vector{Rational{Int}}(Rational{Int}[c // sf for c in rep.central])
+  Rational{Int}[c // sf for c in rep.central]
 end
 
 function _trivial_semisimple_weight(mdt::MarkedDynkinType)
