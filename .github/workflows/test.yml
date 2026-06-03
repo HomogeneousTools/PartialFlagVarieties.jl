@@ -84,10 +84,12 @@ jobs:
           - FanoFourfoldsK3.jl
           - FanoFourfoldsQuiverZeroLoci.jl
           - FanoThreefolds.jl
+          - HochschildKuechle.jl
           - Hyperkaehler.jl
           - HyperellipticLinesExceptional.jl
           - Kuechle.jl
           - LinearSections.jl
+          - SpinorialFanos.jl
     steps:
       - uses: actions/checkout@v5.0.1
       - uses: julia-actions/setup-julia@v3.0.1
