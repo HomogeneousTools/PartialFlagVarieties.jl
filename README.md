@@ -158,15 +158,14 @@ using Pkg
 Pkg.add([
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Base62"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Semisimple.jl"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
 ])
 ```
 
-`Base62`, `ZeroLocus62`, and `Semisimple.jl` are not currently available from the
-General registry, so they must be added explicitly in a clean environment.
-Listing them in `Project.toml` records the dependency graph, but it does not
-teach `Pkg.add(url=...)` where to fetch unregistered dependencies when
+`Base62` and `ZeroLocus62` are not currently available from the General
+registry, so they must be added explicitly in a clean environment. Listing them
+in `Project.toml` records the dependency graph, but it does not teach
+`Pkg.add(url=...)` where to fetch unregistered dependencies when
 `PartialFlagVarieties.jl` is installed into another environment.
 
 Requires Julia ≥ 1.11.
