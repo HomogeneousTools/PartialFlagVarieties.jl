@@ -667,7 +667,7 @@ julia> fano_index(quadric(4))
 ```
 """
 function fano_index(X::PartialFlagVariety)
-  gcd(anticanonical_degrees(X)...)
+  gcd(anticanonical_degrees(X))
 end
 
 function _trivial_semisimple_weight(X::PartialFlagVariety)
