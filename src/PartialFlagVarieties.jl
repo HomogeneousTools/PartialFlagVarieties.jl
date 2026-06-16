@@ -61,6 +61,7 @@ include("ExceptionalCollections.jl")
 include("Hodge.jl")
 include("CacheConfig.jl")
 include("SpectralSequence.jl")
+include("FilteredHodge.jl")
 
 # ─── Reexport commonly used Semisimple.jl types ──────────────────────────────
 
@@ -99,6 +100,7 @@ export solve_ses_cohomology_symbolic, solve_koszul_filtration_symbolic
 export hodge_numbers_symbolic, cohomology_on_restriction_symbolic
 export configure_caches!, clear_caches!, cache_info
 export zerolocus62_label
+export filtered_hodge_numbers, filtered_twisted_hodge_numbers
 
 # ─── Startup banner ──────────────────────────────────────────────────────────
 
