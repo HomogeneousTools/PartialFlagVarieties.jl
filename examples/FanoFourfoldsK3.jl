@@ -584,12 +584,12 @@ function find_candidates(spec::FamilySpec, description::String, db)
   strict = [
     entry for entry in db if
     entry["ambient"] == ambient &&
-    Int(entry["anticanonical"]) == spec.h0antiK &&
-    Int(entry["volume"]) == spec.volume &&
-    entry_minus_chiT(entry) == spec.minus_chiT &&
-    (entry_h11(entry) === nothing || entry_h11(entry) == spec.h11) &&
-    (entry_h21(entry) === nothing || entry_h21(entry) == spec.h21) &&
-    (entry_h22(entry) === nothing || entry_h22(entry) == spec.h22)
+      Int(entry["anticanonical"]) == spec.h0antiK &&
+      Int(entry["volume"]) == spec.volume &&
+      entry_minus_chiT(entry) == spec.minus_chiT &&
+      (entry_h11(entry) === nothing || entry_h11(entry) == spec.h11) &&
+      (entry_h21(entry) === nothing || entry_h21(entry) == spec.h21) &&
+      (entry_h22(entry) === nothing || entry_h22(entry) == spec.h22)
   ]
   !isempty(strict) && return strict
 
