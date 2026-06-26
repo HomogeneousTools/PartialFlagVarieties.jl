@@ -25,11 +25,11 @@ println("=" ^ 70)
 
 X = projective_space(3)
 bundles = [
-  ("O", structure_sheaf(X)),
-  ("O(1)", line_bundle(X, 1)),
-  ("O(2)", line_bundle(X, 2)),
-  ("O(-1)", line_bundle(X, -1)),
-  ("T", tangent_bundle(X)),
+  ("O", O(X)),
+  ("O(1)", O(X, 1)),
+  ("O(2)", O(X, 2)),
+  ("O(-1)", O(X, -1)),
+  ("T", T(X)),
   ("Ω", cotangent_bundle(X)),
 ]
 

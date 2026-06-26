@@ -58,7 +58,7 @@ struct SectionRecord
 end
 
 function build_record(X, codim; label="", note="")
-  E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:codim])
+  E = reduce(direct_sum, [O(X, 1) for _ in 1:codim])
   Z = zero_locus(E)
   d = dimension(Z)
   χ = euler_characteristic(Z)
