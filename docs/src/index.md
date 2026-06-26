@@ -48,7 +48,7 @@ T = tangent_bundle(X)
 dimension(X)              # 6
 dimensions(T)[0]          # h^0(X, T_X)
 
-Z = zero_locus(line_bundle(X, 1))
+Z = zero_locus(O(X, 1))
 hodge_numbers(Z)
 ```
 

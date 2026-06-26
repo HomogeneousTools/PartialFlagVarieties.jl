@@ -10,6 +10,7 @@
 export universal_subbundle, universal_quotient_bundle, residual_bundle
 export spinor_bundle
 export tautological_bundles, universal_subbundles
+export S, Q  # shorthands for universal_subbundle, universal_quotient_bundle
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Generalized Grassmannians: universal, quotient and residual bundle
@@ -116,6 +117,41 @@ function universal_quotient_bundle(X::PartialFlagVariety)
   rank_bundle(residual_bundle(X)) == 0 && return dual(universal_subbundle(X))
   return dual(FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)]))
 end
+
+"""
+    S(X::PartialFlagVariety) -> CompletelyReducibleBundle
+    S(X::PartialFlagVariety, i::Int) -> Bundle
+
+Shorthand for [`universal_subbundle`](@ref): the tautological subbundle
+``\\mathcal{S}`` on `X`. On a multi-step flag, `S(X, i)` is the `i`-th universal
+subbundle.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle(S(Gr(2, 5)))
+2
+```
+"""
+S(X::PartialFlagVariety) = universal_subbundle(X)
+S(X::PartialFlagVariety, i::Int) = universal_subbundle(X, i)
+
+"""
+    Q(X::PartialFlagVariety) -> Union{CompletelyReducibleBundle, FilteredBundle}
+
+Shorthand for [`universal_quotient_bundle`](@ref): the universal quotient bundle
+``\\mathcal{Q}`` on a generalized Grassmannian `X`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle(Q(Gr(2, 5)))
+3
+```
+"""
+Q(X::PartialFlagVariety) = universal_quotient_bundle(X)
 
 """
     residual_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle

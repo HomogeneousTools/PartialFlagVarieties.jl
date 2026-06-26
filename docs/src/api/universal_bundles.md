@@ -13,6 +13,8 @@ literal filtered subbundles or quotients inside a full tautological flag.
 ```@docs
 universal_subbundle
 universal_quotient_bundle
+S
+Q
 ```
 
 ## Spinor bundles

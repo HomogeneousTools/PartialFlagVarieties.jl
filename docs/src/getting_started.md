@@ -65,6 +65,16 @@ E = direct_sum(line_bundle(X, 1), exterior_power(Q, 2))
 rank_bundle(E)
 ```
 
+The most common bundles have single-letter **shorthands** that appear throughout
+the examples: `S(X)` (universal subbundle), `Q(X)` (quotient), `O(X, d)` (the line
+bundle ``\mathcal{O}(d)``, or `O(X, [d₁, …])` when the Picard rank exceeds one),
+`T(X)` (tangent bundle), and `E(X, weights)` (a bundle assembled directly from
+highest weights). Using them, the bundle above reads:
+
+```julia
+E = direct_sum(O(X, 1), exterior_power(Q(X), 2))
+```
+
 The package works primarily with **completely reducible** bundles. This is the
 right model for Borel–Weil–Bott computations. Filtered objects are available
 separately when the order of the filtration matters.
@@ -88,7 +98,7 @@ Hdim[1]                   # H^1
 
 ```julia
 X = Gr(2, 5)
-Z = zero_locus(line_bundle(X, 1))
+Z = zero_locus(O(X, 1))
 
 dimension(Z)
 euler_characteristic(Z)
