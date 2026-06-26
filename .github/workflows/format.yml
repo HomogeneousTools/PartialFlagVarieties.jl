@@ -18,12 +18,7 @@ jobs:
         with:
           version: '1'
       - name: Check formatting
-        # JuliaFormatter is PINNED on purpose. An unpinned `Pkg.add` floats to
-        # the latest release, which can reformat files nobody touched and break
-        # CI out of the blue (v2.9.x reindented multiline comprehension filters
-        # and did exactly that). Bump this version deliberately, and keep it in
-        # sync with `.hooks/pre-commit` and `CONTRIBUTING.md`
-        # (grep the repo for: JuliaFormatter", version=).
-        run: |
-          julia -e 'using Pkg; Pkg.activate(; temp=true); Pkg.add(Pkg.PackageSpec(; name="JuliaFormatter", version="2.9.3")); using JuliaFormatter; format(".")'
-          git --no-pager diff --exit-code -- '*.jl'
+        # Formatting is driven by devtools/format.jl, which pins the
+        # JuliaFormatter version (the single source of truth, shared with the
+        # pre-commit hook). To change the version, edit that script — nowhere else.
+        run: julia devtools/format.jl --check
