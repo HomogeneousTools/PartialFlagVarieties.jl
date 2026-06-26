@@ -17,15 +17,17 @@ echo "── JuliaFormatter check ───────────────�
 julia -e '
   using Pkg
   # Install into the per-process environment so we do not pollute the project.
-  Pkg.activate(temp=true)
-  Pkg.add("JuliaFormatter"; io=devnull)
+  Pkg.activate(; temp=true)
+  # PINNED: keep this version identical to .github/workflows/format.yml and
+  # CONTRIBUTING.md, so local commits and CI never disagree on formatting.
+  Pkg.add(Pkg.PackageSpec(; name="JuliaFormatter", version="2.9.3"); io=devnull)
   using JuliaFormatter
   if !format(".", overwrite=false)
     @error """
     JuliaFormatter check failed.
     Run the formatter and stage the result:
 
-        julia -e '"'"'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'"'"'
+        julia -e '"'"'using Pkg; Pkg.activate(; temp=true); Pkg.add(Pkg.PackageSpec(; name="JuliaFormatter", version="2.9.3")); using JuliaFormatter; format(".")'"'"'
         git add -u
 
     Then re-commit.  To skip this check use: git commit --no-verify
