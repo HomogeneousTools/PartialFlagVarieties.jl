@@ -28,17 +28,15 @@ using Printf
 #  Helpers for Grassmannian bundles via the public API
 # ═══════════════════════════════════════════════════════════════════════════════
 
-O(X, d::Integer) = line_bundle(X, Int(d))
-Sstar(X) = dual(universal_subbundle(X))
-Sbundle(X) = dual(Sstar(X))
-Qbundle(X) = universal_quotient_bundle(X)
-Qstar(X) = dual(Qbundle(X))
-Sym2Sstar(X) = symmetric_power(Sstar(X), 2)
-Λ2Sstar(X) = exterior_power(Sstar(X), 2)
-Λ2Q(X) = exterior_power(Qbundle(X), 2)
-Λ3Q(X) = exterior_power(Qbundle(X), 3)
-Λ4Q(X) = exterior_power(Qbundle(X), 4)
-Λ5Q(X) = exterior_power(Qbundle(X), 5)
+# O(X, d), S(X) (universal subbundle) and Q(X) (quotient) are provided by the
+# package; here we add the duals and the symmetric / exterior powers used below.
+Sstar(X) = dual(S(X))                        # S*
+Sym2Sstar(X) = symmetric_power(Sstar(X), 2)  # Sym² S*
+Λ2Sstar(X) = exterior_power(Sstar(X), 2)     # ∧² S*
+Λ2Q(X) = exterior_power(Q(X), 2)
+Λ3Q(X) = exterior_power(Q(X), 3)
+Λ4Q(X) = exterior_power(Q(X), 4)
+Λ5Q(X) = exterior_power(Q(X), 5)
 
 bundle_sum(E::CompletelyReducibleBundle) = E
 bundle_sum(E::CompletelyReducibleBundle, F::Vararg{CompletelyReducibleBundle}) = reduce(
@@ -114,7 +112,7 @@ const CY3_FAMILIES = CY3Family[
     expected_h21=48, expected_chi=-92,
     note="Alternative description on F(1,3;ℂ⁴)"),
   CY3Family(; no=10, label="b3", k=2, n=6, description="Q(1) ⊕ O(1)",
-    build=X -> bundle_sum(Qbundle(X) * O(X, 1), O(X, 1)), expected_h11=1,
+    build=X -> bundle_sum(Q(X) * O(X, 1), O(X, 1)), expected_h11=1,
     expected_h21=50, expected_chi=-98,
     note="Projectively equivalent to G(2,7)_{1⁷}"),
   CY3Family(; no=11, label="11", k=2, n=6, description="∧³Q ⊕ O(3)",

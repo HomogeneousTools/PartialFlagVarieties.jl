@@ -18,6 +18,7 @@ jobs:
         with:
           version: '1'
       - name: Check formatting
-        run: |
-          julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'
-          git --no-pager diff --exit-code -- '*.jl'
+        # Formatting is driven by devtools/format.jl, which pins the
+        # JuliaFormatter version (the single source of truth, shared with the
+        # pre-commit hook). To change the version, edit that script — nowhere else.
+        run: julia devtools/format.jl --check

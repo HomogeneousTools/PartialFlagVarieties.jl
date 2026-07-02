@@ -102,7 +102,7 @@ function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
     for d in 1:d_max
       degrees = zeros(Int, length(Marked))
       degrees[node_idx] = d
-      bundle = line_bundle(X, degrees)
+      bundle = O(X, degrees)
 
       rk = rank_bundle(bundle)
       det_c = picard_degrees(det(bundle))

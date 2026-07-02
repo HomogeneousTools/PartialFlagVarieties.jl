@@ -49,6 +49,7 @@ CompletelyReducibleBundle(::PartialFlagVariety, ::WeightLatticeElem)
 CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:WeightLatticeElem})
 CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:Integer})
 CompletelyReducibleBundle(::PartialFlagVariety, ::AbstractVector{<:AbstractVector{<:Integer}})
+E
 ```
 
 ## Accessors
@@ -68,6 +69,7 @@ O
 zero_bundle
 line_bundle
 tangent_bundle
+T
 cotangent_bundle
 canonical_bundle
 anticanonical_bundle

@@ -12,6 +12,7 @@ export CompletelyReducibleBundle
 export components, variety
 export rank_bundle, tangent_bundle, cotangent_bundle
 export structure_sheaf, O, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
+export T, E  # shorthands for tangent_bundle and the CompletelyReducibleBundle constructors
 export det, determinant
 export picard_degrees
 export fano_index
@@ -193,6 +194,26 @@ function CompletelyReducibleBundle(
   CompletelyReducibleBundle(X, components)
 end
 
+"""
+    E(X::PartialFlagVariety, weights) -> CompletelyReducibleBundle
+
+Shorthand for the [`CompletelyReducibleBundle`](@ref) constructors: build the
+equivariant bundle on `X` from `weights`, which may be a single
+`WeightLatticeElem`, a vector of them, a vector of fundamental-weight
+coefficients, or a list of such vectors.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(3, 6);
+
+julia> components(E(X, [0, 1, -1, 0, 0])) == components(universal_subbundle(X))
+true
+```
+"""
+E(X::PartialFlagVariety, weights) = CompletelyReducibleBundle(X, weights)
+
 # ─── Accessors ───────────────────────────────────────────────────────────────
 
 """
@@ -258,6 +279,40 @@ julia> rank_bundle(structure_sheaf(X))
 function O(X::PartialFlagVariety)
   CompletelyReducibleBundle(X, WeightLatticeElem(dynkin_type(X)))
 end
+
+"""
+    O(X::PartialFlagVariety, d::Integer) -> CompletelyReducibleBundle
+
+The line bundle ``\\mathcal{O}(d)`` on `X`. Shorthand for
+[`line_bundle(X, d)`](@ref); requires Picard rank 1.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle(O(Gr(2, 4), 3))
+1
+```
+"""
+O(X::PartialFlagVariety, d::Integer) = line_bundle(X, d)
+
+"""
+    O(X::PartialFlagVariety, degrees::Vector{<:Integer}) -> CompletelyReducibleBundle
+
+The line bundle ``\\mathcal{O}(d_1, \\ldots, d_r)`` on `X`, one degree per marked
+node. Shorthand for [`line_bundle(X, degrees)`](@ref).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = partial_flag_variety(TypeA{3}, (1, 3));
+
+julia> rank_bundle(O(X, [2, 1]))
+1
+```
+"""
+O(X::PartialFlagVariety, degrees::Vector{<:Integer}) = line_bundle(X, degrees)
 
 """
     structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
@@ -538,6 +593,21 @@ julia> rank_bundle(T)
 function tangent_bundle(X::PartialFlagVariety)
   CompletelyReducibleBundle(X, _tangent_reps(marked_dynkin_type(X)))
 end
+
+"""
+    T(X::PartialFlagVariety) -> CompletelyReducibleBundle
+
+Shorthand for [`tangent_bundle`](@ref): the tangent bundle ``T_{G/P}``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle(T(Gr(2, 4)))
+4
+```
+"""
+T(X::PartialFlagVariety) = tangent_bundle(X)
 
 """
     cotangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle

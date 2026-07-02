@@ -610,6 +610,34 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(T2) == 4
   end
 
+  @testset "Shorthand constructors" begin
+    X = Gr(2, 5)
+
+    # S / Q: subbundle and quotient (type A → CompletelyReducibleBundle, has ==)
+    @test S(X) == universal_subbundle(X)
+    @test Q(X) == universal_quotient_bundle(X)
+
+    # T: tangent bundle
+    @test T(X) == tangent_bundle(X)
+
+    # O: the one-arg structure sheaf is unaffected by the new line-bundle methods
+    @test O(X) == structure_sheaf(X)
+    @test O(X, 2) == line_bundle(X, 2)
+
+    # E: general equivariant bundle from a weight, coefficients, or a list of them
+    λ = WeightLatticeElem(dynkin_type(X), [0, 1, 0, 0])
+    @test E(X, λ) == CompletelyReducibleBundle(X, λ)
+    @test E(X, [0, 1, 0, 0]) == CompletelyReducibleBundle(X, [0, 1, 0, 0])
+    @test E(X, [[0, 1, 0, 0], [0, 0, 0, 0]]) ==
+      CompletelyReducibleBundle(X, [[0, 1, 0, 0], [0, 0, 0, 0]])
+
+    # multi-step flag Fl(1, 3; 4): indexed subbundle and per-node line-bundle degrees
+    Xf = partial_flag_variety(TypeA{3}, (1, 3))
+    @test S(Xf, 1) == universal_subbundle(Xf, 1)
+    @test rank_bundle(S(Xf, 2)) == rank_bundle(universal_subbundle(Xf, 2))
+    @test O(Xf, [2, 3]) == line_bundle(Xf, [2, 3])
+  end
+
   @testset "Bundle operations" begin
     X = projective_space(4)
     O = structure_sheaf(X)

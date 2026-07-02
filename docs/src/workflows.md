@@ -50,12 +50,14 @@ The public bundle interface is meant to cover most use cases:
 
 ```julia
 X = Gr(2, 5)
-U = universal_subbundle(X)
-Q = universal_quotient_bundle(X)
 
-E = twist(exterior_power(Q, 2), 1)
+E = twist(exterior_power(Q(X), 2), 1)
 F = direct_sum(E, canonical_bundle(X))
 ```
+
+Here `Q(X)` is the single-letter shorthand for [`universal_quotient_bundle`](@ref);
+the full set (`S`, `Q`, `O`, `T`, `E`) is listed under
+[Bundle shorthands](conventions.md#Bundle-shorthands).
 
 For multi-step type-A flags, [`tautological_bundles`](@ref) and
 [`universal_subbundles`](@ref) are best thought of as **convenient equivariant
@@ -65,13 +67,13 @@ building blocks**, not literal geometric tautological flags.
 
 ```julia
 X = Gr(2, 5)
-E = line_bundle(X, 1)
+E = O(X, 1)
 Z = zero_locus(E)
 
 codimension(Z)
 normal_bundle(Z)
 koszul_terms(Z)
-cohomology_on_restriction(Z, tangent_bundle(X))
+cohomology_on_restriction(Z, T(X))
 ```
 
 This is the right workflow when you want cohomology of restrictions, Euler

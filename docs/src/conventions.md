@@ -47,6 +47,24 @@ When the filtration itself matters, use [`FilteredBundle`](@ref). This is
 especially relevant for the filtered tangent bundle and for the conormal
 filtration used in Hodge computations.
 
+## Bundle shorthands
+
+The most common bundles have single-letter shorthands, used throughout the
+examples and these guides:
+
+| Shorthand | Long form | Bundle |
+|:----------|:----------|:-------|
+| `O(X)` | [`structure_sheaf`](@ref) | structure sheaf ``\mathcal{O}_X`` |
+| `O(X, d)`, `O(X, [d₁, …])` | [`line_bundle`](@ref) | line bundle ``\mathcal{O}(d)`` |
+| `S(X)` | [`universal_subbundle`](@ref) | universal subbundle ``\mathcal{S}`` |
+| `Q(X)` | [`universal_quotient_bundle`](@ref) | universal quotient ``\mathcal{Q}`` |
+| `T(X)` | [`tangent_bundle`](@ref) | tangent bundle ``T_X`` |
+| `E(X, weights)` | [`CompletelyReducibleBundle`](@ref) | bundle from highest weights |
+
+`S`, `Q`, `T`, and `E` are exported functions, so they occupy those names after
+`using PartialFlagVarieties`. You can still reuse the letter as a local variable
+inside a function or `let` block — a local binding shadows the function there.
+
 ## Indexing conventions
 
 Two indexing conventions show up repeatedly:
