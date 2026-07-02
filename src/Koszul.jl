@@ -180,11 +180,13 @@ end
 
 """
 Substitute ``x_{\\mathrm{var\\_id}} = \\mathrm{replacement}`` in every entry
-of the `AffineExpr` array ``M``, in place.
+of the `AffineExpr` array ``M``, in place.  Returns `true` when at least one
+entry changed.
 """
 function _substitute_var!(
   M::AbstractArray{AffineExpr}, var_id::Int, replacement::AffineExpr
 )
+  changed = false
   for i in eachindex(M)
     e = M[i]
     haskey(e.coeffs, var_id) || continue
@@ -197,29 +199,24 @@ function _substitute_var!(
       new_coeffs[k] == 0 && delete!(new_coeffs, k)
     end
     M[i] = AffineExpr(new_constant, new_coeffs)
+    changed = true
   end
+  changed
 end
 
 """
-Given a linear equation ``\\mathrm{expr} = 0`` in the symbolic variables,
-eliminate one variable from the `AffineExpr` array ``M``, in place.
+Solve the linear equation ``\\mathrm{expr} = 0`` for one of its variables:
+the one with the smallest id whose coefficient divides all other
+coefficients (so the substitution stays integral).  Returns
+`var_id => solution`, or `nothing` when no variable qualifies.
 
-Solves for a variable that occurs in ``M`` (the one with the smallest id
-whose coefficient divides all other coefficients of the equation, so that
-the substitution stays integral) and substitutes the solution throughout
-``M``.  Variables of the equation that do not occur in ``M`` are kept as
-parameters.  Returns `true` when a variable was eliminated.
+The choice depends on the equation only, never on the array the solution is
+applied to: fixed-point loops that apply one equation to several arrays
+must eliminate the *same* variable everywhere, otherwise two arrays can
+trade variables back and forth without ever converging.
 """
-function _apply_equation!(M::AbstractArray{AffineExpr}, expr::AffineExpr)
-  isempty(expr.coeffs) && return false
-
-  array_vars = Set{Int}()
-  for e in M, v in keys(e.coeffs)
-    push!(array_vars, v)
-  end
-
-  candidates = sort!([v for v in keys(expr.coeffs) if v in array_vars])
-  for var_id in candidates
+function _solve_for_variable(expr::AffineExpr)
+  for var_id in sort!(collect(keys(expr.coeffs)))
     coeff = expr.coeffs[var_id]
     rest_coeffs = copy(expr.coeffs)
     delete!(rest_coeffs, var_id)
@@ -229,8 +226,56 @@ function _apply_equation!(M::AbstractArray{AffineExpr}, expr::AffineExpr)
     sub_const = -(expr.constant ÷ coeff)
     sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
     filter!(p -> p.second != 0, sub_coeffs)
-    _substitute_var!(M, var_id, AffineExpr(sub_const, sub_coeffs))
-    return true
+    return var_id => AffineExpr(sub_const, sub_coeffs)
+  end
+  nothing
+end
+
+"""
+Given a linear equation ``\\mathrm{expr} = 0`` in the symbolic variables,
+eliminate one variable (chosen by [`_solve_for_variable`](@ref), i.e.
+consistently across arrays) from the `AffineExpr` array ``M``, in place.
+Returns `true` when an entry of ``M`` changed.
+"""
+function _apply_equation!(M::AbstractArray{AffineExpr}, expr::AffineExpr)
+  solution = _solve_for_variable(expr)
+  solution === nothing && return false
+  _substitute_var!(M, solution.first, solution.second)
+end
+
+"""
+Like [`_apply_equation!`](@ref), but only eliminates a variable that occurs
+in ``M`` itself; variables of the equation that do not occur in ``M`` are
+kept as parameters.  This is what the entry-based LES solvers need: they
+must solve for their own fresh output variables, not for the variables of
+the input terms.
+"""
+function _apply_equation_in_vars!(M::AbstractArray{AffineExpr}, expr::AffineExpr)
+  isempty(expr.coeffs) && return false
+
+  array_vars = Set{Int}()
+  for e in M, v in keys(e.coeffs)
+    push!(array_vars, v)
+  end
+
+  restricted_coeffs = Dict{Int,BigInt}(
+    v => c for (v, c) in expr.coeffs if v in array_vars
+  )
+  isempty(restricted_coeffs) && return false
+
+  # Solve, but only allow eliminating a variable present in M: keep the
+  # full equation (all variables) as the solution content.
+  for var_id in sort!(collect(keys(restricted_coeffs)))
+    coeff = expr.coeffs[var_id]
+    rest_coeffs = copy(expr.coeffs)
+    delete!(rest_coeffs, var_id)
+    expr.constant % coeff == 0 || continue
+    all(v % coeff == 0 for (_, v) in rest_coeffs) || continue
+
+    sub_const = -(expr.constant ÷ coeff)
+    sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
+    filter!(p -> p.second != 0, sub_coeffs)
+    return _substitute_var!(M, var_id, AffineExpr(sub_const, sub_coeffs))
   end
   false
 end
@@ -638,7 +683,7 @@ function les_cokernel(
 
   c = AffineExpr[_fresh_variable(var_counter) for _ in 1:n]
   for eq in _les_equations(_les_interleave(a, b, c))
-    _apply_equation!(c, eq)
+    _apply_equation_in_vars!(c, eq)
   end
   c
 end
@@ -669,7 +714,7 @@ function les_kernel(
 
   a = AffineExpr[_fresh_variable(var_counter) for _ in 1:n]
   for eq in _les_equations(_les_interleave(a, b, c))
-    _apply_equation!(a, eq)
+    _apply_equation_in_vars!(a, eq)
   end
   a
 end

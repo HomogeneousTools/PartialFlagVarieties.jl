@@ -504,9 +504,9 @@ Choose the conormal restriction backend for rows ``p = 0, \\ldots, p_{\\max}``:
 not completely reducible, [`GradedConormal`](@ref) otherwise.
 """
 function _conormal_data(Z::ZeroLocus, L::CompletelyReducibleBundle, pmax::Int)
+  X = Z.ambient
   graded = GradedConormal(Z, L, pmax)
-  Omega_filt = dual(filtered_tangent_bundle(Z.ambient))
-  n_filtration_steps(Omega_filt) > 1 || return graded
+  n_filtration_steps(filtered_tangent_bundle(X)) > 1 || return graded
 
   # The row p = dim Z uses the ω_Z shortcut, so the filtered powers are only
   # needed for j ≤ min(pmax, dim Z - 1).
@@ -517,7 +517,7 @@ function _conormal_data(Z::ZeroLocus, L::CompletelyReducibleBundle, pmax::Int)
     CompletelyReducibleBundle[
       tensor_product(symmetric_power(E_dual, k), L) for k in 0:pmax
     ],
-    FilteredBundle[exterior_power(Omega_filt, j) for j in 0:jmax],
+    FilteredBundle[_filtered_cotangent_power(X, j) for j in 0:jmax],
   )
 end
 
@@ -997,8 +997,9 @@ function hochschild_cohomology(Z::ZeroLocus)
       expr_serre = M2[p + 1, d - q + 1]
       eq = expr_hkr - expr_serre
       if !isempty(eq.coeffs)
-        constraint_changed = _apply_equation!(data, eq) || constraint_changed
-        _apply_equation!(M2, eq)
+        changed_data = _apply_equation!(data, eq)
+        changed_M2 = _apply_equation!(M2, eq)
+        constraint_changed |= changed_data | changed_M2
       end
     end
 

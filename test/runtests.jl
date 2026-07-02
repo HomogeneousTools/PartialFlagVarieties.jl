@@ -3,6 +3,10 @@ using PartialFlagVarieties
 using Semisimple
 using StaticArrays
 
+# The default cache budget is ~10% of system RAM per process, which is far
+# more than the test workloads need; cap it so a test run stays lean.
+configure_caches!(; budget=256 * 1024^2)
+
 mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
 @testset "PartialFlagVarieties.jl" begin
@@ -2775,6 +2779,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   # ═══════════════════════════════════════════════════════════════════════════
   #  tangent_cohomology  (issue #15)
   # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "_apply_equation! is consistent across arrays" begin
+    # A fixed-point loop that applies the same equation to two arrays must
+    # eliminate the same variable in both, or the arrays can trade variables
+    # forever (regression test for a non-terminating Hochschild loop).
+    a = [symbolic_variable(0)]
+    b = [symbolic_variable(1)]
+    sweeps = 0
+    while !is_zero_expr(a[1] - b[1]) && sweeps < 5
+      eq = a[1] - b[1]
+      PartialFlagVarieties._apply_equation!(a, eq)
+      PartialFlagVarieties._apply_equation!(b, eq)
+      sweeps += 1
+    end
+    @test a[1] == b[1]
+    @test sweeps <= 2
+  end
 
   @testset "les_kernel" begin
     vc = Ref(0)
