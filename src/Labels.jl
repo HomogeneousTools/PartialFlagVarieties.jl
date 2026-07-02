@@ -120,7 +120,7 @@ end
 Split a weight's coefficient vector into per-factor weight vectors.
 """
 function _weight_to_summand_row(λ::WeightLatticeElem, factor_ranks::Vector{Int})
-  coeffs = Int[c for c in coefficients(λ)]
+  coeffs = collect(Int, coefficients(λ))
   row = Vector{Vector{Int}}()
   offset = 1
   for r in factor_ranks
@@ -193,20 +193,7 @@ julia> zerolocus62_label(zero_locus(line_bundle(X, 1)))
 "1.0"
 ```
 """
-function zerolocus62_label(Z::ZeroLocus)
-  X = ambient_variety(Z)
-  factors = _mdt_to_factors(marked_dynkin_type(X))
-  factor_ranks = [f.rank for f in factors]
-
-  E = defining_bundle(Z)
-  summands = Vector{Vector{Vector{Int}}}()
-  for comp in components(E)
-    λ = p_dominant_weight(comp)
-    push!(summands, _weight_to_summand_row(λ, factor_ranks))
-  end
-
-  encode_label(factors, summands)
-end
+zerolocus62_label(Z::ZeroLocus) = zerolocus62_label(defining_bundle(Z))
 
 """
     zerolocus62_label(E::CompletelyReducibleBundle) -> String
@@ -226,16 +213,12 @@ julia> zerolocus62_label(direct_sum(structure_sheaf(X), line_bundle(X, 1)))
 ```
 """
 function zerolocus62_label(E::CompletelyReducibleBundle)
-  X = variety(E)
-  factors = _mdt_to_factors(marked_dynkin_type(X))
+  factors = _mdt_to_factors(marked_dynkin_type(variety(E)))
   factor_ranks = [f.rank for f in factors]
-
-  summands = Vector{Vector{Vector{Int}}}()
-  for comp in components(E)
-    λ = p_dominant_weight(comp)
-    push!(summands, _weight_to_summand_row(λ, factor_ranks))
-  end
-
+  summands = [
+    _weight_to_summand_row(p_dominant_weight(comp), factor_ranks) for
+    comp in components(E)
+  ]
   encode_label(factors, summands)
 end
 

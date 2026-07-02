@@ -91,8 +91,8 @@ function cartan_type_with_ordering(C::AbstractMatrix{<:Integer})
     # ── Rank 2: pair of nodes ─────────────────────────────────────────
     if length(adj[v0]) == 1 && length(adj[only(adj[v0])]) == 1
       v1 = only(adj[v0])
-      prod = C[v0, v1] * C[v1, v0]
-      if prod == 1
+      bond = C[v0, v1] * C[v1, v0]
+      if bond == 1
         push!(type, (:A, 2))
         push!(ord, v0, v1)
       elseif C[v0, v1] == -2
@@ -294,7 +294,7 @@ function parse_dynkin_type(s::AbstractString)
   # Split on 'x' or '×'
   parts = split(s, r"[x×]")
 
-  types = []
+  types = DataType[]
   for part in parts
     part = strip(part)
     isempty(part) && continue

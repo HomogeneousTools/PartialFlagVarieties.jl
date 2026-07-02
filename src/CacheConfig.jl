@@ -29,17 +29,16 @@ function _apply_cache_preferences!()
   budget = @load_preference("cache_budget_bytes", nothing)
   budget === nothing && return nothing
 
-  budget = Int(budget)
-  tf = Float64(@load_preference("tensor_product_cache_fraction", _DEFAULT_TENSOR_FRAC))
-  bf = Float64(@load_preference("bwb_pair_cache_fraction", _DEFAULT_BWB_FRAC))
-  sf = Float64(@load_preference("structural_cache_fraction", _DEFAULT_STRUCTURAL_FRAC))
-
-  resize!(_TENSOR_PRODUCT_CACHE; maxsize=_cache_maxsize(budget, tf))
-  resize!(_BWB_PAIR_CACHE; maxsize=_cache_maxsize(budget, bf))
-  resize!(_marked_dynkin_cache; maxsize=_cache_maxsize(budget, sf * 0.4))
-  resize!(_tangent_reps_cache; maxsize=_cache_maxsize(budget, sf * 0.25))
-  resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(budget, sf * 0.25))
-  resize!(_COTANGENT_POWER_CACHE; maxsize=_cache_maxsize(budget, sf * 0.1))
+  configure_caches!(;
+    budget=Int(budget),
+    tensor_frac=Float64(
+      @load_preference("tensor_product_cache_fraction", _DEFAULT_TENSOR_FRAC)
+    ),
+    bwb_frac=Float64(@load_preference("bwb_pair_cache_fraction", _DEFAULT_BWB_FRAC)),
+    structural_frac=Float64(
+      @load_preference("structural_cache_fraction", _DEFAULT_STRUCTURAL_FRAC)
+    ),
+  )
 end
 
 # ─── Public API ───────────────────────────────────────────────────────────────
