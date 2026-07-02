@@ -167,13 +167,7 @@ Compute the Euler characteristic of Hochschild cohomology:
 ``\\chi(\\mathrm{HH}^*) = \\sum_{p,q} (-1)^{p+q} h^q(X, \\bigwedge^p T_X)``
 """
 function euler_characteristic(P::PolyvectorParallelogram{T}) where {T}
-  result = _pp_zero(T)
-  for p in 0:(P.dim)
-    for q in 0:(P.dim)
-      result += (-1)^(p + q) * P[p, q]
-    end
-  end
-  result
+  sum(((-1)^(p + q) * P[p, q] for p in 0:(P.dim), q in 0:(P.dim)); init=_pp_zero(T))
 end
 
 """
@@ -258,10 +252,10 @@ function hochschild_cohomology(X::PartialFlagVariety)
   d = dimension(X)
   data = zeros(BigInt, d + 1, d + 1)
 
-  T = tangent_bundle(X)
+  TX = tangent_bundle(X)
 
   for p in 0:d
-    wedge_p = exterior_power(T, p)
+    wedge_p = exterior_power(TX, p)
     coh = dimensions(wedge_p)
     for q in 0:d
       data[p + 1, q + 1] = coh[q]
@@ -571,10 +565,7 @@ function _conormal_row(
   end
 
   # Vanishing H^k(Z, ·) = 0 for k > dim Z.
-  for k in (d + 1):(length(row) - 1)
-    is_zero_expr(row[k + 1]) || _apply_equation!(row, row[k + 1])
-  end
-  row[1:(d + 1)]
+  _truncate_cohomology!(row, d)
 end
 
 """Exact ``\\chi(Z, \\Omega^p_Z \\otimes L|_Z)`` from K-theory, memoized in `C`."""

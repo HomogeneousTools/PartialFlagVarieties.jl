@@ -93,11 +93,7 @@ end
 
 function Base.:*(c::Integer, a::AffineExpr)
   c == 0 && return AffineExpr(0)
-  c == 1 && return if isempty(a.coeffs)
-    AffineExpr(a.constant)
-  else
-    AffineExpr(a.constant, copy(a.coeffs))
-  end
+  c == 1 && return a
   c == -1 && return -a
   AffineExpr(
     BigInt(c) * a.constant, Dict{Int,BigInt}(k => BigInt(c) * v for (k, v) in a.coeffs)
@@ -263,6 +259,18 @@ function _renumber_variables!(M::AbstractArray{AffineExpr})
   M
 end
 
+"""
+Impose the vanishing ``H^k = 0`` for ``k > d`` on a symbolic cohomology
+vector (indexed by degree ``0, \\ldots, \\mathrm{length} - 1``), eliminating
+symbolic variables where possible, and truncate to degrees ``0, \\ldots, d``.
+"""
+function _truncate_cohomology!(entries::Vector{AffineExpr}, d::Int)
+  for k in (d + 2):length(entries)
+    is_zero_expr(entries[k]) || _apply_equation!(entries, entries[k])
+  end
+  entries[1:(d + 1)]
+end
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Short exact sequence solver (numeric)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -397,12 +405,7 @@ function solve_koszul_filtration(
   var_counter = Ref(0)
   dim_ambient = koszul_cohos[1].dim_variety
   sym = solve_koszul_filtration_symbolic(koszul_cohos, dim_ambient, var_counter)
-  entries = AffineExpr[sym[k] for k in 0:dim_ambient]
-
-  for k in (dim_zero_locus + 1):dim_ambient
-    is_zero_expr(entries[k + 1]) || _apply_equation!(entries, entries[k + 1])
-  end
-  entries = entries[1:(dim_zero_locus + 1)]
+  entries = _truncate_cohomology!(AffineExpr[sym[k] for k in 0:dim_ambient], dim_zero_locus)
 
   chi_exact = _alternating_euler_characteristic(koszul_cohos)
   _apply_equation!(entries, _alternating_sum(entries) - AffineExpr(chi_exact))
@@ -638,10 +641,6 @@ function les_cokernel(
     _apply_equation!(c, eq)
   end
   c
-end
-
-function les_cokernel(a::Vector{BigInt}, b::Vector{BigInt}, var_counter::Ref{Int})
-  les_cokernel(_as_affine(a), _as_affine(b), var_counter)
 end
 
 function les_cokernel(a::Vector{AffineExpr}, b::Vector{BigInt}, var_counter::Ref{Int})

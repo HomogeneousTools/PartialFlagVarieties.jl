@@ -54,7 +54,7 @@ julia> euler_characteristic(Z)
 mutable struct ZeroLocus
   const ambient::PartialFlagVariety
   const defining_bundle::CompletelyReducibleBundle
-  # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧˾i E*.
+  # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧ⁱE*.
   # Populated lazily on the first call that needs them; reused thereafter.
   koszul_wedges::Union{Nothing,Vector{CompletelyReducibleBundle}}
 end
@@ -145,7 +145,7 @@ Base.:*(Z1::ZeroLocus, Z2::ZeroLocus) = product(Z1, Z2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-Return (and lazily compute) the cached vector `[∧°E*, ∧¹E*, …, ∧ʳE*]`.
+Return (and lazily compute) the cached vector `[∧⁰E*, ∧¹E*, …, ∧ʳE*]`.
 All Koszul computations go through this accessor so the exterior powers
 are computed at most once per `ZeroLocus`, regardless of how many times
 different twists are requested.
@@ -183,7 +183,7 @@ codimension(Z::ZeroLocus)::Int = rank_bundle(Z.defining_bundle)
 """
     dimension(Z::ZeroLocus) -> Int
 
-Return the dimension of the zero locus ``Z = \\dim X - \\mathrm{rank}(E)``.
+Return the dimension ``\\dim Z = \\dim X - \\mathrm{rank}(E)`` of the zero locus.
 """
 dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 
@@ -346,9 +346,9 @@ Dual of a multiplicity dict: map each IrrepLevi to its dual.
 """
 function _dual_counts(f_counts::Dict{IrrepLevi,Int})
   result = Dict{IrrepLevi,Int}()
-  for (c, m) in f_counts
-    d = dual(c)
-    result[d] = get(result, d, 0) + m
+  for (component, mult) in f_counts
+    dual_component = dual(component)
+    result[dual_component] = get(result, dual_component, 0) + mult
   end
   result
 end
@@ -529,13 +529,6 @@ the alternating-sum LES equations.
 Falls back to the numeric path when fully determined.
 """
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int}
-)
-  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
-  _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter, wedge_counts)
-end
-
-function _restrict_to_zero_locus_les(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int}
 )
   wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
@@ -575,17 +568,8 @@ function _restrict_to_zero_locus_les(
   ]
   result = long_exact_sequence_cokernel(koszul_vecs, var_counter)
 
-  # Apply vanishing: H^k(Z, F|_Z) = 0 for k > d_Z
-  for k in (d_Z + 1):d_ambient
-    is_zero_expr(result[k + 1]) || _apply_equation!(result, result[k + 1])
-  end
-  result[1:(d_Z + 1)]
-end
-
-function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, var_counter::Ref{Int}
-)
-  _restrict_to_zero_locus_les(Z, structure_sheaf(Z.ambient), var_counter)
+  # Vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
+  _truncate_cohomology!(result, d_Z)
 end
 
 """
@@ -638,10 +622,7 @@ function _restrict_to_zero_locus_les(
   # Symbolic Koszul chain in reversed order K_r, …, K_0, then vanishing
   # H^k(Z, F|_Z) = 0 for k > dim Z.
   result = long_exact_sequence_cokernel(reverse(koszul), var_counter)
-  for k in (d_Z + 1):d_X
-    is_zero_expr(result[k + 1]) || _apply_equation!(result, result[k + 1])
-  end
-  result[1:(d_Z + 1)]
+  _truncate_cohomology!(result, d_Z)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -702,11 +683,7 @@ function is_strict_calabi_yau(Z::ZeroLocus)
 
   d = dimension(Z)
   (H, _) = cohomology_on_restriction(Z)
-  H[0] == 1 || return false
-  for i in 1:(d - 1)
-    H[i] == 0 || return false
-  end
-  true
+  H[0] == 1 && all(H[i] == 0 for i in 1:(d - 1))
 end
 
 """
@@ -939,22 +916,6 @@ function _chi_omega_tensor_counts(
   )
 end
 
-"""
-Recursively compute ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z)`` where ``G`` is
-a bundle on ``X`` (restricted to ``Z`` via Koszul).
-
-Base case: ``j = 0``, returns ``\\chi(Z, G|_Z)`` via Koszul.
-Recursion: ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z) =
-            \\chi(Z, \\wedge^j \\Omega_X \\otimes G|_Z) -
-            \\sum_{i=1}^{\\min(j,r)} \\chi(Z, \\Omega^{j-i}_Z \\otimes
-            \\wedge^i E^* \\otimes G|_Z)``
-"""
-function _chi_omega_tensor(
-  Z::ZeroLocus, j::Int, G::CompletelyReducibleBundle
-)
-  _chi_omega_tensor_counts(Z, j, _to_counts(G))
-end
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Tangent bundle cohomology
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1046,13 +1007,12 @@ true
 function hilbert_polynomial(Z::ZeroLocus)
   X = Z.ambient
   d = dimension(Z)
-  n_pts = d + 4  # degree-d polynomial needs d+1 points; extra for numerical stability
-  values = Rational{BigInt}[]
-  for t in 0:(n_pts - 1)
-    Lt = line_bundle(X, t)
-    push!(values, Rational{BigInt}(euler_characteristic(Z, Lt)))
-  end
-  _lagrange_interpolation(values)
+  # A degree-d polynomial is pinned down by d+1 values; the interpolation
+  # is exact over the rationals.
+  values = Rational{BigInt}[
+    Rational{BigInt}(euler_characteristic(Z, line_bundle(X, t))) for t in 0:d
+  ]
+  _newton_interpolation(values)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

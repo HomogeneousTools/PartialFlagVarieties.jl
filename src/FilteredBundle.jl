@@ -109,11 +109,8 @@ true
 ```
 """
 function total_bundle(F::FilteredBundle)
-  all_comps = IrrepLevi[]
-  for piece in F.pieces
-    append!(all_comps, components(piece))
-  end
-  CompletelyReducibleBundle(F.variety, all_comps)
+  all_components = IrrepLevi[c for piece in F.pieces for c in components(piece)]
+  CompletelyReducibleBundle(F.variety, all_components)
 end
 
 """
@@ -172,10 +169,7 @@ function _root_heights(mdt::MarkedDynkinType)
   height_groups = Dict{Int,Vector{typeof(first(nonpar_roots))}}()
   for α in nonpar_roots
     h = _nonparabolic_height(coefficients(α), Marked)
-    if !haskey(height_groups, h)
-      height_groups[h] = typeof(α)[]
-    end
-    push!(height_groups[h], α)
+    push!(get!(height_groups, h, typeof(α)[]), α)
   end
 
   # Simple parabolic roots (at unmarked positions)
@@ -243,12 +237,9 @@ function filtered_tangent_bundle(X::PartialFlagVariety)
   mdt = marked_dynkin_type(X)
   height_data = _root_heights(mdt)
 
-  pieces = CompletelyReducibleBundle[]
-  for (h, ws) in height_data
-    push!(pieces, CompletelyReducibleBundle(X, ws))
-  end
-
-  FilteredBundle(X, pieces)
+  FilteredBundle(
+    X, CompletelyReducibleBundle[CompletelyReducibleBundle(X, ws) for (_, ws) in height_data]
+  )
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
