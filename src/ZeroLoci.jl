@@ -790,17 +790,6 @@ end
 # ─── Dict-based tensor and euler operations for _chi_omega_tensor ────────────
 
 """
-Convert a `CompletelyReducibleBundle` to a `Dict{IrrepLevi,Int}` of counts.
-"""
-function _to_counts(E::CompletelyReducibleBundle)
-  counts = Dict{IrrepLevi,Int}()
-  for c in E.components
-    counts[c] = get(counts, c, 0) + 1
-  end
-  counts
-end
-
-"""
 Tensor product of two multiplicity dicts, returning a new multiplicity dict.
 """
 function _tensor_product_counts(

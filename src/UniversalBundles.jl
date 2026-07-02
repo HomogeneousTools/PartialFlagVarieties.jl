@@ -45,7 +45,8 @@ julia> rank_bundle(universal_subbundle(OGr(3, 7)))
 3
 ```
 
-``\\mathcal{U}`` sits inside the trivial bundle, so ``H^0(\\mathcal{U}) = 0``,
+``\\mathcal{U}`` has no dominant weights (its ``\\rho``-shifted weights are
+singular), so ``H^0(\\mathcal{U}) = 0``,
 while ``H^0(\\mathcal{U}^\\vee)`` recovers the standard representation of the
 structure group:
 ```jldoctest
@@ -174,8 +175,9 @@ julia> rank_bundle(R)
 ```
 
 ``\\mathcal{R}`` vanishes on Lagrangian Grassmannians (the spinor / maximal isotropic
-cases), and is acyclic on all isotropic Grassmannians since its highest weights
-are not dominant for the parabolic:
+cases); on the isotropic Grassmannians below it is acyclic because the
+``\\rho``-shifts of its weights are singular (by Bott, non-dominance alone
+would only move cohomology to higher degree):
 ```jldoctest
 julia> using PartialFlagVarieties
 
