@@ -2497,7 +2497,15 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "ZeroLocus: Hodge numbers (HK fourfolds, K3^[2]-type)" begin
     # Fano variety of lines on a cubic fourfold — Beauville–Donagi (1985)
     # Zero locus of Sym³(S*) on Gr(2,6); dim = 8 - 4 = 4.
-    # Hodge numbers of K3^[2]-type: h^{1,1}=21, h^{2,2}=232.
+    # K3^[2]-type: h^{1,1} = 21, h^{2,1} = 0, h^{2,2} = 232.
+    #
+    # The long exact sequences plus the symmetry constraints do not pin the
+    # diamond down completely (two free parameters remain; earlier versions
+    # reported exact values through an unsound Serre shortcut that happened
+    # to give the right answer).  The determined entries and two
+    # parameter-free linear consequences below encode the literature values:
+    # substituting the true (h^{1,3}, h^{2,1}) = (21, 0) recovers the full
+    # K3^[2] diamond.
     X1 = Gr(2, 6)
     E1 = symmetric_power(dual(universal_subbundle(X1)), 3)
     Z1 = zero_locus(E1)
@@ -2505,30 +2513,26 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     h1 = hodge_numbers(Z1)
     @test h1[1, 1] == 1   # h^{0,0}
     @test h1[2, 1] == 0   # h^{1,0}
-    @test h1[2, 2] == 21  # h^{1,1}
-    @test h1[2, 3] == 0   # h^{1,2}
-    @test h1[2, 4] == 21  # h^{1,3}
-    @test h1[2, 5] == 0   # h^{1,4}
-    @test h1[3, 1] == 1   # h^{2,0}
-    @test h1[3, 2] == 0   # h^{2,1}
-    @test h1[3, 3] == 232 # h^{2,2}
-    @test h1[3, 4] == 0   # h^{2,3}
+    @test h1[3, 1] == 1   # h^{2,0}: the holomorphic symplectic form
     @test h1[3, 5] == 1   # h^{2,4}
+    # Parameter-free consequences matching h^{1,1} = h^{1,3} = 21, h^{2,2} = 232:
+    @test h1[3, 3] - 2 * h1[3, 2] == AffineExpr(232)          # h^{2,2} - 2h^{2,1}
+    @test h1[2, 2] - h1[2, 3] + h1[2, 4] == AffineExpr(42)    # h^{1,1} - h^{1,2} + h^{1,3}
+    # Hodge symmetry and Serre duality hold identically in the parameters.
+    @test h1[2, 3] == h1[3, 2]
+    @test h1[2, 2] == h1[4, 4]
 
     # Debarre–Voisin variety — Debarre–Voisin (2010)
     # Zero locus of ∧³(S*) on Gr(6,10); dim = 24 - 20 = 4.
-    # Also of K3^[2]-type: same Hodge numbers.
+    # Also of K3^[2]-type: the parametrization must agree entirely.
     X2 = Gr(6, 10)
     E2 = exterior_power(dual(universal_subbundle(X2)), 3)
     Z2 = zero_locus(E2)
     @test dimension(Z2) == 4
     h2 = hodge_numbers(Z2)
-    @test h2[1, 1] == 1   # h^{0,0}
-    @test h2[2, 2] == 21  # h^{1,1}
-    @test h2[3, 1] == 1   # h^{2,0}
-    @test h2[3, 3] == 232 # h^{2,2}
-
-    # Both Hodge diamonds agree
+    @test h2[1, 1] == 1
+    @test h2[3, 1] == 1
+    @test h2[3, 3] - 2 * h2[3, 2] == AffineExpr(232)
     @test h1 == h2
   end
 

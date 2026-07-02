@@ -570,25 +570,45 @@ function _restrict_to_zero_locus_les(
     return AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
   end
 
-  # Serre duality fallback before the symbolic path (valid: ω_Z ≅ O_Z).
+  koszul_cohos_dual = nothing
   if is_calabi_yau(Z)
-    f_dual_counts = _dual_counts(f_counts)
-    koszul_cohos_dual = _koszul_dimensions(Z, f_dual_counts, wedge_counts)
+    # Serre duality fallback before the symbolic path (valid: ω_Z ≅ O_Z).
+    koszul_cohos_dual = _koszul_dimensions(Z, _dual_counts(f_counts), wedge_counts)
     (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
     if det_dual
       return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
     end
   end
 
-  # Symbolic path: reuse already-computed koszul_cohos.
-  # Extract BigInt vectors, reversed: K_r, K_{r-1}, …, K_0
-  koszul_vecs = Vector{BigInt}[
-    BigInt[kc[i] for i in 0:d_ambient] for kc in reverse(koszul_cohos)
-  ]
-  result = long_exact_sequence_cokernel(koszul_vecs, var_counter)
+  # Symbolic path: chain the Koszul LES over K_r, K_{r-1}, …, K_0 and impose
+  # the vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
+  result = _truncate_cohomology!(
+    long_exact_sequence_cokernel(_reversed_koszul_vecs(koszul_cohos), var_counter), d_Z
+  )
 
-  # Vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
-  _truncate_cohomology!(result, d_Z)
+  # For ω_Z ≅ O_Z, chain the dual bundle symbolically as well and impose
+  # Serre duality H^k(Z, F|_Z) = H^{d-k}(Z, F^∨|_Z) entry by entry.  Both
+  # chains are sound parametrizations, so equating them is a sound
+  # constraint (unlike cross-validating two undetermined numeric guesses).
+  if koszul_cohos_dual !== nothing
+    result_dual = _truncate_cohomology!(
+      long_exact_sequence_cokernel(_reversed_koszul_vecs(koszul_cohos_dual), var_counter),
+      d_Z,
+    )
+    combined = vcat(result, result_dual)
+    for k in 0:d_Z
+      _apply_equation!(combined, combined[k + 1] - combined[2d_Z + 2 - k])
+    end
+    result = combined[1:(d_Z + 1)]
+  end
+
+  result
+end
+
+"""Extract the Koszul cohomologies as plain vectors in reversed order K_r, …, K_0."""
+function _reversed_koszul_vecs(koszul_cohos::Vector{Cohomology{BigInt}})
+  d_ambient = koszul_cohos[1].dim_variety
+  Vector{BigInt}[BigInt[kc[i] for i in 0:d_ambient] for kc in reverse(koszul_cohos)]
 end
 
 """
