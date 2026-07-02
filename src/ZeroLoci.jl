@@ -487,49 +487,16 @@ end
       var_counter::Ref{Int}
     ) -> Cohomology{AffineExpr}
 
-Symbolic version of `cohomology_on_restriction`.  Introduces fresh
-symbolic variables for undetermined connecting-map ranks.
+Symbolic version of [`cohomology_on_restriction`](@ref): entries the long
+exact sequences do not determine contain fresh symbolic variables instead.
 """
 function cohomology_on_restriction_symbolic(
   Z::ZeroLocus,
   F::CompletelyReducibleBundle,
   var_counter::Ref{Int},
 )
-  d_Z = dimension(Z)
-
-  # Compute Koszul cohomologies once (memory-efficient path)
-  koszul_cohos = _koszul_dimensions(Z, F)
-
-  # Try numeric solve first
-  (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
-  if det_numeric
-    entries = AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
-    return Cohomology{AffineExpr}(entries, d_Z)
-  end
-
-  # Serre duality fallback: H^k(Z, F|_Z) = H^{d-k}(Z, F^*|_Z), valid because
-  # is_calabi_yau guarantees ω_Z ≅ O_Z via adjunction.
-  if is_calabi_yau(Z)
-    koszul_cohos_dual = _koszul_dimensions(Z, dual(F))
-    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-    if det_dual
-      entries = AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
-      return Cohomology{AffineExpr}(entries, d_Z)
-    end
-  end
-
-  # Numeric path underdetermined: fall back to symbolic filtration.
-  # Reuse already-computed koszul_cohos.
-  d_ambient = koszul_cohos[1].dim_variety
-  H_sym_full = solve_koszul_filtration_symbolic(koszul_cohos, d_ambient, var_counter)
-
-  # Apply vanishing constraints: H^k(Z, F) = 0 for k = d_Z+1..d_ambient.
-  entries = AffineExpr[H_sym_full[k] for k in 0:d_ambient]
-  for k in (d_Z + 1):d_ambient
-    is_zero_expr(entries[k + 1]) || _apply_equation!(entries, entries[k + 1])
-  end
-
-  Cohomology{AffineExpr}(entries[1:(d_Z + 1)], d_Z)
+  entries = _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter)
+  Cohomology{AffineExpr}(entries, dimension(Z))
 end
 
 """
