@@ -465,11 +465,30 @@ function picard_degrees(E::CompletelyReducibleBundle)
 end
 
 """
+    is_ample_line_bundle(E::CompletelyReducibleBundle) -> Bool
+
 Whether `E` is an ample line bundle: rank 1 with strictly positive degree
-at every marked node.  The restriction of an ample line bundle to a
-subvariety is again ample.
+at every marked node.  Returns `false` for bundles of rank different
+from 1.  The restriction of an ample line bundle to a subvariety is again
+ample.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 4);
+
+julia> is_ample_line_bundle(line_bundle(X, 1))
+true
+
+julia> is_ample_line_bundle(structure_sheaf(X))
+false
+
+julia> is_ample_line_bundle(universal_subbundle(X))
+false
+```
 """
-function _is_ample_line_bundle(E::CompletelyReducibleBundle)
+function is_ample_line_bundle(E::CompletelyReducibleBundle)
   rank_bundle(E) == 1 && all(>(0), picard_degrees(E))
 end
 

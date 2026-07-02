@@ -85,6 +85,7 @@ export direct_sum, twist, product
 export cartan_type, cartan_type_with_ordering, parse_dynkin_type
 export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
 export universal_subbundle, universal_quotient_bundle, spinor_bundle
+export is_ample_line_bundle
 export is_orthogonal_grassmannian, is_projective_space, is_quadric
 export tautological_bundles, universal_subbundles
 export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology

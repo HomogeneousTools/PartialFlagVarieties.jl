@@ -2815,6 +2815,17 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
   end
 
+  @testset "is_ample_line_bundle" begin
+    X = Gr(2, 4)
+    @test is_ample_line_bundle(line_bundle(X, 1))
+    @test !is_ample_line_bundle(structure_sheaf(X))
+    @test !is_ample_line_bundle(line_bundle(X, -1))
+    @test !is_ample_line_bundle(universal_subbundle(X))
+    X2 = partial_flag_variety(TypeA{3}, (1, 3))
+    @test is_ample_line_bundle(line_bundle(X2, [1, 2]))
+    @test !is_ample_line_bundle(line_bundle(X2, [1, 0]))
+  end
+
   # ═══════════════════════════════════════════════════════════════════════════
   #  Lefschetz hyperplane injection  (issue #17)
   # ═══════════════════════════════════════════════════════════════════════════

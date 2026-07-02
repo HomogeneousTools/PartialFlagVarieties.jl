@@ -714,7 +714,7 @@ function _lefschetz_inject!(M::Matrix{AffineExpr}, Z::ZeroLocus)
   comps = components(Z.defining_bundle)
   i = findfirst(
     c -> fiber_dimension(c) == 1 &&
-      _is_ample_line_bundle(CompletelyReducibleBundle(X, [c])),
+      is_ample_line_bundle(CompletelyReducibleBundle(X, [c])),
     comps,
   )
   i === nothing && return false
@@ -777,11 +777,11 @@ function _twisted_hodge_symbolic(
   # H^q(Z, Ω^p_Z ⊗ L|_Z) = 0 for p + q > d, and for antiample L the Serre
   # dual statement gives vanishing for p + q < d.  Ampleness of L on X
   # restricts to ampleness on Z.
-  if _is_ample_line_bundle(L)
+  if is_ample_line_bundle(L)
     for p in 0:d, q in (d - p + 1):d
       _inject_exact!(M, p + 1, q + 1, BigInt(0))
     end
-  elseif rank_bundle(L) == 1 && _is_ample_line_bundle(dual(L))
+  elseif is_ample_line_bundle(dual(L))
     for p in 0:d, q in 0:(d - p - 1)
       _inject_exact!(M, p + 1, q + 1, BigInt(0))
     end
