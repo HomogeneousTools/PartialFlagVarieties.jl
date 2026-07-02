@@ -106,17 +106,10 @@ function _restrict_filtered_to_zero_locus(
   result = long_exact_sequence_cokernel(reverse(koszul_cohos), var_counter)
 
   # Apply vanishing H^k(Z, F|_Z) = 0 for k > d_Z
-  if length(result) > d_Z + 1
-    mat = reshape(copy(result), 1, length(result))
-    for k in (d_Z + 1):(length(result) - 1)
-      expr = mat[1, k + 1]
-      is_zero_expr(expr) && continue
-      _apply_equation_in_vars!(mat, expr)
-    end
-    return AffineExpr[mat[1, k + 1] for k in 0:d_Z]
+  for k in (d_Z + 1):(length(result) - 1)
+    is_zero_expr(result[k + 1]) || _apply_equation!(result, result[k + 1])
   end
-
-  result[1:min(d_Z + 1, length(result))]
+  result[1:(d_Z + 1)]
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

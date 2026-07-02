@@ -455,17 +455,11 @@ function _twisted_hodge_symbolic(
         Hp = les_cokernel(Hp, conormal_cohomologies[k], var_counter)
       end
       # Enforce vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
-      if length(Hp) > d + 1
-        mat = reshape(copy(Hp), 1, length(Hp))
-        for k in (d + 1):(length(Hp) - 1)
-          expr = mat[1, k + 1]
-          is_zero_expr(expr) && continue
-          _apply_equation_in_vars!(mat, expr)
-        end
-        Hp = AffineExpr[mat[1, k + 1] for k in 0:d]
-      else
-        Hp = Hp[1:(d + 1)]
+      Hp = copy(Hp)
+      for k in (d + 1):(length(Hp) - 1)
+        is_zero_expr(Hp[k + 1]) || _apply_equation!(Hp, Hp[k + 1])
       end
+      Hp = Hp[1:(d + 1)]
     end
     for q in 0:d
       M[p + 1, q + 1] = Hp[q + 1]

@@ -23,36 +23,6 @@ export hodge_numbers_symbolic
 export hodge_numbers_les
 export euler_characteristic_tangent_bundle
 
-"""
-Renumber variables in an `AffineExpr` matrix to use contiguous IDs
-starting from 0.  This makes the output more readable (e.g. `x_0, x_1, …`)
-rather than reflecting the internal counter."""
-function _renumber_variables!(M::Matrix{AffineExpr})
-  # Collect all variable IDs
-  old_ids = Set{Int}()
-  for e in M
-    for v in keys(e.coeffs)
-      push!(old_ids, v)
-    end
-  end
-  isempty(old_ids) && return M
-
-  # Build mapping: sorted old IDs → 0, 1, 2, …
-  mapping = Dict{Int,Int}()
-  for (new_id, old_id) in enumerate(sort!(collect(old_ids)))
-    mapping[old_id] = new_id - 1  # 0-based
-  end
-
-  # Apply mapping
-  for i in eachindex(M)
-    e = M[i]
-    isempty(e.coeffs) && continue
-    new_coeffs = Dict{Int,BigInt}(mapping[k] => v for (k, v) in e.coeffs)
-    M[i] = AffineExpr(e.constant, new_coeffs)
-  end
-  M
-end
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -661,23 +631,13 @@ function cohomology_on_restriction_symbolic(
   d_ambient = koszul_cohos[1].dim_variety
   H_sym_full = solve_koszul_filtration_symbolic(koszul_cohos, d_ambient, var_counter)
 
-  # Apply vanishing constraints: H^k = 0 for k = d_Z+1..d_ambient.
-  n_full = d_ambient + 1
-  mat = Matrix{AffineExpr}(undef, 1, n_full)
-  for k in 0:d_ambient
-    mat[1, k + 1] = H_sym_full[k]
-  end
+  # Apply vanishing constraints: H^k(Z, F) = 0 for k = d_Z+1..d_ambient.
+  entries = AffineExpr[H_sym_full[k] for k in 0:d_ambient]
   for k in (d_Z + 1):d_ambient
-    # H^k(Z, F) = 0 for k > dim(Z)
-    expr = mat[1, k + 1]
-    if !is_determined(expr) || expr.constant != 0
-      _apply_equation!(mat, expr - AffineExpr(BigInt(0)))
-    end
+    is_zero_expr(entries[k + 1]) || _apply_equation!(entries, entries[k + 1])
   end
-  # Extract the result at degrees 0..d_Z
-  H_sym = Cohomology{AffineExpr}(AffineExpr[mat[1, k + 1] for k in 0:d_Z], d_Z)
 
-  H_sym
+  Cohomology{AffineExpr}(entries[1:(d_Z + 1)], d_Z)
 end
 
 """
@@ -763,27 +723,18 @@ function _restrict_to_zero_locus_les(
     end
   end
 
-  # Symbolic path: reuse already-computed koszul_cohos
+  # Symbolic path: reuse already-computed koszul_cohos.
   # Extract BigInt vectors, reversed: K_r, K_{r-1}, …, K_0
   koszul_vecs = Vector{BigInt}[
     BigInt[kc[i] for i in 0:d_ambient] for kc in reverse(koszul_cohos)
   ]
-
-  # Apply alternative LES chain
-  result_full = long_exact_sequence_cokernel(koszul_vecs, var_counter)
+  result = long_exact_sequence_cokernel(koszul_vecs, var_counter)
 
   # Apply vanishing: H^k(Z, F|_Z) = 0 for k > d_Z
-  if d_ambient > d_Z
-    mat = reshape(copy(result_full), 1, length(result_full))
-    for k in (d_Z + 1):d_ambient
-      expr = mat[1, k + 1]
-      is_zero_expr(expr) && continue
-      _apply_equation_in_vars!(mat, expr)
-    end
-    return AffineExpr[mat[1, k + 1] for k in 0:d_Z]
+  for k in (d_Z + 1):d_ambient
+    is_zero_expr(result[k + 1]) || _apply_equation!(result, result[k + 1])
   end
-
-  result_full[1:(d_Z + 1)]
+  result[1:(d_Z + 1)]
 end
 
 function _restrict_to_zero_locus_les(
