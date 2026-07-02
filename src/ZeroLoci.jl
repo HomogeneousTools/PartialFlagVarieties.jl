@@ -258,6 +258,25 @@ function _cotangent_power(X::PartialFlagVariety, j::Int)
   end
 end
 
+const _FILTERED_COTANGENT_POWER_CACHE = let b = _default_cache_budget()
+  LRU{Tuple{MarkedDynkinType,Int},FilteredBundle}(;
+    maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.1),
+    by=Base.summarysize,
+  )
+end
+
+"""
+The ``j``-th exterior power of the filtered cotangent bundle, cached per
+marked Dynkin type: the induced-filtration plethysm is the expensive part
+of every filtered-ambient Hodge computation and only depends on ``(X, j)``.
+"""
+function _filtered_cotangent_power(X::PartialFlagVariety, j::Int)
+  mdt = marked_dynkin_type(X)
+  get!(_FILTERED_COTANGENT_POWER_CACHE, (mdt, j)) do
+    exterior_power(dual(filtered_tangent_bundle(X)), j)
+  end
+end
+
 """
 Compute and cache the BWB contributions `[(deg, dim), ...]` for
 `tensor_product(a, b)`.  Returns an empty vector when all components are
