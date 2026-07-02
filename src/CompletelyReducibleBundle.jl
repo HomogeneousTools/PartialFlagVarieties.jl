@@ -465,6 +465,15 @@ function picard_degrees(E::CompletelyReducibleBundle)
 end
 
 """
+Whether `E` is an ample line bundle: rank 1 with strictly positive degree
+at every marked node.  The restriction of an ample line bundle to a
+subvariety is again ample.
+"""
+function _is_ample_line_bundle(E::CompletelyReducibleBundle)
+  rank_bundle(E) == 1 && all(>(0), picard_degrees(E))
+end
+
+"""
     _product_factor_range(total_rank, factor_rank, offset) -> UnitRange{Int}
 
 Return the block of ambient coordinates occupied by a factor embedded into a

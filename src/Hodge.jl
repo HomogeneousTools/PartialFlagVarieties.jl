@@ -717,6 +717,20 @@ function _twisted_hodge_symbolic(
     end
   end
 
+  # Kodaira–Akizuki–Nakano vanishing: for ample L we get
+  # H^q(Z, Ω^p_Z ⊗ L|_Z) = 0 for p + q > d, and for antiample L the Serre
+  # dual statement gives vanishing for p + q < d.  Ampleness of L on X
+  # restricts to ampleness on Z.
+  if _is_ample_line_bundle(L)
+    for p in 0:d, q in (d - p + 1):d
+      _inject_exact!(M, p + 1, q + 1, BigInt(0))
+    end
+  elseif rank_bundle(L) == 1 && _is_ample_line_bundle(dual(L))
+    for p in 0:d, q in 0:(d - p - 1)
+      _inject_exact!(M, p + 1, q + 1, BigInt(0))
+    end
+  end
+
   # χ constraint per row: Σ_q (-1)^q h^q(Ω^p_Z ⊗ L) is exact from K-theory.
   for p in 0:d
     eq = _alternating_sum(M, p + 1, d) - AffineExpr(_chi_row(C, p))
@@ -866,8 +880,6 @@ function hochschild_cohomology(Z::ZeroLocus)
   L_anti = tensor_product(anticanonical_bundle(X), dual(det(E)))
   L_can = dual(L_anti)
 
-  is_fano = is_strongly_fano(Z)
-
   # ── Build two symbolic twisted Hodge matrices ──────────────────────────
   # We compute h^q(Ω^p_Z ⊗ L) for L = ω_Z⁻¹ and L = ω_Z independently,
   # sharing a single var_counter so all symbolic variables are distinct.
@@ -948,50 +960,10 @@ function hochschild_cohomology(Z::ZeroLocus)
       end
     end
 
-    # 3. Akizuki–Nakano vanishing for Fano zero loci
-    #   h^q(∧^p T) = 0 for q > p  (on data)
-    #   h^q(Ω^p ⊗ ω⁻¹) = 0 for p + q > d  (on M1)
-    #   h^q(Ω^p ⊗ ω)   = 0 for p + q < d  (Nakano dual, on M2)
-    if is_fano === true
-      for p in 0:d, q in (p + 1):d
-        eq = data[p + 1, q + 1]
-        if !is_zero_expr(eq)
-          if !isempty(eq.coeffs)
-            constraint_changed = _apply_equation!(data, eq) || constraint_changed
-            _apply_equation!(M1, eq)
-            _apply_equation!(M2, eq)
-          end
-          data[p + 1, q + 1] = AffineExpr(0)
-          constraint_changed = true
-        end
-      end
-      for p in 0:d, q in 0:d
-        if p + q > d
-          eq = M1[p + 1, q + 1]
-          if !is_zero_expr(eq)
-            if !isempty(eq.coeffs)
-              constraint_changed = _apply_equation!(M1, eq) || constraint_changed
-              _apply_equation!(data, eq)
-              _apply_equation!(M2, eq)
-            end
-            M1[p + 1, q + 1] = AffineExpr(0)
-            constraint_changed = true
-          end
-        end
-        if p + q < d
-          eq = M2[p + 1, q + 1]
-          if !is_zero_expr(eq)
-            if !isempty(eq.coeffs)
-              constraint_changed = _apply_equation!(M2, eq) || constraint_changed
-              _apply_equation!(data, eq)
-              _apply_equation!(M1, eq)
-            end
-            M2[p + 1, q + 1] = AffineExpr(0)
-            constraint_changed = true
-          end
-        end
-      end
-    end
+    # Akizuki–Nakano vanishing (for confirmed Fano) is already applied
+    # inside _twisted_hodge_symbolic: L_anti is then an ample line bundle, so
+    # M1 vanishes for p + q > d (equivalently h^q(∧^p T_Z) = 0 for q > p)
+    # and M2, twisted by the antiample ω_Z, vanishes for p + q < d.
   end
 
   # ── Renumber remaining symbolic variables ──────────────────────────────
