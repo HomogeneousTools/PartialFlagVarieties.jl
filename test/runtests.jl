@@ -2966,17 +2966,28 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
     end
 
-    let X = Gr(2, 5), S = universal_subbundle(X), Z = zero_locus(symmetric_power(S, 2))
+    let X = Gr(2, 5), S = universal_subbundle(X)
+      Z = zero_locus(symmetric_power(dual(S), 2))
       @test hodge_numbers(Z) == hodge_numbers_symbolic(Z)
+      @test hodge_numbers(Z)[2, 2] == 1
+
+      # Sym²S itself has no global sections: there is no regular section and
+      # the zero-locus premise fails, which the solver now detects instead of
+      # silently patching the contradictory constraints.
+      @test_throws ErrorException hodge_numbers(zero_locus(symmetric_power(S, 2)))
     end
 
-    let X = Gr(2, 7), S = universal_subbundle(X), Z = zero_locus(2 * symmetric_power(S, 2))
+    let X = Gr(2, 7), S = universal_subbundle(X)
+      # Küchle b9 = (Sym²S*)^⊕2: the Picard rank of Z jumps, so h^{1,1} stays
+      # a free parameter (the true value is 8, i.e. x_0 = 0).
+      Z = zero_locus(2 * symmetric_power(dual(S), 2))
       h1 = hodge_numbers(Z)
       h2 = hodge_numbers_symbolic(Z)
       d = dimension(Z)
       for p in 0:d, q in 0:d
         @test h1[p + 1, q + 1] == h2[p + 1, q + 1]
       end
+      @test h1[2, 2] - symbolic_variable(0) == AffineExpr(8)
     end
 
     let Z = zero_locus("44.70")
