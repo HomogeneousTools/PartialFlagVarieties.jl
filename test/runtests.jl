@@ -2816,6 +2816,24 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  Lefschetz hyperplane injection  (issue #17)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "hodge_numbers: Lefschetz injection" begin
+    # Z(Q^*(1) ⊕ O(1)) ⊂ Gr(2,8) is an ample divisor in Z(Q^*(1)), so
+    # h^{p,q} agrees with the latter below the middle degree; this resolves
+    # the symbolic variable the long exact sequences leave open.
+    X = Gr(2, 8)
+    E = tensor_product(dual(universal_quotient_bundle(X)), line_bundle(X, 1))
+    Z = zero_locus(direct_sum(E, line_bundle(X, 1)))
+    h = hodge_numbers(Z)
+    @test all(is_determined, h)
+    @test h[3, 3] == 3  # h^{2,2} = h^{2,2}(Z(E)) = b_4(Gr(2,8)) by Lefschetz
+    @test h[4, 4] == 3  # h^{3,3} via Serre duality
+    @test h[3, 4] == 2  # middle-degree row
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  hodge_numbers vs hodge_numbers_symbolic agreement
   # ═══════════════════════════════════════════════════════════════════════════
 

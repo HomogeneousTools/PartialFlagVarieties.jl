@@ -333,6 +333,12 @@ function hodge_numbers(Z::ZeroLocus)
   chi_vals = BigInt[_chi_row(C, p) for p in 0:half]
   _propagate_hodge_constraints!(M, chi_vals, d)
 
+  # The Lefschetz hyperplane theorem can pin down entries the long exact
+  # sequences leave open.
+  if _lefschetz_inject!(M, Z)
+    _propagate_hodge_constraints!(M, chi_vals, d)
+  end
+
   # Serre duality h^{p,q} = h^{d-p,d-q} fills the remaining rows.
   for p in (half + 1):d, q in 0:d
     M[p + 1, q + 1] = M[d - p + 1, d - q + 1]
@@ -679,6 +685,56 @@ function _propagate_hodge_constraints!(
     end
   end
   M
+end
+
+"""
+    _lefschetz_inject!(M, Z) -> Bool
+
+Resolve entries of the Hodge matrix via the Lefschetz hyperplane theorem.
+
+When ``E = E' \\oplus L`` with ``L`` an ample line bundle, ``Z = Z(E)`` is an
+ample divisor in ``Z' = Z(E')``, so ``h^{p,q}(Z) = h^{p,q}(Z')`` for
+``p + q < \\dim Z``.  The Hodge numbers of ``Z'`` are computed recursively
+(further ample line-bundle summands strip off the same way; with no summand
+left they are the Hodge numbers of the ambient space) and the determined
+values are injected into the computed rows ``p \\le \\lfloor d/2 \\rfloor``.
+
+Only attempted when undetermined entries remain below the middle total
+degree, since the recursive computation is not free.  Returns whether
+anything was injected.
+"""
+function _lefschetz_inject!(M::Matrix{AffineExpr}, Z::ZeroLocus)
+  d = dimension(Z)
+  half = d ÷ 2
+  any(
+    !is_determined(M[p + 1, q + 1]) for p in 0:half for q in 0:d if p + q < d
+  ) || return false
+
+  X = Z.ambient
+  comps = components(Z.defining_bundle)
+  i = findfirst(
+    c -> fiber_dimension(c) == 1 &&
+      _is_ample_line_bundle(CompletelyReducibleBundle(X, [c])),
+    comps,
+  )
+  i === nothing && return false
+
+  rest = comps[setdiff(eachindex(comps), i)]
+  H = if isempty(rest)
+    hodge_numbers(X)
+  else
+    hodge_numbers(zero_locus(CompletelyReducibleBundle(X, rest)))
+  end
+
+  changed = false
+  for p in 0:half, q in 0:d
+    p + q < d || continue
+    v = H[p + 1, q + 1]
+    v isa AffineExpr && !is_determined(v) && continue
+    val = v isa AffineExpr ? v.constant : BigInt(v)
+    changed |= _inject_exact!(M, p + 1, q + 1, val)
+  end
+  changed
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
