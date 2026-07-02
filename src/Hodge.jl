@@ -288,8 +288,10 @@ On ambient varieties whose tangent bundle is not completely reducible, the
 cotangent powers are treated as filtered bundles and their cohomology goes
 through the spectral sequence of the filtration, so no silent degeneration
 assumption is made.  Hodge symmetry, Serre duality, and Euler characteristic
-constraints are then propagated to a fixed point, and the remaining rows
-follow by Serre duality.
+constraints are then propagated to a fixed point, together with the
+Lefschetz hyperplane theorem when the defining bundle splits off an ample
+line bundle (see [`_lefschetz_inject!`](@ref)); the remaining rows follow
+by Serre duality.
 
 Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^{p,q}``.
 Entries that are fully determined are plain integers (wrapped in `AffineExpr`);
@@ -977,10 +979,11 @@ function hochschild_cohomology(Z::ZeroLocus)
   end
 
   # ── Constraint propagation loop ────────────────────────────────────────
-  # Three families of constraints, iterated to a fixed point:
+  # Two families of constraints, iterated to a fixed point (Akizuki–Nakano
+  # vanishing for confirmed Fano Z is already applied inside the twisted
+  # engine, since L_anti is then an ample line bundle):
   #   1. Serre duality:  data[p+1, q+1] = M2[p+1, d-q+1]
   #   2. Euler char:     Σ_q (-1)^q h^q(∧^p T) = χ(Ω^{d-p} ⊗ ω⁻¹)
-  #   3. Akizuki–Nakano: h^q(∧^p T) = 0 for q > p  (Fano only)
   # χ(∧^p T_Z) = χ(Ω^{d-p}_Z ⊗ ω_Z^{-1}), exact from the conormal recursion.
   l_anti_counts = _to_counts(L_anti)
   chi_memo = Dict{Tuple{Int,UInt},BigInt}()

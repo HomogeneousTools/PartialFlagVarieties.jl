@@ -26,6 +26,7 @@ makedocs(;
       "IrrepLevi" => "api/irrep_levi.md",
       "CompletelyReducibleBundle" => "api/bundle.md",
       "FilteredBundle" => "api/filtered_bundle.md",
+      "SpectralSequence" => "api/spectral_sequence.md",
       "UniversalBundles" => "api/universal_bundles.md",
       "Cohomology" => "api/cohomology.md",
       "Hodge & Hochschild" => "api/hodge.md",

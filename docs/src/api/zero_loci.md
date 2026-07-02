@@ -65,6 +65,7 @@ koszul_terms
 
 ```@docs
 cohomology_on_restriction
+tangent_cohomology
 cohomology_on_restriction_symbolic
 euler_characteristic(::ZeroLocus, ::CompletelyReducibleBundle)
 ```

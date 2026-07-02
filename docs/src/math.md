@@ -144,17 +144,27 @@ For a smooth zero locus ``Z \subset X``, the **conormal exact sequence** reads
 0 \to E^{\vee}|_Z \to \Omega^1_X|_Z \to \Omega^1_Z \to 0.
 ```
 
-Taking exterior powers induces a filtration on ``\Omega^p_Z`` whose graded
-pieces are
+Taking exterior powers yields, for every ``p``, the exact complex
 
 ```math
-\mathrm{gr}_j\!\bigl(\Omega^p_Z\bigr) = \mathrm{Sym}^j(E^{\vee}|_Z) \otimes \Omega^{p-j}_X\big|_Z, \quad j = 0, \ldots, p.
+0 \to \mathrm{Sym}^p(E^{\vee}) \to \mathrm{Sym}^{p-1}(E^{\vee}) \otimes \Omega^1_X
+  \to \cdots \to \Omega^p_X \to \Omega^p_Z \to 0
 ```
 
-This reduces the computation of ``H^q(Z, \Omega^p_Z \otimes L)`` (for any
-line bundle ``L``) to a sequence of long exact sequences, each involving
+on ``Z`` (exact because the section is regular and ``Z`` smooth). This
+reduces the computation of ``H^q(Z, \Omega^p_Z \otimes L)`` (for any line
+bundle ``L``) to a sequence of long exact sequences, each involving
 restrictions of bundles on ``X`` — which are computable via the Koszul
 resolution and the BWB theorem.
+
+On a non-cominuscule ambient variety the cotangent powers ``\Omega^j_X``
+are only *filtered* equivariant bundles, not direct sums of irreducibles;
+their cohomology is the abutment of the spectral sequence of the height
+filtration, computed per isotypical component with symbolic variables for
+the possible differentials (see the
+[SpectralSequence](api/spectral_sequence.md) API). Computing with the
+associated graded alone would silently assume degeneration and produce
+wrong Hodge numbers.
 
 ### Symbolic resolution
 
@@ -167,8 +177,12 @@ ranks and propagates constraints from:
    Hodge matrices ``M_1[p,q]`` and ``M_2[d-p,\,d-q]``
 2. **Euler characteristic**: the alternating sum ``\chi(Z, \bigwedge^p T_Z)``
    is an integer computable exactly from the Koszul complex
-3. **Akizuki–Nakano vanishing** (for Fano ``Z``): forcing certain entries to
-   zero when ``p + q > \dim Z``
+3. **Kodaira–Akizuki–Nakano vanishing**: for an ample line bundle twist,
+   entries with ``p + q > \dim Z`` vanish (and dually for antiample twists)
+4. **Hodge symmetry** ``h^{p,q} = h^{q,p}`` for the untwisted diamond
+5. **Lefschetz**: when the defining bundle splits off an ample line bundle
+   ``L``, the zero locus is an ample divisor in the zero locus of the
+   remaining summands and ``h^{p,q}`` agrees below the middle degree
 
 These constraints form a linear system that is solved by iterative
 substitution until a fixed point is reached; see
