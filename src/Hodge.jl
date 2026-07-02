@@ -673,12 +673,11 @@ function hochschild_cohomology(Z::ZeroLocus)
   M2 = _twisted_hodge_symbolic(Z, L_can, var_counter)
 
   # ── Additional boundary injection for M2 via Serre duality ─────────────
-  # M2[1, q+1] = h^q(Ω⁰_Z ⊗ ω_Z) = h^q(ω_Z|_Z) = h^{d-q}(𝒪_Z)
-  # The h^q(𝒪_Z) values are already exact in M1[d+1, :] (its p=d row with
-  # L=ω_Z⁻¹ gives h^q(Ω^d ⊗ ω_Z⁻¹) = h^q(𝒪_Z)).  Inject the Serre-dual
-  # values into M2's p=0 row.
+  # M2[1, q+1] = h^q(Ω⁰_Z ⊗ ω_Z) = h^q(ω_Z) = h^{d-q}(𝒪_Z), and the
+  # h^q(𝒪_Z) values are already exact in M1[d+1, :] (its p=d row with
+  # L=ω_Z⁻¹ gives h^q(Ω^d ⊗ ω_Z⁻¹) = h^q(𝒪_Z)).
   for q in 0:d
-    val_OZ = M1[d + 1, q + 1]
+    val_OZ = M1[d + 1, d - q + 1]
     if is_determined(val_OZ)
       _inject_exact!(M2, 1, q + 1, BigInt(val_OZ.constant))
     end
