@@ -310,24 +310,25 @@ coordinate is ``\le 0``), vanishing is *not* assumed even if ``Z`` happens
 to be Fano for reasons not visible from the ambient coordinates.
 
 A boundary case arises when ``X = \mathrm{Fl}(1,3;\,4) = A_3/P_{\{1,3\}}``
-(Picard rank 2, coordinates ``[\omega_1, \omega_3]``).  Take a bundle ``E``
-with ``\det(E) = \mathcal{O}(2, 0)``.  Then
+(Picard rank 2, coordinates ``[\omega_1, \omega_3]``, anticanonical
+``\omega_X^{-1} = \mathcal{O}(3,3)``).  Take a bundle ``E``
+with ``\det(E) = \mathcal{O}(3, 0)``.  Then
 
 ```math
 \omega_Z^{-1} = \bigl(\omega_X^{-1} \otimes \det(E)^{-1}\bigr)\big|_Z
-  = \mathcal{O}(2,2) \otimes \mathcal{O}(-2,0)\big|_Z
-  = \mathcal{O}(0,2)\big|_Z.
+  = \mathcal{O}(3,3) \otimes \mathcal{O}(-3,0)\big|_Z
+  = \mathcal{O}(0,3)\big|_Z.
 ```
 
-On ``X``, ``\mathcal{O}(0,2)`` is **nef** (non-negative degree on all curves)
+On ``X``, ``\mathcal{O}(0,3)`` is **nef** (non-negative degree on all curves)
 but **not ample** (it is pulled back from a factor and vanishes on the fibers
-of the projection).  The Picard-basis coordinate at node 1 is ``2 - 2 = 0``,
+of the projection).  The Picard-basis coordinate at node 1 is ``3 - 3 = 0``,
 so `is_strongly_fano` returns `false` and Nakano vanishing is not applied —
 the test is intentionally conservative.
 
-For a zero locus of a **rank-1 bundle** (hypersurface section), the Lefschetz
-hyperplane theorem guarantees that ampleness is preserved under restriction, so
-``\mathcal{O}(0,2)|_Z`` is ample when ``Z`` is ample.  For higher-rank bundles
-the situation is more subtle: ampleness of ``L|_Z`` must be checked
-independently on ``Z`` and cannot be read off from the restriction of the Picard
-coordinates of ``X``.
+The restriction of an *ample* bundle to a subvariety is always ample, which is
+why a strictly positive check on ``X`` suffices.  A bundle like
+``\mathcal{O}(0,3)`` that is merely nef on ``X`` may or may not restrict to an
+ample bundle on ``Z`` (curves contracted by the corresponding projection can
+survive inside ``Z``); its ampleness would have to be checked on ``Z`` itself,
+which the package does not attempt.

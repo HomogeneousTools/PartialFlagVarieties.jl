@@ -70,8 +70,11 @@ inside a function or `let` block — a local binding shadows the function there.
 Two indexing conventions show up repeatedly:
 
 1. [`Cohomology`](@ref) objects are **0-indexed**: `H[0]` means ``H^0``.
-2. Hodge and Hochschild matrices use ordinary Julia matrix indexing, so the
-   entry corresponding to ``(p,q)`` is stored at `[p+1, q+1]`.
+2. Hodge matrices use ordinary Julia matrix indexing, so the entry
+   corresponding to ``(p,q)`` is stored at `[p+1, q+1]`.
+3. The Hochschild [`PolyvectorParallelogram`](@ref) is **0-indexed**:
+   `P[p, q]` is ``h^q(X, \bigwedge^p T_X)`` and `P[n]` is
+   ``\dim \mathrm{HH}^n``.
 
 For example:
 

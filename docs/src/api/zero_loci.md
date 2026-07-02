@@ -31,11 +31,13 @@ If you need compact serialization for datasets or classifications, see
 [Labels](labels.md).
 
 !!! warning "Lefschetz caveat for higher-rank bundles"
-    The **Lefschetz hyperplane theorem** guarantees ``\mathrm{Pic}(X) \xrightarrow{\sim} \mathrm{Pic}(Z)``
-    only when ``Z`` is a hypersurface (``\mathrm{rank}\, E = 1``). For zero loci
-    of higher-rank bundles, the Picard rank of ``Z`` can exceed that of ``X``,
-    so `hodge_numbers_symbolic` may leave ``h^{1,1}`` as an underdetermined
-    symbolic variable — **this is correct behaviour**, not a bug.
+    The **Grothendieck–Lefschetz theorem** guarantees ``\mathrm{Pic}(X) \xrightarrow{\sim} \mathrm{Pic}(Z)``
+    when ``Z`` is a smooth complete intersection of ample divisors of dimension
+    ``\ge 3`` (in particular for ample hypersurfaces). For zero loci of
+    higher-rank bundles that do **not** split as sums of ample line bundles,
+    the Picard rank of ``Z`` can exceed that of ``X``, so `hodge_numbers` may
+    leave ``h^{1,1}`` as an underdetermined symbolic variable — **this is
+    correct behaviour**, not a bug.
 
 ## Type
 

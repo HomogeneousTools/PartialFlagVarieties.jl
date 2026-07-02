@@ -129,9 +129,10 @@ each ``c_i`` as an affine function of ``x_1``. The variable satisfies
 ### Geometric example: hypersurface (fully determined)
 
 For a *hypersurface* zero locus the Koszul complex has a single short
-exact sequence (one twist of the line bundle), which the Lefschetz
-hyperplane theorem forces to be determined. The quintic
-threefold ``Z \subset \mathbb{P}^4`` is the classic example:
+exact sequence ``0 \to L^{-1} \to \mathcal{O}_X \to \mathcal{O}_Z \to 0``
+in which both ambient terms are known from Borel–Weil–Bott, so the solver
+determines the result with no rank ambiguity. The quintic threefold
+``Z \subset \mathbb{P}^4`` is the classic example:
 
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -188,8 +189,9 @@ false
 Here ``x_0`` is the unknown rank of a connecting homomorphism in one of
 the Koszul short exact sequences. Serre duality forces ``\mathrm{h}^{p,q} = \mathrm{h}^{n-p,n-q}``,
 and the Euler characteristic ``\chi(Z) = 1`` imposes a further linear
-relation, but one degree of freedom remains:
-by the Lefschetz hyperplane theorem, ``h^{1,1}`` is uniquely determined
-only for *hypersurfaces*, not for higher-codimension zero loci.
+relation, but one degree of freedom remains: Grothendieck–Lefschetz pins
+down ``h^{1,1}`` for complete intersections of ample divisors, but ``Z`` is
+the zero locus of a higher-rank bundle that does not split into ample line
+bundles, so no Lefschetz-type argument applies.
 The true value (computable by other means) is ``h^{1,1}(Z) = 8``,
 corresponding to ``x_0 = 0``.
