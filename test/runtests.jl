@@ -2815,6 +2815,90 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
   end
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  SpectralSequence of a filtered bundle
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "SpectralSequence" begin
+    # Cominuscule ambient: one filtration step, trivially degenerate.
+    let F = filtered_tangent_bundle(Gr(2, 4))
+      S = spectral_sequence(F)
+      @test does_E1_degenerate(S)
+      H = cohomology(F)
+      @test all(is_determined, H.entries)
+      @test H[0] == 15  # H^0(T) = sl(4)
+      @test all(is_zero_expr(H[q]) for q in 1:dimension(Gr(2, 4)))
+    end
+
+    X = SGr(2, 6)
+    Omega = dual(filtered_tangent_bundle(X))
+    @test n_filtration_steps(Omega) == 2
+
+    # Ground truth: H^q(X, Ω^p) is the diagonal Betti table.  Whatever the
+    # spectral sequence machinery declares determined must match it.
+    betti = betti_numbers(X)
+    for p in 0:3
+      H = cohomology(exterior_power(Omega, p))
+      for q in 0:dimension(X)
+        if is_determined(H[q])
+          @test H[q] == (p == q ? betti[p + 1] : 0)
+        end
+      end
+    end
+
+    # A genuinely non-degenerate case: Ω³(-1) has E₁ = (2, 1) in degrees
+    # (4, 5) but true cohomology (1, 0); the result must stay symbolic and
+    # retain the χ-level relation.
+    W = tensor_product(exterior_power(Omega, 3), line_bundle(X, -1))
+    S = spectral_sequence(W)
+    @test !does_E1_degenerate(S)
+    H = cohomology(W)
+    @test !is_determined(H[4])
+    @test H[4] - H[5] == AffineExpr(1)
+
+    # The isotypical components partition the E₁ page.
+    iso = isotypical_components(S)
+    @test !isempty(iso)
+    @test all(!isempty(E1_page(T)) for T in values(iso))
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Hodge numbers over ambients with filtered tangent bundle
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "hodge_numbers: filtered ambient SGr(2,6)" begin
+    X = SGr(2, 6)
+    betti = betti_numbers(X)
+
+    # Hyperplane section (Fano 6-fold): Lefschetz forces h^{p,q} = h^{p,q}(X)
+    # below the middle degree.
+    h = hodge_numbers(zero_locus(line_bundle(X, 1)))
+    for p in 0:6, q in 0:6
+      p + q < 6 || continue
+      @test h[p + 1, q + 1] == (p == q ? betti[p + 1] : 0)
+    end
+    @test h[4, 4] == 4
+
+    # Fano threefold O(1)^4: h^{1,1} = 1 by Lefschetz and χ(Ω¹) = 4
+    # forces h^{1,2} = 5.
+    E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:4])
+    h3 = hodge_numbers(zero_locus(E))
+    @test h3[2, 2] == 1
+    @test h3[2, 3] == 5
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  Kodaira–Akizuki–Nakano vanishing  (issue #4)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "twisted_hodge_numbers: Kodaira-Akizuki-Nakano" begin
+    Z = zero_locus(line_bundle(projective_space(4), 3))
+    M = twisted_hodge_numbers(Z, 1)
+    @test all(M[p + 1, q + 1] == 0 for p in 0:3, q in 0:3 if p + q > 3)
+    M2 = twisted_hodge_numbers(Z, -1)
+    @test all(M2[p + 1, q + 1] == 0 for p in 0:3, q in 0:3 if p + q < 3)
+  end
+
   @testset "is_ample_line_bundle" begin
     X = Gr(2, 4)
     @test is_ample_line_bundle(line_bundle(X, 1))
