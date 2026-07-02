@@ -77,14 +77,12 @@ function MarkedDynkinType(::Type{DT}, marked::Tuple{Vararg{Int}}) where {DT<:Dyn
 end
 
 function MarkedDynkinType(::Type{DT}, marked::Tuple) where {DT<:DynkinType}
-  marked_int = Tuple(sort(Int[m for m in marked]))
+  marked_int = Tuple(sort!(collect(Int, marked)))
   invoke(MarkedDynkinType, Tuple{DataType,Tuple{Vararg{Int}}}, DT, marked_int)
 end
 
 MarkedDynkinType(::Type{DT}, marked::Vector{<:Integer}) where {DT<:DynkinType} =
-  MarkedDynkinType(
-    DT, Tuple(sort(Int.(marked)))
-  )
+  MarkedDynkinType(DT, Tuple(marked))
 
 MarkedDynkinType(::Type{DT}, marked::Integer) where {DT<:DynkinType} = MarkedDynkinType(
   DT, (Int(marked),)
@@ -127,28 +125,21 @@ function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
   end
 
   Cinv = cartan_matrix_inverse(DT)
-  sf = 1
-  for j in marked
-    for k in 1:R
-      sf = lcm(sf, denominator(Cinv[j, k]))
-    end
-  end
+  scaling = reduce(lcm, (denominator(Cinv[j, k]) for j in marked for k in 1:R); init=1)
 
   M = zeros(Rational{Int}, R, R)
   for i in unmarked
     M[i, i] = 1
   end
   for j in marked
-    for k in 1:R
-      M[j, k] = Cinv[j, k]
-    end
+    M[j, :] = Cinv[j, :]
   end
 
   Minv = inv(M)
   n_pos_G = n_positive_roots(DT)
   n_pos_L = levi === nothing ? 0 : n_positive_roots(levi)
 
-  _MarkedDynkinData(unmarked, levi, perm, sf, M, Minv, n_pos_G - n_pos_L)
+  _MarkedDynkinData(unmarked, levi, perm, scaling, M, Minv, n_pos_G - n_pos_L)
 end
 
 _mdt_data(mdt::MarkedDynkinType) =
@@ -273,11 +264,7 @@ roots of ``G`` minus the number of positive roots of the Levi subalgebra.
 dimension(mdt::MarkedDynkinType) = _mdt_data(mdt).dimension
 
 function _nonparabolic_height(α_vec::AbstractVector{<:Integer}, marked::Tuple{Vararg{Int}})
-  h = 0
-  for m in marked
-    h += α_vec[m]
-  end
-  h
+  sum((α_vec[m] for m in marked); init=0)
 end
 
 """
@@ -289,12 +276,10 @@ Levi subalgebra). These span the tangent directions of ``G/P``.
 """
 function positive_nonparabolic_roots(mdt::MarkedDynkinType)
   RS = RootSystem(dynkin_type(mdt))
-  roots = collect(positive_roots(RS))
-  result = eltype(roots)[]
-  for α in roots
-    _nonparabolic_height(coefficients(α), marked_nodes(mdt)) > 0 && push!(result, α)
-  end
-  result
+  filter(
+    α -> _nonparabolic_height(coefficients(α), marked_nodes(mdt)) > 0,
+    collect(positive_roots(RS)),
+  )
 end
 
 """
@@ -305,12 +290,10 @@ on every marked simple root (i.e., the positive roots of the Levi subalgebra).
 """
 function positive_parabolic_roots(mdt::MarkedDynkinType)
   RS = RootSystem(dynkin_type(mdt))
-  roots = collect(positive_roots(RS))
-  result = eltype(roots)[]
-  for α in roots
-    _nonparabolic_height(coefficients(α), marked_nodes(mdt)) == 0 && push!(result, α)
-  end
-  result
+  filter(
+    α -> _nonparabolic_height(coefficients(α), marked_nodes(mdt)) == 0,
+    collect(positive_roots(RS)),
+  )
 end
 
 """
@@ -321,45 +304,18 @@ tangent space ``T_{eP}(G/P)`` at the base point. Each weight corresponds to
 a Levi-orbit of nonparabolic positive roots.
 """
 function tangent_weights(mdt::MarkedDynkinType)
-  DT = dynkin_type(mdt)
-  RS = RootSystem(DT)
+  RS = RootSystem(dynkin_type(mdt))
   nonpar_roots = positive_nonparabolic_roots(mdt)
-  unmarked = unmarked_nodes(mdt)
-  if isempty(unmarked)
-    simple_par = typeof(simple_root(RS, 1))[]
-  else
-    simple_par = Vector{typeof(simple_root(RS, first(unmarked)))}(undef, length(unmarked))
-    for (idx, i) in enumerate(unmarked)
-      simple_par[idx] = simple_root(RS, i)
-    end
-  end
+  simple_parabolic = [simple_root(RS, i) for i in unmarked_nodes(mdt)]
+  nonpar_set = Set(coefficients(α) for α in nonpar_roots)
 
-  nonpar_set = Set{typeof(coefficients(first(nonpar_roots)))}()
-  for α in nonpar_roots
-    push!(nonpar_set, coefficients(α))
-  end
-
-  highest = eltype(nonpar_roots)[]
-  for α in nonpar_roots
-    is_highest = true
+  # A nonparabolic root is a highest weight for the Levi action when no
+  # simple parabolic root can be added to it within the nonparabolic roots.
+  highest = filter(nonpar_roots) do α
     α_coeffs = coefficients(α)
-    for s in simple_par
-      if (α_coeffs + coefficients(s)) in nonpar_set
-        is_highest = false
-        break
-      end
-    end
-    is_highest && push!(highest, α)
+    !any(s -> (α_coeffs + coefficients(s)) in nonpar_set, simple_parabolic)
   end
-
-  isempty(highest) && return WeightLatticeElem[]
-  first_weight = WeightLatticeElem(first(highest))
-  result = Vector{typeof(first_weight)}(undef, length(highest))
-  result[1] = first_weight
-  for i in 2:length(highest)
-    result[i] = WeightLatticeElem(highest[i])
-  end
-  result
+  WeightLatticeElem[WeightLatticeElem(α) for α in highest]
 end
 
 _ambient_type(mdt::MarkedDynkinType) = dynkin_type(mdt)
@@ -418,7 +374,7 @@ function _marked_diagram_D(::Type{DT}, marked) where {DT<:TypeD}
   fork = " "^(4 * (N - 2) - 1) * "/"
   if N - 1 >= 2
     main = join([string(node_char(i)) for i in 1:(N - 1)], "───")
-    main_labels = join([lpad(string(i), 1) for i in 1:(N - 1)], "   ")
+    main_labels = join([string(i) for i in 1:(N - 1)], "   ")
   else
     main = string(node_char(N - 1))
     main_labels = "$(N - 1)"
@@ -431,9 +387,9 @@ function _marked_diagram_E(::Type{DT}, marked) where {DT<:TypeE}
   marked_set = Set(marked)
   node_char(i) = i in marked_set ? '×' : '○'
 
-  main_nodes = [1; collect(3:N)]
+  main_nodes = [1; 3:N]
   main = join([string(node_char(i)) for i in main_nodes], "───")
-  main_labels = join([lpad(string(i), 1) for i in main_nodes], "   ")
+  main_labels = join([string(i) for i in main_nodes], "   ")
 
   indent = 8
   top = " "^indent * "$(node_char(2)) 2"
@@ -472,9 +428,8 @@ true
 ```
 """
 is_exceptional_type(DT::Type{<:SimpleDynkinType}) = DT <: Union{TypeE,TypeF4,TypeG2}
-is_exceptional_type(DT::Type{<:ProductDynkinType}) = any(
-  T -> is_exceptional_type(T), DT.parameters[1].parameters
-)
+is_exceptional_type(DT::Type{<:ProductDynkinType}) =
+  any(is_exceptional_type, DT.parameters[1].parameters)
 
 """
     is_exceptional_type(mdt::MarkedDynkinType) -> Bool
