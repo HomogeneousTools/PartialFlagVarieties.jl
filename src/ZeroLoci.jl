@@ -620,6 +620,62 @@ function _restrict_to_zero_locus_les(
   _restrict_to_zero_locus_les(Z, structure_sheaf(Z.ambient), var_counter)
 end
 
+"""
+    _restrict_to_zero_locus_les(Z, F::FilteredBundle, var_counter)
+      -> Vector{AffineExpr}
+
+Compute ``H^*(Z, F|_Z)`` for a filtered bundle ``F`` on the ambient variety.
+
+Each Koszul term ``F ⊗ ∧^k E^*`` is again a filtered bundle; its cohomology
+on ``X`` is the abutment of the spectral sequence of the filtration
+(see [`_cohomology_filtered`](@ref)), and the Koszul chain is then solved
+with the symbolic LES solver.  When every spectral sequence visibly
+degenerates, the terms are exact and the numeric solver (with its Serre
+duality fallback for ``ω_Z ≅ \\mathcal{O}_Z``) is used instead.
+"""
+function _restrict_to_zero_locus_les(
+  Z::ZeroLocus, F::FilteredBundle, var_counter::Ref{Int}
+)
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError(
+      "_restrict_to_zero_locus_les requires a bundle on the ambient variety."
+    ),
+  )
+  d_Z = dimension(Z)
+  d_X = dimension(Z.ambient)
+  wedges = _koszul_wedges!(Z)
+  koszul = [_cohomology_filtered(tensor_product(F, w), var_counter) for w in wedges]
+
+  if all(is_determined, Iterators.flatten(koszul))
+    cohos = [Cohomology{BigInt}(_determined_bigints(k), d_X) for k in koszul]
+    (H, det) = solve_koszul_filtration(cohos, d_Z)
+    det && return AffineExpr[AffineExpr(H[k]) for k in 0:d_Z]
+
+    # Serre duality fallback: sound when ω_Z ≅ O_Z, provided the spectral
+    # sequences of the dual Koszul terms degenerate as well.
+    if is_calabi_yau(Z)
+      F_dual = dual(F)
+      scratch = Ref(0)
+      koszul_dual = [
+        _cohomology_filtered(tensor_product(F_dual, w), scratch) for w in wedges
+      ]
+      if all(is_determined, Iterators.flatten(koszul_dual))
+        cohos_dual = [Cohomology{BigInt}(_determined_bigints(k), d_X) for k in koszul_dual]
+        (H_dual, det_dual) = solve_koszul_filtration(cohos_dual, d_Z)
+        det_dual && return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
+      end
+    end
+  end
+
+  # Symbolic Koszul chain in reversed order K_r, …, K_0, then vanishing
+  # H^k(Z, F|_Z) = 0 for k > dim Z.
+  result = long_exact_sequence_cokernel(reverse(koszul), var_counter)
+  for k in (d_Z + 1):d_X
+    is_zero_expr(result[k + 1]) || _apply_equation!(result, result[k + 1])
+  end
+  result[1:(d_Z + 1)]
+end
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Calabi–Yau detection
 # ═══════════════════════════════════════════════════════════════════════════════

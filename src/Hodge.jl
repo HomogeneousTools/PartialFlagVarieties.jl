@@ -280,10 +280,20 @@ end
 
 Compute the Hodge diamond ``\\mathrm{h}^{p,q}(Z)`` for ``p, q = 0, \\ldots, \\dim Z``.
 
-Uses the Koszul resolution and long exact sequences.
+For each row ``p \\le \\lfloor d/2 \\rfloor`` the conormal resolution of
+``\\Omega^p_Z`` is restricted to ``Z`` through the Koszul resolution and the
+long exact sequences are solved symbolically (see [`GradedConormal`](@ref)
+and [`FilteredConormal`](@ref)).
+On ambient varieties whose tangent bundle is not completely reducible, the
+cotangent powers are treated as filtered bundles and their cohomology goes
+through the spectral sequence of the filtration, so no silent degeneration
+assumption is made.  Hodge symmetry, Serre duality, and Euler characteristic
+constraints are then propagated to a fixed point, and the remaining rows
+follow by Serre duality.
+
 Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^{p,q}``.
 Entries that are fully determined are plain integers (wrapped in `AffineExpr`);
-entries that cannot be resolved from Koszul + symmetry constraints contain
+entries that cannot be resolved from the available constraints contain
 symbolic variables.
 
 As throughout the zero-locus API, this assumes that `Z` is the smooth zero
@@ -307,7 +317,28 @@ julia> h[3, 2]  # h^{2,1}
 ```
 """
 function hodge_numbers(Z::ZeroLocus)
-  hodge_numbers_les(Z)
+  d = dimension(Z)
+  half = d ÷ 2
+  var_counter = Ref(0)
+  C = _conormal_data(Z, structure_sheaf(Z.ambient), half)
+
+  M = fill(AffineExpr(0), d + 1, d + 1)
+  for p in 0:half
+    row = _conormal_row(C, p, var_counter)
+    for q in 0:d
+      M[p + 1, q + 1] = row[q + 1]
+    end
+  end
+
+  chi_vals = BigInt[_chi_row(C, p) for p in 0:half]
+  _propagate_hodge_constraints!(M, chi_vals, d)
+
+  # Serre duality h^{p,q} = h^{d-p,d-q} fills the remaining rows.
+  for p in (half + 1):d, q in 0:d
+    M[p + 1, q + 1] = M[d - p + 1, d - q + 1]
+  end
+
+  _renumber_variables!(M)
 end
 
 """
@@ -317,8 +348,8 @@ Symbolic version of `hodge_numbers`. When the long exact sequence does
 not uniquely determine a Hodge number, the entry is an `AffineExpr`
 involving symbolic variables ``x_0, x_1, \\ldots``.
 
-This function delegates to [`hodge_numbers_les`](@ref), which is the
-shared symbolic Hodge solver used for zero loci.
+This is a synonym of [`hodge_numbers`](@ref), which always returns the
+symbolic form.
 
 !!! warning "Lefschetz hyperplane theorem does not apply to higher-rank zero loci"
     The Lefschetz hyperplane theorem guarantees ``\\mathrm{Pic}(X) \\xrightarrow{\\sim}
@@ -371,127 +402,326 @@ julia> H[3, 3].constant  # h^{2,2}
 8
 ```
 """
-function hodge_numbers_symbolic(Z::ZeroLocus)
-  hodge_numbers_les(Z)
-end
+hodge_numbers_symbolic(Z::ZeroLocus) = hodge_numbers(Z)
+
+"""
+    hodge_numbers_les(Z::ZeroLocus) -> Matrix{AffineExpr}
+
+Synonym of [`hodge_numbers`](@ref), kept for backwards compatibility.
+"""
+hodge_numbers_les(Z::ZeroLocus) = hodge_numbers(Z)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Twisted Hodge numbers of zero loci
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# ── Shared symbolic engine for twisted Hodge computation ─────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Conormal restriction of cotangent powers
 #
-# _twisted_hodge_symbolic(Z, L, var_counter) computes h^q(Ω^p_Z ⊗ L|_Z)
-# symbolically via:
-#   1. Koszul resolution for each conormal graded piece (tries numeric first)
-#   2. les_cokernel to chain the conormal SES
-#   3. χ(Ω^p_Z ⊗ L) constraint per row (exact from _chi_omega_tensor_counts)
-#   4. Exact boundary injection for p = 0 and p = d
+#  Ω^p_Z is not the restriction of a bundle on X, so the Koszul resolution
+#  does not apply to it directly.  Instead, the conormal sequence
+#  0 → E^∨|_Z → Ω^1_X|_Z → Ω^1_Z → 0 yields the exact complex (exact because
+#  the section is regular and Z smooth)
 #
-# Both twisted_hodge_numbers and hochschild_cohomology delegate to this.
+#      0 → Sym^p(E^∨) → Sym^{p-1}(E^∨) ⊗ Ω^1_X → ⋯ → Ω^p_X → Ω^p_Z → 0
+#
+#  on Z, whose remaining terms all are restrictions from X.  _conormal_row
+#  computes H^*(Z, Ω^p_Z ⊗ L|_Z) by chaining this complex through
+#  les_cokernel.
+#
+#  Restricting the terms Sym^{p-j}(E^∨) ⊗ Ω^j_X ⊗ L has two backends:
+#
+#   - GradedConormal: when the tangent bundle of X is completely reducible
+#     (abelian nilradical), Ω^j_X equals its associated graded and everything
+#     is done with deduplicated multiplicity dicts.
+#   - FilteredConormal: otherwise Ω^j_X is a genuinely filtered bundle and
+#     its cohomology goes through the spectral sequence of the filtration —
+#     plain Borel–Weil–Bott on the associated graded would silently assume
+#     degeneration.
+#
+#  The exact Euler characteristics χ(Ω^p_Z ⊗ L) only depend on K-theory
+#  classes, so they always use the graded data.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    GradedConormal
+
+Counts-level data for restricting the conormal terms
+``\\mathrm{Sym}^{p-j}(E^\\vee) \\otimes \\Omega^j_X \\otimes L`` of a zero locus
+``Z = Z(s) \\subset X`` to ``Z``, for ``p \\le p_{\\max}``, together with the
+memoization state of the exact ``χ(\\Omega^p_Z \\otimes L)`` recursion.
+
+Only valid as a restriction backend when the tangent bundle of ``X`` is
+completely reducible; see [`FilteredConormal`](@ref) for the general case
+(which still uses this type for χ and for the ``p = \\dim Z`` row).
+"""
+struct GradedConormal
+  Z::ZeroLocus
+  l_counts::Dict{IrrepLevi,Int}
+  syms::Vector{Dict{IrrepLevi,Int}}    # gr Sym^k(E^∨), k = 0..pmax
+  omegas::Vector{Dict{IrrepLevi,Int}}  # gr Ω^j_X,      j = 0..pmax
+  wedge_counts::Vector{Dict{IrrepLevi,Int}}
+  chi_memo::Dict{Tuple{Int,UInt},BigInt}
+  chi_tp_memo::Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}
+end
+
+function GradedConormal(Z::ZeroLocus, L::CompletelyReducibleBundle, pmax::Int)
+  X = Z.ambient
+  E_dual = dual(Z.defining_bundle)
+  GradedConormal(
+    Z,
+    _to_counts(L),
+    Dict{IrrepLevi,Int}[_to_counts(symmetric_power(E_dual, k)) for k in 0:pmax],
+    Dict{IrrepLevi,Int}[_to_counts(_cotangent_power(X, j)) for j in 0:pmax],
+    Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)],
+    Dict{Tuple{Int,UInt},BigInt}(),
+    Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}(),
+  )
+end
+
+"""
+    FilteredConormal
+
+Bundle-level backend for the conormal terms when ``\\Omega^1_X`` is genuinely
+filtered (non-abelian nilradical): restriction to ``Z`` goes through the
+spectral sequence of the filtration.  Wraps a [`GradedConormal`](@ref) for
+everything that only depends on K-theory classes.
+"""
+struct FilteredConormal
+  graded::GradedConormal
+  syms_L::Vector{CompletelyReducibleBundle}  # Sym^k(E^∨) ⊗ L, k = 0..pmax
+  omega_filt::Vector{FilteredBundle}         # filtered Ω^j_X, j = 0..jmax
+end
+
+_graded(C::GradedConormal) = C
+_graded(C::FilteredConormal) = C.graded
+
+"""
+Choose the conormal restriction backend for rows ``p = 0, \\ldots, p_{\\max}``:
+[`FilteredConormal`](@ref) when the tangent bundle of the ambient variety is
+not completely reducible, [`GradedConormal`](@ref) otherwise.
+"""
+function _conormal_data(Z::ZeroLocus, L::CompletelyReducibleBundle, pmax::Int)
+  graded = GradedConormal(Z, L, pmax)
+  Omega_filt = dual(filtered_tangent_bundle(Z.ambient))
+  n_filtration_steps(Omega_filt) > 1 || return graded
+
+  # The row p = dim Z uses the ω_Z shortcut, so the filtered powers are only
+  # needed for j ≤ min(pmax, dim Z - 1).
+  jmax = min(pmax, dimension(Z) - 1)
+  E_dual = dual(Z.defining_bundle)
+  FilteredConormal(
+    graded,
+    CompletelyReducibleBundle[
+      tensor_product(symmetric_power(E_dual, k), L) for k in 0:pmax
+    ],
+    FilteredBundle[exterior_power(Omega_filt, j) for j in 0:jmax],
+  )
+end
+
+"""Restriction to ``Z`` of the conormal term ``\\mathrm{Sym}^{p-j}(E^\\vee) \\otimes \\Omega^j_X \\otimes L``."""
+function _restrict_conormal_term(C::GradedConormal, p::Int, j::Int, var_counter::Ref{Int})
+  f_counts = _tensor_product_counts(
+    _tensor_product_counts(C.syms[p - j + 1], C.omegas[j + 1]), C.l_counts
+  )
+  _restrict_to_zero_locus_les(C.Z, f_counts, var_counter, C.wedge_counts)
+end
+
+function _restrict_conormal_term(C::FilteredConormal, p::Int, j::Int, var_counter::Ref{Int})
+  term = tensor_product(C.omega_filt[j + 1], C.syms_L[p - j + 1])
+  _restrict_to_zero_locus_les(_graded(C).Z, term, var_counter)
+end
+
+"""
+    _conormal_row(C, p, var_counter) -> Vector{AffineExpr}
+
+``H^q(Z, \\Omega^p_Z \\otimes L|_Z)`` for ``q = 0, \\ldots, \\dim Z``, where `C`
+is a conormal backend from [`_conormal_data`](@ref).
+
+Chains the conormal complex through `les_cokernel`, solving
+``0 \\to C_{j-1} \\to \\mathrm{Sym}^{p-j}(E^\\vee) \\otimes \\Omega^j_X \\otimes L|_Z \\to C_j \\to 0``
+for ``j = 1, \\ldots, p`` starting from ``C_0 = \\mathrm{Sym}^p(E^\\vee) \\otimes L|_Z``;
+the last cokernel is ``\\Omega^p_Z \\otimes L|_Z``.  For ``p = \\dim Z`` the row is
+the line bundle ``\\omega_Z \\otimes L`` and plain Koszul restriction is used.
+"""
+function _conormal_row(
+  C::Union{GradedConormal,FilteredConormal}, p::Int, var_counter::Ref{Int}
+)
+  G = _graded(C)
+  Z = G.Z
+  d = dimension(Z)
+  if p == d
+    X = Z.ambient
+    omega_Z_counts = _to_counts(tensor_product(canonical_bundle(X), det(Z.defining_bundle)))
+    f_counts = _tensor_product_counts(omega_Z_counts, G.l_counts)
+    return _restrict_to_zero_locus_les(Z, f_counts, var_counter, G.wedge_counts)
+  end
+
+  row = _restrict_conormal_term(C, p, 0, var_counter)
+  for j in 1:p
+    row = les_cokernel(row, _restrict_conormal_term(C, p, j, var_counter), var_counter)
+  end
+
+  # Vanishing H^k(Z, ·) = 0 for k > dim Z.
+  for k in (d + 1):(length(row) - 1)
+    is_zero_expr(row[k + 1]) || _apply_equation!(row, row[k + 1])
+  end
+  row[1:(d + 1)]
+end
+
+"""Exact ``\\chi(Z, \\Omega^p_Z \\otimes L|_Z)`` from K-theory, memoized in `C`."""
+function _chi_row(C::Union{GradedConormal,FilteredConormal}, p::Int)
+  G = _graded(C)
+  _chi_omega_tensor_counts_cached(
+    G.Z, p, G.l_counts, G.chi_memo, G.omegas, G.wedge_counts, G.chi_tp_memo
+  )
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Symbolic Hodge constraint helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_hodge_inconsistency() = error(
+  "inconsistent Hodge constraints: is the section regular, with smooth zero locus " *
+  "of the expected dimension?",
+)
+
+"""
+Impose the exact value `M[i, j] = val`, eliminating a symbolic variable when
+the entry is not determined yet.  A determined entry that disagrees signals
+inconsistent input data and raises an error.
+"""
+function _inject_exact!(M::Matrix{AffineExpr}, i::Int, j::Int, val::BigInt)
+  expr = M[i, j]
+  if is_determined(expr)
+    expr.constant == val || _hodge_inconsistency()
+    return false
+  end
+  _apply_equation!(M, expr - AffineExpr(val))
+  M[i, j] = AffineExpr(val)
+  true
+end
+
+"""Impose `M[pi, qi] = target`; see [`_inject_exact!`](@ref)."""
+function _apply_hodge_constraint!(M::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt)
+  expr = M[pi, qi]
+  if is_determined(expr)
+    expr.constant == target || _hodge_inconsistency()
+    return false
+  end
+  _apply_equation!(M, expr - AffineExpr(target))
+end
+
+"""Impose `M[p1, q1] = M[p2, q2]`, erroring on a determined contradiction."""
+function _apply_hodge_pair!(M::Matrix{AffineExpr}, p1::Int, q1::Int, p2::Int, q2::Int)
+  eq = M[p1, q1] - M[p2, q2]
+  if is_determined(eq)
+    eq.constant == 0 || _hodge_inconsistency()
+    return false
+  end
+  _apply_equation!(M, eq)
+end
+
+"""
+Propagate Hodge symmetry, Serre duality, and Euler characteristic constraints
+through the ``(d+1) \\times (d+1)`` matrix `M` of ``h^{p,q}`` candidates, of
+which only rows ``p = 0, \\ldots, \\lfloor d/2 \\rfloor`` are filled (the others
+follow by Serre duality afterwards).  `chi_vals[p+1]` is the exact
+``\\chi(\\Omega^p_Z)``.  Iterates to a fixed point.
+"""
+function _propagate_hodge_constraints!(
+  M::Matrix{AffineExpr}, chi_vals::Vector{BigInt}, d::Int
+)
+  half = d ÷ 2
+  changed = true
+  while changed
+    changed = false
+
+    # Hodge symmetry against the exact row 0: h^{p,0} = h^{0,p}, and
+    # Serre duality h^{p,d} = h^{d-p,0} = h^{0,d-p}.
+    for p in 1:half
+      if is_determined(M[1, p + 1])
+        changed |= _apply_hodge_constraint!(M, p + 1, 1, M[1, p + 1].constant)
+      end
+      dp = d - p
+      if dp != p && is_determined(M[1, dp + 1])
+        changed |= _apply_hodge_constraint!(M, p + 1, d + 1, M[1, dp + 1].constant)
+      end
+    end
+
+    # χ(Ω^p_Z) per computed row.
+    for p in 0:half
+      eq = _alternating_sum(M, p + 1, d) - AffineExpr(chi_vals[p + 1])
+      is_determined(eq) && eq.constant != 0 && _hodge_inconsistency()
+      changed |= _apply_equation!(M, eq)
+    end
+
+    # Hodge symmetry h^{p,q} = h^{q,p} within the computed rows.
+    for p in 0:half, q in 0:half
+      p == q && continue
+      changed |= _apply_hodge_pair!(M, p + 1, q + 1, q + 1, p + 1)
+    end
+
+    # Middle-row Serre duality h^{half,q} = h^{half,d-q} for even d.
+    if d % 2 == 0
+      for q in 0:(half - 1)
+        changed |= _apply_hodge_pair!(M, half + 1, q + 1, half + 1, d - q + 1)
+      end
+    end
+
+    # Hodge combined with Serre: h^{p,q} = h^{d-q,d-p} when both rows are
+    # among the computed ones.
+    for p in 0:half, q in 0:d
+      dq = d - q
+      0 <= dq <= half || continue
+      (p == dq && q == d - p) && continue
+      changed |= _apply_hodge_pair!(M, p + 1, q + 1, dq + 1, d - p + 1)
+    end
+  end
+  M
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Twisted Hodge engine
+# ═══════════════════════════════════════════════════════════════════════════════
 
 function _twisted_hodge_symbolic(
   Z::ZeroLocus, L::CompletelyReducibleBundle, var_counter::Ref{Int}
 )
   X = Z.ambient
   E = Z.defining_bundle
-  E_dual = dual(E)
   d = dimension(Z)
-
-  # Precompute Sym^k(E*) and Ω^j_X as multiplicity dicts for k,j = 0..d.
-  # The _to_counts representation (Dict{IrrepLevi,Int}) deduplicates
-  # identical summands, avoiding redundant tensor-product calls.
-  syms_counts = Dict{IrrepLevi,Int}[
-    _to_counts(symmetric_power(E_dual, k)) for k in 0:d
-  ]
-  omegas_counts = Dict{IrrepLevi,Int}[
-    _to_counts(_cotangent_power(X, j)) for j in 0:d
-  ]
-  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
-
-  # ω_Z lifted to X (before restriction), as a multiplicity dict for the
-  # p = d branch (Ω^d_Z = ω_Z).
-  omega_Z_counts = _to_counts(tensor_product(canonical_bundle(X), det(E)))
-
-  # Convert the twist line bundle to a multiplicity dict for
-  # _tensor_product_counts.
-  l_counts = _to_counts(L)
+  C = _conormal_data(Z, L, d)
 
   M = fill(AffineExpr(0), d + 1, d + 1)
-
   for p in 0:d
-    if p == d
-      # Ω^d_Z ⊗ L = (ω_Z ⊗ L)|_Z — use the precomputed ω_Z counts.
-      f_counts = _tensor_product_counts(omega_Z_counts, l_counts)
-      Hp = _restrict_to_zero_locus_les(Z, f_counts, var_counter, wedge_counts)
-    else
-      # ── Conormal filtration ─────────────────────────────────────────
-      # For 0 < p < d, Ω^p_Z is intrinsic to Z — it is NOT the
-      # restriction of a bundle from X, so we cannot apply the Koszul
-      # resolution directly.  Instead, the conormal exact sequence
-      #   0 → E∨|_Z → Ω¹_X|_Z → Ω¹_Z → 0
-      # induces a filtration on Ω^p_Z whose graded pieces ARE
-      # restrictions from X:
-      #   Gr_j = Sym^{p-j}(E∨) ⊗ Ω^j_X   for j = 0, …, p.
-      #
-      # We compute H*(Z, Gr_j ⊗ L|_Z) for each graded piece via
-      # the Koszul resolution, then recover H*(Z, Ω^p_Z ⊗ L|_Z)
-      # by chaining short exact sequences:
-      #   0 → C_{k-1} → H*(Z, Gr_k ⊗ L|_Z) → C_k → 0
-      # with C_0 = H*(Z, Sym^p(E∨) ⊗ L|_Z).  After p steps,
-      # C_p = H*(Z, Ω^p_Z ⊗ L|_Z) is the desired cohomology.
-      conormal_cohomologies = Vector{AffineExpr}[]
-      for j in 0:p
-        f_counts = _tensor_product_counts(
-          _tensor_product_counts(syms_counts[p - j + 1], omegas_counts[j + 1]),
-          l_counts,
-        )
-        Hj = _restrict_to_zero_locus_les(Z, f_counts, var_counter, wedge_counts)
-        push!(conormal_cohomologies, Hj)
-      end
-      # les_cokernel(A, B) solves 0 → A → B → C → 0 for H*(C).
-      Hp = conormal_cohomologies[1]
-      for k in 2:(p + 1)
-        Hp = les_cokernel(Hp, conormal_cohomologies[k], var_counter)
-      end
-      # Enforce vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
-      Hp = copy(Hp)
-      for k in (d + 1):(length(Hp) - 1)
-        is_zero_expr(Hp[k + 1]) || _apply_equation!(Hp, Hp[k + 1])
-      end
-      Hp = Hp[1:(d + 1)]
-    end
+    row = _conormal_row(C, p, var_counter)
     for q in 0:d
-      M[p + 1, q + 1] = Hp[q + 1]
+      M[p + 1, q + 1] = row[q + 1]
     end
   end
 
-  # ── Inject exact boundary values for p = 0 and p = d ─────────────────
-  # p = 0: h^q(Ω⁰_Z ⊗ L) = h^q(L|_Z), computable exactly.
-  (H_L, _) = cohomology_on_restriction(Z, L)
-  for q in 0:d
-    val = BigInt(q <= H_L.dim_variety ? H_L[q] : 0)
-    _inject_exact!(M, 1, q + 1, val)
+  # Exact boundary rows, when plain Koszul restriction determines them:
+  # p = 0 is L|_Z and p = d is (ω_Z ⊗ L)|_Z.
+  (H_L, det_L) = cohomology_on_restriction(Z, L)
+  if det_L
+    for q in 0:d
+      _inject_exact!(M, 1, q + 1, BigInt(H_L[q]))
+    end
   end
-  # p = d: h^q(Ω^d_Z ⊗ L) = h^q((ω_Z ⊗ L)|_Z), computable exactly.
   omega_Z_L = tensor_product(tensor_product(canonical_bundle(X), det(E)), L)
-  (H_top, _) = cohomology_on_restriction(Z, omega_Z_L)
-  for q in 0:d
-    val = BigInt(q <= H_top.dim_variety ? H_top[q] : 0)
-    _inject_exact!(M, d + 1, q + 1, val)
+  (H_top, det_top) = cohomology_on_restriction(Z, omega_Z_L)
+  if det_top
+    for q in 0:d
+      _inject_exact!(M, d + 1, q + 1, BigInt(H_top[q]))
+    end
   end
 
-  # ── χ constraint per row ─────────────────────────────────────────────
-  # Σ_q (-1)^q h^q(Ω^p_Z ⊗ L) = χ(Ω^p_Z ⊗ L), exact from the Koszul complex.
-  chi_memo = Dict{Tuple{Int,UInt},BigInt}()
-  chi_tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
+  # χ constraint per row: Σ_q (-1)^q h^q(Ω^p_Z ⊗ L) is exact from K-theory.
   for p in 0:d
-    chi_p = _chi_omega_tensor_counts_cached(
-      Z, p, l_counts, chi_memo, omegas_counts, wedge_counts, chi_tp_memo
-    )
-    alt_sum = _alternating_sum(M, p + 1, d)
-    eq = alt_sum - AffineExpr(chi_p)
-    !isempty(eq.coeffs) && _apply_equation!(M, eq)
+    eq = _alternating_sum(M, p + 1, d) - AffineExpr(_chi_row(C, p))
+    is_determined(eq) && eq.constant != 0 && _hodge_inconsistency()
+    _apply_equation!(M, eq)
   end
 
   M
@@ -536,7 +766,8 @@ julia> M[4, 1]  # h^0(Z, Ω³_Z) = h^{3,0} = 1 (CY3)
 function twisted_hodge_numbers(
   Z::ZeroLocus, L::CompletelyReducibleBundle
 )
-  _twisted_hodge_symbolic(Z, L, Ref(0))
+  M = _twisted_hodge_symbolic(Z, L, Ref(0))
+  _renumber_variables!(M)
 end
 
 """
@@ -577,19 +808,6 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Hochschild cohomology of zero loci via HKR
 # ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-Replace the symbolic AffineExpr in matrix M at (i, j) with the exact
-integer value `val`, propagating the resulting equation into `M`.
-"""
-function _inject_exact!(M::Matrix{AffineExpr}, i::Int, j::Int, val::BigInt)
-  expr = M[i, j]
-  if !is_determined(expr) || expr.constant != val
-    eq = expr - AffineExpr(val)
-    !isempty(eq.coeffs) && _apply_equation!(M, eq)
-    M[i, j] = AffineExpr(val)
-  end
-end
 
 """
     hochschild_cohomology(Z::ZeroLocus) -> PolyvectorParallelogram{AffineExpr}
@@ -695,7 +913,18 @@ function hochschild_cohomology(Z::ZeroLocus)
   #   1. Serre duality:  data[p+1, q+1] = M2[p+1, d-q+1]
   #   2. Euler char:     Σ_q (-1)^q h^q(∧^p T) = χ(Ω^{d-p} ⊗ ω⁻¹)
   #   3. Akizuki–Nakano: h^q(∧^p T) = 0 for q > p  (Fano only)
+  # χ(∧^p T_Z) = χ(Ω^{d-p}_Z ⊗ ω_Z^{-1}), exact from the conormal recursion.
   l_anti_counts = _to_counts(L_anti)
+  chi_memo = Dict{Tuple{Int,UInt},BigInt}()
+  chi_tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
+  chi_omegas = Dict{IrrepLevi,Int}[_to_counts(_cotangent_power(X, j)) for j in 0:d]
+  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
+  chi_polyvector = BigInt[
+    _chi_omega_tensor_counts_cached(
+      Z, d - p, l_anti_counts, chi_memo, chi_omegas, wedge_counts, chi_tp_memo
+    ) for p in 0:d
+  ]
+
   constraint_changed = true
   while constraint_changed
     constraint_changed = false
@@ -712,18 +941,8 @@ function hochschild_cohomology(Z::ZeroLocus)
     end
 
     # 2. χ(∧^p T_Z) = exact value from conormal recursion
-    chi_memo = Dict{Tuple{Int,UInt},BigInt}()
-    chi_tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
-    chi_omegas_counts = Dict{IrrepLevi,Int}[
-      _to_counts(_cotangent_power(X, j)) for j in 0:d
-    ]
-    wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
     for p in 0:d
-      chi_p = _chi_omega_tensor_counts_cached(
-        Z, d - p, l_anti_counts, chi_memo, chi_omegas_counts, wedge_counts, chi_tp_memo
-      )
-      alt_sum = _alternating_sum(data, p + 1, d)
-      eq = alt_sum - AffineExpr(chi_p)
+      eq = _alternating_sum(data, p + 1, d) - AffineExpr(chi_polyvector[p + 1])
       if !isempty(eq.coeffs)
         constraint_changed = _apply_equation!(data, eq) || constraint_changed
       end
