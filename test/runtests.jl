@@ -5,7 +5,7 @@ using StaticArrays
 
 # The default cache budget is ~10% of system RAM per process, which is far
 # more than the test workloads need; cap it so a test run stays lean.
-configure_caches!(; budget=256 * 1024^2)
+PartialFlagVarieties.configure_caches!(; budget=256 * 1024^2)
 
 mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 

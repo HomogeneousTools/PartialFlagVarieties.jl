@@ -240,7 +240,7 @@ end
 # Populated lazily; avoids repeated borel_weil_bott + degree calls.
 const _BWB_PAIR_CACHE = let b = _default_cache_budget()
   LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}(;
-    maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC),
+    maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC * 0.8),
     by=Base.summarysize,
   )
 end

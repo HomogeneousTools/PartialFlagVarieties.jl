@@ -77,7 +77,8 @@ function configure_caches!(;
   sf = Float64(structural_frac)
 
   resize!(_TENSOR_PRODUCT_CACHE; maxsize=_cache_maxsize(b, tf))
-  resize!(_BWB_PAIR_CACHE; maxsize=_cache_maxsize(b, bf))
+  resize!(_BWB_PAIR_CACHE; maxsize=_cache_maxsize(b, bf * 0.8))
+  resize!(_BWB_WEIGHT_CACHE; maxsize=_cache_maxsize(b, bf * 0.2))
   resize!(_marked_dynkin_cache; maxsize=_cache_maxsize(b, sf * 0.35))
   resize!(_tangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.25))
   resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.25))
@@ -100,6 +101,7 @@ function clear_caches!()
   empty!(_FILTERED_COTANGENT_POWER_CACHE)
   empty!(_TENSOR_PRODUCT_CACHE)
   empty!(_BWB_PAIR_CACHE)
+  empty!(_BWB_WEIGHT_CACHE)
   Semisimple.clear_all_caches!()
   nothing
 end
@@ -127,5 +129,6 @@ function cache_info()
     filtered_cotangent_powers=LRUCache.cache_info(_FILTERED_COTANGENT_POWER_CACHE),
     tensor_product=LRUCache.cache_info(_TENSOR_PRODUCT_CACHE),
     bwb_pair=LRUCache.cache_info(_BWB_PAIR_CACHE),
+    bwb_weight=LRUCache.cache_info(_BWB_WEIGHT_CACHE),
   )
 end

@@ -21,13 +21,24 @@ export borel_weil_bott
 #  Borel–Weil–Bott theorem
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Memoize the BWB kernel: every cohomology, dimension, and Euler
+# characteristic call funnels through it, and the same weights recur across
+# bundles (Koszul twists, plethysm summands), so the hit rate is high.
+const _BWB_WEIGHT_CACHE = let b = _default_cache_budget()
+  LRU{WeightLatticeElem,Union{Nothing,Tuple{Int,WeightLatticeElem}}}(;
+    maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC * 0.2),
+    by=Base.summarysize,
+  )
+end
+
 function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
-  DT = typeof(λ).parameters[1]
-  ρ = weyl_vector(DT)
-  μ = λ + ρ
-  μ_dom, d = conjugate_dominant_weight_with_length(μ)
-  any(==(0), μ_dom.vec) && return nothing
-  (d, μ_dom - ρ)
+  get!(_BWB_WEIGHT_CACHE, λ) do
+    DT = typeof(λ).parameters[1]
+    ρ = weyl_vector(DT)
+    μ = λ + ρ
+    μ_dom, d = conjugate_dominant_weight_with_length(μ)
+    any(==(0), μ_dom.vec) ? nothing : (d, μ_dom - ρ)
+  end
 end
 
 """
