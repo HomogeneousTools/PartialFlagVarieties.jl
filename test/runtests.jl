@@ -2773,6 +2773,49 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  tangent_cohomology  (issue #15)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "les_kernel" begin
+    vc = Ref(0)
+    # H*(C) = 0 forces H*(A) = H*(B)
+    @test PartialFlagVarieties.les_kernel(
+      AffineExpr.([3, 1, 0]), AffineExpr.([0, 0, 0]), vc
+    ) == AffineExpr.([3, 1, 0])
+
+    # 0 → a₀ → 5 → 2 → a₁ → 0 → ⋯ gives a₀ = 3 + a₁, and a₂ = 0
+    a = PartialFlagVarieties.les_kernel(
+      AffineExpr.([5, 0, 0]), AffineExpr.([2, 0, 0]), vc
+    )
+    @test a[1] - a[2] == AffineExpr(3)
+    @test is_zero_expr(a[3])
+  end
+
+  @testset "ZeroLocus: tangent_cohomology" begin
+    # Quintic threefold: h¹(T) = 101 deformations, h²(T) = h¹(Ω¹) = 1.
+    let Z = zero_locus(line_bundle(projective_space(4), 5))
+      H = tangent_cohomology(Z)
+      @test [H[i] for i in 0:3] == AffineExpr.([0, 101, 1, 0])
+    end
+
+    # K3 of degree 14 in Gr(2,6): h¹(T) = 20.
+    let X = Gr(2, 6),
+      Z = zero_locus(reduce(direct_sum, [line_bundle(X, 1) for _ in 1:6]))
+
+      H = tangent_cohomology(Z)
+      @test [H[i] for i in 0:2] == AffineExpr.([0, 20, 0])
+    end
+
+    # Cubic threefold: h⁰ - h¹ is pinned by χ even though the pair is open.
+    let Z = zero_locus(line_bundle(projective_space(4), 3))
+      H = tangent_cohomology(Z)
+      alt = PartialFlagVarieties._alternating_sum(H.entries)
+      @test alt == AffineExpr(euler_characteristic_tangent_bundle(Z))
+      @test is_zero_expr(H[2]) && is_zero_expr(H[3])
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  hodge_numbers vs hodge_numbers_symbolic agreement
   # ═══════════════════════════════════════════════════════════════════════════
 

@@ -22,6 +22,7 @@ export hilbert_polynomial
 export hodge_numbers_symbolic
 export hodge_numbers_les
 export euler_characteristic_tangent_bundle
+export tangent_cohomology
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -985,6 +986,61 @@ function _chi_omega_tensor(
   Z::ZeroLocus, j::Int, G::CompletelyReducibleBundle
 )
   _chi_omega_tensor_counts(Z, j, _to_counts(G))
+end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Tangent bundle cohomology
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    tangent_cohomology(Z::ZeroLocus) -> Cohomology{AffineExpr}
+
+Compute ``H^*(Z, T_Z)`` via the normal bundle sequence
+``0 \\to T_Z \\to T_X|_Z \\to E|_Z \\to 0``.
+
+The restrictions ``T_X|_Z`` (through the spectral sequence of the height
+filtration when ``T_X`` is not completely reducible) and ``E|_Z`` are
+computed by the Koszul resolution, and the long exact sequence is solved
+for the kernel term with [`les_kernel`](@ref).  The exact Euler
+characteristic ``\\chi(T_Z) = \\chi(T_X|_Z) - \\chi(E|_Z)`` and, for a strict
+Calabi–Yau, the vanishing ``h^0(T_Z) = h^{d-1,0} = 0`` are imposed.
+
+Entries are `AffineExpr`s: exact integers where the constraints determine
+them, symbolic otherwise.  ``H^1(Z, T_Z)`` is the space of first-order
+deformations of ``Z``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(4), 5));  # quintic threefold
+
+julia> tangent_cohomology(Z)
+H¹ = 101
+H² = 1
+```
+"""
+function tangent_cohomology(Z::ZeroLocus)
+  d_Z = dimension(Z)
+  var_counter = Ref(0)
+
+  HT = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(Z.ambient), var_counter)
+  HE = _restrict_to_zero_locus_les(Z, _to_counts(Z.defining_bundle), var_counter)
+  entries = les_kernel(HT, HE, var_counter)
+
+  # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
+  chi = euler_characteristic(Z, tangent_bundle(Z.ambient)) -
+        euler_characteristic(Z, Z.defining_bundle)
+  _apply_equation!(entries, _alternating_sum(entries) - AffineExpr(chi))
+
+  # For a strict Calabi–Yau, T_Z ≅ Ω^{d-1}_Z ⊗ ω_Z^{-1} ≅ Ω^{d-1}_Z, and
+  # h^0(Ω^{d-1}_Z) = h^{d-1,0} = h^{d-1}(O_Z) = 0.
+  if d_Z >= 2 && !is_zero_expr(entries[1]) && is_strict_calabi_yau(Z)
+    _apply_equation!(entries, entries[1])
+  end
+
+  _renumber_variables!(entries)
+  Cohomology{AffineExpr}(entries, d_Z)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
