@@ -149,8 +149,8 @@ function _alternating_sum(entries::AbstractVector{AffineExpr})
   total
 end
 
-function _alternating_sum(mat::AbstractMatrix{AffineExpr}, row::Int, dim::Int)
-  _alternating_sum(@view mat[row, 1:(dim + 1)])
+function _alternating_sum(M::AbstractMatrix{AffineExpr}, row::Int, dim::Int)
+  _alternating_sum(@view M[row, 1:(dim + 1)])
 end
 
 # ─── Display ─────────────────────────────────────────────────────────────────
@@ -439,23 +439,23 @@ Writing ``δ_i = \\mathrm{rank}(H^i(C) \\to H^{i+1}(A))``, exactness gives
 ``δ_{i-1} + δ_i \\ge a_i - b_i``.  The bounds are propagated
 forward and backward until convergence.
 
-Returns `(lb, ub)`, vectors of length `d + 2` indexed for ``δ_{-1}, …, δ_d``.
+Returns `(lower, upper)` bound vectors of length `d + 2` indexed for ``δ_{-1}, …, δ_d``.
 """
 function _ses_delta_bounds(a_vals::Vector{BigInt}, b_vals::Vector{BigInt}, d::Int)
-  lb = zeros(BigInt, d + 2)
+  lower = zeros(BigInt, d + 2)
   # 10^18 stands in for +∞; actual cohomology dimensions are far smaller, and
   # BigInt arithmetic keeps the sentinel exact.
-  ub = fill(BigInt(10)^18, d + 2)
+  upper = fill(BigInt(10)^18, d + 2)
 
-  ub[1] = BigInt(0)      # δ_{-1} = 0: there is no H^{-1}(C)
-  ub[d + 2] = BigInt(0)  # δ_d = 0: there is no H^{d+1}(A)
+  upper[1] = BigInt(0)      # δ_{-1} = 0: there is no H^{-1}(C)
+  upper[d + 2] = BigInt(0)  # δ_d = 0: there is no H^{d+1}(A)
 
   # δ_i ≤ a_{i+1} (the connecting map lands in H^{i+1}(A)), and
   # δ_i ≥ a_{i+1} - b_{i+1} (exactness at H^{i+1}(A): the kernel of
   # H^{i+1}(A) → H^{i+1}(B) is the image of the connecting map).
   for i in 0:(d - 1)
-    ub[i + 2] = min(ub[i + 2], a_vals[i + 2])
-    lb[i + 2] = max(lb[i + 2], a_vals[i + 2] - b_vals[i + 2])
+    upper[i + 2] = min(upper[i + 2], a_vals[i + 2])
+    lower[i + 2] = max(lower[i + 2], a_vals[i + 2] - b_vals[i + 2])
   end
 
   # Each pass can only push information one slot along the sequence, so
@@ -468,24 +468,24 @@ function _ses_delta_bounds(a_vals::Vector{BigInt}, b_vals::Vector{BigInt}, d::In
     for i in 0:d
       needed = a_vals[i + 1] - b_vals[i + 1]
       for (target, partner) in ((i + 2, i + 1), (i + 1, i + 2))
-        new_lb = needed - ub[partner]
-        if new_lb > lb[target]
-          lb[target] = new_lb
+        new_lb = needed - upper[partner]
+        if new_lb > lower[target]
+          lower[target] = new_lb
           changed = true
         end
       end
     end
 
     # Clamp: an interval that would empty is truncated (the caller treats
-    # lb == ub as determined and anything else as open).
+    # lower == upper as determined and anything else as open).
     for j in 1:(d + 2)
-      lb[j] > ub[j] && (lb[j] = ub[j])
+      lower[j] > upper[j] && (lower[j] = upper[j])
     end
 
     !changed && break
   end
 
-  (lb, ub)
+  (lower, upper)
 end
 
 """
@@ -511,11 +511,11 @@ function solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
 
   a_vals = BigInt[a[i] for i in 0:d]
   b_vals = BigInt[b[i] for i in 0:d]
-  (lb, ub) = _ses_delta_bounds(a_vals, b_vals, d)
+  (lower, upper) = _ses_delta_bounds(a_vals, b_vals, d)
 
   # c_i = b_i - a_i + δ_{i-1} + δ_i, using the lower bounds for the δ's.
-  entries = BigInt[b_vals[i + 1] - a_vals[i + 1] + lb[i + 1] + lb[i + 2] for i in 0:d]
-  (Cohomology{BigInt}(entries, d), lb == ub)
+  entries = BigInt[b_vals[i + 1] - a_vals[i + 1] + lower[i + 1] + lower[i + 2] for i in 0:d]
+  (Cohomology{BigInt}(entries, d), lower == upper)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -614,12 +614,16 @@ function solve_ses_cohomology_symbolic(
 
   a_vals = BigInt[a[i] for i in 0:d]
   b_vals = BigInt[b[i] for i in 0:d]
-  (lb, ub) = _ses_delta_bounds(a_vals, b_vals, d)
+  (lower, upper) = _ses_delta_bounds(a_vals, b_vals, d)
 
   # δ_j = lb_j exactly when the bounds meet, and lb_j plus a fresh
   # nonnegative variable otherwise.
   δ = AffineExpr[
-    lb[j] == ub[j] ? AffineExpr(lb[j]) : AffineExpr(lb[j]) + _fresh_variable(var_counter)
+    if lower[j] == upper[j]
+      AffineExpr(lower[j])
+    else
+      AffineExpr(lower[j]) + _fresh_variable(var_counter)
+    end
     for j in 1:(d + 2)
   ]
 

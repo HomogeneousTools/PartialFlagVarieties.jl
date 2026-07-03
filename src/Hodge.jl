@@ -107,9 +107,9 @@ function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
     # Ω^p(j) = ∧^p Ω ⊗ O(j)
     Omega_p = exterior_power(cotangent_bundle(X), p)
     Omega_p_j = twist(Omega_p, 1, Int(j))
-    coh = dimensions(Omega_p_j)
+    Hp = dimensions(Omega_p_j)
     for q in 0:d
-      H[p + 1, q + 1] = coh[q]
+      H[p + 1, q + 1] = Hp[q]
     end
   end
 
@@ -254,9 +254,9 @@ function hochschild_cohomology(X::PartialFlagVariety)
 
   for p in 0:d
     wedge_p = exterior_power(TX, p)
-    coh = dimensions(wedge_p)
+    Hp = dimensions(wedge_p)
     for q in 0:d
-      data[p + 1, q + 1] = coh[q]
+      data[p + 1, q + 1] = Hp[q]
     end
   end
 

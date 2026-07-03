@@ -2556,7 +2556,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # b2: O(2)² on Gr(2,5)   — h¹¹=1, h¹³=20, h²²=132, χ_top=176
     let X = Gr(2, 5), E = 2 * line_bundle(X, 2), Z = zero_locus(E), h = hodge_numbers(Z)
-
       @test dimension(Z) == 4
       @test h[2, 2] == 1     # h^{1,1}
       @test h[2, 4] == 20    # h^{1,3}

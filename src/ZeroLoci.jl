@@ -665,11 +665,15 @@ function _restrict_to_zero_locus_les(
   d_Z = dimension(Z)
   d_X = dimension(Z.ambient)
   wedges = _koszul_wedges!(Z)
-  koszul = [_cohomology_filtered(tensor_product(F, w), var_counter) for w in wedges]
+  koszul_entries = [
+    _cohomology_filtered(tensor_product(F, wedge), var_counter) for wedge in wedges
+  ]
 
-  if all(is_determined, Iterators.flatten(koszul))
-    cohos = [Cohomology{BigInt}(_determined_bigints(k), d_X) for k in koszul]
-    (H, determined) = solve_koszul_filtration(cohos, d_Z)
+  if all(is_determined, Iterators.flatten(koszul_entries))
+    koszul_cohos = [
+      Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in koszul_entries
+    ]
+    (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
     determined && return AffineExpr[AffineExpr(H[k]) for k in 0:d_Z]
 
     # Serre duality fallback: sound when ω_Z ≅ O_Z, provided the spectral
@@ -677,12 +681,14 @@ function _restrict_to_zero_locus_les(
     if is_calabi_yau(Z)
       F_dual = dual(F)
       scratch = Ref(0)
-      koszul_dual = [
-        _cohomology_filtered(tensor_product(F_dual, w), scratch) for w in wedges
+      dual_entries = [
+        _cohomology_filtered(tensor_product(F_dual, wedge), scratch) for wedge in wedges
       ]
-      if all(is_determined, Iterators.flatten(koszul_dual))
-        cohos_dual = [Cohomology{BigInt}(_determined_bigints(k), d_X) for k in koszul_dual]
-        (H_dual, det_dual) = solve_koszul_filtration(cohos_dual, d_Z)
+      if all(is_determined, Iterators.flatten(dual_entries))
+        koszul_cohos_dual = [
+          Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in dual_entries
+        ]
+        (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
         det_dual && return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
       end
     end
@@ -692,7 +698,7 @@ function _restrict_to_zero_locus_les(
   # inequalities, then vanishing H^k(Z, F|_Z) = 0 for k > dim Z and interval
   # propagation over the combined system.
   inequalities = AffineExpr[]
-  chain = long_exact_sequence_cokernel(reverse(koszul), var_counter; inequalities)
+  chain = long_exact_sequence_cokernel(reverse(koszul_entries), var_counter; inequalities)
   system = vcat(chain, inequalities)
   for k in (d_Z + 1):d_X
     is_zero_expr(system[k + 1]) || _apply_equation!(system, system[k + 1])

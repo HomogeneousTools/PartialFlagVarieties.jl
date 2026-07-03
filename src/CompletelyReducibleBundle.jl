@@ -780,7 +780,9 @@ true
 ```
 """
 function dual(E::CompletelyReducibleBundle)
-  CompletelyReducibleBundle(variety(E), IrrepLevi[dual(c) for c in E.components])
+  CompletelyReducibleBundle(
+    variety(E), IrrepLevi[dual(component) for component in E.components]
+  )
 end
 
 """
@@ -828,8 +830,8 @@ end
 """Multiplicity dict of the irreducible summands of `E`."""
 function _to_counts(E::CompletelyReducibleBundle)
   counts = Dict{IrrepLevi,Int}()
-  for c in E.components
-    counts[c] = get(counts, c, 0) + 1
+  for component in E.components
+    counts[component] = get(counts, component, 0) + 1
   end
   counts
 end
@@ -896,7 +898,7 @@ function _power_of_direct_sum(
 )
   counts = _to_counts(E)
   unique_comps = collect(keys(counts))
-  mults = [counts[c] for c in unique_comps]
+  mults = [counts[component] for component in unique_comps]
   n_groups = length(unique_comps)
   capacities = [capacity(unique_comps[g], mults[g]) for g in 1:n_groups]
 
@@ -1069,9 +1071,9 @@ function det(E::CompletelyReducibleBundle)
   mdt = marked_dynkin_type(X)
   triv_ss = _trivial_semisimple_weight(X)
   λ = WeightLatticeElem(dynkin_type(X))
-  for c in components(E)
-    d = fiber_dimension(c)
-    det_rep = IrrepLevi(mdt, d .* c.central, triv_ss)
+  for component in components(E)
+    fiber_rank = fiber_dimension(component)
+    det_rep = IrrepLevi(mdt, fiber_rank .* component.central, triv_ss)
     λ += p_dominant_weight(det_rep)
   end
   CompletelyReducibleBundle(X, λ)
@@ -1132,7 +1134,10 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
   twist_rep = IrrepLevi(mdt, λ)
 
   CompletelyReducibleBundle(
-    E.variety, IrrepLevi[t for c in E.components for t in tensor_product(c, twist_rep)]
+    E.variety,
+    IrrepLevi[
+      t for component in E.components for t in tensor_product(component, twist_rep)
+    ]
   )
 end
 
@@ -1175,7 +1180,7 @@ function Base.show(io::IO, E::CompletelyReducibleBundle)
   elseif length(E.components) == 1
     print(io, "E", E.components[1])
   else
-    parts = ["E" * sprint(show, c) for c in E.components]
+    parts = ["E" * sprint(show, component) for component in E.components]
     print(io, join(parts, " ⊕ "))
   end
 end

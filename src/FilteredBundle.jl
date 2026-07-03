@@ -109,7 +109,9 @@ true
 ```
 """
 function total_bundle(F::FilteredBundle)
-  all_components = IrrepLevi[c for piece in F.pieces for c in components(piece)]
+  all_components = IrrepLevi[
+    component for piece in F.pieces for component in components(piece)
+  ]
   CompletelyReducibleBundle(F.variety, all_components)
 end
 
