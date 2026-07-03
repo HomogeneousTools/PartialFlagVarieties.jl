@@ -1055,19 +1055,17 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    hilbert_polynomial(Z::ZeroLocus) -> Vector{Rational{BigInt}}
+    hilbert_polynomial(Z::ZeroLocus[, L::CompletelyReducibleBundle])
+      -> Vector{Rational{BigInt}}
 
-Compute the Hilbert polynomial ``P(t) = \\chi(Z, \\mathcal{O}_Z(t))`` as a
-polynomial in ``t``.
+Compute the Hilbert polynomial ``P(t) = \\chi(Z, L^{\\otimes t}|_Z)`` of the
+zero locus with respect to the polarization ``L``, as coefficients
+``[a_0, a_1, \\ldots, a_d]`` with ``P(t) = \\sum_k a_k t^k``.
 
-Returns coefficients ``[a_0, a_1, \\ldots, a_d]`` so that
-``P(t) = \\sum_k a_k t^k``.
-
-For a Fano 4-fold ``Z`` of index ``i``, the anticanonical degree is
-``(-K_Z)^4 = i^4 \\cdot 24 \\cdot a_4``, and ``h^0(-K_Z) = P(i)`` (by
-Kodaira–Nakano vanishing).
-
-Requires the ambient variety to have Picard rank 1.
+The polarization must be a line bundle on the ambient variety; for the
+result to be a genuine Hilbert polynomial it should be ample.  Without an
+explicit polarization the ample generator of ``\\mathrm{Pic}(X)`` is used,
+which requires the ambient variety to have Picard rank 1.
 
 # Examples
 ```jldoctest
@@ -1083,15 +1081,35 @@ julia> length(hp) >= 3
 true
 ```
 """
-function hilbert_polynomial(Z::ZeroLocus)
-  X = Z.ambient
-  d = dimension(Z)
+function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
+  marked_dynkin_type(variety(L)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError("the polarization must live on the ambient variety.")
+  )
+  rank_bundle(L) == 1 || throw(
+    ArgumentError("the polarization must be a line bundle (rank 1).")
+  )
+
   # A degree-d polynomial is pinned down by d+1 values; the interpolation
   # is exact over the rationals.
-  values = Rational{BigInt}[
-    Rational{BigInt}(euler_characteristic(Z, line_bundle(X, t))) for t in 0:d
-  ]
+  d = dimension(Z)
+  values = Vector{Rational{BigInt}}(undef, d + 1)
+  power = structure_sheaf(Z.ambient)
+  for t in 0:d
+    values[t + 1] = Rational{BigInt}(euler_characteristic(Z, power))
+    t < d && (power = tensor_product(power, L))
+  end
   _newton_interpolation(values)
+end
+
+function hilbert_polynomial(Z::ZeroLocus)
+  marked = marked_nodes(Z.ambient)
+  length(marked) == 1 || throw(
+    ArgumentError(
+      "hilbert_polynomial on a Picard rank > 1 ambient needs a polarization; " *
+      "pass an ample line bundle as the second argument.",
+    ),
+  )
+  hilbert_polynomial(Z, line_bundle(Z.ambient, 1))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
