@@ -193,6 +193,21 @@ These constraints form a linear system that is solved by iterative
 substitution until a fixed point is reached; see
 [Hochschild cohomology of zero loci](@ref) below for the full algorithm.
 
+**Limits.**  All of the above are linear consequences of exactness on the
+ambient variety, and some Hodge diamonds are provably not determined by
+them.  The model cases are the hyperkähler fourfolds of Beauville–Donagi
+(``Z(\mathrm{Sym}^3 \mathcal{U}^\vee) \subset \mathrm{Gr}(2,6)``) and
+Debarre–Voisin (``Z(\wedge^3 \mathcal{U}^\vee) \subset \mathrm{Gr}(6,10)``),
+where two parameters survive every constraint listed here.  The literature
+computes their diamonds by global arguments instead: the Hodge structure of
+the cubic fourfold (computable by Griffiths residues) is transported through
+the Fano correspondence, the Pfaffian members are identified with the
+Hilbert square ``S^{[2]}`` of a degree-14 K3 surface, and deformation
+invariance transfers the answer to the whole family — inputs that live
+outside sheaf cohomology on the ambient ``G/P``.  The symbolic output is
+still correct: the true diamond is a substitution instance of the returned
+parametrization.
+
 ## Hochschild cohomology of zero loci
 
 ### HKR decomposition

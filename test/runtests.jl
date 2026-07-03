@@ -2505,6 +2505,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # to give the right answer).  Interval propagation over the exactness
     # inequalities does not close the gap either: the remaining freedom is
     # not a linear consequence of exactness, Serre duality, and vanishing.
+    #
+    # The literature closes it with global inputs invisible to this solver:
+    # Beauville–Donagi transport the (Griffiths-computable) Hodge structure
+    # of the cubic fourfold through the Fano correspondence, identify F(Y)
+    # with S^[2] of the degree-14 K3 for Pfaffian cubics, and conclude by
+    # deformation invariance; Debarre–Voisin specialize their trivector to a
+    # Hilbert square as well.
+    #
     # The determined entries and two parameter-free linear consequences below
     # encode the literature values: substituting the true
     # (h^{1,3}, h^{2,1}) = (21, 0) recovers the full K3^[2] diamond.

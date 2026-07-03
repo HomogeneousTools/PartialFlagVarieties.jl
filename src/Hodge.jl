@@ -295,6 +295,16 @@ symbolic variables.
 As throughout the zero-locus API, this assumes that `Z` is the smooth zero
 locus of a regular section.
 
+!!! note "Some diamonds are provably underdetermined"
+    The constraints above are the linear consequences of exactness on the
+    ambient variety, and for some zero loci they do not suffice.  For the
+    Beauville–Donagi and Debarre–Voisin hyperkähler fourfolds two free
+    parameters remain; the literature pins them with global inputs this
+    solver cannot see (the Fano correspondence with the cubic fourfold,
+    identification with a Hilbert square of a K3, and deformation
+    invariance).  The symbolic output still contains the true diamond as a
+    substitution instance.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
