@@ -304,6 +304,97 @@ function _renumber_variables!(M::AbstractArray{AffineExpr})
   M
 end
 
+_infeasible_intervals() = error(
+  "inconsistent long exact sequence constraints: the input data admits no " *
+  "nonnegative solution (is the section regular, with smooth zero locus of " *
+  "the expected dimension?)",
+)
+
+"""
+    _propagate_intervals!(sys::AbstractArray{AffineExpr}) -> Bool
+
+Interval (bound-consistency) propagation on a system of nonnegative
+quantities.
+
+Every element of `sys` represents a nonnegative integer (a cohomology
+dimension or a connecting-map rank), and every symbolic variable is itself a
+nonnegative integer.  Each element ``c + \\sum_j k_j x_j \\ge 0`` bounds each of
+its variables in terms of the current intervals of the others; the bounds are
+tightened to a fixed point, and a variable whose interval collapses to a
+point is substituted throughout `sys`.  Raises when an interval empties,
+which means the input data was inconsistent.
+
+Returns `true` when at least one variable was pinned.  This recovers the
+information the equation-only solvers discard: for example the entries
+``(x - 20, 21 - x, 20 - x + y)`` pin ``x = 20`` and then bound ``y``.
+"""
+function _propagate_intervals!(sys::AbstractArray{AffineExpr})
+  lo = Dict{Int,BigInt}()  # absent: 0
+  hi = Dict{Int,BigInt}()  # absent: unbounded
+
+  pinned_any = false
+  # The sweep cap is a backstop: bounds tighten monotonically, so feasible
+  # systems reach their fixed point long before it (stopping early is sound).
+  for _ in 1:64
+    changed = false
+
+    for e in sys
+      if isempty(e.coeffs)
+        e.constant >= 0 || _infeasible_intervals()
+        continue
+      end
+      for (v, k) in e.coeffs
+        # Bound x_v using c + Σ_{j≠v} k_j x_j ≤ resid, the box maximum of the
+        # other terms; skip when that maximum is unbounded.
+        resid = e.constant
+        bounded = true
+        for (j, kj) in e.coeffs
+          j == v && continue
+          if kj > 0
+            hj = get(hi, j, nothing)
+            hj === nothing && (bounded = false; break)
+            resid += kj * hj
+          else
+            resid += kj * get(lo, j, BigInt(0))
+          end
+        end
+        bounded || continue
+
+        if k < 0
+          # (-k) x_v ≤ resid
+          new_hi = fld(resid, -k)
+          if new_hi < get(hi, v, new_hi + 1)
+            hi[v] = new_hi
+            changed = true
+            new_hi < get(lo, v, BigInt(0)) && _infeasible_intervals()
+          end
+        else
+          # k x_v ≥ -resid
+          new_lo = cld(-resid, k)
+          if new_lo > get(lo, v, BigInt(0))
+            lo[v] = new_lo
+            changed = true
+            new_lo > get(hi, v, new_lo) && _infeasible_intervals()
+          end
+        end
+      end
+    end
+
+    for v in collect(keys(hi))
+      if get(lo, v, BigInt(0)) == hi[v]
+        _substitute_var!(sys, v, AffineExpr(hi[v]))
+        delete!(hi, v)
+        delete!(lo, v)
+        changed = true
+        pinned_any = true
+      end
+    end
+
+    changed || break
+  end
+  pinned_any
+end
+
 """
 Impose the vanishing ``H^k = 0`` for ``k > d`` on a symbolic cohomology
 vector (indexed by degree ``0, \\ldots, \\mathrm{length} - 1``), eliminating
@@ -632,6 +723,31 @@ function _les_equations(les::Vector{AffineExpr})
 end
 
 """
+Partial alternating-sum inequalities of a long exact sequence with zero
+flanks: writing ``r_k`` for the rank of the map out of slot ``k``, exactness
+gives ``s_k = r_{k-1} + r_k``, so the partial sums satisfy
+
+```math
+(-1)^{k-1} \\sum_{i \\le k} (-1)^{i-1} s_i = r_k \\ge 0 .
+```
+
+Returns one expression per proper partial sum (the full sum is the usual
+equality and is omitted), each of which is a nonnegative quantity.  These
+encode every linear consequence of exactness, in particular the bounds
+``r_k \\le \\min(s_k, s_{k+1})`` that the equation-only solvers discard.
+"""
+function _les_inequalities(les::Vector{AffineExpr})
+  inequalities = AffineExpr[]
+  partial = AffineExpr(0)
+  for k in 1:(length(les) - 1)
+    partial = isodd(k) ? partial + les[k] : partial - les[k]
+    rank_k = isodd(k) ? partial : -partial
+    is_determined(rank_k) || push!(inequalities, rank_k)
+  end
+  inequalities
+end
+
+"""
 Interleave the cohomologies of a short exact sequence
 ``0 \\to A \\to B \\to C \\to 0`` into its long exact sequence
 ``(a_0, b_0, c_0, a_1, b_1, c_1, \\ldots)``.
@@ -669,7 +785,8 @@ delegated to the bound-propagation solver first.
 """
 function les_cokernel(
   a::Vector{AffineExpr}, b::Vector{AffineExpr},
-  var_counter::Ref{Int},
+  var_counter::Ref{Int};
+  inequalities::Union{Nothing,Vector{AffineExpr}}=nothing,
 )
   n = length(a)
   length(b) == n || throw(
@@ -687,11 +804,17 @@ function les_cokernel(
   for eq in _les_equations(_les_interleave(a, b, c))
     _apply_equation_in_vars!(c, eq)
   end
+  if inequalities !== nothing
+    append!(inequalities, _les_inequalities(_les_interleave(a, b, c)))
+  end
   c
 end
 
-function les_cokernel(a::Vector{AffineExpr}, b::Vector{BigInt}, var_counter::Ref{Int})
-  les_cokernel(a, _as_affine(b), var_counter)
+function les_cokernel(
+  a::Vector{AffineExpr}, b::Vector{BigInt}, var_counter::Ref{Int};
+  inequalities::Union{Nothing,Vector{AffineExpr}}=nothing,
+)
+  les_cokernel(a, _as_affine(b), var_counter; inequalities)
 end
 
 """
@@ -705,7 +828,8 @@ long exact sequence.
 """
 function les_kernel(
   b::Vector{AffineExpr}, c::Vector{AffineExpr},
-  var_counter::Ref{Int},
+  var_counter::Ref{Int};
+  inequalities::Union{Nothing,Vector{AffineExpr}}=nothing,
 )
   n = length(b)
   length(c) == n || throw(
@@ -717,6 +841,9 @@ function les_kernel(
   a = AffineExpr[_fresh_variable(var_counter) for _ in 1:n]
   for eq in _les_equations(_les_interleave(a, b, c))
     _apply_equation_in_vars!(a, eq)
+  end
+  if inequalities !== nothing
+    append!(inequalities, _les_inequalities(_les_interleave(a, b, c)))
   end
   a
 end
@@ -732,11 +859,12 @@ iteratively apply [`les_cokernel`](@ref) to compute the final cokernel:
 ```
 """
 function long_exact_sequence_cokernel(
-  terms::Vector{Vector{T}}, var_counter::Ref{Int}
+  terms::Vector{Vector{T}}, var_counter::Ref{Int};
+  inequalities::Union{Nothing,Vector{AffineExpr}}=nothing,
 ) where {T<:Union{BigInt,AffineExpr}}
   current = _as_affine(terms[1])
   for j in 2:length(terms)
-    current = les_cokernel(current, terms[j], var_counter)
+    current = les_cokernel(current, terms[j], var_counter; inequalities)
   end
   current
 end

@@ -580,29 +580,53 @@ function _restrict_to_zero_locus_les(
     end
   end
 
-  # Symbolic path: chain the Koszul LES over K_r, K_{r-1}, …, K_0 and impose
-  # the vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
-  result = _truncate_cohomology!(
-    long_exact_sequence_cokernel(_reversed_koszul_vecs(koszul_cohos), var_counter), d_Z
+  # Symbolic path: chain the Koszul LES over K_r, K_{r-1}, …, K_0, harvesting
+  # the exactness inequalities of every long exact sequence along the way.
+  # For ω_Z ≅ O_Z the dual bundle is chained as well, and Serre duality
+  # H^k(Z, F|_Z) = H^{d-k}(Z, F^∨|_Z) is imposed entry by entry: both chains
+  # are sound parametrizations, so equating them is a sound constraint
+  # (unlike cross-validating two undetermined numeric guesses).
+  inequalities = AffineExpr[]
+  primal = long_exact_sequence_cokernel(
+    _reversed_koszul_vecs(koszul_cohos), var_counter; inequalities
   )
-
-  # For ω_Z ≅ O_Z, chain the dual bundle symbolically as well and impose
-  # Serre duality H^k(Z, F|_Z) = H^{d-k}(Z, F^∨|_Z) entry by entry.  Both
-  # chains are sound parametrizations, so equating them is a sound
-  # constraint (unlike cross-validating two undetermined numeric guesses).
-  if koszul_cohos_dual !== nothing
-    result_dual = _truncate_cohomology!(
-      long_exact_sequence_cokernel(_reversed_koszul_vecs(koszul_cohos_dual), var_counter),
-      d_Z,
+  dual_chain = if koszul_cohos_dual === nothing
+    AffineExpr[]
+  else
+    long_exact_sequence_cokernel(
+      _reversed_koszul_vecs(koszul_cohos_dual), var_counter; inequalities
     )
-    combined = vcat(result, result_dual)
-    for k in 0:d_Z
-      _apply_equation!(combined, combined[k + 1] - combined[2d_Z + 2 - k])
-    end
-    result = combined[1:(d_Z + 1)]
   end
 
-  result
+  # One combined system so every substitution stays synchronized between the
+  # entries and the harvested inequalities.
+  n = length(primal)
+  sys = vcat(primal, dual_chain, inequalities)
+
+  apply_structure! = function ()
+    applied = false
+    for k in (d_Z + 1):(n - 1)
+      # vanishing H^k(Z, ·) = 0 above dim Z, on both chains
+      is_zero_expr(sys[k + 1]) || (applied |= _apply_equation!(sys, sys[k + 1]))
+      if !isempty(dual_chain)
+        is_zero_expr(sys[n + k + 1]) || (applied |= _apply_equation!(sys, sys[n + k + 1]))
+      end
+    end
+    if !isempty(dual_chain)
+      for k in 0:d_Z
+        eq = sys[k + 1] - sys[n + d_Z - k + 1]
+        is_zero_expr(eq) || (applied |= _apply_equation!(sys, eq))
+      end
+    end
+    applied
+  end
+
+  apply_structure!()
+  while _propagate_intervals!(sys)
+    apply_structure!() || break
+  end
+
+  sys[1:(d_Z + 1)]
 end
 
 """Extract the Koszul cohomologies as plain vectors in reversed order K_r, …, K_0."""
@@ -658,10 +682,16 @@ function _restrict_to_zero_locus_les(
     end
   end
 
-  # Symbolic Koszul chain in reversed order K_r, …, K_0, then vanishing
-  # H^k(Z, F|_Z) = 0 for k > dim Z.
-  result = long_exact_sequence_cokernel(reverse(koszul), var_counter)
-  _truncate_cohomology!(result, d_Z)
+  # Symbolic Koszul chain in reversed order K_r, …, K_0, with the exactness
+  # inequalities, then vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
+  inequalities = AffineExpr[]
+  chain = long_exact_sequence_cokernel(reverse(koszul), var_counter; inequalities)
+  sys = vcat(chain, inequalities)
+  for k in (d_Z + 1):d_X
+    is_zero_expr(sys[k + 1]) || _apply_equation!(sys, sys[k + 1])
+  end
+  _propagate_intervals!(sys)
+  sys[1:(d_Z + 1)]
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -982,13 +1012,18 @@ function tangent_cohomology(Z::ZeroLocus)
 
   HT = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(Z.ambient), var_counter)
   HE = _restrict_to_zero_locus_les(Z, _to_counts(Z.defining_bundle), var_counter)
-  entries = les_kernel(HT, HE, var_counter)
+  inequalities = AffineExpr[]
+  kernel = les_kernel(HT, HE, var_counter; inequalities)
+  sys = vcat(kernel, inequalities)
 
   # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
   chi =
     euler_characteristic(Z, tangent_bundle(Z.ambient)) -
     euler_characteristic(Z, Z.defining_bundle)
-  _apply_equation!(entries, _alternating_sum(entries) - AffineExpr(chi))
+  n = length(kernel)
+  _apply_equation!(sys, _alternating_sum(@view sys[1:n]) - AffineExpr(chi))
+  _propagate_intervals!(sys)
+  entries = sys[1:n]
 
   # For a strict Calabi–Yau, T_Z ≅ Ω^{d-1}_Z ⊗ ω_Z^{-1} ≅ Ω^{d-1}_Z, and
   # h^0(Ω^{d-1}_Z) = h^{d-1,0} = h^{d-1}(O_Z) = 0.

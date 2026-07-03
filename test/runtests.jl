@@ -2502,10 +2502,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # The long exact sequences plus the symmetry constraints do not pin the
     # diamond down completely (two free parameters remain; earlier versions
     # reported exact values through an unsound Serre shortcut that happened
-    # to give the right answer).  The determined entries and two
-    # parameter-free linear consequences below encode the literature values:
-    # substituting the true (h^{1,3}, h^{2,1}) = (21, 0) recovers the full
-    # K3^[2] diamond.
+    # to give the right answer).  Interval propagation over the exactness
+    # inequalities does not close the gap either: the remaining freedom is
+    # not a linear consequence of exactness, Serre duality, and vanishing.
+    # The determined entries and two parameter-free linear consequences below
+    # encode the literature values: substituting the true
+    # (h^{1,3}, h^{2,1}) = (21, 0) recovers the full K3^[2] diamond.
     X1 = Gr(2, 6)
     E1 = symmetric_power(dual(universal_subbundle(X1)), 3)
     Z1 = zero_locus(E1)
@@ -2799,6 +2801,30 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
     @test a[1] == b[1]
     @test sweeps <= 2
+  end
+
+  @testset "_propagate_intervals!" begin
+    x = symbolic_variable(0)
+    y = symbolic_variable(1)
+
+    # Bounds without collapse leave the system unchanged.
+    sys = [x - 20, 21 - x]
+    @test !PartialFlagVarieties._propagate_intervals!(sys)
+    @test sys == [x - 20, 21 - x]
+
+    # A collapsing interval pins the variable and substitutes it everywhere.
+    sys = [x - 20, 20 - x, 20 - x + y, 3 - y]
+    @test PartialFlagVarieties._propagate_intervals!(sys)
+    @test sys[1] == 0 && sys[3] == y
+
+    # Chained bounds: y ≤ x and x ≤ 5 pin nothing, but y ≤ x, x ≤ y, y ≤ 0
+    # collapse both to zero.
+    sys = [x - y, y - x, -y + 0]
+    @test PartialFlagVarieties._propagate_intervals!(sys)
+    @test all(is_zero_expr, sys)
+
+    # An empty interval means the input data was inconsistent.
+    @test_throws ErrorException PartialFlagVarieties._propagate_intervals!([x - 5, 3 - x])
   end
 
   @testset "les_kernel" begin

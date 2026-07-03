@@ -559,13 +559,22 @@ function _conormal_row(
     return _restrict_to_zero_locus_les(Z, f_counts, var_counter, G.wedge_counts)
   end
 
+  inequalities = AffineExpr[]
   row = _restrict_conormal_term(C, p, 0, var_counter)
   for j in 1:p
-    row = les_cokernel(row, _restrict_conormal_term(C, p, j, var_counter), var_counter)
+    row = les_cokernel(
+      row, _restrict_conormal_term(C, p, j, var_counter), var_counter; inequalities
+    )
   end
 
-  # Vanishing H^k(Z, ·) = 0 for k > dim Z.
-  _truncate_cohomology!(row, d)
+  # Vanishing H^k(Z, ·) = 0 for k > dim Z, then interval propagation over the
+  # row entries and the harvested exactness inequalities.
+  sys = vcat(row, inequalities)
+  for k in (d + 1):(length(row) - 1)
+    is_zero_expr(sys[k + 1]) || _apply_equation!(sys, sys[k + 1])
+  end
+  _propagate_intervals!(sys)
+  sys[1:(d + 1)]
 end
 
 """Exact ``\\chi(Z, \\Omega^p_Z \\otimes L|_Z)`` from K-theory, memoized in `C`."""
@@ -676,6 +685,10 @@ function _propagate_hodge_constraints!(
       (p == dq && q == d - p) && continue
       changed |= _apply_hodge_pair!(M, p + 1, q + 1, dq + 1, d - p + 1)
     end
+
+    # Every Hodge number is nonnegative: interval propagation over the matrix
+    # can pin variables the linear equations alone leave open.
+    changed |= _propagate_intervals!(M)
   end
   M
 end
