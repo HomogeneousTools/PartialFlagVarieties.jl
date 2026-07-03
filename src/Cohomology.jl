@@ -532,12 +532,11 @@ end
     hilbert_polynomial(E::CompletelyReducibleBundle;
                        max_degree::Int=20) -> Vector{Rational{BigInt}}
 
-Compute the Hilbert polynomial of a bundle ``E`` on a generalized Grassmannian
-(Picard rank 1), using the ample generator of ``\\operatorname{Pic}(X)`` as
-the polarization.
-
-For higher Picard rank, pass an explicit polarization line bundle as a second
-argument.
+Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to
+the minimal ample polarization ``\\mathcal{O}(1, \\ldots, 1)`` (degree one at
+every marked node); for Picard rank 1 this is the ample generator of
+``\\operatorname{Pic}(X)``.  Pass an explicit line bundle as a second
+argument for any other polarization.
 
 # Examples
 ```jldoctest
@@ -554,13 +553,9 @@ julia> hilbert_polynomial(structure_sheaf(X))
 ```
 """
 function hilbert_polynomial(E::CompletelyReducibleBundle; max_degree::Int=20)
-  marked = marked_nodes(variety(E))
-  length(marked) == 1 || throw(
-    ArgumentError(
-      "hilbert_polynomial on a Picard rank > 1 variety needs a polarization; pass an ample line bundle as the second argument."
-    ),
-  )
-  hilbert_polynomial(E, line_bundle(variety(E), 1); max_degree=max_degree)
+  X = variety(E)
+  polarization = line_bundle(X, ones(Int, length(marked_nodes(X))))
+  hilbert_polynomial(E, polarization; max_degree=max_degree)
 end
 
 """

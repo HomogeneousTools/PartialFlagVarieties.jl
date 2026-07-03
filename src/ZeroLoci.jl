@@ -1064,8 +1064,9 @@ zero locus with respect to the polarization ``L``, as coefficients
 
 The polarization must be a line bundle on the ambient variety; for the
 result to be a genuine Hilbert polynomial it should be ample.  Without an
-explicit polarization the ample generator of ``\\mathrm{Pic}(X)`` is used,
-which requires the ambient variety to have Picard rank 1.
+explicit polarization the minimal ample line bundle
+``\\mathcal{O}(1, \\ldots, 1)`` (degree one at every marked node) is used;
+for Picard rank 1 this is the ample generator of ``\\mathrm{Pic}(X)``.
 
 # Examples
 ```jldoctest
@@ -1102,14 +1103,8 @@ function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
 end
 
 function hilbert_polynomial(Z::ZeroLocus)
-  marked = marked_nodes(Z.ambient)
-  length(marked) == 1 || throw(
-    ArgumentError(
-      "hilbert_polynomial on a Picard rank > 1 ambient needs a polarization; " *
-      "pass an ample line bundle as the second argument.",
-    ),
-  )
-  hilbert_polynomial(Z, line_bundle(Z.ambient, 1))
+  X = Z.ambient
+  hilbert_polynomial(Z, line_bundle(X, ones(Int, length(marked_nodes(X)))))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -933,8 +933,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1])) ==
       Rational{BigInt}[1, 2, 1]
 
-    # No polarization on Picard rank > 1: throws.
-    @test_throws ArgumentError hilbert_polynomial(structure_sheaf(X))
+    # No polarization: the minimal ample O(1, …, 1) is the default.
+    @test hilbert_polynomial(structure_sheaf(X)) ==
+      hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1]))
 
     # Polarization must be a line bundle on the same variety as E.
     @test_throws ArgumentError hilbert_polynomial(structure_sheaf(P3), tangent_bundle(P3))
