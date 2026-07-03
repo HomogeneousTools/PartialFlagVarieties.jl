@@ -794,8 +794,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # canonical ⊗ anticanonical = structure sheaf (trivial bundle)
     X = projective_space(2)
-    prod = canonical_bundle(X) ⊗ anticanonical_bundle(X)
-    @test dimensions(prod)[0] == 1  # H^0(O) = 1
+    product_bundle = canonical_bundle(X) ⊗ anticanonical_bundle(X)
+    @test dimensions(product_bundle)[0] == 1  # H^0(O) = 1
   end
 
   @testset "Fano index: ambient varieties" begin
@@ -828,7 +828,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test fano_index(zero_locus(line_bundle(X, 5))) == 0   # CY: -K = O(0)
 
     # Z(O(1) ⊕ O(1)) in P^4: a codim-2 surface, fano_index = 5 - 2 = 3
-    E2 = direct_sum(line_bundle(X, 1), line_bundle(X, 1))
+    E2 = 2 * line_bundle(X, 1)
     @test fano_index(zero_locus(E2)) == 3
 
     # Adjunction consistency: fano_index(Z) = fano_index(X) - deg(det E)
@@ -850,12 +850,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = projective_space(4)
     O = structure_sheaf(X)
     H = cohomology(O)
-    d = dimensions(H)
+    dims = dimensions(H)
 
     # H⁰(ℙ⁴, 𝒪) = 1, Hⁱ = 0 for i > 0
-    @test d[0] == 1
+    @test dims[0] == 1
     for i in 1:4
-      @test d[i] == 0
+      @test dims[i] == 0
     end
   end
 
@@ -1677,22 +1677,22 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Hodge numbers" begin
     # ℙ^3: diagonal Hodge diamond
     X = projective_space(3)
-    H = hodge_numbers(X)
-    @test H[1, 1] == 1  # h^{0,0}
-    @test H[2, 2] == 1  # h^{1,1}
-    @test H[3, 3] == 1  # h^{2,2}
-    @test H[4, 4] == 1  # h^{3,3}
-    @test H[1, 2] == 0  # h^{0,1}
-    @test H[2, 1] == 0  # h^{1,0}
+    h = hodge_numbers(X)
+    @test h[1, 1] == 1  # h^{0,0}
+    @test h[2, 2] == 1  # h^{1,1}
+    @test h[3, 3] == 1  # h^{2,2}
+    @test h[4, 4] == 1  # h^{3,3}
+    @test h[1, 2] == 0  # h^{0,1}
+    @test h[2, 1] == 0  # h^{1,0}
 
     # Gr(2, 4): b₀=1, b₂=1, b₄=2, b₆=1, b₈=1
     #           h^{p,q} = 0 for p ≠ q, h^{p,p} = b_{2p}
     X2 = Gr(2, 4)
-    H2 = hodge_numbers(X2)
-    @test H2[1, 1] == 1  # h^{0,0} = b₀ = 1
-    @test H2[2, 2] == 1  # h^{1,1} = b₂ = 1
-    @test H2[3, 3] == 2  # h^{2,2} = b₄ = 2
-    @test H2[1, 3] == 0
+    h2 = hodge_numbers(X2)
+    @test h2[1, 1] == 1  # h^{0,0} = b₀ = 1
+    @test h2[2, 2] == 1  # h^{1,1} = b₂ = 1
+    @test h2[3, 3] == 2  # h^{2,2} = b₄ = 2
+    @test h2[1, 3] == 0
   end
 
   @testset "Twisted Hodge numbers" begin
@@ -1810,10 +1810,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # H*(C) should be [1,0] (determined)
     a = Cohomology{BigInt}(BigInt[1, 0], 1)
     b = Cohomology{BigInt}(BigInt[2, 0], 1)
-    (c, det) = solve_ses_cohomology(a, b)
+    (c, determined) = solve_ses_cohomology(a, b)
     @test c[0] == 1
     @test c[1] == 0
-    @test det == true
+    @test determined
 
     var_counter = Ref(0)
     c_expr = PartialFlagVarieties.les_cokernel(
@@ -2049,7 +2049,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     X5 = projective_space(5)
-    E = direct_sum(line_bundle(X5, 3), line_bundle(X5, 3))
+    E = 2 * line_bundle(X5, 3)
     @test is_calabi_yau(zero_locus(E)) == true
     @test is_strict_calabi_yau(zero_locus(E)) == true
   end
@@ -2093,7 +2093,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # h^0(O) = 1, and -K is trivially ample: so CY, strict CY, and strongly Fano.
     P4 = projective_space(4)
     H = line_bundle(P4, 1)
-    Z = zero_locus(reduce(direct_sum, [H for _ in 1:4]))
+    Z = zero_locus(4 * H)
     @test dimension(Z) == 0
     @test euler_characteristic(Z) == 1
     @test is_calabi_yau(Z) == true
@@ -2104,7 +2104,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # h^0(O_Z) = 2, so the locus is disconnected and not a strict CY.
     P3 = projective_space(3)
     Z2 = zero_locus(
-      reduce(direct_sum, [line_bundle(P3, 1), line_bundle(P3, 1), line_bundle(P3, 2)])
+      2 * line_bundle(P3, 1) + line_bundle(P3, 2)
     )
     @test dimension(Z2) == 0
     @test euler_characteristic(Z2) == 2
@@ -2169,7 +2169,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Two cubics in P^5: CY3, h^{1,1}=1, h^{2,1}=73
     X5 = projective_space(5)
-    E = direct_sum(line_bundle(X5, 3), line_bundle(X5, 3))
+    E = 2 * line_bundle(X5, 3)
     Z5 = zero_locus(E)
     h5 = hodge_numbers(Z5)
     @test h5[2, 2] == 1   # h^{1,1}
@@ -2203,7 +2203,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "ZeroLocus: Hodge numbers (Grassmannian)" begin
     # O(1)^4 on Gr(2,6): Küchle c6, h^{1,1}=1, h^{2,2}=8
     X = Gr(2, 6)
-    E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:4])
+    E = 4 * line_bundle(X, 1)
     Z = zero_locus(E)
     @test dimension(Z) == 4
     h = hodge_numbers(Z)
@@ -2470,7 +2470,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Constraint propagation: h^{1,0} = 0 for Küchle c6 Fano fourfold
     X2 = Gr(2, 6)
-    E2 = reduce(direct_sum, [line_bundle(X2, 1) for _ in 1:4])
+    E2 = 4 * line_bundle(X2, 1)
     Z2 = zero_locus(E2)
     H2 = hodge_numbers_symbolic(Z2)
     @test is_determined(H2[2, 1])       # h^{1,0} determined
@@ -2555,8 +2555,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # must NOT be applied when computing cohomology of bundles on the zero locus.
 
     # b2: O(2)² on Gr(2,5)   — h¹¹=1, h¹³=20, h²²=132, χ_top=176
-    let X = Gr(2, 5), E = direct_sum(line_bundle(X, 2), line_bundle(X, 2)),
-      Z = zero_locus(E), h = hodge_numbers(Z)
+    let X = Gr(2, 5), E = 2 * line_bundle(X, 2), Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
       @test h[2, 2] == 1     # h^{1,1}
@@ -2567,8 +2566,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # b6: O(1)³ + O(2) on Gr(2,6)   — h¹¹=1, h¹³=15, h²²=106, χ_top=140
-    let X = Gr(2, 6), O1 = line_bundle(X, 1),
-      E = direct_sum(direct_sum(O1, direct_sum(O1, O1)), line_bundle(X, 2)),
+    let X = Gr(2, 6), O1 = line_bundle(X, 1), E = 3 * O1 + line_bundle(X, 2),
       Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
@@ -2579,8 +2577,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # b7: O(1)⁶ on Gr(2,7)   — h¹¹=1, h¹³=6, h²²=57, χ_top=73
-    let X = Gr(2, 7), O1 = line_bundle(X, 1),
-      E = foldl(direct_sum, [line_bundle(X, 1) for _ in 1:6]), Z = zero_locus(E),
+    let X = Gr(2, 7), O1 = line_bundle(X, 1), E = 6 * line_bundle(X, 1), Z = zero_locus(E),
       h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
@@ -2777,11 +2774,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # ── Küchle Fano 4-folds ──────────────────────────────────────────────────
-    let X = Gr(2, 5), E = direct_sum(line_bundle(X, 2), line_bundle(X, 2))
+    let X = Gr(2, 5), E = 2 * line_bundle(X, 2)
       @test euler_characteristic_tangent_bundle(zero_locus(E)) == -72   # b2
     end
 
-    let X = Gr(2, 7), E = foldl(direct_sum, [line_bundle(X, 1) for _ in 1:6])
+    let X = Gr(2, 7), E = 6 * line_bundle(X, 1)
       @test euler_characteristic_tangent_bundle(zero_locus(E)) == -42   # b7
     end
 
@@ -2836,15 +2833,15 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "les_kernel" begin
-    vc = Ref(0)
+    var_counter = Ref(0)
     # H*(C) = 0 forces H*(A) = H*(B)
     @test PartialFlagVarieties.les_kernel(
-      AffineExpr.([3, 1, 0]), AffineExpr.([0, 0, 0]), vc
+      AffineExpr.([3, 1, 0]), AffineExpr.([0, 0, 0]), var_counter
     ) == AffineExpr.([3, 1, 0])
 
     # 0 → a₀ → 5 → 2 → a₁ → 0 → ⋯ gives a₀ = 3 + a₁, and a₂ = 0
     a = PartialFlagVarieties.les_kernel(
-      AffineExpr.([5, 0, 0]), AffineExpr.([2, 0, 0]), vc
+      AffineExpr.([5, 0, 0]), AffineExpr.([2, 0, 0]), var_counter
     )
     @test a[1] - a[2] == AffineExpr(3)
     @test is_zero_expr(a[3])
@@ -2858,7 +2855,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
 
     # K3 of degree 14 in Gr(2,6): h¹(T) = 20.
-    let X = Gr(2, 6), Z = zero_locus(reduce(direct_sum, [line_bundle(X, 1) for _ in 1:6]))
+    let X = Gr(2, 6), Z = zero_locus(6 * line_bundle(X, 1))
       H = tangent_cohomology(Z)
       @test [H[i] for i in 0:2] == AffineExpr.([0, 20, 0])
     end
@@ -2938,7 +2935,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Fano threefold O(1)^4: h^{1,1} = 1 by Lefschetz and χ(Ω¹) = 4
     # forces h^{1,2} = 5.
-    E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:4])
+    E = 4 * line_bundle(X, 1)
     h3 = hodge_numbers(zero_locus(E))
     @test h3[2, 2] == 1
     @test h3[2, 3] == 5
@@ -3119,7 +3116,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
       # O(1) ⊕ O(1) on P^1 (rank exceeds dim, encode via bundle directly)
       let X = projective_space(1)
-        E = direct_sum(line_bundle(X, 1), line_bundle(X, 1))
+        E = 2 * line_bundle(X, 1)
         @test zerolocus62_label(E) == "1.00"
       end
 
@@ -3206,7 +3203,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       end
 
       let X = projective_space(3)
-        Z = zero_locus(direct_sum(line_bundle(X, 1), line_bundle(X, 1)))
+        Z = zero_locus(2 * line_bundle(X, 1))
         label = zerolocus62_label(Z)
         Z2 = zero_locus(label)
         @test zerolocus62_label(Z2) == label
