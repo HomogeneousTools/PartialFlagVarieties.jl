@@ -53,45 +53,29 @@ Return the highest weight of the semisimple Levi factor component of `rep`.
 """
 semisimple_part(rep::IrrepLevi) = rep.semisimple
 
-_central_length(mdt::MarkedDynkinType) = central_rank(mdt)
-
 @inline function _apply_central_ext(mdt::MarkedDynkinType, λ_ivec::AbstractVector{Int})
-  marked = marked_nodes(mdt)
   M = decomposition_matrix(mdt)
   sf = Int(central_scaling_factor(mdt))
-  central = Vector{Int}(undef, length(marked))
-  for (idx, m) in enumerate(marked)
-    total = 0
-    for k in eachindex(λ_ivec)
-      total += round(Int, M[m, k] * sf) * λ_ivec[k]
-    end
-    central[idx] = total
-  end
-  central
+  Int[
+    sum(round(Int, M[m, k] * sf) * λ_ivec[k] for k in eachindex(λ_ivec)) for
+    m in marked_nodes(mdt)
+  ]
 end
 
 @inline function _amb_scalars(mdt::MarkedDynkinType)
   sf = Int(central_scaling_factor(mdt))
   Minv = decomposition_matrix_inv(mdt)
-  sf_total = sf
-  for j in axes(Minv, 1), k in axes(Minv, 2)
-    sf_total = lcm(sf_total, denominator(Minv[j, k]))
-  end
+  sf_total = reduce(lcm, denominator.(Minv); init=sf)
   (sf_total, sf_total ÷ sf)
 end
 
 @inline function _apply_Minv_int(mdt::MarkedDynkinType, x::AbstractVector{Int})
   Minv = decomposition_matrix_inv(mdt)
   sf_total, _ = _amb_scalars(mdt)
-  result = Vector{Int}(undef, length(x))
-  for i in eachindex(result)
-    total = 0
-    for j in eachindex(x)
-      total += round(Int, Minv[i, j] * sf_total) * x[j]
-    end
-    result[i] = total
-  end
-  result
+  Int[
+    sum(round(Int, Minv[i, j] * sf_total) * x[j] for j in eachindex(x)) for
+    i in eachindex(x)
+  ]
 end
 
 """
@@ -112,24 +96,15 @@ end
 
 function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
   unmarked = unmarked_nodes(mdt)
-  λ_coeffs = coefficients(λ)
-  λ_ivec = Vector{Int}(undef, length(λ_coeffs))
-  for i in eachindex(λ_coeffs)
-    λ_ivec[i] = λ_coeffs[i]
-  end
+  λ_ivec = collect(Int, coefficients(λ))
   central = _apply_central_ext(mdt, λ_ivec)
 
-  if is_borel(mdt)
-    semisimple = _trivial_semisimple_weight(mdt)
+  semisimple = if is_borel(mdt)
+    _trivial_semisimple_weight(mdt)
   else
     LT = levi_type(mdt)
-    LR = rank(LT)
     perm = levi_permutation(mdt)
-    ss_coords = Vector{Int}(undef, LR)
-    for j in 1:LR
-      ss_coords[j] = λ_ivec[unmarked[perm[j]]]
-    end
-    semisimple = WeightLatticeElem(LT, ss_coords)
+    WeightLatticeElem(LT, Int[λ_ivec[unmarked[perm[j]]] for j in 1:rank(LT)])
   end
 
   IrrepLevi(mdt, λ, central, semisimple)
@@ -138,9 +113,9 @@ end
 function IrrepLevi(
   mdt::MarkedDynkinType, central::AbstractVector{Int}, semisimple::WeightLatticeElem
 )
-  length(central) == _central_length(mdt) || throw(
+  length(central) == central_rank(mdt) || throw(
     ArgumentError(
-      "Expected $(_central_length(mdt)) central coordinates, got $(length(central))."
+      "Expected $(central_rank(mdt)) central coordinates, got $(length(central))."
     ),
   )
 
@@ -150,38 +125,16 @@ function IrrepLevi(
   R = rank(DT)
 
   sf_total, ratio = _amb_scalars(mdt)
-  coords_full = Vector{Int}(undef, R)
+  coords_full = zeros(Int, R)
+  coords_full[collect(marked)] .= central .* ratio
 
-  for (idx, m) in enumerate(marked)
-    coords_full[m] = Int(central[idx]) * ratio
+  ss_vec = coefficients(semisimple)
+  if !isempty(unmarked) && !isempty(ss_vec)
+    inverse_perm = invperm(collect(levi_permutation(mdt)))
+    coords_full[collect(unmarked)] .= ss_vec[inverse_perm] .* sf_total
   end
 
-  if !isempty(unmarked)
-    ss_vec = coefficients(semisimple)
-    LR = length(ss_vec)
-    if LR > 0
-      perm = levi_permutation(mdt)
-      inv_perm = Vector{Int}(undef, LR)
-      for j in 1:LR
-        inv_perm[perm[j]] = j
-      end
-      for (i, u) in enumerate(unmarked)
-        coords_full[u] = ss_vec[inv_perm[i]] * sf_total
-      end
-    else
-      for u in unmarked
-        coords_full[u] = 0
-      end
-    end
-  end
-
-  ambient_scaled = _apply_Minv_int(mdt, coords_full)
-  sf_sq = sf_total * sf_total
-  λ_coords = Vector{Int}(undef, length(ambient_scaled))
-  for i in eachindex(ambient_scaled)
-    λ_coords[i] = div(ambient_scaled[i], sf_sq)
-  end
-  λ = WeightLatticeElem(DT, λ_coords)
+  λ = WeightLatticeElem(DT, div.(_apply_Minv_int(mdt, coords_full), sf_total^2))
 
   IrrepLevi(mdt, λ, Vector{Int}(central), semisimple)
 end
@@ -190,7 +143,7 @@ function IrrepLevi(
   mdt::MarkedDynkinType, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem
 )
   sf = central_scaling_factor(mdt)
-  central_scaled = Int[Int(c * sf) for c in central]
+  central_scaled = Int.(central .* sf)
   IrrepLevi(mdt, central_scaled, semisimple)
 end
 
@@ -236,12 +189,24 @@ const _TENSOR_PRODUCT_CACHE = let b = _default_cache_budget()
   )
 end
 
+"""
+Canonical order for an unordered cache key: tensor products of Levi
+representations are symmetric (``V ⊗ W ≅ W ⊗ V``, and every consumer treats
+the decomposition as a multiset), so both orders share one cache entry.
+"""
+function _unordered_pair(a::IrrepLevi, b::IrrepLevi)
+  hash(a) <= hash(b) ? (a, b) : (b, a)
+end
+
 function _tensor_product_terms(a::IrrepLevi, b::IrrepLevi)
-  get!(_TENSOR_PRODUCT_CACHE, (a, b)) do
+  get!(_TENSOR_PRODUCT_CACHE, _unordered_pair(a, b)) do
     _tensor_product_terms_uncached(a, b)
   end
 end
 
+# The following wrappers deliberately @nospecialize on the rank-parametric
+# WeightLatticeElem{DT,R}: they keep the callers from being recompiled once
+# per ambient rank (same latency pattern as in Cohomology.jl).
 _dual_semisimple_generic(@nospecialize(ss::WeightLatticeElem)) = dual(ss)
 _tensor_product_character_generic(
   @nospecialize(a::WeightLatticeElem), @nospecialize(b::WeightLatticeElem)
@@ -267,13 +232,7 @@ decomposition calls.
 function tensor_product(a::IrrepLevi, b::IrrepLevi)
   terms = _tensor_product_terms(a, b)
 
-  result = IrrepLevi[]
-  for (rep, mult) in terms
-    for _ in 1:mult
-      push!(result, rep)
-    end
-  end
-  result
+  IrrepLevi[rep for (rep, mult) in terms for _ in 1:mult]
 end
 
 function _tensor_product_terms_uncached(a::IrrepLevi, b::IrrepLevi)
@@ -299,11 +258,7 @@ function _tensor_product_terms_uncached(a::IrrepLevi, b::IrrepLevi)
   end
 
   χ = _tensor_product_character_generic(ss_a, ss_b)
-  result = Pair{IrrepLevi,Int}[]
-  for (hw, mult) in χ
-    push!(result, IrrepLevi(mdt, new_central, hw) => Int(mult))
-  end
-  result
+  Pair{IrrepLevi,Int}[IrrepLevi(mdt, new_central, hw) => Int(mult) for (hw, mult) in χ]
 end
 
 """
@@ -348,13 +303,7 @@ function exterior_power(rep::IrrepLevi, k::Integer)
   k > dim_ss && return IrrepLevi[]
 
   χ = _exterior_power_character_generic(ss, k)
-  result = IrrepLevi[]
-  for (hw, mult) in χ
-    for _ in 1:mult
-      push!(result, IrrepLevi(mdt, new_central, hw))
-    end
-  end
-  result
+  IrrepLevi[IrrepLevi(mdt, new_central, hw) for (hw, mult) in χ for _ in 1:mult]
 end
 
 """
@@ -380,13 +329,7 @@ function symmetric_power(rep::IrrepLevi, k::Integer)
   end
 
   χ = _symmetric_power_character_generic(ss, k)
-  result = IrrepLevi[]
-  for (hw, mult) in χ
-    for _ in 1:mult
-      push!(result, IrrepLevi(mdt, new_central, hw))
-    end
-  end
-  result
+  IrrepLevi[IrrepLevi(mdt, new_central, hw) for (hw, mult) in χ for _ in 1:mult]
 end
 
 """

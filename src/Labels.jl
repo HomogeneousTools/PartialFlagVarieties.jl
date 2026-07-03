@@ -30,24 +30,6 @@ function _simple_dynkin_family(::Type{DT}) where {DT<:SimpleDynkinType}
 end
 
 """
-    _flatten_simple_factors(DT::Type{<:DynkinType}) -> Vector{DataType}
-
-Recursively flatten a (possibly nested) `ProductDynkinType` into an ordered
-list of simple factors.
-"""
-function _flatten_simple_factors(::Type{DT}) where {DT<:SimpleDynkinType}
-  DataType[DT]
-end
-
-function _flatten_simple_factors(::Type{DT}) where {DT<:ProductDynkinType}
-  result = DataType[]
-  for T in DT.parameters[1].parameters
-    append!(result, _flatten_simple_factors(T))
-  end
-  result
-end
-
-"""
     _mdt_to_factors(mdt::MarkedDynkinType) -> Vector{Factor}
 
 Convert a `MarkedDynkinType` to a vector of `ZeroLocus62.Factor` objects, one
@@ -56,7 +38,7 @@ product type the marked nodes are partitioned by cumulative rank offsets.
 """
 function _mdt_to_factors(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
-  simple_factors = _flatten_simple_factors(DT)
+  simple_factors = _flatten_dynkin_factors(DT)
   marked = marked_nodes(mdt)
 
   factors = Factor[]
@@ -79,14 +61,6 @@ function _mdt_to_factors(mdt::MarkedDynkinType)
 end
 
 """
-    _char_to_symbol(c::Char) -> Symbol
-
-Convert a Dynkin family character to the corresponding Symbol for
-`_symbol_to_simple_type`.
-"""
-_char_to_symbol(c::Char) = Symbol(c)
-
-"""
     _factors_to_mdt(factors::Vector{Factor}) -> MarkedDynkinType
 
 Convert a vector of `ZeroLocus62.Factor` objects back to a `MarkedDynkinType`.
@@ -95,7 +69,7 @@ function _factors_to_mdt(factors::Vector{Factor})
   length(factors) >= 1 || throw(ArgumentError("Need at least one factor"))
 
   simple_types = DataType[
-    _symbol_to_simple_type(_char_to_symbol(f.group), f.rank) for f in factors
+    _symbol_to_simple_type(Symbol(f.group), f.rank) for f in factors
   ]
 
   DT = _combine_dynkin_factors(simple_types)
@@ -120,7 +94,7 @@ end
 Split a weight's coefficient vector into per-factor weight vectors.
 """
 function _weight_to_summand_row(λ::WeightLatticeElem, factor_ranks::Vector{Int})
-  coeffs = Int[c for c in coefficients(λ)]
+  coeffs = collect(Int, coefficients(λ))
   row = Vector{Vector{Int}}()
   offset = 1
   for r in factor_ranks
@@ -193,20 +167,7 @@ julia> zerolocus62_label(zero_locus(line_bundle(X, 1)))
 "1.0"
 ```
 """
-function zerolocus62_label(Z::ZeroLocus)
-  X = ambient_variety(Z)
-  factors = _mdt_to_factors(marked_dynkin_type(X))
-  factor_ranks = [f.rank for f in factors]
-
-  E = defining_bundle(Z)
-  summands = Vector{Vector{Vector{Int}}}()
-  for comp in components(E)
-    λ = p_dominant_weight(comp)
-    push!(summands, _weight_to_summand_row(λ, factor_ranks))
-  end
-
-  encode_label(factors, summands)
-end
+zerolocus62_label(Z::ZeroLocus) = zerolocus62_label(defining_bundle(Z))
 
 """
     zerolocus62_label(E::CompletelyReducibleBundle) -> String
@@ -226,16 +187,12 @@ julia> zerolocus62_label(direct_sum(structure_sheaf(X), line_bundle(X, 1)))
 ```
 """
 function zerolocus62_label(E::CompletelyReducibleBundle)
-  X = variety(E)
-  factors = _mdt_to_factors(marked_dynkin_type(X))
+  factors = _mdt_to_factors(marked_dynkin_type(variety(E)))
   factor_ranks = [f.rank for f in factors]
-
-  summands = Vector{Vector{Vector{Int}}}()
-  for comp in components(E)
-    λ = p_dominant_weight(comp)
-    push!(summands, _weight_to_summand_row(λ, factor_ranks))
-  end
-
+  summands = [
+    _weight_to_summand_row(p_dominant_weight(comp), factor_ranks) for
+    comp in components(E)
+  ]
   encode_label(factors, summands)
 end
 

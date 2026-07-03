@@ -66,10 +66,7 @@ function enumerate_cr_bundles(
       new_rank = remaining_rank - m * rk_int
       new_det = remaining_det .- m .* det_c
 
-      new_summands = copy(summands)
-      for _ in 1:m
-        push!(new_summands, bundle)
-      end
+      new_summands = [summands; fill(bundle, m)]
 
       backtrack(idx + 1, new_rank, new_det, new_summands)
     end

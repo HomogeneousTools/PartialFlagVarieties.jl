@@ -22,36 +22,7 @@ export hilbert_polynomial
 export hodge_numbers_symbolic
 export hodge_numbers_les
 export euler_characteristic_tangent_bundle
-
-"""
-Renumber variables in an `AffineExpr` matrix to use contiguous IDs
-starting from 0.  This makes the output more readable (e.g. `x_0, x_1, …`)
-rather than reflecting the internal counter."""
-function _renumber_variables!(M::Matrix{AffineExpr})
-  # Collect all variable IDs
-  old_ids = Set{Int}()
-  for e in M
-    for v in keys(e.coeffs)
-      push!(old_ids, v)
-    end
-  end
-  isempty(old_ids) && return M
-
-  # Build mapping: sorted old IDs → 0, 1, 2, …
-  mapping = Dict{Int,Int}()
-  for (new_id, old_id) in enumerate(sort!(collect(old_ids)))
-    mapping[old_id] = new_id - 1  # 0-based
-  end
-
-  # Apply mapping
-  for i in eachindex(M)
-    e = M[i]
-    isempty(e.coeffs) && continue
-    new_coeffs = Dict{Int,BigInt}(mapping[k] => v for (k, v) in e.coeffs)
-    M[i] = AffineExpr(e.constant, new_coeffs)
-  end
-  M
-end
+export tangent_cohomology
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -83,7 +54,7 @@ julia> euler_characteristic(Z)
 mutable struct ZeroLocus
   const ambient::PartialFlagVariety
   const defining_bundle::CompletelyReducibleBundle
-  # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧˾i E*.
+  # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧ⁱE*.
   # Populated lazily on the first call that needs them; reused thereafter.
   koszul_wedges::Union{Nothing,Vector{CompletelyReducibleBundle}}
 end
@@ -174,7 +145,7 @@ Base.:*(Z1::ZeroLocus, Z2::ZeroLocus) = product(Z1, Z2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-Return (and lazily compute) the cached vector `[∧°E*, ∧¹E*, …, ∧ʳE*]`.
+Return (and lazily compute) the cached vector `[∧⁰E*, ∧¹E*, …, ∧ʳE*]`.
 All Koszul computations go through this accessor so the exterior powers
 are computed at most once per `ZeroLocus`, regardless of how many times
 different twists are requested.
@@ -212,7 +183,7 @@ codimension(Z::ZeroLocus)::Int = rank_bundle(Z.defining_bundle)
 """
     dimension(Z::ZeroLocus) -> Int
 
-Return the dimension of the zero locus ``Z = \\dim X - \\mathrm{rank}(E)``.
+Return the dimension ``\\dim Z = \\dim X - \\mathrm{rank}(E)`` of the zero locus.
 """
 dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 
@@ -269,7 +240,7 @@ end
 # Populated lazily; avoids repeated borel_weil_bott + degree calls.
 const _BWB_PAIR_CACHE = let b = _default_cache_budget()
   LRU{Tuple{IrrepLevi,IrrepLevi},Vector{Pair{Int,BigInt}}}(;
-    maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC),
+    maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC * 0.8),
     by=Base.summarysize,
   )
 end
@@ -287,13 +258,32 @@ function _cotangent_power(X::PartialFlagVariety, j::Int)
   end
 end
 
+const _FILTERED_COTANGENT_POWER_CACHE = let b = _default_cache_budget()
+  LRU{Tuple{MarkedDynkinType,Int},FilteredBundle}(;
+    maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.1),
+    by=Base.summarysize,
+  )
+end
+
+"""
+The ``j``-th exterior power of the filtered cotangent bundle, cached per
+marked Dynkin type: the induced-filtration plethysm is the expensive part
+of every filtered-ambient Hodge computation and only depends on ``(X, j)``.
+"""
+function _filtered_cotangent_power(X::PartialFlagVariety, j::Int)
+  mdt = marked_dynkin_type(X)
+  get!(_FILTERED_COTANGENT_POWER_CACHE, (mdt, j)) do
+    exterior_power(dual(filtered_tangent_bundle(X)), j)
+  end
+end
+
 """
 Compute and cache the BWB contributions `[(deg, dim), ...]` for
 `tensor_product(a, b)`.  Returns an empty vector when all components are
 acyclic.
 """
 function _bwb_pair(a::IrrepLevi, b::IrrepLevi)
-  get!(_BWB_PAIR_CACHE, (a, b)) do
+  get!(_BWB_PAIR_CACHE, _unordered_pair(a, b)) do
     by_degree = Dict{Int,BigInt}()
     for (c, mult) in _tensor_product_terms(a, b)
       λ = p_dominant_weight(c)
@@ -324,40 +314,7 @@ function _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
       "_koszul_dimensions requires a bundle on the ambient variety of the zero locus."
     ),
   )
-
-  d = dimension(F.variety)
-
-  # Deduplicate F components once
-  f_counts = Dict{IrrepLevi,Int}()
-  for c in F.components
-    f_counts[c] = get(f_counts, c, 0) + 1
-  end
-
-  wedges = _koszul_wedges!(Z)
-  result = Vector{Cohomology{BigInt}}(undef, length(wedges))
-
-  for (wi, w) in enumerate(wedges)
-    # Deduplicate wedge components
-    w_counts = Dict{IrrepLevi,Int}()
-    for c in w.components
-      w_counts[c] = get(w_counts, c, 0) + 1
-    end
-
-    entries = zeros(BigInt, d + 1)
-    for (a, ma) in f_counts
-      for (b, mb) in w_counts
-        total = ma * mb
-        for (deg, dim) in _bwb_pair(a, b)
-          if 0 <= deg <= d
-            entries[deg + 1] += total * dim
-          end
-        end
-      end
-    end
-    result[wi] = Cohomology{BigInt}(entries, d)
-  end
-
-  result
+  _koszul_dimensions(Z, _to_counts(F))
 end
 
 function _koszul_dimensions(Z::ZeroLocus)
@@ -408,51 +365,10 @@ Dual of a multiplicity dict: map each IrrepLevi to its dual.
 """
 function _dual_counts(f_counts::Dict{IrrepLevi,Int})
   result = Dict{IrrepLevi,Int}()
-  for (c, m) in f_counts
-    d = dual(c)
-    result[d] = get(result, d, 0) + m
+  for (component, mult) in f_counts
+    dual_component = dual(component)
+    result[dual_component] = get(result, dual_component, 0) + mult
   end
-  result
-end
-
-"""
-    _koszul_euler_characteristics(Z::ZeroLocus, F::CompletelyReducibleBundle)
-      -> Vector{BigInt}
-
-Compute ``χ(X, F ⊗ ∧^i E^*)`` for each Koszul term without materialising
-intermediate `CompletelyReducibleBundle` objects.
-"""
-function _koszul_euler_characteristics(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
-    ArgumentError(
-      "_koszul_euler_characteristics requires a bundle on the ambient variety."
-    ),
-  )
-
-  # Deduplicate F components once
-  f_counts = Dict{IrrepLevi,Int}()
-  for c in F.components
-    f_counts[c] = get(f_counts, c, 0) + 1
-  end
-
-  wedges = _koszul_wedges!(Z)
-  result = Vector{BigInt}(undef, length(wedges))
-
-  for (wi, w) in enumerate(wedges)
-    w_counts = _to_counts(w)
-
-    chi = BigInt(0)
-    for (a, ma) in f_counts
-      for (b, mb) in w_counts
-        total = ma * mb
-        for (deg, dim) in _bwb_pair(a, b)
-          chi += (iseven(deg) ? 1 : -1) * total * dim
-        end
-      end
-    end
-    result[wi] = chi
-  end
-
   result
 end
 
@@ -479,12 +395,10 @@ julia> euler_characteristic(Z)
 ```
 """
 function euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  chis = _koszul_euler_characteristics(Z, F)
-  result = BigInt(0)
-  for (i, χ) in enumerate(chis)
-    result += (-1)^(i - 1) * χ
-  end
-  result
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError("euler_characteristic requires a bundle on the ambient variety.")
+  )
+  _euler_characteristic_from_counts(Z, _to_counts(F))
 end
 
 """
@@ -556,42 +470,17 @@ function cohomology_on_restriction(
 
   koszul_cohos = _koszul_dimensions(Z, F)
 
-  (H, det) = solve_koszul_filtration(koszul_cohos, d_Z)
-  det && return (H, true)
+  (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
+  determined && return (H, true)
 
-  # Serre duality fallback: H^k(Z, F) = H^{d-k}(Z, F*) when K_Z = O_Z.
-  # Try computing H*(Z, F*) directly (without further fallback to avoid recursion).
-  F_dual = dual(F)
-  koszul_cohos_dual = _koszul_dimensions(Z, F_dual)
-  (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-
-  # Serre duality is only valid H^k(F) = H^{d-k}(F*) when K_Z ≅ O_Z.
-  # Guard all Serre-duality paths by checking that the zero locus is
-  # a (candidate) Calabi–Yau (i.e. det(E) ≅ ω_X^{-1}).
+  # Serre duality fallback: H^k(Z, F|_Z) = H^{d-k}(Z, F^*|_Z), valid because
+  # is_calabi_yau guarantees ω_Z ≅ O_Z via adjunction.
   if is_calabi_yau(Z)
+    koszul_cohos_dual = _koszul_dimensions(Z, dual(F))
+    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
     if det_dual
-      # Apply Serre duality: H^k(Z, F) = H^{d-k}(Z, F*)
-      entries = Vector{BigInt}(undef, d_Z + 1)
-      for k in 0:d_Z
-        entries[k + 1] = H_dual[d_Z - k]
-      end
+      entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
       return (Cohomology{BigInt}(entries, d_Z), true)
-    end
-
-    # Both F and F* are underdetermined by the Koszul filtration alone.
-    # Cross-validate: if both numeric results satisfy the Euler characteristic
-    # constraint AND are Serre-dual to each other, the pair is consistent with
-    # all available constraints and the result can be trusted.
-    chi_exact = _alternating_euler_characteristic(koszul_cohos)
-    chi_numeric = euler_characteristic(H)
-
-    chi_exact_dual = _alternating_euler_characteristic(koszul_cohos_dual)
-    chi_numeric_dual = euler_characteristic(H_dual)
-
-    serre_consistent = all(H[k] == H_dual[d_Z - k] for k in 0:d_Z)
-
-    if chi_numeric == chi_exact && chi_numeric_dual == chi_exact_dual && serre_consistent
-      return (H, true)
     end
   end
 
@@ -617,67 +506,16 @@ end
       var_counter::Ref{Int}
     ) -> Cohomology{AffineExpr}
 
-Symbolic version of `cohomology_on_restriction`.  Introduces fresh
-symbolic variables for undetermined connecting-map ranks.
+Symbolic version of [`cohomology_on_restriction`](@ref): entries the long
+exact sequences do not determine contain fresh symbolic variables instead.
 """
 function cohomology_on_restriction_symbolic(
   Z::ZeroLocus,
   F::CompletelyReducibleBundle,
   var_counter::Ref{Int},
 )
-  d_Z = dimension(Z)
-
-  # Compute Koszul cohomologies once (memory-efficient path)
-  koszul_cohos = _koszul_dimensions(Z, F)
-
-  # Try numeric solve first
-  (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
-  if det_numeric
-    entries = AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
-    return Cohomology{AffineExpr}(entries, d_Z)
-  end
-
-  # Also try Serre duality fallback (numeric on the dual)
-  serre_resolved = false
-  H_dual_result = nothing
-  if is_calabi_yau(Z)
-    F_dual = dual(F)
-    koszul_cohos_dual = _koszul_dimensions(Z, F_dual)
-    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-    if det_dual
-      serre_resolved = true
-      H_dual_result = H_dual
-    end
-  end
-
-  if serre_resolved
-    # H^k(F) = H^{d-k}(F*) is fully known from Serre duality
-    entries = AffineExpr[AffineExpr(H_dual_result[d_Z - k]) for k in 0:d_Z]
-    return Cohomology{AffineExpr}(entries, d_Z)
-  end
-
-  # Numeric path underdetermined: fall back to symbolic filtration.
-  # Reuse already-computed koszul_cohos.
-  d_ambient = koszul_cohos[1].dim_variety
-  H_sym_full = solve_koszul_filtration_symbolic(koszul_cohos, d_ambient, var_counter)
-
-  # Apply vanishing constraints: H^k = 0 for k = d_Z+1..d_ambient.
-  n_full = d_ambient + 1
-  mat = Matrix{AffineExpr}(undef, 1, n_full)
-  for k in 0:d_ambient
-    mat[1, k + 1] = H_sym_full[k]
-  end
-  for k in (d_Z + 1):d_ambient
-    # H^k(Z, F) = 0 for k > dim(Z)
-    expr = mat[1, k + 1]
-    if !is_determined(expr) || expr.constant != 0
-      _apply_equation!(mat, expr - AffineExpr(BigInt(0)))
-    end
-  end
-  # Extract the result at degrees 0..d_Z
-  H_sym = Cohomology{AffineExpr}(AffineExpr[mat[1, k + 1] for k in 0:d_Z], d_Z)
-
-  H_sym
+  entries = _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter)
+  Cohomology{AffineExpr}(entries, dimension(Z))
 end
 
 """
@@ -710,13 +548,6 @@ the alternating-sum LES equations.
 Falls back to the numeric path when fully determined.
 """
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int}
-)
-  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
-  _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter, wedge_counts)
-end
-
-function _restrict_to_zero_locus_les(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int}
 )
   wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
@@ -731,7 +562,6 @@ function _restrict_to_zero_locus_les(
 
   # Compute Koszul cohomologies once (memory-efficient path)
   koszul_cohos = _koszul_dimensions(Z, f_counts, wedge_counts)
-  d_ambient = koszul_cohos[1].dim_variety
 
   # Try numeric solve first
   (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
@@ -739,57 +569,142 @@ function _restrict_to_zero_locus_les(
     return AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
   end
 
-  # Try Serre duality fallback before symbolic path
+  koszul_cohos_dual = nothing
   if is_calabi_yau(Z)
-    f_dual_counts = _dual_counts(f_counts)
-    koszul_cohos_dual = _koszul_dimensions(Z, f_dual_counts, wedge_counts)
+    # Serre duality fallback before the symbolic path (valid: ω_Z ≅ O_Z).
+    koszul_cohos_dual = _koszul_dimensions(Z, _dual_counts(f_counts), wedge_counts)
     (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
     if det_dual
-      entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
-      return AffineExpr[AffineExpr(e) for e in entries]
-    end
-
-    # Cross-validation: check if both are consistent
-    chi_exact = _alternating_euler_characteristic(koszul_cohos)
-    chi_numeric = euler_characteristic(H_numeric)
-
-    chi_exact_dual = _alternating_euler_characteristic(koszul_cohos_dual)
-    chi_numeric_dual = euler_characteristic(H_dual)
-
-    serre_consistent = all(H_numeric[k] == H_dual[d_Z - k] for k in 0:d_Z)
-
-    if chi_numeric == chi_exact && chi_numeric_dual == chi_exact_dual && serre_consistent
-      return AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
+      return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
     end
   end
 
-  # Symbolic path: reuse already-computed koszul_cohos
-  # Extract BigInt vectors, reversed: K_r, K_{r-1}, …, K_0
-  koszul_vecs = Vector{BigInt}[
-    BigInt[kc[i] for i in 0:d_ambient] for kc in reverse(koszul_cohos)
-  ]
-
-  # Apply alternative LES chain
-  result_full = long_exact_sequence_cokernel(koszul_vecs, var_counter)
-
-  # Apply vanishing: H^k(Z, F|_Z) = 0 for k > d_Z
-  if d_ambient > d_Z
-    mat = reshape(copy(result_full), 1, length(result_full))
-    for k in (d_Z + 1):d_ambient
-      expr = mat[1, k + 1]
-      is_zero_expr(expr) && continue
-      _apply_equation_in_vars!(mat, expr)
-    end
-    return AffineExpr[mat[1, k + 1] for k in 0:d_Z]
+  # Symbolic path: chain the Koszul LES over K_r, K_{r-1}, …, K_0, harvesting
+  # the exactness inequalities of every long exact sequence along the way.
+  # For ω_Z ≅ O_Z the dual bundle is chained as well, and Serre duality
+  # H^k(Z, F|_Z) = H^{d-k}(Z, F^∨|_Z) is imposed entry by entry: both chains
+  # are sound parametrizations, so equating them is a sound constraint
+  # (unlike cross-validating two undetermined numeric guesses).
+  inequalities = AffineExpr[]
+  primal = long_exact_sequence_cokernel(
+    _reversed_koszul_vecs(koszul_cohos), var_counter; inequalities
+  )
+  dual_chain = if koszul_cohos_dual === nothing
+    AffineExpr[]
+  else
+    long_exact_sequence_cokernel(
+      _reversed_koszul_vecs(koszul_cohos_dual), var_counter; inequalities
+    )
   end
 
-  result_full[1:(d_Z + 1)]
+  # One combined system, so every substitution stays synchronized between the
+  # two chains and the harvested inequalities: slots 1:chain_length hold the
+  # primal entries H^k(Z, F|_Z) for k = 0, …, d_X; the dual entries (if any)
+  # follow; the inequalities come last.
+  chain_length = length(primal)
+  system = vcat(primal, dual_chain, inequalities)
+
+  # The structural equations — vanishing above dim Z on both chains, and the
+  # entrywise Serre duality between them — are re-applied whenever interval
+  # propagation pins a variable, since each substitution can make a
+  # previously unusable equation solvable.
+  apply_structure! = function ()
+    applied = false
+    for k in (d_Z + 1):(chain_length - 1)
+      is_zero_expr(system[k + 1]) || (applied |= _apply_equation!(system, system[k + 1]))
+      if !isempty(dual_chain)
+        dual_slot = chain_length + k + 1
+        is_zero_expr(system[dual_slot]) ||
+          (applied |= _apply_equation!(system, system[dual_slot]))
+      end
+    end
+    if !isempty(dual_chain)
+      for k in 0:d_Z
+        serre_pair = system[k + 1] - system[chain_length + d_Z - k + 1]
+        is_zero_expr(serre_pair) || (applied |= _apply_equation!(system, serre_pair))
+      end
+    end
+    applied
+  end
+
+  apply_structure!()
+  while _propagate_intervals!(system)
+    apply_structure!() || break
+  end
+
+  system[1:(d_Z + 1)]
 end
 
+"""Extract the Koszul cohomologies as plain vectors in reversed order K_r, …, K_0."""
+function _reversed_koszul_vecs(koszul_cohos::Vector{Cohomology{BigInt}})
+  d_X = koszul_cohos[1].dim_variety
+  Vector{BigInt}[BigInt[kc[i] for i in 0:d_X] for kc in reverse(koszul_cohos)]
+end
+
+"""
+    _restrict_to_zero_locus_les(Z, F::FilteredBundle, var_counter)
+      -> Vector{AffineExpr}
+
+Compute ``H^*(Z, F|_Z)`` for a filtered bundle ``F`` on the ambient variety.
+
+Each Koszul term ``F ⊗ ∧^k E^*`` is again a filtered bundle; its cohomology
+on ``X`` is the abutment of the spectral sequence of the filtration
+(see `_cohomology_filtered`), and the Koszul chain is then solved
+with the symbolic LES solver.  When every spectral sequence visibly
+degenerates, the terms are exact and the numeric solver (with its Serre
+duality fallback for ``ω_Z ≅ \\mathcal{O}_Z``) is used instead.
+"""
 function _restrict_to_zero_locus_les(
-  Z::ZeroLocus, var_counter::Ref{Int}
+  Z::ZeroLocus, F::FilteredBundle, var_counter::Ref{Int}
 )
-  _restrict_to_zero_locus_les(Z, structure_sheaf(Z.ambient), var_counter)
+  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+    ArgumentError(
+      "_restrict_to_zero_locus_les requires a bundle on the ambient variety."
+    ),
+  )
+  d_Z = dimension(Z)
+  d_X = dimension(Z.ambient)
+  wedges = _koszul_wedges!(Z)
+  koszul_entries = [
+    _cohomology_filtered(tensor_product(F, wedge), var_counter) for wedge in wedges
+  ]
+
+  if all(is_determined, Iterators.flatten(koszul_entries))
+    koszul_cohos = [
+      Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in koszul_entries
+    ]
+    (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
+    determined && return AffineExpr[AffineExpr(H[k]) for k in 0:d_Z]
+
+    # Serre duality fallback: sound when ω_Z ≅ O_Z, provided the spectral
+    # sequences of the dual Koszul terms degenerate as well.
+    if is_calabi_yau(Z)
+      F_dual = dual(F)
+      scratch = Ref(0)
+      dual_entries = [
+        _cohomology_filtered(tensor_product(F_dual, wedge), scratch) for wedge in wedges
+      ]
+      if all(is_determined, Iterators.flatten(dual_entries))
+        koszul_cohos_dual = [
+          Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in dual_entries
+        ]
+        (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+        det_dual && return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
+      end
+    end
+  end
+
+  # Symbolic Koszul chain in reversed order K_r, …, K_0, with the exactness
+  # inequalities, then vanishing H^k(Z, F|_Z) = 0 for k > dim Z and interval
+  # propagation over the combined system.
+  inequalities = AffineExpr[]
+  chain = long_exact_sequence_cokernel(reverse(koszul_entries), var_counter; inequalities)
+  system = vcat(chain, inequalities)
+  for k in (d_Z + 1):d_X
+    is_zero_expr(system[k + 1]) || _apply_equation!(system, system[k + 1])
+  end
+  _propagate_intervals!(system)
+  system[1:(d_Z + 1)]
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -850,11 +765,7 @@ function is_strict_calabi_yau(Z::ZeroLocus)
 
   d = dimension(Z)
   (H, _) = cohomology_on_restriction(Z)
-  H[0] == 1 || return false
-  for i in 1:(d - 1)
-    H[i] == 0 || return false
-  end
-  true
+  H[0] == 1 && all(H[i] == 0 for i in 1:(d - 1))
 end
 
 """
@@ -943,228 +854,9 @@ function fano_index(Z::ZeroLocus)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Alternative Hodge numbers
+#  Euler characteristics of cotangent powers (K-theory, always exact)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-"""
-    hodge_numbers_les(Z::ZeroLocus) -> Matrix{AffineExpr}
-
-Compute the symbolic Hodge diamond using the alternative LES solver.
-
-For each row ``p``, the conormal terms
-``H^*(Z, \\mathrm{Sym}^{p-j}(E^*) \\otimes \\Omega^j_X|_Z)``
-are computed via `_restrict_to_zero_locus_les` (alternative inner Koszul),
-then chained via `long_exact_sequence_cokernel` (alternative outer conormal).
-
-The free parameters in the output represent genuine degrees of freedom that
-cannot be resolved from the Koszul complex and symmetry constraints alone.
-"""
-function hodge_numbers_les(Z::ZeroLocus)
-  d = dimension(Z)
-  X = Z.ambient
-  E_dual = dual(Z.defining_bundle)
-  var_counter = Ref(0)
-
-  half = d ÷ 2
-  syms_counts = Dict{IrrepLevi,Int}[
-    _to_counts(symmetric_power(E_dual, k)) for k in 0:half
-  ]
-  omegas_counts = Dict{IrrepLevi,Int}[
-    _to_counts(_cotangent_power(X, k)) for k in 0:half
-  ]
-
-  hodge = Matrix{AffineExpr}(undef, d + 1, d + 1)
-  for i in eachindex(hodge)
-    hodge[i] = AffineExpr(0)
-  end
-
-  # ── Compute rows p = 0..⌊d/2⌋ via alternative LES ──────────────────────
-  restriction_wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
-  for p in 0:half
-    if p == 0
-      Hp = _restrict_to_zero_locus_les(
-        Z, _to_counts(structure_sheaf(Z.ambient)), var_counter, restriction_wedge_counts
-      )
-    else
-      # Conormal terms: H*(Z, Sym^{p-j}(E*) ⊗ Ω^j_X |_Z) for j = 0..p
-      conormal_cohos = Vector{AffineExpr}[]
-      for j in 0:p
-        f_counts = _tensor_product_counts(syms_counts[p - j + 1], omegas_counts[j + 1])
-        Hj = _restrict_to_zero_locus_les(Z, f_counts, var_counter, restriction_wedge_counts)
-        push!(conormal_cohos, Hj)
-      end
-      # Outer conormal filtration via alternative LES chain
-      Hp = long_exact_sequence_cokernel(conormal_cohos, var_counter)
-    end
-    for q in 0:d
-      hodge[p + 1, q + 1] = Hp[q + 1]
-    end
-  end
-
-  # ── Apply symmetry constraints (same loop as hodge_numbers_symbolic) ─
-  chi_memo = Dict{Tuple{Int,UInt},BigInt}()
-  g_counts = _to_counts(structure_sheaf(Z.ambient))
-  wedge_counts = Dict{IrrepLevi,Int}[_to_counts(w) for w in _koszul_wedges!(Z)]
-  chi_tp_memo = Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}()
-  chi_vals = BigInt[
-    _chi_omega_p_conormal(
-      Z, p, g_counts, chi_memo, omegas_counts, wedge_counts, chi_tp_memo
-    ) for p in 0:half
-  ]
-
-  constraint_changed = true
-  while constraint_changed
-    constraint_changed = false
-
-    # Hodge corner constraints: h^{p,0} = h^{0,p}, h^{p,d} = h^{0,d-p}
-    for p in 1:half
-      if is_determined(hodge[1, p + 1])
-        constraint_changed =
-          _apply_hodge_constraint!(
-            hodge, p + 1, 1, hodge[1, p + 1].constant, chi_vals[p + 1], d
-          ) ||
-          constraint_changed
-      end
-      dp = d - p
-      if dp != p && dp >= 0 && is_determined(hodge[1, dp + 1])
-        constraint_changed =
-          _apply_hodge_constraint!(
-            hodge, p + 1, d + 1, hodge[1, dp + 1].constant, chi_vals[p + 1], d
-          ) ||
-          constraint_changed
-      end
-    end
-
-    # χ(Ω^p_Z) constraint
-    for p in 0:half
-      alt_sum = _alternating_sum(hodge, p + 1, d)
-      constraint_changed =
-        _apply_equation!(hodge, alt_sum - AffineExpr(chi_vals[p + 1])) ||
-        constraint_changed
-    end
-
-    # Cross-row Hodge symmetry: h^{p,q} = h^{q,p} for p,q ∈ 0..half
-    for p in 0:half, q in 0:half
-      p == q && continue
-      constraint_changed =
-        _apply_hodge_pair!(hodge, p + 1, q + 1, q + 1, p + 1, chi_vals, d) ||
-        constraint_changed
-    end
-
-    # Middle-row Serre: h^{half,q} = h^{half,d-q}
-    if d % 2 == 0
-      p = half
-      for q in 0:(d ÷ 2 - 1)
-        constraint_changed =
-          _apply_hodge_pair!(hodge, p + 1, q + 1, p + 1, d - q + 1, chi_vals, d) ||
-          constraint_changed
-      end
-    end
-
-    # Combined Hodge–Serre: h^{p,q} = h^{d-q,d-p}
-    for p in 0:half, q in 0:d
-      dq = d - q
-      dp = d - p
-      (0 <= dq <= half) || continue
-      (0 <= dp <= d) || continue
-      (p == dq && q == dp) && continue
-      constraint_changed =
-        _apply_hodge_pair!(hodge, p + 1, q + 1, dq + 1, dp + 1, chi_vals, d) ||
-        constraint_changed
-    end
-  end
-
-  # ── Fill rows p > ⌊d/2⌋ via Serre duality ────────────────────────────
-  for p in (half + 1):d
-    for q in 0:d
-      hodge[p + 1, q + 1] = hodge[d - p + 1, d - q + 1]
-    end
-  end
-
-  _renumber_variables!(hodge)
-end
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Symbolic Hodge constraint helpers
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-Apply `hodge[pi, qi] = target`, handling the case where the entry is
-determined but contradicts the target.  When the entry is symbolic,
-delegates to `_apply_equation!`.  When it's a determined wrong value,
-forces the correct value and adjusts the diagonal entry of the same row
-to preserve the alternating sum χ.
-"""
-function _apply_hodge_constraint!(
-  hodge::Matrix{AffineExpr}, pi::Int, qi::Int, target::BigInt,
-  chi_p::BigInt, d::Int,
-)
-  expr = hodge[pi, qi]
-  if !is_determined(expr)
-    return _apply_equation!(hodge, expr - AffineExpr(target))
-  end
-  expr.constant == target && return false
-
-  # Determined but wrong: force the correct value.
-  delta = target - expr.constant
-  hodge[pi, qi] = AffineExpr(target)
-
-  # Preserve the row Euler characteristic immediately, but bias the correction
-  # toward the diagonal entry. This avoids injecting the shift into an arbitrary
-  # symbolic off-diagonal term, which can create impossible negative Hodge
-  # numbers once the remaining symmetry constraints are applied.
-  q_forced = qi - 1  # 0-based column index
-  p_idx = pi - 1  # 0-based
-  comp_col = p_idx == q_forced ? -1 : p_idx
-  if comp_col < 0
-    for q in 0:d
-      q == q_forced && continue
-      if !is_determined(hodge[pi, q + 1])
-        comp_col = q
-        break
-      end
-    end
-  end
-  comp_col < 0 && (comp_col = q_forced == 0 ? d : 0)
-
-  correction = -delta * (iseven(q_forced - comp_col) ? 1 : -1)
-  e = hodge[pi, comp_col + 1]
-  hodge[pi, comp_col + 1] = AffineExpr(e.constant + correction, copy(e.coeffs))
-  true
-end
-
-"""
-Apply `hodge[p1, q1] = hodge[p2, q2]`, handling the determined-but-wrong
-case by forcing the entry with fewer variables to match the other.
-"""
-function _apply_hodge_pair!(
-  hodge::Matrix{AffineExpr}, p1::Int, q1::Int, p2::Int, q2::Int,
-  chi_vals::Vector{BigInt}, d::Int,
-)
-  e1 = hodge[p1, q1]
-  e2 = hodge[p2, q2]
-  expr = e1 - e2
-
-  # If the equation has a variable, eliminate it normally
-  if !isempty(expr.coeffs)
-    return _apply_equation!(hodge, expr)
-  end
-
-  # Both sides are determined to the same value — nothing to do
-  expr.constant == 0 && return false
-
-  # Both sides are determined to different values (contradiction from
-  # the Koszul solver).  Force the one with the wrong value.
-  # Prefer to force the entry in the higher-indexed row (later in the
-  # conormal sequence, more likely to have accumulated error).
-  if p1 >= p2
-    return _apply_hodge_constraint!(hodge, p1, q1, e2.constant, chi_vals[p1], d)
-  else
-    return _apply_hodge_constraint!(hodge, p2, q2, e1.constant, chi_vals[p2], d)
-  end
-end
-
-# ═══════════════════════════════════════════════════════════════════════════════
 """
 Compute ``\\chi(\\Omega^p_Z)`` using the conormal recursion.
 
@@ -1173,37 +865,11 @@ the K-theory relation ``[\\wedge^p \\Omega_X|_Z] = \\sum_i [\\wedge^i E^*|_Z \\o
 \\Omega^{p-i}_Z]`` gives a recursion for ``\\chi(\\Omega^p_Z)`` in terms of
 Koszul-computable Euler characteristics on ``X``.
 """
-function _chi_omega_p_conormal(
-  Z::ZeroLocus, p::Int,
-  g_counts::Dict{IrrepLevi,Int}=_to_counts(structure_sheaf(Z.ambient)),
-  memo::Dict{Tuple{Int,UInt},BigInt}=Dict{Tuple{Int,UInt},BigInt}(),
-  omegas_counts::Vector{Dict{IrrepLevi,Int}}=Dict{IrrepLevi,Int}[
-    _to_counts(_cotangent_power(Z.ambient, j)) for j in 0:p
-  ],
-  wedge_counts::Vector{Dict{IrrepLevi,Int}}=Dict{IrrepLevi,Int}[
-    _to_counts(w) for w in _koszul_wedges!(Z)
-  ],
-  tp_memo::Dict{Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}}=Dict{
-    Tuple{UInt,Int,Bool},Dict{IrrepLevi,Int}
-  }(),
-)
-  _chi_omega_tensor_counts_cached(
-    Z, p, g_counts, memo, omegas_counts, wedge_counts, tp_memo
-  )
+function _chi_omega_p_conormal(Z::ZeroLocus, p::Int)
+  _chi_omega_tensor_counts(Z, p, _to_counts(structure_sheaf(Z.ambient)))
 end
 
 # ─── Dict-based tensor and euler operations for _chi_omega_tensor ────────────
-
-"""
-Convert a `CompletelyReducibleBundle` to a `Dict{IrrepLevi,Int}` of counts.
-"""
-function _to_counts(E::CompletelyReducibleBundle)
-  counts = Dict{IrrepLevi,Int}()
-  for c in E.components
-    counts[c] = get(counts, c, 0) + 1
-  end
-  counts
-end
 
 """
 Tensor product of two multiplicity dicts, returning a new multiplicity dict.
@@ -1321,48 +987,67 @@ function _chi_omega_tensor_counts(
   )
 end
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Tangent bundle cohomology
+# ═══════════════════════════════════════════════════════════════════════════════
+
 """
-Recursively compute ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z)`` where ``G`` is
-a bundle on ``X`` (restricted to ``Z`` via Koszul).
+    tangent_cohomology(Z::ZeroLocus) -> Cohomology{AffineExpr}
 
-Base case: ``j = 0``, returns ``\\chi(Z, G|_Z)`` via Koszul.
-Recursion: ``\\chi(Z, \\Omega^j_Z \\otimes G|_Z) =
-            \\chi(Z, \\wedge^j \\Omega_X \\otimes G|_Z) -
-            \\sum_{i=1}^{\\min(j,r)} \\chi(Z, \\Omega^{j-i}_Z \\otimes
-            \\wedge^i E^* \\otimes G|_Z)``
+Compute ``H^*(Z, T_Z)`` via the normal bundle sequence
+``0 \\to T_Z \\to T_X|_Z \\to E|_Z \\to 0``.
+
+The restrictions ``T_X|_Z`` (through the spectral sequence of the height
+filtration when ``T_X`` is not completely reducible) and ``E|_Z`` are
+computed by the Koszul resolution, and the long exact sequence is solved
+for the kernel term with [`les_kernel`](@ref).  The exact Euler
+characteristic ``\\chi(T_Z) = \\chi(T_X|_Z) - \\chi(E|_Z)`` and, for a strict
+Calabi–Yau, the vanishing ``h^0(T_Z) = h^{d-1,0} = 0`` are imposed.
+
+Entries are `AffineExpr`s: exact integers where the constraints determine
+them, symbolic otherwise.  ``H^1(Z, T_Z)`` is the space of first-order
+deformations of ``Z``.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(4), 5));  # quintic threefold
+
+julia> tangent_cohomology(Z)
+H¹ = 101
+H² = 1
+```
 """
-function _chi_omega_tensor(
-  Z::ZeroLocus, j::Int, G::CompletelyReducibleBundle
-)
-  _chi_omega_tensor_counts(Z, j, _to_counts(G))
-end
+function tangent_cohomology(Z::ZeroLocus)
+  d_Z = dimension(Z)
+  var_counter = Ref(0)
 
-"""Try to resolve remaining unknowns in row `p` of the Hodge diamond."""
-function _resolve_remaining!(
-  hodge::Matrix{BigInt}, known::BitMatrix, p::Int, d::Int, χ::BigInt
-)
-  unknown_qs = [q for q in 0:d if !known[p + 1, q + 1]]
+  HT = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(Z.ambient), var_counter)
+  HE = _restrict_to_zero_locus_les(Z, _to_counts(Z.defining_bundle), var_counter)
+  inequalities = AffineExpr[]
+  kernel = les_kernel(HT, HE, var_counter; inequalities)
+  system = vcat(kernel, inequalities)
 
-  if d - p == p
-    # Middle row: Serre gives h^{p,q} = h^{p,d-q}
-    # Group unknowns into pairs (q, d-q)
-    handled = Set{Int}()
-    for q in unknown_qs
-      q in handled && continue
-      dq = d - q
-      if dq == q
-        push!(handled, q)
-      elseif dq in Set(unknown_qs) && !(dq in handled)
-        # Paired unknowns: h^{p,q} = h^{p,d-q}
-        # This halves the unknowns but doesn't resolve them
-        push!(handled, q, dq)
-      end
-    end
+  # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
+  chi =
+    euler_characteristic(Z, tangent_bundle(Z.ambient)) -
+    euler_characteristic(Z, Z.defining_bundle)
+  kernel_length = length(kernel)
+  _apply_equation!(
+    system, _alternating_sum(@view system[1:kernel_length]) - AffineExpr(chi)
+  )
+  _propagate_intervals!(system)
+  entries = system[1:kernel_length]
+
+  # For a strict Calabi–Yau, T_Z ≅ Ω^{d-1}_Z ⊗ ω_Z^{-1} ≅ Ω^{d-1}_Z, and
+  # h^0(Ω^{d-1}_Z) = h^{d-1,0} = h^{d-1}(O_Z) = 0.
+  if d_Z >= 2 && !is_zero_expr(entries[1]) && is_strict_calabi_yau(Z)
+    _apply_equation!(entries, entries[1])
   end
 
-  # After pairing, if only one free parameter remains, solve from χ
-  # For now, leave unsolved — the values determined by symmetry from
-  # earlier rows are the most reliable.
+  _renumber_variables!(entries)
+  Cohomology{AffineExpr}(entries, d_Z)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1401,13 +1086,12 @@ true
 function hilbert_polynomial(Z::ZeroLocus)
   X = Z.ambient
   d = dimension(Z)
-  n_pts = d + 4  # degree-d polynomial needs d+1 points; extra for numerical stability
-  values = Rational{BigInt}[]
-  for t in 0:(n_pts - 1)
-    Lt = line_bundle(X, t)
-    push!(values, Rational{BigInt}(euler_characteristic(Z, Lt)))
-  end
-  _lagrange_interpolation(values)
+  # A degree-d polynomial is pinned down by d+1 values; the interpolation
+  # is exact over the rationals.
+  values = Rational{BigInt}[
+    Rational{BigInt}(euler_characteristic(Z, line_bundle(X, t))) for t in 0:d
+  ]
+  _newton_interpolation(values)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

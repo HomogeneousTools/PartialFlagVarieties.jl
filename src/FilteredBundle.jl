@@ -109,11 +109,10 @@ true
 ```
 """
 function total_bundle(F::FilteredBundle)
-  all_comps = IrrepLevi[]
-  for piece in F.pieces
-    append!(all_comps, components(piece))
-  end
-  CompletelyReducibleBundle(F.variety, all_comps)
+  all_components = IrrepLevi[
+    component for piece in F.pieces for component in components(piece)
+  ]
+  CompletelyReducibleBundle(F.variety, all_components)
 end
 
 """
@@ -160,10 +159,8 @@ is ``\\sum_{j \\in I} a_j`` where ``I`` is the set of marked (crossed-out)
 nodes.
 """
 function _root_heights(mdt::MarkedDynkinType)
-  DT = _ambient_type(mdt)
-  R = rank(DT)
-  RS = RootSystem(DT)
-  Marked = marked_nodes(mdt)
+  RS = RootSystem(dynkin_type(mdt))
+  marked = marked_nodes(mdt)
   unmarked = unmarked_nodes(mdt)
 
   nonpar_roots = positive_nonparabolic_roots(mdt)
@@ -171,11 +168,8 @@ function _root_heights(mdt::MarkedDynkinType)
   # Group roots by nonparabolic height
   height_groups = Dict{Int,Vector{typeof(first(nonpar_roots))}}()
   for α in nonpar_roots
-    h = _nonparabolic_height(coefficients(α), Marked)
-    if !haskey(height_groups, h)
-      height_groups[h] = typeof(α)[]
-    end
-    push!(height_groups[h], α)
+    h = _nonparabolic_height(coefficients(α), marked)
+    push!(get!(height_groups, h, typeof(α)[]), α)
   end
 
   # Simple parabolic roots (at unmarked positions)
@@ -243,12 +237,10 @@ function filtered_tangent_bundle(X::PartialFlagVariety)
   mdt = marked_dynkin_type(X)
   height_data = _root_heights(mdt)
 
-  pieces = CompletelyReducibleBundle[]
-  for (h, ws) in height_data
-    push!(pieces, CompletelyReducibleBundle(X, ws))
-  end
-
-  FilteredBundle(X, pieces)
+  FilteredBundle(
+    X,
+    CompletelyReducibleBundle[CompletelyReducibleBundle(X, ws) for (_, ws) in height_data],
+  )
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -271,17 +263,54 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
+Shared construction of ``\\wedge^k F`` and ``\\mathrm{Sym}^k F`` for a filtered
+bundle ``F``: the associated graded of the induced filtration is
+
+```math
+\\bigoplus_{|\\alpha|=k} P^{\\alpha_1}(\\mathrm{gr}_1) \\otimes \\cdots \\otimes P^{\\alpha_s}(\\mathrm{gr}_s)
+```
+
+for ``P = \\wedge`` or ``\\mathrm{Sym}``, where the term of multiexponent
+``\\alpha`` sits at filtration weight ``\\sum_i i \\cdot \\alpha_i`` and terms of
+equal weight form a single graded piece.
+"""
+function _graded_power(power, F::FilteredBundle, k::Integer)
+  k = Int(k)
+  k < 0 && return FilteredBundle(F.variety, CompletelyReducibleBundle[])
+  k == 0 && return FilteredBundle(F.variety, [structure_sheaf(F.variety)])
+  k == 1 && return F
+
+  pieces = graded_pieces(F)
+  s = length(pieces)
+  weight_terms = Dict{Int,Vector{IrrepLevi}}()
+
+  for α in multiexponents(s, k)
+    factors = CompletelyReducibleBundle[]
+    for i in 1:s
+      f = power(pieces[i], α[i])
+      iszero(f) && (empty!(factors); break)
+      push!(factors, f)
+    end
+    isempty(factors) && continue
+    term = reduce(tensor_product, factors)
+    fw = sum(i * α[i] for i in 1:s)
+    append!(get!(weight_terms, fw, IrrepLevi[]), components(term))
+  end
+
+  FilteredBundle(
+    F.variety,
+    CompletelyReducibleBundle[
+      CompletelyReducibleBundle(F.variety, weight_terms[fw]) for
+      fw in sort!(collect(keys(weight_terms)))
+    ],
+  )
+end
+
+"""
     exterior_power(F::FilteredBundle, k::Integer) -> FilteredBundle
 
 The ``k``-th exterior power ``\\bigwedge^k F`` of a filtered bundle, equipped
-with the induced filtration.
-
-The associated graded of ``\\bigwedge^k F`` is
-```math
-\\bigoplus_{|\\alpha|=k} \\bigwedge^{\\alpha_1} \\mathrm{gr}_1 \\otimes \\cdots \\otimes \\bigwedge^{\\alpha_s} \\mathrm{gr}_s
-```
-where ``\\mathrm{gr}_i`` are the graded pieces of ``F``, and the filtration
-is ordered by filtration weight ``\\sum_i i \\cdot \\alpha_i``.
+with the induced filtration (see [`_graded_power`](@ref)).
 
 # Examples
 ```jldoctest
@@ -295,74 +324,13 @@ julia> rank_bundle(exterior_power(F, 2)) == binomial(dimension(X), 2)
 true
 ```
 """
-function exterior_power(F::FilteredBundle, k::Integer)
-  k = Int(k)
-  s = n_filtration_steps(F)
-  k < 0 && return FilteredBundle(F.variety, CompletelyReducibleBundle[])
-  k == 0 && return FilteredBundle(F.variety, [structure_sheaf(F.variety)])
-  k == 1 && return F
-
-  pieces = graded_pieces(F)
-  ranks = [Int(rank_bundle(p)) for p in pieces]
-
-  # Collect terms by filtration weight
-  weight_terms = Dict{Int,Vector{CompletelyReducibleBundle}}()
-
-  for α in multiexponents(s, k)
-    # Skip if any α_i exceeds the rank of gr_i
-    any(α[i] > ranks[i] for i in 1:s) && continue
-
-    # Compute ∧^{α_1} gr_1 ⊗ ⋯ ⊗ ∧^{α_s} gr_s
-    factors = CompletelyReducibleBundle[]
-    skip = false
-    for i in 1:s
-      w_i = exterior_power(pieces[i], α[i])
-      if iszero(w_i)
-        skip = true
-        break
-      end
-      push!(factors, w_i)
-    end
-    skip && continue
-
-    # Tensor all factors together
-    term = factors[1]
-    for i in 2:length(factors)
-      term = tensor_product(term, factors[i])
-    end
-
-    # Filtration weight = Σ i * α_i (1-indexed)
-    fw = sum(i * α[i] for i in 1:s)
-    if !haskey(weight_terms, fw)
-      weight_terms[fw] = CompletelyReducibleBundle[]
-    end
-    push!(weight_terms[fw], term)
-  end
-
-  # Assemble graded pieces ordered by filtration weight
-  result_pieces = CompletelyReducibleBundle[]
-  for fw in sort(collect(keys(weight_terms)))
-    # Direct sum of all terms at this filtration weight
-    all_comps = IrrepLevi[]
-    for t in weight_terms[fw]
-      append!(all_comps, components(t))
-    end
-    push!(result_pieces, CompletelyReducibleBundle(F.variety, all_comps))
-  end
-
-  FilteredBundle(F.variety, result_pieces)
-end
+exterior_power(F::FilteredBundle, k::Integer) = _graded_power(exterior_power, F, k)
 
 """
     symmetric_power(F::FilteredBundle, k::Integer) -> FilteredBundle
 
 The ``k``-th symmetric power ``\\mathrm{Sym}^k F`` of a filtered bundle,
-equipped with the induced filtration.
-
-The associated graded of ``\\mathrm{Sym}^k F`` is
-```math
-\\bigoplus_{|\\alpha|=k} \\mathrm{Sym}^{\\alpha_1} \\mathrm{gr}_1 \\otimes \\cdots \\otimes \\mathrm{Sym}^{\\alpha_s} \\mathrm{gr}_s
-```
+equipped with the induced filtration (see [`_graded_power`](@ref)).
 
 # Examples
 ```jldoctest
@@ -376,55 +344,7 @@ julia> rank_bundle(symmetric_power(F, 2)) == binomial(dimension(X) + 1, 2)
 true
 ```
 """
-function symmetric_power(F::FilteredBundle, k::Integer)
-  k = Int(k)
-  s = n_filtration_steps(F)
-  k < 0 && return FilteredBundle(F.variety, CompletelyReducibleBundle[])
-  k == 0 && return FilteredBundle(F.variety, [structure_sheaf(F.variety)])
-  k == 1 && return F
-
-  pieces = graded_pieces(F)
-
-  # Collect terms by filtration weight
-  weight_terms = Dict{Int,Vector{CompletelyReducibleBundle}}()
-
-  for α in multiexponents(s, k)
-    # Compute Sym^{α_1} gr_1 ⊗ ⋯ ⊗ Sym^{α_s} gr_s
-    factors = CompletelyReducibleBundle[]
-    skip = false
-    for i in 1:s
-      s_i = symmetric_power(pieces[i], α[i])
-      if iszero(s_i)
-        skip = true
-        break
-      end
-      push!(factors, s_i)
-    end
-    skip && continue
-
-    term = factors[1]
-    for i in 2:length(factors)
-      term = tensor_product(term, factors[i])
-    end
-
-    fw = sum(i * α[i] for i in 1:s)
-    if !haskey(weight_terms, fw)
-      weight_terms[fw] = CompletelyReducibleBundle[]
-    end
-    push!(weight_terms[fw], term)
-  end
-
-  result_pieces = CompletelyReducibleBundle[]
-  for fw in sort(collect(keys(weight_terms)))
-    all_comps = IrrepLevi[]
-    for t in weight_terms[fw]
-      append!(all_comps, components(t))
-    end
-    push!(result_pieces, CompletelyReducibleBundle(F.variety, all_comps))
-  end
-
-  FilteredBundle(F.variety, result_pieces)
-end
+symmetric_power(F::FilteredBundle, k::Integer) = _graded_power(symmetric_power, F, k)
 
 """
     dual(F::FilteredBundle) -> FilteredBundle

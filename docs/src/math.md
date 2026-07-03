@@ -144,17 +144,27 @@ For a smooth zero locus ``Z \subset X``, the **conormal exact sequence** reads
 0 \to E^{\vee}|_Z \to \Omega^1_X|_Z \to \Omega^1_Z \to 0.
 ```
 
-Taking exterior powers induces a filtration on ``\Omega^p_Z`` whose graded
-pieces are
+Taking exterior powers yields, for every ``p``, the exact complex
 
 ```math
-\mathrm{gr}_j\!\bigl(\Omega^p_Z\bigr) = \mathrm{Sym}^j(E^{\vee}|_Z) \otimes \Omega^{p-j}_X\big|_Z, \quad j = 0, \ldots, p.
+0 \to \mathrm{Sym}^p(E^{\vee}) \to \mathrm{Sym}^{p-1}(E^{\vee}) \otimes \Omega^1_X
+  \to \cdots \to \Omega^p_X \to \Omega^p_Z \to 0
 ```
 
-This reduces the computation of ``H^q(Z, \Omega^p_Z \otimes L)`` (for any
-line bundle ``L``) to a sequence of long exact sequences, each involving
+on ``Z`` (exact because the section is regular and ``Z`` smooth). This
+reduces the computation of ``H^q(Z, \Omega^p_Z \otimes L)`` (for any line
+bundle ``L``) to a sequence of long exact sequences, each involving
 restrictions of bundles on ``X`` — which are computable via the Koszul
 resolution and the BWB theorem.
+
+On a non-cominuscule ambient variety the cotangent powers ``\Omega^j_X``
+are only *filtered* equivariant bundles, not direct sums of irreducibles;
+their cohomology is the abutment of the spectral sequence of the height
+filtration, computed per isotypical component with symbolic variables for
+the possible differentials (see the
+[SpectralSequence](api/spectral_sequence.md) API). Computing with the
+associated graded alone would silently assume degeneration and produce
+wrong Hodge numbers.
 
 ### Symbolic resolution
 
@@ -167,12 +177,36 @@ ranks and propagates constraints from:
    Hodge matrices ``M_1[p,q]`` and ``M_2[d-p,\,d-q]``
 2. **Euler characteristic**: the alternating sum ``\chi(Z, \bigwedge^p T_Z)``
    is an integer computable exactly from the Koszul complex
-3. **Akizuki–Nakano vanishing** (for Fano ``Z``): forcing certain entries to
-   zero when ``p + q > \dim Z``
+3. **Kodaira–Akizuki–Nakano vanishing**: for an ample line bundle twist,
+   entries with ``p + q > \dim Z`` vanish (and dually for antiample twists)
+4. **Hodge symmetry** ``h^{p,q} = h^{q,p}`` for the untwisted diamond
+5. **Lefschetz**: when the defining bundle splits off an ample line bundle
+   ``L``, the zero locus is an ample divisor in the zero locus of the
+   remaining summands and ``h^{p,q}`` agrees below the middle degree
+6. **Interval propagation**: every cohomology entry and every partial
+   alternating sum of an exact sequence is a nonnegative integer (the
+   latter equal the ranks of the maps in the sequence); propagating these
+   bounds pins a variable whenever its feasible interval collapses to a
+   point, and detects inconsistent input when an interval empties
 
 These constraints form a linear system that is solved by iterative
 substitution until a fixed point is reached; see
 [Hochschild cohomology of zero loci](@ref) below for the full algorithm.
+
+**Limits.**  All of the above are linear consequences of exactness on the
+ambient variety, and some Hodge diamonds are provably not determined by
+them.  The model cases are the hyperkähler fourfolds of Beauville–Donagi
+(``Z(\mathrm{Sym}^3 \mathcal{U}^\vee) \subset \mathrm{Gr}(2,6)``) and
+Debarre–Voisin (``Z(\wedge^3 \mathcal{U}^\vee) \subset \mathrm{Gr}(6,10)``),
+where two parameters survive every constraint listed here.  The literature
+computes their diamonds by global arguments instead: the Hodge structure of
+the cubic fourfold (computable by Griffiths residues) is transported through
+the Fano correspondence, the Pfaffian members are identified with the
+Hilbert square ``S^{[2]}`` of a degree-14 K3 surface, and deformation
+invariance transfers the answer to the whole family — inputs that live
+outside sheaf cohomology on the ambient ``G/P``.  The symbolic output is
+still correct: the true diamond is a substitution instance of the returned
+parametrization.
 
 ## Hochschild cohomology of zero loci
 
@@ -296,24 +330,25 @@ coordinate is ``\le 0``), vanishing is *not* assumed even if ``Z`` happens
 to be Fano for reasons not visible from the ambient coordinates.
 
 A boundary case arises when ``X = \mathrm{Fl}(1,3;\,4) = A_3/P_{\{1,3\}}``
-(Picard rank 2, coordinates ``[\omega_1, \omega_3]``).  Take a bundle ``E``
-with ``\det(E) = \mathcal{O}(2, 0)``.  Then
+(Picard rank 2, coordinates ``[\omega_1, \omega_3]``, anticanonical
+``\omega_X^{-1} = \mathcal{O}(3,3)``).  Take a bundle ``E``
+with ``\det(E) = \mathcal{O}(3, 0)``.  Then
 
 ```math
 \omega_Z^{-1} = \bigl(\omega_X^{-1} \otimes \det(E)^{-1}\bigr)\big|_Z
-  = \mathcal{O}(2,2) \otimes \mathcal{O}(-2,0)\big|_Z
-  = \mathcal{O}(0,2)\big|_Z.
+  = \mathcal{O}(3,3) \otimes \mathcal{O}(-3,0)\big|_Z
+  = \mathcal{O}(0,3)\big|_Z.
 ```
 
-On ``X``, ``\mathcal{O}(0,2)`` is **nef** (non-negative degree on all curves)
+On ``X``, ``\mathcal{O}(0,3)`` is **nef** (non-negative degree on all curves)
 but **not ample** (it is pulled back from a factor and vanishes on the fibers
-of the projection).  The Picard-basis coordinate at node 1 is ``2 - 2 = 0``,
+of the projection).  The Picard-basis coordinate at node 1 is ``3 - 3 = 0``,
 so `is_strongly_fano` returns `false` and Nakano vanishing is not applied —
 the test is intentionally conservative.
 
-For a zero locus of a **rank-1 bundle** (hypersurface section), the Lefschetz
-hyperplane theorem guarantees that ampleness is preserved under restriction, so
-``\mathcal{O}(0,2)|_Z`` is ample when ``Z`` is ample.  For higher-rank bundles
-the situation is more subtle: ampleness of ``L|_Z`` must be checked
-independently on ``Z`` and cannot be read off from the restriction of the Picard
-coordinates of ``X``.
+The restriction of an *ample* bundle to a subvariety is always ample, which is
+why a strictly positive check on ``X`` suffices.  A bundle like
+``\mathcal{O}(0,3)`` that is merely nef on ``X`` may or may not restrict to an
+ample bundle on ``Z`` (curves contracted by the corresponding projection can
+survive inside ``Z``); its ampleness would have to be checked on ``Z`` itself,
+which the package does not attempt.

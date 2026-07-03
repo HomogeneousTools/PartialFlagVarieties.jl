@@ -16,7 +16,6 @@
 #   - kapranov_collection       Kapranov's collection on Q^n and Gr(k,n)
 #   - schur_functor             Σ^α(E) for an irreducible E (Type A, Gr)
 #   - kapranov_bundles_grassmannian  all Σ^α U^∨ bundles on Gr(k,n)
-#   - lefschetz_grassmannian    Kuznetsov rectangular Lefschetz on Gr(k,n)  [not yet impl]
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export is_exceptional, is_exceptional_pair, is_strong_exceptional_pair
@@ -27,7 +26,7 @@ export kapranov_collection
 export schur_functor, kapranov_bundles_grassmannian
 
 const _SEQUENCE_STATUS_CACHE = let b = _default_cache_budget()
-  LRU{Tuple{UInt,UInt},Tuple{Bool,Bool}}(;
+  LRU{Tuple{Vector{CompletelyReducibleBundle},CompletelyReducibleBundle},Tuple{Bool,Bool}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.1),
     by=Base.summarysize,
   )
@@ -62,13 +61,8 @@ true
 ```
 """
 function is_exceptional(E::CompletelyReducibleBundle)
-  EE = dual(E) ⊗ E
-  H = dimensions(cohomology(EE))
-  H[0] == 1 || return false
-  for i in 1:(H.dim_variety)
-    H[i] == 0 || return false
-  end
-  return true
+  H = dimensions(cohomology(dual(E) ⊗ E))
+  H[0] == 1 && all(H[i] == 0 for i in 1:(H.dim_variety))
 end
 
 """
@@ -132,12 +126,8 @@ function is_strong_exceptional_pair(
 end
 
 function _has_no_positive_exts(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
-  EvF = dual(E) ⊗ F
-  H = dimensions(cohomology(EvF))
-  for i in 1:(H.dim_variety)
-    H[i] == 0 || return false
-  end
-  true
+  H = dimensions(cohomology(dual(E) ⊗ F))
+  all(H[i] == 0 for i in 1:(H.dim_variety))
 end
 
 """
@@ -161,15 +151,8 @@ true
 """
 function is_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle})
   n = length(Es)
-  for i in 1:n
-    is_exceptional(Es[i]) || return false
-  end
-  for i in 1:n
-    for j in (i + 1):n
-      is_exceptional_pair(Es[i], Es[j]) || return false
-    end
-  end
-  return true
+  all(is_exceptional, Es) &&
+    all(is_exceptional_pair(Es[i], Es[j]) for i in 1:n for j in (i + 1):n)
 end
 
 """
@@ -193,15 +176,8 @@ true
 """
 function is_strong_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle})
   n = length(Es)
-  for i in 1:n
-    is_exceptional(Es[i]) || return false
-  end
-  for i in 1:n
-    for j in (i + 1):n
-      is_strong_exceptional_pair(Es[i], Es[j]) || return false
-    end
-  end
-  return true
+  all(is_exceptional, Es) &&
+    all(is_strong_exceptional_pair(Es[i], Es[j]) for i in 1:n for j in (i + 1):n)
 end
 
 """
@@ -328,16 +304,12 @@ function beilinson_collection_dual(X::PartialFlagVariety)
       "non-type-A model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"),
   )
   n = dimension(X)
-  Ω = cotangent_bundle(X)
-  result = CompletelyReducibleBundle[]
-  for k in n:-1:1
-    # Ω^k(k) = ∧^k Ω ⊗ O(k)
-    wedge_k = exterior_power(Ω, k)
-    bundle_k = twist(wedge_k, 1, k)
-    push!(result, bundle_k)
-  end
-  push!(result, structure_sheaf(X))
-  result
+  Omega = cotangent_bundle(X)
+  # Omega^k(k) = ∧^k Omega ⊗ O(k) for k = n, …, 1, followed by O.
+  collection = CompletelyReducibleBundle[
+    twist(exterior_power(Omega, k), 1, k) for k in n:-1:1
+  ]
+  push!(collection, structure_sheaf(X))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -453,17 +425,17 @@ function schur_functor(
   partition::Vector{<:Integer},
 )
   DT = dynkin_type(X)
-  Marked = marked_nodes(X)
+  marked = marked_nodes(X)
   DT <: TypeA || throw(ArgumentError(
     "schur_functor is only implemented for Type A Grassmannians"
   ))
-  length(Marked) == 1 || throw(
+  length(marked) == 1 || throw(
     ArgumentError(
       "schur_functor requires a generalized Grassmannian (one marked node)"
     ),
   )
 
-  k = Int(Marked[1])     # Gr(k, n) → marked node k
+  k = Int(marked[1])     # Gr(k, n) → marked node k
   n = rank(DT) + 1       # = n  (since rank(A_{n-1}) = n-1)
   nk = n - k             # n - k
 
@@ -569,17 +541,17 @@ function kapranov_bundles_grassmannian(
   X::PartialFlagVariety
 )
   DT = dynkin_type(X)
-  Marked = marked_nodes(X)
+  marked = marked_nodes(X)
   DT <: TypeA || throw(ArgumentError(
     "kapranov_bundles_grassmannian requires a Type-A Grassmannian"
   ))
-  length(Marked) == 1 || throw(
+  length(marked) == 1 || throw(
     ArgumentError(
       "kapranov_bundles_grassmannian requires a generalized Grassmannian"
     ),
   )
 
-  k = Int(Marked[1])
+  k = Int(marked[1])
   n = rank(DT) + 1
   nk = n - k
 
@@ -638,15 +610,10 @@ via the Koszul resolution and checks that ``\\operatorname{Hom} = \\mathbb{k}``
 and all higher Ext groups vanish.
 """
 function is_exceptional(E::CompletelyReducibleBundle, Z::ZeroLocus)
-  EE = dual(E) ⊗ E
-  (H, det) = cohomology_on_restriction(Z, EE)
-  det || @warn "cohomology_on_restriction underdetermined for self-Ext"
-  H[0] == 1 || return false
-  d_Z = dimension(Z)
-  for i in 1:d_Z
-    H[i] == 0 || return false
-  end
-  true
+  endomorphism_bundle = dual(E) ⊗ E
+  (H, determined) = cohomology_on_restriction(Z, endomorphism_bundle)
+  determined || @warn "cohomology_on_restriction underdetermined for self-Ext"
+  H[0] == 1 && all(H[i] == 0 for i in 1:dimension(Z))
 end
 
 """
@@ -661,14 +628,11 @@ function is_exceptional_pair(
   F::CompletelyReducibleBundle,
   Z::ZeroLocus,
 )
-  FvE = dual(F) ⊗ E
-  (H, det) = cohomology_on_restriction(Z, FvE)
-  det || @warn "cohomology_on_restriction underdetermined for exceptional pair"
-  d_Z = dimension(Z)
-  for i in 0:d_Z
-    H[i] == 0 || return false
-  end
-  true
+  # Ext^i(F|_Z, E|_Z) = H^i(Z, (F^∨ ⊗ E)|_Z)
+  hom_bundle = dual(F) ⊗ E
+  (H, determined) = cohomology_on_restriction(Z, hom_bundle)
+  determined || @warn "cohomology_on_restriction underdetermined for exceptional pair"
+  all(H[i] == 0 for i in 0:dimension(Z))
 end
 
 """
@@ -693,18 +657,16 @@ function _has_no_positive_exts(
   F::CompletelyReducibleBundle,
   Z::ZeroLocus,
 )
-  EvF = dual(E) ⊗ F
-  (H, det) = cohomology_on_restriction(Z, EvF)
-  det || @warn "cohomology_on_restriction underdetermined for strong pair"
-  d_Z = dimension(Z)
-  for i in 1:d_Z
-    H[i] == 0 || return false
-  end
-  true
+  hom_bundle = dual(E) ⊗ F
+  (H, determined) = cohomology_on_restriction(Z, hom_bundle)
+  determined || @warn "cohomology_on_restriction underdetermined for strong pair"
+  all(H[i] == 0 for i in 1:dimension(Z))
 end
 
+# Content-based key: the bundles determine the answer, and the defining
+# bundle (whose variety is part of its hash) determines the zero locus.
 _sequence_status_key(Es::Vector{<:CompletelyReducibleBundle}, Z::ZeroLocus) = (
-  objectid(Es), objectid(Z)
+  collect(CompletelyReducibleBundle, Es), defining_bundle(Z)
 )
 
 function _exceptional_sequence_status(
@@ -721,20 +683,11 @@ function _exceptional_sequence_status_uncached(
   Z::ZeroLocus,
 )
   n = length(Es)
-  for i in 1:n
-    is_exceptional(Es[i], Z) || return (false, false)
-  end
-  for i in 1:n
-    for j in (i + 1):n
-      is_exceptional_pair(Es[i], Es[j], Z) || return (false, false)
-    end
-  end
-  for i in 1:n
-    for j in (i + 1):n
-      _has_no_positive_exts(Es[i], Es[j], Z) || return (true, false)
-    end
-  end
-  (true, true)
+  all(is_exceptional(Es[i], Z) for i in 1:n) || return (false, false)
+  all(is_exceptional_pair(Es[i], Es[j], Z) for i in 1:n for j in (i + 1):n) ||
+    return (false, false)
+  strong = all(_has_no_positive_exts(Es[i], Es[j], Z) for i in 1:n for j in (i + 1):n)
+  (true, strong)
 end
 
 """

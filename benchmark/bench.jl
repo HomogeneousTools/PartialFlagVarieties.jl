@@ -100,7 +100,7 @@ let
   S2 = symmetric_power(S, 2)
   tp = tensor_product(S, universal_quotient_bundle(X))
   H = dimensions(E3)
-  Z = zero_locus(reduce(direct_sum, [line_bundle(X, 1) for _ in 1:2]))
+  Z = zero_locus(2 * line_bundle(X, 1))
   hodge_numbers(Z)
   euler_characteristic(Z)
   cohomology_on_restriction(Z, structure_sheaf(X))
@@ -347,7 +347,7 @@ end
 
 # Fano threefold 1-15: O(1)³ on Gr(2,5)
 let X = Gr(2, 5)
-  E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:3])
+  E = 3 * line_bundle(X, 1)
   _bench_zl_hodge(E)
   b = @benchmark _bench_zl_hodge($E) evals = 1 samples = 5
   report("Hodge(O(1)³ on Gr(2,5))", b; category="zero_loci")
@@ -355,7 +355,7 @@ end
 
 # Fano threefold 1-7: O(1)⁵ on Gr(2,6)  (rank 5, dim 8 ambient)
 let X = Gr(2, 6)
-  E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:5])
+  E = 5 * line_bundle(X, 1)
   _bench_zl_hodge(E)
   b = @benchmark _bench_zl_hodge($E) evals = 1 samples = 5
   report("Hodge(O(1)⁵ on Gr(2,6))", b; category="zero_loci")
@@ -380,7 +380,7 @@ end
 
 # Linear section CY: 7·O(1) on Gr(2,7) — rank 7, dim 10
 let X = Gr(2, 7)
-  E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:7])
+  E = 7 * line_bundle(X, 1)
   _bench_zl_hodge(E)
   b = @benchmark _bench_zl_hodge($E) evals = 1 samples = 3
   report("Hodge(7·O(1) CY3 on Gr(2,7))", b; category="zero_loci")
@@ -389,7 +389,7 @@ end
 # Fano threefold 1-10: (∧²U)³ on Gr(3,7) — rank 9, dim 12
 let X = Gr(3, 7)
   U = universal_subbundle(X)
-  E = reduce(direct_sum, [exterior_power(U, 2) for _ in 1:3])
+  E = 3 * exterior_power(U, 2)
   _bench_zl_hodge(E)
   b = @benchmark _bench_zl_hodge($E) evals = 1 samples = 3
   report("Hodge((∧²U)³ on Gr(3,7))", b; category="zero_loci")
@@ -398,7 +398,7 @@ end
 # CY3 No.28 on Gr(3,8): (∧²S*)⁴ — rank 12, dim 15
 let X = Gr(3, 8)
   S = dual(universal_subbundle(X))
-  E = reduce(direct_sum, [exterior_power(S, 2) for _ in 1:4])
+  E = 4 * exterior_power(S, 2)
   _bench_zl_hodge(E)
   b = @benchmark _bench_zl_hodge($E) evals = 1 samples = 3
   report("Hodge((∧²S*)⁴ on Gr(3,8))", b; category="zero_loci")
@@ -406,7 +406,7 @@ end
 
 # Hodge on OGr(5,10) CY3: 7·O(1)
 let X = OGr(5, 10)
-  E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:7])
+  E = 7 * line_bundle(X, 1)
   _bench_zl_hodge(E)
   b = @benchmark _bench_zl_hodge($E) evals = 1 samples = 3
   report("Hodge(7·O(1) CY3 on OGr(5,10))", b; category="zero_loci")
@@ -427,7 +427,7 @@ end
 
 # O(1)³ on Gr(2,5), restrict O(k) for k=1..3
 let X = Gr(2, 5)
-  E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:3])
+  E = 3 * line_bundle(X, 1)
   for k in [1, 2, 3]
     F = line_bundle(X, k)
     _bench_cohom_on_restriction(E, F)
@@ -471,7 +471,7 @@ function _bench_cayley_cy(E)
 end
 
 let X = cayley_plane()
-  E = reduce(direct_sum, [line_bundle(X, 1) for _ in 1:13])
+  E = 13 * line_bundle(X, 1)
   _bench_cayley_cy(E)
   b = @benchmark _bench_cayley_cy($E) evals = 1 samples = 3
   report("χ(CY3 in cayley_plane)", b; category="zero_loci_exceptional")

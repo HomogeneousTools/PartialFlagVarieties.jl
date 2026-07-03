@@ -38,3 +38,14 @@ The result is stored in a [`PolyvectorParallelogram`](@ref), which uses
 hochschild_cohomology
 PolyvectorParallelogram
 ```
+
+## Internals
+
+The conormal restriction backends and the Lefschetz refinement used by
+[`hodge_numbers`](@ref).
+
+```@docs
+PartialFlagVarieties.GradedConormal
+PartialFlagVarieties.FilteredConormal
+PartialFlagVarieties._lefschetz_inject!
+```

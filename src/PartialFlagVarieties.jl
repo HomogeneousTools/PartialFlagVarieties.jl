@@ -60,6 +60,7 @@ include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
 include("CacheConfig.jl")
+include("SpectralSequence.jl")
 
 # ─── Reexport commonly used Semisimple.jl types ──────────────────────────────
 
@@ -84,6 +85,7 @@ export direct_sum, twist, product
 export cartan_type, cartan_type_with_ordering, parse_dynkin_type
 export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
 export universal_subbundle, universal_quotient_bundle, spinor_bundle
+export is_ample_line_bundle
 export is_orthogonal_grassmannian, is_projective_space, is_quadric
 export tautological_bundles, universal_subbundles
 export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology
@@ -91,6 +93,7 @@ export PolyvectorParallelogram
 export ZeroLocus, zero_locus, ambient_variety, defining_bundle
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction
+export tangent_cohomology
 export is_calabi_yau, is_strict_calabi_yau, is_strongly_fano
 export solve_ses_cohomology, solve_koszul_filtration
 export AffineExpr, is_determined, is_zero_expr, symbolic_variable

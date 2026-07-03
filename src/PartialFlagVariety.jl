@@ -73,9 +73,7 @@ end
 
 partial_flag_variety(
   ::Type{DT}, marked::Vector{<:Integer}, name::String=""
-) where {DT<:DynkinType} = partial_flag_variety(
-  DT, Tuple(sort(Int.(marked))), name
-)
+) where {DT<:DynkinType} = partial_flag_variety(DT, Tuple(marked), name)
 
 partial_flag_variety(::Type{DT}, marked::Integer, name::String="") where {DT<:DynkinType} =
   partial_flag_variety(
@@ -262,16 +260,8 @@ function betti_numbers(X::PartialFlagVariety)
     collect(degrees_fundamental_invariants(levi_type(X)))
   end
 
-  num = BigInt[1]
-  for d in degs_G
-    num = _poly_mul(num, ones(BigInt, d))
-  end
-
-  den = BigInt[1]
-  for d in degs_L
-    den = _poly_mul(den, ones(BigInt, d))
-  end
-
+  num = foldl((p, d) -> _poly_mul(p, ones(BigInt, d)), degs_G; init=BigInt[1])
+  den = foldl((p, d) -> _poly_mul(p, ones(BigInt, d)), degs_L; init=BigInt[1])
   _poly_div(num, den)
 end
 

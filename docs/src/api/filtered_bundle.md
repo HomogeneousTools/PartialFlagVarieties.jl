@@ -49,3 +49,9 @@ symmetric_power(::FilteredBundle, ::Integer)
 dual(::FilteredBundle)
 tensor_product(::FilteredBundle, ::CompletelyReducibleBundle)
 ```
+
+## Internals
+
+```@docs
+PartialFlagVarieties._graded_power
+```

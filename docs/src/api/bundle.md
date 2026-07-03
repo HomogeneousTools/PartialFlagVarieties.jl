@@ -61,6 +61,13 @@ n_components
 rank_bundle
 ```
 
+## Positivity
+
+```@docs
+picard_degrees
+is_ample_line_bundle
+```
+
 ## Standard bundles
 
 ```@docs

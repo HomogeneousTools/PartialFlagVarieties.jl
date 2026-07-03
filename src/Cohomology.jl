@@ -21,13 +21,24 @@ export borel_weil_bott
 #  Borel–Weil–Bott theorem
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Memoize the BWB kernel: every cohomology, dimension, and Euler
+# characteristic call funnels through it, and the same weights recur across
+# bundles (Koszul twists, plethysm summands), so the hit rate is high.
+const _BWB_WEIGHT_CACHE = let b = _default_cache_budget()
+  LRU{WeightLatticeElem,Union{Nothing,Tuple{Int,WeightLatticeElem}}}(;
+    maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC * 0.2),
+    by=Base.summarysize,
+  )
+end
+
 function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
-  DT = typeof(λ).parameters[1]
-  ρ = weyl_vector(DT)
-  μ = λ + ρ
-  μ_dom, d = conjugate_dominant_weight_with_length(μ)
-  any(==(0), μ_dom.vec) && return nothing
-  (d, μ_dom - ρ)
+  get!(_BWB_WEIGHT_CACHE, λ) do
+    DT = typeof(λ).parameters[1]
+    ρ = weyl_vector(DT)
+    μ = λ + ρ
+    μ_dom, d = conjugate_dominant_weight_with_length(μ)
+    any(==(0), μ_dom.vec) ? nothing : (d, μ_dom - ρ)
+  end
 end
 
 """
@@ -177,43 +188,37 @@ function _cohomology_generic(
 )
   Base.@nospecialize sentinel
 
-  dynkin = typeof(sentinel).parameters[1]
-  zero_character = WeylCharacter(dynkin)
-  entries = [WeylCharacter(dynkin) for _ in 0:d]
+  DT = typeof(sentinel).parameters[1]
+  entries = [WeylCharacter(DT) for _ in 0:d]
   weight_counts = _weight_counts(comps, sentinel)
 
   for (λ, mult) in weight_counts
     result = borel_weil_bott(λ)
-    if result !== nothing
-      (deg, μ) = result
-      if 0 <= deg <= d
-        χμ = WeylCharacter(μ)
-        for _ in 1:mult
-          add!(entries[deg + 1], χμ)
-        end
-      end
+    result === nothing && continue
+    (deg, μ) = result
+    0 <= deg <= d || continue
+    χμ = WeylCharacter(μ)
+    for _ in 1:mult
+      add!(entries[deg + 1], χμ)
     end
   end
 
-  Cohomology{typeof(zero_character)}(entries, d)
+  Cohomology{eltype(entries)}(entries, d)
 end
 
 function _cohomology_single(d::Int, λ::WeightLatticeElem)
   Base.@nospecialize λ
 
-  dynkin = typeof(λ).parameters[1]
-  zero_character = WeylCharacter(dynkin)
-  entries = [WeylCharacter(dynkin) for _ in 0:d]
+  DT = typeof(λ).parameters[1]
+  entries = [WeylCharacter(DT) for _ in 0:d]
 
   result = borel_weil_bott(λ)
   if result !== nothing
     deg, μ = result
-    if 0 <= deg <= d
-      add!(entries[deg + 1], WeylCharacter(μ))
-    end
+    0 <= deg <= d && add!(entries[deg + 1], WeylCharacter(μ))
   end
 
-  Cohomology{typeof(zero_character)}(entries, d)
+  Cohomology{eltype(entries)}(entries, d)
 end
 
 """
@@ -280,20 +285,12 @@ julia> dims[0]
 5
 ```
 """
-function dimensions(H::Cohomology{<:WeylCharacter{DT,R}}) where {DT,R}
-  dim_entries = BigInt[]
-  for χ in H.entries
-    if isempty(χ.terms)
-      push!(dim_entries, BigInt(0))
-    else
-      d = BigInt(0)
-      for (hw, mult) in χ
-        d += mult * degree(hw)
-      end
-      push!(dim_entries, d)
-    end
-  end
-  return Cohomology{BigInt}(dim_entries, H.dim_variety)
+function dimensions(H::Cohomology{<:WeylCharacter})
+  entries = BigInt[
+    sum((BigInt(mult) * degree(weight) for (weight, mult) in χ); init=BigInt(0)) for
+    χ in H.entries
+  ]
+  Cohomology{BigInt}(entries, H.dim_variety)
 end
 
 """
@@ -363,13 +360,9 @@ end
 
 Return `true` when all cohomology groups vanish.
 """
-function Base.iszero(H::Cohomology{BigInt})
-  return all(==(BigInt(0)), H.entries)
-end
+Base.iszero(H::Cohomology{BigInt}) = all(iszero, H.entries)
 
-function Base.iszero(H::Cohomology{<:WeylCharacter})
-  return all(isempty(v.terms) for v in H.entries)
-end
+Base.iszero(H::Cohomology{<:WeylCharacter}) = all(χ -> isempty(χ.terms), H.entries)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Euler characteristic
@@ -393,21 +386,13 @@ julia> euler_characteristic(H)
 ```
 """
 function euler_characteristic(H::Cohomology{BigInt})
-  result = BigInt(0)
-  for i in 0:(H.dim_variety)
-    result += (iseven(i) ? 1 : -1) * H[i]
-  end
-  return result
+  sum(((-1)^i * H[i] for i in 0:(H.dim_variety)); init=BigInt(0))
 end
 
 function _alternating_euler_characteristic(cohos::AbstractVector{<:Cohomology{BigInt}})
-  result = BigInt(0)
-  add_term = true
-  for H in cohos
-    result = add_term ? result + euler_characteristic(H) : result - euler_characteristic(H)
-    add_term = !add_term
-  end
-  result
+  sum(
+    ((-1)^(i - 1) * euler_characteristic(H) for (i, H) in enumerate(cohos)); init=BigInt(0)
+  )
 end
 
 function euler_characteristic(H::Cohomology{<:WeylCharacter})
@@ -540,7 +525,7 @@ function hilbert_polynomial(
     push!(values, Rational{BigInt}(euler_characteristic(tensor_product(E, Lt))))
     Lt = tensor_product(Lt, L)
   end
-  _lagrange_interpolation(values)
+  _newton_interpolation(values)
 end
 
 """
@@ -579,51 +564,35 @@ function hilbert_polynomial(E::CompletelyReducibleBundle; max_degree::Int=20)
 end
 
 """
-    _lagrange_interpolation(values::Vector{Rational{BigInt}}) -> Vector{Rational{BigInt}}
+    _newton_interpolation(values::Vector{Rational{BigInt}}) -> Vector{Rational{BigInt}}
 
-Given `values[i] = P(i-1)` for `i = 1, ..., n`, recover the polynomial coefficients
-`[a_0, a_1, ..., a_{n-1}]` such that `P(t) = Σ aₖ tᵏ`.
+Given `values[i] = P(i-1)` for `i = 1, ..., n`, recover the polynomial
+coefficients `[a_0, a_1, ..., a_{n-1}]` with `P(t) = Σ aₖ tᵏ` via Newton's
+forward differences: `P(t) = Σ_k C(t, k) Δᵏf(0)`.
 """
-function _lagrange_interpolation(values::Vector{Rational{BigInt}})
+function _newton_interpolation(values::Vector{Rational{BigInt}})
   n = length(values)
-  # Newton's forward differences
-  # Δ⁰f(0) = f(0), Δ¹f(0) = f(1) - f(0), etc.
-  # P(t) = Σ_{k=0}^{n-1} C(t, k) * Δᵏf(0)
-  # where C(t, k) = t*(t-1)*...*(t-k+1)/k!
 
-  diffs = copy(values)
-  deltas = Rational{BigInt}[diffs[1]]
-
-  for order in 1:(n - 1)
-    new_diffs = Rational{BigInt}[]
-    for i in 1:(length(diffs) - 1)
-      push!(new_diffs, diffs[i + 1] - diffs[i])
-    end
-    push!(deltas, new_diffs[1])
-    diffs = new_diffs
+  deltas = Rational{BigInt}[]
+  forward_differences = values
+  while !isempty(forward_differences)
+    push!(deltas, forward_differences[1])
+    forward_differences = diff(forward_differences)
   end
 
-  # Convert from Newton basis C(t, k) to monomial basis tᵏ
-  # C(t, k) = (1/k!) tᵏ + lower terms
-  # Use symbolic expansion
-  # coeffs[d+1] = coefficient of t^d
+  # Convert from the Newton basis C(t, k) to the monomial basis tᵏ.
   result = zeros(Rational{BigInt}, n)
   for k in 0:(n - 1)
-    # Expand C(t, k) * deltas[k+1]
-    # C(t, k) = Σ_{d=0}^{k} s(k, d) / k! * t^d  where s are Stirling
-    # Simpler: compute the polynomial t(t-1)...(t-k+1)/k! directly
-    binom_poly = _binomial_poly_coeffs(k)
-    for (d, c) in enumerate(binom_poly)
+    for (d, c) in enumerate(_binomial_poly_coeffs(k))
       result[d] += deltas[k + 1] * c
     end
   end
 
-  # Trim trailing zeros
+  # Trim trailing zeros.
   while length(result) > 1 && result[end] == 0
     pop!(result)
   end
-
-  return result
+  result
 end
 
 """
@@ -687,10 +656,9 @@ function Base.show(io::IO, H::Cohomology{<:WeylCharacter})
   end
 end
 
-function _superscript(n::Int)
-  digits = Dict(
-    '0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
-    '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹',
-  )
-  return String([get(digits, c, c) for c in string(n)])
-end
+const _SUPERSCRIPT_DIGITS = Dict(
+  '0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
+  '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹',
+)
+
+_superscript(n::Int) = String([get(_SUPERSCRIPT_DIGITS, c, c) for c in string(n)])

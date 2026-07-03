@@ -409,22 +409,14 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
   marked = marked_nodes(X)
   length(degrees) == length(marked) || throw(
     ArgumentError(
-      string(
-        "Expected ",
-        length(marked),
-        " degrees (one per marked node), got ",
-        length(degrees),
-        ".",
-      ),
+      "Expected $(length(marked)) degrees (one per marked node), got $(length(degrees))."
     ),
   )
 
-  coefficients = zeros(Int, rank(X))
-  for (j, m) in enumerate(marked)
-    coefficients[m] = Int(degrees[j])
-  end
+  coeffs = zeros(Int, rank(X))
+  coeffs[collect(marked)] .= degrees
 
-  λ = WeightLatticeElem(dynkin_type(X), coefficients)
+  λ = WeightLatticeElem(dynkin_type(X), coeffs)
   CompletelyReducibleBundle(X, λ)
 end
 
@@ -460,8 +452,36 @@ function picard_degrees(E::CompletelyReducibleBundle)
     ArgumentError("picard_degrees requires a rank-1 bundle, got rank $(rank_bundle(E)).")
   )
   X = variety(E)
-  v = p_dominant_weight(only(components(E))).vec
+  v = coefficients(p_dominant_weight(only(components(E))))
   Int[v[m] for m in marked_nodes(X)]
+end
+
+"""
+    is_ample_line_bundle(E::CompletelyReducibleBundle) -> Bool
+
+Whether `E` is an ample line bundle: rank 1 with strictly positive degree
+at every marked node.  Returns `false` for bundles of rank different
+from 1.  The restriction of an ample line bundle to a subvariety is again
+ample.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 4);
+
+julia> is_ample_line_bundle(line_bundle(X, 1))
+true
+
+julia> is_ample_line_bundle(structure_sheaf(X))
+false
+
+julia> is_ample_line_bundle(universal_subbundle(X))
+false
+```
+"""
+function is_ample_line_bundle(E::CompletelyReducibleBundle)
+  rank_bundle(E) == 1 && all(>(0), picard_degrees(E))
 end
 
 """
@@ -523,7 +543,7 @@ block starting at `offset`.
 function _lift_bundle_to_product(
   X::PartialFlagVariety, E::CompletelyReducibleBundle, offset::Int
 )
-  _product_factor_range(rank(X), rank(variety(E)), offset)
+  _product_factor_range(rank(X), rank(variety(E)), offset)  # validates the fit
   lifted_components = map(components(E)) do component
     _lift_irrep_to_product(X, component, offset)
   end
@@ -550,12 +570,7 @@ end
 
 function _tangent_reps(mdt::MarkedDynkinType)
   get!(_tangent_reps_cache, mdt) do
-    tw = tangent_weights(mdt)
-    result = Vector{IrrepLevi}(undef, length(tw))
-    for i in eachindex(tw)
-      result[i] = IrrepLevi(mdt, tw[i])
-    end
-    result
+    IrrepLevi[IrrepLevi(mdt, w) for w in tangent_weights(mdt)]
   end
 end
 
@@ -740,10 +755,8 @@ function fano_index(X::PartialFlagVariety)
   gcd(anticanonical_degrees(X))
 end
 
-function _trivial_semisimple_weight(X::PartialFlagVariety)
-  mdt = marked_dynkin_type(X)
-  WeightLatticeElem(is_borel(mdt) ? TypeA{1} : levi_type(mdt))
-end
+_trivial_semisimple_weight(X::PartialFlagVariety) =
+  _trivial_semisimple_weight(marked_dynkin_type(X))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Monoidal operations on bundles
@@ -767,7 +780,9 @@ true
 ```
 """
 function dual(E::CompletelyReducibleBundle)
-  CompletelyReducibleBundle(variety(E), IrrepLevi[dual(c) for c in E.components])
+  CompletelyReducibleBundle(
+    variety(E), IrrepLevi[dual(component) for component in E.components]
+  )
 end
 
 """
@@ -802,26 +817,23 @@ function tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBund
 
   # Deduplicate components to avoid redundant tensor product calls.
   # E.g., O(1)⁶ has 6 identical components → compute ⊗ once, replicate.
-  e_counts = Dict{IrrepLevi,Int}()
-  for a in E.components
-    e_counts[a] = get(e_counts, a, 0) + 1
-  end
-  f_counts = Dict{IrrepLevi,Int}()
-  for b in F.components
-    f_counts[b] = get(f_counts, b, 0) + 1
-  end
-
   result = IrrepLevi[]
-  for (a, ma) in e_counts
-    for (b, mb) in f_counts
-      tp = tensor_product(a, b)
-      total = ma * mb
-      for _ in 1:total
-        append!(result, tp)
-      end
+  for (a, mult_a) in _to_counts(E), (b, mult_b) in _to_counts(F)
+    product_terms = tensor_product(a, b)
+    for _ in 1:(mult_a * mult_b)
+      append!(result, product_terms)
     end
   end
   CompletelyReducibleBundle(X, result)
+end
+
+"""Multiplicity dict of the irreducible summands of `E`."""
+function _to_counts(E::CompletelyReducibleBundle)
+  counts = Dict{IrrepLevi,Int}()
+  for component in E.components
+    counts[component] = get(counts, component, 0) + 1
+  end
+  counts
 end
 
 """
@@ -853,80 +865,64 @@ true
 function exterior_power(E::CompletelyReducibleBundle, k::Integer)
   k = Int(k)
   r = rank_bundle(E)
-  k < 0 && return zero_bundle(E.variety)
-  k > r && return zero_bundle(E.variety)
+  (k < 0 || k > r) && return zero_bundle(E.variety)
   k == 0 && return structure_sheaf(E.variety)
   k == r && return det(E)
   k == 1 && return E
 
-  # Perfect pairing shortcut: ∧^k E ≅ det(E) ⊗ ∧^(r-k) E∨ when k > r/2
-  if 2k > r
-    return tensor_product(det(E), exterior_power(dual(E), r - k))
-  end
+  # Perfect pairing shortcut: ∧^k E ≅ det(E) ⊗ ∧^{r-k} E∨ when k > r/2
+  2k > r && return tensor_product(det(E), exterior_power(dual(E), r - k))
 
-  # Group identical components: unique_comps[i] with multiplicity mults[i]
-  comp_counts = Dict{IrrepLevi,Int}()
-  for c in E.components
-    comp_counts[c] = get(comp_counts, c, 0) + 1
-  end
-  unique_comps = collect(keys(comp_counts))
-  mults = [comp_counts[c] for c in unique_comps]
+  # A group of m copies of an irreducible of rank r absorbs at most m⋅r.
+  _power_of_direct_sum(
+    exterior_power, E, k; capacity=(c, m) -> Int(fiber_dimension(c)) * m
+  )
+end
+
+"""
+Shared worker for the exterior and symmetric powers of a direct sum: group
+equal summands, distribute `k` among the groups, and expand the power of
+each ``V^{\\oplus m}`` as
+
+```math
+P^{g}(V^{\\oplus m}) = \\bigoplus_{|α| = g} P^{α_1}(V) \\otimes \\cdots \\otimes P^{α_m}(V)
+```
+
+for ``P = \\wedge`` or ``\\mathrm{Sym}``, iterating one weakly decreasing
+representative per permutation orbit of ``α``, weighted by the multinomial
+coefficient counting its permutations.  `capacity(component, mult)` bounds
+the exponent a group can absorb (the total rank for exterior powers).
+"""
+function _power_of_direct_sum(
+  power, E::CompletelyReducibleBundle, k::Int; capacity=(c, m) -> typemax(Int)
+)
+  counts = _to_counts(E)
+  unique_comps = collect(keys(counts))
+  mults = [counts[component] for component in unique_comps]
   n_groups = length(unique_comps)
-  ranks = [Int(fiber_dimension(c)) for c in unique_comps]
+  capacities = [capacity(unique_comps[g], mults[g]) for g in 1:n_groups]
 
   result = IrrepLevi[]
 
-  # Outer multiexponents: how much of k is allocated to each group
+  # Outer multiexponents: how much of k is allocated to each group.
   for group_alloc in multiexponents(n_groups, k)
-    any(group_alloc[i] > ranks[i] * mults[i] for i in 1:n_groups) && continue
+    any(group_alloc[g] > capacities[g] for g in 1:n_groups) && continue
 
-    # For each group, compute ∧^{group_alloc[i]}(V^{⊕m}) by iterating
-    # sorted compositions of group_alloc[i] into mults[i] parts
     group_results = Vector{Vector{Pair{Vector{IrrepLevi},Int}}}()
     skip = false
     for g in 1:n_groups
-      ga = group_alloc[g]
-      m = mults[g]
-      r = ranks[g]
-      comp = unique_comps[g]
-
-      # Iterate multiexponents for this group (m copies of comp)
+      component = unique_comps[g]
       group_terms = Pair{Vector{IrrepLevi},Int}[]
-      for α in multiexponents(m, ga)
-        any(α[j] > r for j in 1:m) && continue
-
-        # Check if this is a canonical (sorted) representative
+      for α in multiexponents(mults[g], group_alloc[g])
+        # One canonical (weakly decreasing) representative per orbit.
         issorted(α; rev=true) || continue
-
-        # Multinomial coefficient: m! / prod(count_i!)
-        multinomial = _multinomial_coeff(α)
-
-        # Compute ∧^{α₁}(comp) ⊗ ... ⊗ ∧^{αₘ}(comp)
-        factors = Vector{Vector{IrrepLevi}}()
-        inner_skip = false
-        for j in 1:m
-          wj = exterior_power(comp, α[j])
-          if isempty(wj)
-            inner_skip = true
-            break
-          end
-          push!(factors, wj)
+        factors = [power(component, a) for a in α]
+        any(isempty, factors) && continue
+        term = reduce(factors) do acc, factor
+          IrrepLevi[t for x in acc for y in factor for t in tensor_product(x, y)]
         end
-        inner_skip && continue
-
-        current = factors[1]
-        for i in 2:length(factors)
-          next = IrrepLevi[]
-          for a in current
-            for b in factors[i]
-              append!(next, tensor_product(a, b))
-            end
-          end
-          current = next
-        end
-        push!(group_terms, current => multinomial)
+        push!(group_terms, term => _multinomial_coeff(α))
       end
-
       if isempty(group_terms)
         skip = true
         break
@@ -935,7 +931,7 @@ function exterior_power(E::CompletelyReducibleBundle, k::Integer)
     end
     skip && continue
 
-    # Combine across groups via tensor product
+    # Combine across groups via tensor product.
     _combine_group_results!(result, group_results)
   end
 
@@ -1033,77 +1029,7 @@ function symmetric_power(E::CompletelyReducibleBundle, k::Integer)
   k < 0 && return zero_bundle(E.variety)
   k == 0 && return structure_sheaf(E.variety)
   k == 1 && return E
-
-  # Group identical components: unique_comps[i] with multiplicity mults[i]
-  comp_counts = Dict{IrrepLevi,Int}()
-  for c in E.components
-    comp_counts[c] = get(comp_counts, c, 0) + 1
-  end
-  unique_comps = collect(keys(comp_counts))
-  mults = [comp_counts[c] for c in unique_comps]
-  n_groups = length(unique_comps)
-
-  result = IrrepLevi[]
-
-  # Outer multiexponents: how much of k is allocated to each group
-  for group_alloc in multiexponents(n_groups, k)
-    # For each group, compute Sym^{group_alloc[i]}(V^{⊕m}) by iterating
-    # sorted compositions of group_alloc[i] into mults[i] parts
-    group_results = Vector{Vector{Pair{Vector{IrrepLevi},Int}}}()
-    skip = false
-    for g in 1:n_groups
-      ga = group_alloc[g]
-      m = mults[g]
-      comp = unique_comps[g]
-
-      # Iterate multiexponents for this group (m copies of comp)
-      group_terms = Pair{Vector{IrrepLevi},Int}[]
-      for α in multiexponents(m, ga)
-        # Check if this is a canonical (sorted) representative
-        issorted(α; rev=true) || continue
-
-        # Multinomial coefficient: m! / prod(count_i!)
-        multinomial = _multinomial_coeff(α)
-
-        # Compute Sym^{α₁}(comp) ⊗ ... ⊗ Sym^{αₘ}(comp)
-        factors = Vector{Vector{IrrepLevi}}()
-        inner_skip = false
-        for j in 1:m
-          sj = symmetric_power(comp, α[j])
-          if isempty(sj)
-            inner_skip = true
-            break
-          end
-          push!(factors, sj)
-        end
-        inner_skip && continue
-
-        current = factors[1]
-        for i in 2:length(factors)
-          next = IrrepLevi[]
-          for a in current
-            for b in factors[i]
-              append!(next, tensor_product(a, b))
-            end
-          end
-          current = next
-        end
-        push!(group_terms, current => multinomial)
-      end
-
-      if isempty(group_terms)
-        skip = true
-        break
-      end
-      push!(group_results, group_terms)
-    end
-    skip && continue
-
-    # Combine across groups via tensor product
-    _combine_group_results!(result, group_results)
-  end
-
-  CompletelyReducibleBundle(E.variety, result)
+  _power_of_direct_sum(symmetric_power, E, k)
 end
 
 """
@@ -1145,9 +1071,9 @@ function det(E::CompletelyReducibleBundle)
   mdt = marked_dynkin_type(X)
   triv_ss = _trivial_semisimple_weight(X)
   λ = WeightLatticeElem(dynkin_type(X))
-  for c in components(E)
-    d = fiber_dimension(c)
-    det_rep = IrrepLevi(mdt, d .* c.central, triv_ss)
+  for component in components(E)
+    fiber_rank = fiber_dimension(component)
+    det_rep = IrrepLevi(mdt, fiber_rank .* component.central, triv_ss)
     λ += p_dominant_weight(det_rep)
   end
   CompletelyReducibleBundle(X, λ)
@@ -1207,11 +1133,12 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
   λ = k * ω
   twist_rep = IrrepLevi(mdt, λ)
 
-  result = IrrepLevi[]
-  for c in E.components
-    append!(result, tensor_product(c, twist_rep))
-  end
-  CompletelyReducibleBundle(E.variety, result)
+  CompletelyReducibleBundle(
+    E.variety,
+    IrrepLevi[
+      t for component in E.components for t in tensor_product(component, twist_rep)
+    ],
+  )
 end
 
 # ─── Arithmetic operators ───────────────────────────────────────────────────
@@ -1253,7 +1180,7 @@ function Base.show(io::IO, E::CompletelyReducibleBundle)
   elseif length(E.components) == 1
     print(io, "E", E.components[1])
   else
-    parts = ["E" * sprint(show, c) for c in E.components]
+    parts = ["E" * sprint(show, component) for component in E.components]
     print(io, join(parts, " ⊕ "))
   end
 end
