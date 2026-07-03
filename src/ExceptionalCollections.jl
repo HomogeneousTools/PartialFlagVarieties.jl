@@ -42,10 +42,10 @@ end
 Check whether `E` is an exceptional object in `D^b(G/P)`.
 
 An object `E` is **exceptional** if:
-- ``\\operatorname{Hom}(E, E) = \\mathbb{k}``  (i.e., ``\\mathrm{h}^0(E^\\vee \\otimes E) = 1``), and
-- ``\\operatorname{Ext}^i(E, E) = 0`` for all ``i > 0``  (i.e., ``\\mathrm{h}^i(E^\\vee \\otimes E) = 0``).
+- ``\\operatorname{Hom}(\\mathcal{E}, \\mathcal{E}) = \\mathbb{k}``  (i.e., ``\\mathrm{h}^0(\\mathcal{E}^\\vee \\otimes \\mathcal{E}) = 1``), and
+- ``\\operatorname{Ext}^i(\\mathcal{E}, \\mathcal{E}) = 0`` for all ``i > 0``  (i.e., ``\\mathrm{h}^i(\\mathcal{E}^\\vee \\otimes \\mathcal{E}) = 0``).
 
-Uses Borel–Weil–Bott to compute cohomology of ``E^\\vee \\otimes E``.
+Uses Borel–Weil–Bott to compute cohomology of ``\\mathcal{E}^\\vee \\otimes \\mathcal{E}``.
 
 # Examples
 ```jldoctest
@@ -68,12 +68,12 @@ end
 """
     is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
 
-Check whether `(E, F)` is an **exceptional pair**: ``\\operatorname{RHom}(F, E) = 0``,
-i.e., ``\\mathrm{H}^i(G/P,\\, F^\\vee \\otimes E) = 0`` for all ``i \\geq 0``.
+Check whether `(E, F)` is an **exceptional pair**: ``\\operatorname{RHom}(\\mathcal{F}, \\mathcal{E}) = 0``,
+i.e., ``\\mathrm{H}^i(G/P,\\, \\mathcal{F}^\\vee \\otimes \\mathcal{E}) = 0`` for all ``i \\geq 0``.
 
 Note: this is the orthogonality condition; the pair is ordered so that
-``(E_i, E_j)`` is an exceptional pair for ``i < j`` in an exceptional
-sequence ``\\langle E_1, \\ldots, E_n \\rangle``.
+``(\\mathcal{E}_i, \\mathcal{E}_j)`` is an exceptional pair for ``i < j`` in an exceptional
+sequence ``\\langle \\mathcal{E}_1, \\ldots, \\mathcal{E}_n \\rangle``.
 
 # Examples
 ```jldoctest
@@ -99,8 +99,8 @@ end
     is_strong_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
 
 Check whether `(E, F)` is a **strong exceptional pair**:
-- ``\\operatorname{Ext}^i(F, E) = 0`` for all ``i`` (i.e., ``(E, F)`` is an exceptional pair), and
-- ``\\operatorname{Ext}^i(E, F) = 0`` for all ``i > 0`` (only ``\\operatorname{Hom}(E, F)`` can be nonzero).
+- ``\\operatorname{Ext}^i(\\mathcal{F}, \\mathcal{E}) = 0`` for all ``i`` (i.e., ``(\\mathcal{E}, \\mathcal{F})`` is an exceptional pair), and
+- ``\\operatorname{Ext}^i(\\mathcal{E}, \\mathcal{F}) = 0`` for all ``i > 0`` (only ``\\operatorname{Hom}(\\mathcal{E}, \\mathcal{F})`` can be nonzero).
 
 # Examples
 ```jldoctest
@@ -134,8 +134,8 @@ end
     is_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle}) -> Bool
 
 Check whether `Es = [E₁, ..., Eₙ]` is an **exceptional sequence**:
-- Each ``E_i`` is exceptional (``\\operatorname{Ext}^\\vee(E_i, E_i) = \\mathbb{k}``), and
-- ``(E_i, E_j)`` is an exceptional pair (``\\operatorname{RHom}(E_j, E_i) = 0``) for all ``i < j``.
+- Each ``\\mathcal{E}_i`` is exceptional (``\\operatorname{Ext}^\\vee(\\mathcal{E}_i, \\mathcal{E}_i) = \\mathbb{k}``), and
+- ``(\\mathcal{E}_i, \\mathcal{E}_j)`` is an exceptional pair (``\\operatorname{RHom}(\\mathcal{E}_j, \\mathcal{E}_i) = 0``) for all ``i < j``.
 
 # Examples
 ```jldoctest
@@ -159,8 +159,8 @@ end
     is_strong_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle}) -> Bool
 
 Check whether `Es = [E₁, ..., Eₙ]` is a **strong exceptional sequence**:
-- Each ``E_i`` is exceptional, and
-- ``(E_i, E_j)`` is a strong exceptional pair for all ``i < j``.
+- Each ``\\mathcal{E}_i`` is exceptional, and
+- ``(\\mathcal{E}_i, \\mathcal{E}_j)`` is a strong exceptional pair for all ``i < j``.
 
 # Examples
 ```jldoctest
@@ -602,10 +602,10 @@ end
 """
     is_exceptional(E::CompletelyReducibleBundle, Z::ZeroLocus) -> Bool
 
-Check whether the restriction ``E|_Z`` is an exceptional object on the
+Check whether the restriction ``\\mathcal{E}|_Z`` is an exceptional object on the
 zero locus ``Z``.
 
-Computes ``\\operatorname{Ext}^\\vee(E|_Z, E|_Z) = \\mathrm{H}^\\bullet(Z, E^\\vee \\otimes E|_Z)``
+Computes ``\\operatorname{Ext}^\\vee(\\mathcal{E}|_Z, \\mathcal{E}|_Z) = \\mathrm{H}^\\bullet(Z, \\mathcal{E}^\\vee \\otimes \\mathcal{E}|_Z)``
 via the Koszul resolution and checks that ``\\operatorname{Hom} = \\mathbb{k}``
 and all higher Ext groups vanish.
 """
@@ -620,8 +620,8 @@ end
     is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle,
                         Z::ZeroLocus) -> Bool
 
-Check whether ``(E|_Z, F|_Z)`` is an exceptional pair on the zero locus ``Z``:
-``\\operatorname{RHom}(F|_Z, E|_Z) = 0``.
+Check whether ``(\\mathcal{E}|_Z, \\mathcal{F}|_Z)`` is an exceptional pair on the zero locus ``Z``:
+``\\operatorname{RHom}(\\mathcal{F}|_Z, \\mathcal{E}|_Z) = 0``.
 """
 function is_exceptional_pair(
   E::CompletelyReducibleBundle,
@@ -639,9 +639,9 @@ end
     is_strong_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle,
                                 Z::ZeroLocus) -> Bool
 
-Check whether ``(E|_Z, F|_Z)`` is a strong exceptional pair on ``Z``:
-``\\operatorname{RHom}(F|_Z, E|_Z) = 0`` and
-``\\operatorname{Ext}^{>0}(E|_Z, F|_Z) = 0``.
+Check whether ``(\\mathcal{E}|_Z, \\mathcal{F}|_Z)`` is a strong exceptional pair on ``Z``:
+``\\operatorname{RHom}(\\mathcal{F}|_Z, \\mathcal{E}|_Z) = 0`` and
+``\\operatorname{Ext}^{>0}(\\mathcal{E}|_Z, \\mathcal{F}|_Z) = 0``.
 """
 function is_strong_exceptional_pair(
   E::CompletelyReducibleBundle,
@@ -694,7 +694,7 @@ end
     is_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle},
                             Z::ZeroLocus) -> Bool
 
-Check whether the restrictions ``E_i|_Z`` form an exceptional sequence on ``Z``.
+Check whether the restrictions ``\\mathcal{E}_i|_Z`` form an exceptional sequence on ``Z``.
 """
 function is_exceptional_sequence(
   Es::Vector{<:CompletelyReducibleBundle},
@@ -707,7 +707,7 @@ end
     is_strong_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle},
                                     Z::ZeroLocus) -> Bool
 
-Check whether the restrictions ``E_i|_Z`` form a strong exceptional sequence on ``Z``.
+Check whether the restrictions ``\\mathcal{E}_i|_Z`` form a strong exceptional sequence on ``Z``.
 """
 function is_strong_exceptional_sequence(
   Es::Vector{<:CompletelyReducibleBundle},
