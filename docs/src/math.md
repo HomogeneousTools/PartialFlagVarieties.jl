@@ -183,6 +183,11 @@ ranks and propagates constraints from:
 5. **Lefschetz**: when the defining bundle splits off an ample line bundle
    ``L``, the zero locus is an ample divisor in the zero locus of the
    remaining summands and ``h^{p,q}`` agrees below the middle degree
+6. **Interval propagation**: every cohomology entry and every partial
+   alternating sum of an exact sequence is a nonnegative integer (the
+   latter equal the ranks of the maps in the sequence); propagating these
+   bounds pins a variable whenever its feasible interval collapses to a
+   point, and detects inconsistent input when an interval empties
 
 These constraints form a linear system that is solved by iterative
 substitution until a fixed point is reached; see
