@@ -2851,7 +2851,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # K3 of degree 14 in Gr(2,6): h¹(T) = 20.
     let X = Gr(2, 6), Z = zero_locus(reduce(direct_sum, [line_bundle(X, 1) for _ in 1:6]))
-
       H = tangent_cohomology(Z)
       @test [H[i] for i in 0:2] == AffineExpr.([0, 20, 0])
     end

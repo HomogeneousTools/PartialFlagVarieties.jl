@@ -352,7 +352,7 @@ function _propagate_intervals!(sys::AbstractArray{AffineExpr})
           j == v && continue
           if kj > 0
             hj = get(hi, j, nothing)
-            hj === nothing && (bounded = false; break)
+            hj === nothing && (bounded=false; break)
             resid += kj * hj
           else
             resid += kj * get(lo, j, BigInt(0))
