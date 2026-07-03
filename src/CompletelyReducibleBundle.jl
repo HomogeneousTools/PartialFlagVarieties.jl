@@ -1137,7 +1137,7 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
     E.variety,
     IrrepLevi[
       t for component in E.components for t in tensor_product(component, twist_rep)
-    ]
+    ],
   )
 end
 
