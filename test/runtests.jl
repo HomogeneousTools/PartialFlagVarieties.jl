@@ -2816,20 +2816,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     y = symbolic_variable(1)
 
     # Bounds without collapse leave the system unchanged.
-    sys = [x - 20, 21 - x]
-    @test !PartialFlagVarieties._propagate_intervals!(sys)
-    @test sys == [x - 20, 21 - x]
+    system = [x - 20, 21 - x]
+    @test !PartialFlagVarieties._propagate_intervals!(system)
+    @test system == [x - 20, 21 - x]
 
     # A collapsing interval pins the variable and substitutes it everywhere.
-    sys = [x - 20, 20 - x, 20 - x + y, 3 - y]
-    @test PartialFlagVarieties._propagate_intervals!(sys)
-    @test sys[1] == 0 && sys[3] == y
+    system = [x - 20, 20 - x, 20 - x + y, 3 - y]
+    @test PartialFlagVarieties._propagate_intervals!(system)
+    @test system[1] == 0 && system[3] == y
 
     # Chained bounds: y ≤ x and x ≤ 5 pin nothing, but y ≤ x, x ≤ y, y ≤ 0
     # collapse both to zero.
-    sys = [x - y, y - x, -y + 0]
-    @test PartialFlagVarieties._propagate_intervals!(sys)
-    @test all(is_zero_expr, sys)
+    system = [x - y, y - x, -y + 0]
+    @test PartialFlagVarieties._propagate_intervals!(system)
+    @test all(is_zero_expr, system)
 
     # An empty interval means the input data was inconsistent.
     @test_throws ErrorException PartialFlagVarieties._propagate_intervals!([x - 5, 3 - x])

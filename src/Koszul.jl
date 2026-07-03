@@ -318,28 +318,28 @@ _infeasible_intervals() = error(
 )
 
 """
-    _propagate_intervals!(sys::AbstractArray{AffineExpr}) -> Bool
+    _propagate_intervals!(system::AbstractArray{AffineExpr}) -> Bool
 
 Interval (bound-consistency) propagation on a system of nonnegative
 quantities.
 
-Every element of `sys` represents a nonnegative integer (a cohomology
+Every element of `system` represents a nonnegative integer (a cohomology
 dimension or a connecting-map rank), and every symbolic variable is itself a
 nonnegative integer.  Each element ``c + \\sum_j k_j x_j \\ge 0`` bounds each of
 its variables in terms of the current intervals of the others; the bounds are
 tightened to a fixed point, and a variable whose interval collapses to a
-point is substituted throughout `sys`.  Raises when an interval empties,
+point is substituted throughout `system`.  Raises when an interval empties,
 which means the input data was inconsistent.
 
 Returns `true` when at least one variable was pinned.  This recovers the
 information the equation-only solvers discard: for example the entries
 ``(x - 20, 21 - x, 20 - x + y)`` pin ``x = 20`` and then bound ``y``.
 """
-function _propagate_intervals!(sys::AbstractArray{AffineExpr})
+function _propagate_intervals!(system::AbstractArray{AffineExpr})
   # Fast path: fully determined systems (the common case) need no sweeps,
   # only the nonnegativity sanity check.
-  if all(is_determined, sys)
-    all(constraint -> constraint.constant >= 0, sys) || _infeasible_intervals()
+  if all(is_determined, system)
+    all(constraint -> constraint.constant >= 0, system) || _infeasible_intervals()
     return false
   end
 
@@ -352,7 +352,7 @@ function _propagate_intervals!(sys::AbstractArray{AffineExpr})
   for _ in 1:64
     changed = false
 
-    for constraint in sys
+    for constraint in system
       if isempty(constraint.coeffs)
         constraint.constant >= 0 || _infeasible_intervals()
         continue
@@ -400,7 +400,7 @@ function _propagate_intervals!(sys::AbstractArray{AffineExpr})
     # A collapsed interval turns the variable into a known constant.
     for var in collect(keys(upper))
       if get(lower, var, BigInt(0)) == upper[var]
-        _substitute_var!(sys, var, AffineExpr(upper[var]))
+        _substitute_var!(system, var, AffineExpr(upper[var]))
         delete!(upper, var)
         delete!(lower, var)
         changed = true
