@@ -442,19 +442,15 @@ forward and backward until convergence.
 Returns `(lower, upper)` bound vectors of length `d + 2` indexed for ``δ_{-1}, …, δ_d``.
 """
 function _ses_delta_bounds(a_vals::Vector{BigInt}, b_vals::Vector{BigInt}, d::Int)
+  # Every rank has a finite bound from the start, so no infinity sentinel is
+  # needed: δ_{-1} = δ_d = 0 (there is no H^{-1}(C) and no H^{d+1}(A)), and
+  # δ_i ≤ a_{i+1} since the connecting map lands in H^{i+1}(A).
+  upper = [BigInt(0); a_vals[2:end]; BigInt(0)]
+
+  # δ_i ≥ a_{i+1} - b_{i+1}: exactness at H^{i+1}(A) makes the kernel of
+  # H^{i+1}(A) → H^{i+1}(B) the image of the connecting map.
   lower = zeros(BigInt, d + 2)
-  # 10^18 stands in for +∞; actual cohomology dimensions are far smaller, and
-  # BigInt arithmetic keeps the sentinel exact.
-  upper = fill(BigInt(10)^18, d + 2)
-
-  upper[1] = BigInt(0)      # δ_{-1} = 0: there is no H^{-1}(C)
-  upper[d + 2] = BigInt(0)  # δ_d = 0: there is no H^{d+1}(A)
-
-  # δ_i ≤ a_{i+1} (the connecting map lands in H^{i+1}(A)), and
-  # δ_i ≥ a_{i+1} - b_{i+1} (exactness at H^{i+1}(A): the kernel of
-  # H^{i+1}(A) → H^{i+1}(B) is the image of the connecting map).
   for i in 0:(d - 1)
-    upper[i + 2] = min(upper[i + 2], a_vals[i + 2])
     lower[i + 2] = max(lower[i + 2], a_vals[i + 2] - b_vals[i + 2])
   end
 
