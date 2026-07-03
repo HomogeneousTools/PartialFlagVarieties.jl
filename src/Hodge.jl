@@ -95,25 +95,47 @@ julia> H[1, 1]  # h^0(ℙ³, 𝒪)
 1
 ```
 """
-function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
-  length(marked_nodes(X)) == 1 || throw(ArgumentError(
-    "twisted_hodge_numbers requires Picard rank 1"
-  ))
+function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBundle)
+  rank_bundle(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
 
   d = dimension(X)
   H = zeros(BigInt, d + 1, d + 1)
-
   for p in 0:d
-    # Ω^p(j) = ∧^p Ω ⊗ O(j)
-    Omega_p = exterior_power(cotangent_bundle(X), p)
-    Omega_p_j = twist(Omega_p, 1, Int(j))
-    Hp = dimensions(Omega_p_j)
+    Hp = dimensions(tensor_product(exterior_power(cotangent_bundle(X), p), L))
     for q in 0:d
       H[p + 1, q + 1] = Hp[q]
     end
   end
-
   H
+end
+
+function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
+  length(marked_nodes(X)) == 1 || throw(ArgumentError(
+    "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
+  ))
+  twisted_hodge_numbers(X, line_bundle(X, Int(j)))
+end
+
+"""
+    twisted_hodge_numbers(X, degrees::AbstractVector{<:Integer})
+    twisted_hodge_numbers(Z, degrees::AbstractVector{<:Integer})
+
+Twist by the line bundle ``\\mathcal{O}_X(d_1, \\ldots, d_r)`` with one degree
+per marked node, as in `line_bundle(X, degrees)`.  This is the natural form
+for ambient varieties of Picard rank greater than 1.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = partial_flag_variety(TypeA{3}, (1, 3));
+
+julia> twisted_hodge_numbers(X, [1, 1])[1, 1]  # h^0(O(1,1))
+15
+```
+"""
+function twisted_hodge_numbers(X::PartialFlagVariety, degrees::AbstractVector{<:Integer})
+  twisted_hodge_numbers(X, line_bundle(X, collect(Int, degrees)))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -162,7 +184,7 @@ end
     euler_characteristic(P::PolyvectorParallelogram)
 
 Compute the Euler characteristic of Hochschild cohomology:
-``\\chi(\\mathrm{HH}^*) = \\sum_{p,q} (-1)^{p+q} h^q(X, \\bigwedge^p T_X)``
+``\\chi(\\mathrm{HH}^\\bullet(X)) = \\sum_{p,q} (-1)^{p+q} \\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``
 """
 function euler_characteristic(P::PolyvectorParallelogram{T}) where {T}
   sum(((-1)^(p + q) * P[p, q] for p in 0:(P.dim), q in 0:(P.dim)); init=_pp_zero(T))
@@ -716,6 +738,27 @@ values are injected into the computed rows ``p \\le \\lfloor d/2 \\rfloor``.
 Only attempted when undetermined entries remain below the middle total
 degree, since the recursive computation is not free.  Returns whether
 anything was injected.
+
+# Examples
+
+The zero locus of ``\\mathcal{Q}^\\vee(1) \\oplus \\mathcal{O}(1)`` on
+``\\mathrm{Gr}(2,8)`` is an ample divisor in ``Z(\\mathcal{Q}^\\vee(1))``; the
+long exact sequences leave ``\\mathrm{h}^{2,2}`` open, and stripping the
+``\\mathcal{O}(1)`` summand pins it to
+``\\mathrm{h}^{2,2}(Z(\\mathcal{Q}^\\vee(1))) = 3``:
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 8);
+
+julia> E = tensor_product(dual(universal_quotient_bundle(X)), line_bundle(X, 1));
+
+julia> h = hodge_numbers(zero_locus(direct_sum(E, line_bundle(X, 1))));
+
+julia> h[3, 3]
+3
+```
 """
 function _lefschetz_inject!(M::Matrix{AffineExpr}, Z::ZeroLocus)
   d = dimension(Z)
@@ -884,9 +927,13 @@ julia> M[2, 2]  # h^1(Z, Ω¹_Z) = h^{1,1} = 1
 function twisted_hodge_numbers(Z::ZeroLocus, j::Integer)
   X = Z.ambient
   length(marked_nodes(X)) == 1 || throw(ArgumentError(
-    "twisted_hodge_numbers with integer twist requires Picard rank 1"
+    "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
   ))
   twisted_hodge_numbers(Z, line_bundle(X, Int(j)))
+end
+
+function twisted_hodge_numbers(Z::ZeroLocus, degrees::AbstractVector{<:Integer})
+  twisted_hodge_numbers(Z, line_bundle(Z.ambient, collect(Int, degrees)))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
