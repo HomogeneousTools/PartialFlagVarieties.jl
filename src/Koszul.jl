@@ -336,6 +336,13 @@ information the equation-only solvers discard: for example the entries
 ``(x - 20, 21 - x, 20 - x + y)`` pin ``x = 20`` and then bound ``y``.
 """
 function _propagate_intervals!(sys::AbstractArray{AffineExpr})
+  # Fast path: fully determined systems (the common case) need no sweeps,
+  # only the nonnegativity sanity check.
+  if all(is_determined, sys)
+    all(constraint -> constraint.constant >= 0, sys) || _infeasible_intervals()
+    return false
+  end
+
   lower = Dict{Int,BigInt}()  # absent: 0 (every variable is a nonnegative integer)
   upper = Dict{Int,BigInt}()  # absent: unbounded
 
