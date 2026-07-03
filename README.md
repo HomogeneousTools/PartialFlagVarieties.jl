@@ -194,3 +194,8 @@ with the Blue style configured in `.JuliaFormatter.toml`.
 ```sh
 julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.add("JuliaFormatter"); using JuliaFormatter; format(".")'
 ```
+
+## Authors
+
+- Pieter Belmans <pbelmans@uu.nl>
+- Javier Fernández Píriz <javier.fernandezpiriz@uni.lu>

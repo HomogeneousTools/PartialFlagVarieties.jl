@@ -3,7 +3,7 @@ using PartialFlagVarieties
 
 makedocs(;
   sitename="PartialFlagVarieties.jl",
-  authors="Pieter Belmans",
+  authors="Pieter Belmans <pbelmans@uu.nl>, Javier Fernández Píriz <javier.fernandezpiriz@uni.lu>",
   remotes=nothing,
   format=Documenter.HTML(;
     prettyurls=get(ENV, "CI", nothing) == "true",
@@ -23,7 +23,6 @@ makedocs(;
     "API Reference" => [
       "MarkedDynkinType" => "api/marked_dynkin_type.md",
       "PartialFlagVariety" => "api/partial_flag_variety.md",
-      "IrrepLevi" => "api/irrep_levi.md",
       "CompletelyReducibleBundle" => "api/bundle.md",
       "FilteredBundle" => "api/filtered_bundle.md",
       "SpectralSequence" => "api/spectral_sequence.md",
@@ -33,6 +32,7 @@ makedocs(;
       "ZeroLoci" => "api/zero_loci.md",
       "Koszul Algebra" => "api/koszul.md",
       "Constructions" => "api/constructions.md",
+      "IrrepLevi" => "api/irrep_levi.md",
       "Labels" => "api/labels.md",
       "ExceptionalCollections" => "api/exceptional_collections.md",
       "Cache Configuration" => "api/cache_config.md",
