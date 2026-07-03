@@ -189,8 +189,17 @@ const _TENSOR_PRODUCT_CACHE = let b = _default_cache_budget()
   )
 end
 
+"""
+Canonical order for an unordered cache key: tensor products of Levi
+representations are symmetric (``V ⊗ W ≅ W ⊗ V``, and every consumer treats
+the decomposition as a multiset), so both orders share one cache entry.
+"""
+function _unordered_pair(a::IrrepLevi, b::IrrepLevi)
+  hash(a) <= hash(b) ? (a, b) : (b, a)
+end
+
 function _tensor_product_terms(a::IrrepLevi, b::IrrepLevi)
-  get!(_TENSOR_PRODUCT_CACHE, (a, b)) do
+  get!(_TENSOR_PRODUCT_CACHE, _unordered_pair(a, b)) do
     _tensor_product_terms_uncached(a, b)
   end
 end

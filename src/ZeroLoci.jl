@@ -283,7 +283,7 @@ Compute and cache the BWB contributions `[(deg, dim), ...]` for
 acyclic.
 """
 function _bwb_pair(a::IrrepLevi, b::IrrepLevi)
-  get!(_BWB_PAIR_CACHE, (a, b)) do
+  get!(_BWB_PAIR_CACHE, _unordered_pair(a, b)) do
     by_degree = Dict{Int,BigInt}()
     for (c, mult) in _tensor_product_terms(a, b)
       λ = p_dominant_weight(c)
