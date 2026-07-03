@@ -107,8 +107,8 @@ H² = 1, false)
 julia> var_counter = Ref(0);
 
 julia> C_sym = solve_ses_cohomology_symbolic(A, B, var_counter)
-H⁰ = 2 + x_1
-H¹ = 3 + x_1
+H⁰ = 2 + x_0
+H¹ = 3 + x_0
 H² = 1
 
 julia> is_determined(C_sym[0])
@@ -121,9 +121,9 @@ true
 The dimension-valued solver picks *some* valid solution (here
 ``r_0 = 0``, giving ``c_0 = 2``), but returns `exact = false` to
 indicate the answer is not unique. The symbolic solver instead
-introduces a variable ``x_1 = \mathrm{rk}(\delta_0)`` and expresses
-each ``c_i`` as an affine function of ``x_1``. The variable satisfies
-``0 \le x_1 \le 2``, so the true
+introduces a variable ``x_0 = \mathrm{rk}(\delta_0)`` and expresses
+each ``c_i`` as an affine function of ``x_0``. The variable satisfies
+``0 \le x_0 \le 2``, so the true
 ``h^0(C)`` lies in ``\{2, 3, 4\}``.
 
 ### Geometric example: hypersurface (fully determined)
@@ -195,3 +195,12 @@ the zero locus of a higher-rank bundle that does not split into ample line
 bundles, so no Lefschetz-type argument applies.
 The true value (computable by other means) is ``h^{1,1}(Z) = 8``,
 corresponding to ``x_0 = 0``.
+
+## Internals
+
+Entry-based long exact sequence solvers used by the restriction machinery.
+
+```@docs
+PartialFlagVarieties.les_cokernel
+PartialFlagVarieties.les_kernel
+```

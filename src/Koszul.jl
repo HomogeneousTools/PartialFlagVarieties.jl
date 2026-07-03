@@ -233,7 +233,7 @@ end
 
 """
 Given a linear equation ``\\mathrm{expr} = 0`` in the symbolic variables,
-eliminate one variable (chosen by [`_solve_for_variable`](@ref), i.e.
+eliminate one variable (chosen by `_solve_for_variable`, i.e.
 consistently across arrays) from the `AffineExpr` array ``M``, in place.
 Returns `true` when an entry of ``M`` changed.
 """
@@ -662,7 +662,7 @@ Given ``H^*(A)`` and ``H^*(B)`` from a short exact sequence
 
 Creates a fresh symbolic variable for each ``H^i(C)``, then eliminates as
 many as possible using the alternating-sum equations of the long exact
-sequence (see [`_les_equations`](@ref)).  Fully determined numeric input is
+sequence (see `_les_equations`).  Fully determined numeric input is
 delegated to the bound-propagation solver first.
 """
 function les_cokernel(

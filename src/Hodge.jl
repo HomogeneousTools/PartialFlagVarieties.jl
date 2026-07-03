@@ -538,7 +538,7 @@ end
     _conormal_row(C, p, var_counter) -> Vector{AffineExpr}
 
 ``H^q(Z, \\Omega^p_Z \\otimes L|_Z)`` for ``q = 0, \\ldots, \\dim Z``, where `C`
-is a conormal backend from [`_conormal_data`](@ref).
+is a conormal backend from `_conormal_data`.
 
 Chains the conormal complex through `les_cokernel`, solving
 ``0 \\to C_{j-1} \\to \\mathrm{Sym}^{p-j}(E^\\vee) \\otimes \\Omega^j_X \\otimes L|_Z \\to C_j \\to 0``

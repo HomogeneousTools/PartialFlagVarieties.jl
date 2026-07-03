@@ -619,7 +619,7 @@ Compute ``H^*(Z, F|_Z)`` for a filtered bundle ``F`` on the ambient variety.
 
 Each Koszul term ``F ⊗ ∧^k E^*`` is again a filtered bundle; its cohomology
 on ``X`` is the abutment of the spectral sequence of the filtration
-(see [`_cohomology_filtered`](@ref)), and the Koszul chain is then solved
+(see `_cohomology_filtered`), and the Koszul chain is then solved
 with the symbolic LES solver.  When every spectral sequence visibly
 degenerates, the terms are exact and the numeric solver (with its Serre
 duality fallback for ``ω_Z ≅ \\mathcal{O}_Z``) is used instead.
