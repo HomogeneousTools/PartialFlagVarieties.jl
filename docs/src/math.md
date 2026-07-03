@@ -54,12 +54,12 @@ flag variety), the **Borel–Weil–Bott theorem** states:
 Let ``\mu = \lambda + \rho`` where ``\rho`` is the Weyl vector.
 
 - If ``\mu`` is **singular** (lies on a wall of the Weyl chambers), then
-  ``H^i(G/B, \mathcal{L}_\lambda) = 0`` for all ``i``.
+  ``\mathrm{H}^i(G/B, \mathcal{L}_\lambda) = 0`` for all ``i``.
 
 - If ``\mu`` is **regular**, there exists a unique ``w \in W`` such that
   ``w(\mu)`` is dominant. Then:
-  - ``H^{\ell(w)}(G/B, \mathcal{L}_\lambda) \cong V_{w(\mu) - \rho}`` as ``G``-modules
-  - ``H^i(G/B, \mathcal{L}_\lambda) = 0`` for ``i \neq \ell(w)``
+  - ``\mathrm{H}^{\ell(w)}(G/B, \mathcal{L}_\lambda) \cong V_{w(\mu) - \rho}`` as ``G``-modules
+  - ``\mathrm{H}^i(G/B, \mathcal{L}_\lambda) = 0`` for ``i \neq \ell(w)``
 
 For a bundle on ``G/P``, we apply this to each irreducible Levi summand by
 converting back to an ambient weight via the special matrix.
@@ -68,17 +68,17 @@ converting back to an ambient weight via the special matrix.
 
 - **Dimension**: ``\dim(G/P) = |\Phi^+_G| - |\Phi^+_L|`` (positive roots of ``G``
   minus positive roots of the Levi)
-- **Euler characteristic**: ``\chi(G/P) = |W_G| / |W_L|``
-- **Betti numbers**: computed from the ratio of Poincaré polynomials of ``W_G``
-  and ``W_L``
+- **Euler characteristic**: ``\chi(G/P) = |\mathrm{W}_G| / |\mathrm{W}_L|``
+- **Betti numbers**: computed from the ratio of Poincaré polynomials of ``\mathrm{W}_G``
+  and ``\mathrm{W}_L``
 - **Picard rank**: equals ``|I|``, the number of marked nodes
 
 ## Koszul resolution and zero loci
 
 ### Zero loci of equivariant bundles
 
-Let ``X = G/P`` be a partial flag variety and ``E`` an equivariant vector
-bundle of rank ``r`` on ``X``. A **regular section** ``s \in H^0(X, E)``
+Let ``X = G/P`` be a partial flag variety and ``\mathcal{E}`` an equivariant vector
+bundle of rank ``r`` on ``X``. A **regular section** ``s \in \mathrm{H}^0(X, E)``
 defines a smooth subvariety
 
 ```math
@@ -89,7 +89,7 @@ of codimension ``r`` (hence dimension ``\dim Z = \dim X - r``). The
 **Koszul complex** of ``s`` resolves the structure sheaf of ``Z``:
 
 ```math
-0 \to \bigwedge^r E^* \xrightarrow{d_r} \bigwedge^{r-1} E^* \xrightarrow{d_{r-1}} \cdots \xrightarrow{d_2} E^* \xrightarrow{d_1} \mathcal{O}_X \to \mathcal{O}_Z \to 0,
+0 \to \bigwedge^r \mathcal{E}^\vee \xrightarrow{d_r} \bigwedge^{r-1} \mathcal{E}^\vee \xrightarrow{d_{r-1}} \cdots \xrightarrow{d_2} \mathcal{E}^\vee \xrightarrow{d_1} \mathcal{O}_X \to \mathcal{O}_Z \to 0,
 ```
 
 where the differentials ``d_k`` are contractions with ``s``. Exactness holds
@@ -99,16 +99,16 @@ precisely when ``s`` is regular (its zero locus has the expected codimension
 ### Computing cohomology on ``Z``
 
 To compute the cohomology of a bundle ``F|_Z`` (the restriction of an
-equivariant bundle ``F`` on ``X``), one **twists** the Koszul complex by
-``F``:
+equivariant bundle ``\mathcal{F}`` on ``X``), one **twists** the Koszul complex by
+``\mathcal{F}``:
 
 ```math
-0 \to F \otimes \bigwedge^r E^* \to \cdots \to F \otimes E^* \to F \to F|_Z \to 0.
+0 \to F \otimes \bigwedge^r \mathcal{E}^\vee \to \cdots \to F \otimes \mathcal{E}^\vee \to F \to F|_Z \to 0.
 ```
 
-Each term ``F \otimes \bigwedge^k E^*`` is a bundle on ``X``, so its
+Each term ``F \otimes \bigwedge^k \mathcal{E}^\vee`` is a bundle on ``X``, so its
 cohomology is computable via the Borel–Weil–Bott theorem. The long exact
-sequence in cohomology then determines ``H^*(Z, F|_Z)`` — either exactly or
+sequence in cohomology then determines ``\mathrm{H}^\bullet(Z, F|_Z)`` — either exactly or
 up to symbolic variables representing unknown connecting map ranks (see
 [Koszul Algebra](@ref)).
 
@@ -127,7 +127,7 @@ cancels the canonical class of the ambient variety.
 ### Fano condition
 
 The zero locus is **Fano** when ``\omega_Z^{-1}`` is ample, or equivalently
-when ``\omega_X^{-1} \otimes \det(E)^{-1}`` restricts to an ample bundle
+when ``\omega_X^{-1} \otimes \det(\mathcal{E})^{-1}`` restricts to an ample bundle
 on ``Z``.
 
 For Picard-rank-1 zero loci, the **Fano index** is
@@ -152,7 +152,7 @@ Taking exterior powers yields, for every ``p``, the exact complex
 ```
 
 on ``Z`` (exact because the section is regular and ``Z`` smooth). This
-reduces the computation of ``H^q(Z, \Omega^p_Z \otimes L)`` (for any line
+reduces the computation of ``\mathrm{H}^q(Z, \Omega^p_Z \otimes L)`` (for any line
 bundle ``L``) to a sequence of long exact sequences, each involving
 restrictions of bundles on ``X`` — which are computable via the Koszul
 resolution and the BWB theorem.
@@ -175,14 +175,14 @@ ranks and propagates constraints from:
 
 1. **Serre duality** on ``Z``: cross-identifying entries of the two twisted
    Hodge matrices ``M_1[p,q]`` and ``M_2[d-p,\,d-q]``
-2. **Euler characteristic**: the alternating sum ``\chi(Z, \bigwedge^p T_Z)``
+2. **Euler characteristic**: the alternating sum ``\chi(Z, \bigwedge^p \mathrm{T}_Z)``
    is an integer computable exactly from the Koszul complex
 3. **Kodaira–Akizuki–Nakano vanishing**: for an ample line bundle twist,
    entries with ``p + q > \dim Z`` vanish (and dually for antiample twists)
-4. **Hodge symmetry** ``h^{p,q} = h^{q,p}`` for the untwisted diamond
+4. **Hodge symmetry** ``\mathrm{h}^{p,q} = \mathrm{h}^{q,p}`` for the untwisted diamond
 5. **Lefschetz**: when the defining bundle splits off an ample line bundle
    ``L``, the zero locus is an ample divisor in the zero locus of the
-   remaining summands and ``h^{p,q}`` agrees below the middle degree
+   remaining summands and ``\mathrm{h}^{p,q}`` agrees below the middle degree
 6. **Interval propagation**: every cohomology entry and every partial
    alternating sum of an exact sequence is a nonnegative integer (the
    latter equal the ranks of the maps in the sequence); propagating these
@@ -215,24 +215,24 @@ parametrization.
 For a smooth variety ``Z``, the **Hochschild–Kostant–Rosenberg theorem** gives
 
 ```math
-\mathrm{HH}^n(Z) = \bigoplus_{p+q=n} H^q\!\bigl(Z,\, \bigwedge^p T_Z\bigr).
+\mathrm{HH}^n(Z) = \bigoplus_{p+q=n} \mathrm{H}^q\!\bigl(Z,\, \bigwedge^p \mathrm{T}_Z\bigr).
 ```
 
-The entries ``\mathrm{h}^{p,q}(Z) = h^q(\bigwedge^p T_Z)`` form the **polyvector
+The entries ``\mathrm{h}^{p,q}(Z) = \mathrm{h}^q(\bigwedge^p \mathrm{T}_Z)`` form the **polyvector
 parallelogram**.  For a smooth zero locus ``Z = Z(s) \subset X`` of a regular
-section of an equivariant bundle ``E``, the adjunction formula gives
+section of an equivariant bundle ``\mathcal{E}``, the adjunction formula gives
 
 ```math
 \omega_Z \cong \bigl(\omega_X \otimes \det E\bigr)\big|_Z,
 ```
 
 so the anticanonical twist is ``\omega_Z^{-1} = \bigl(\omega_X^{-1} \otimes
-\det(E)^{-1}\bigr)\big|_Z``.  The **HKR identity** then reduces polyvector
+\det(\mathcal{E})^{-1}\bigr)\big|_Z``.  The **HKR identity** then reduces polyvector
 fields to twisted Hodge numbers:
 
 ```math
-h^q\!\bigl(\bigwedge^p T_Z\bigr)
-  = h^q\!\bigl(\Omega^{d-p}_Z \otimes \omega_Z^{-1}\bigr),
+\mathrm{h}^q\!\bigl(\bigwedge^p \mathrm{T}_Z\bigr)
+  = \mathrm{h}^q\!\bigl(\Omega^{d-p}_Z \otimes \omega_Z^{-1}\bigr),
   \quad d = \dim Z.
 ```
 
@@ -242,9 +242,9 @@ The algorithm introduces two ``(d+1)\times(d+1)`` matrices of symbolic affine
 expressions:
 
 ```math
-M_1[p,q] = h^q\!\bigl(\Omega^p_Z \otimes \omega_Z^{-1}\bigr),
+M_1[p,q] = \mathrm{h}^q\!\bigl(\Omega^p_Z \otimes \omega_Z^{-1}\bigr),
 \qquad
-M_2[p,q] = h^q\!\bigl(\Omega^p_Z \otimes \omega_Z\bigr).
+M_2[p,q] = \mathrm{h}^q\!\bigl(\Omega^p_Z \otimes \omega_Z\bigr).
 ```
 
 Each entry is computed by applying the **conormal filtration** of
@@ -256,16 +256,16 @@ affine expressions ``c + \sum_i k_i x_i`` rather than integers.
 
 **Serre cross-constraints resolve symbolic variables.**  By Serre duality on
 ``Z``, applied to ``F = \Omega^p_Z \otimes \omega_Z^{-1}`` and using the HKR
-isomorphism ``\bigwedge^p T_Z \cong \Omega^{d-p}_Z \otimes \omega_Z^{-1}``:
+isomorphism ``\bigwedge^p \mathrm{T}_Z \cong \Omega^{d-p}_Z \otimes \omega_Z^{-1}``:
 
 ```math
-h^q\!\bigl(\Omega^p_Z \otimes \omega_Z^{-1}\bigr)
-  = h^{d-q}\!\bigl(\Omega^{d-p}_Z \otimes \omega_Z\bigr),
+\mathrm{h}^q\!\bigl(\Omega^p_Z \otimes \omega_Z^{-1}\bigr)
+  = \mathrm{h}^{d-q}\!\bigl(\Omega^{d-p}_Z \otimes \omega_Z\bigr),
 ```
 
 which translates to the matrix equation ``M_1[p,q] = M_2[d-p,\,d-q]``.
-The derivation is: ``h^q(F) = h^{d-q}(F^* \otimes \omega_Z)`` with
-``F^* \otimes \omega_Z = \bigwedge^p T_Z \otimes \omega_Z^2
+The derivation is: ``\mathrm{h}^q(F) = \mathrm{h}^{d-q}(F^\vee \otimes \omega_Z)`` with
+``F^\vee \otimes \omega_Z = \bigwedge^p \mathrm{T}_Z \otimes \omega_Z^2
 \cong \Omega^{d-p}_Z \otimes \omega_Z``.
 Whenever one side is a determined integer and the other still contains a
 symbolic variable, this equation eliminates that variable globally across
@@ -276,14 +276,14 @@ hypersurface ``Z \subset \mathbb{P}^4`` (a Calabi–Yau threefold, ``d=3``).
 The conormal filtration for ``\Omega^2_Z \otimes \omega_Z^{-1}`` involves a
 three-step LES chain; suppose the connecting map at one step has unknown
 rank ``x_0``, leaving ``M_1[2,1] = c_0 + x_0``.  The independent
-computation of ``M_2[1,2] = h^2(\Omega^1_Z \otimes \omega_Z)`` is fully
+computation of ``M_2[1,2] = \mathrm{h}^2(\Omega^1_Z \otimes \omega_Z)`` is fully
 determined (say ``= k``).  The Serre equation
 ``M_1[2,1] = M_2[d-2,\, d-1] = M_2[1,2]`` — concretely, the
 cross-identification
 
 ```math
-h^1\!\bigl(\Omega^2_Z \otimes \omega_Z^{-1}\bigr)
-  = h^{d-1}\!\bigl(\Omega^{d-2}_Z \otimes \omega_Z\bigr)
+\mathrm{h}^1\!\bigl(\Omega^2_Z \otimes \omega_Z^{-1}\bigr)
+  = \mathrm{h}^{d-1}\!\bigl(\Omega^{d-2}_Z \otimes \omega_Z\bigr)
 ```
 
 at ``(p,q) = (2, 1)`` with ``d = 3`` reads ``M_1[2,1] = M_2[1,2]``.
@@ -293,7 +293,7 @@ If ``M_2[1,2]`` is determined, the variable ``x_0`` is resolved.
 ``p``:
 
 ```math
-\chi(Z,\, \bigwedge^p T_Z) = \sum_{q=0}^{d} (-1)^q \mathrm{h}^{p,q}(Z)
+\chi(Z,\, \bigwedge^p \mathrm{T}_Z) = \sum_{q=0}^{d} (-1)^q \mathrm{h}^{p,q}(Z)
 ```
 
 is computed exactly from the Koszul resolution (an alternating sum of BWB
@@ -306,15 +306,15 @@ When the zero locus is **Fano** (``\omega_Z^{-1}`` ample), the
 **Akizuki–Nakano theorem** gives:
 
 ```math
-H^q\!\bigl(Z,\, \Omega^p_Z \otimes L\bigr) = 0
+\mathrm{H}^q\!\bigl(Z,\, \Omega^p_Z \otimes L\bigr) = 0
   \quad\text{for } p + q > \dim Z,
 ```
 
 for any ample line bundle ``L``.  Applied to ``L = \omega_Z^{-1}``:
 
-- ``h^q(\Omega^p_Z \otimes \omega_Z^{-1}) = 0`` for ``p + q > d``
+- ``\mathrm{h}^q(\Omega^p_Z \otimes \omega_Z^{-1}) = 0`` for ``p + q > d``
   (equivalently ``\mathrm{h}^{p,q} = 0`` for ``q > p``), and
-- by the Serre dual statement: ``h^q(\Omega^p_Z \otimes \omega_Z) = 0``
+- by the Serre dual statement: ``\mathrm{h}^q(\Omega^p_Z \otimes \omega_Z) = 0``
   for ``p + q < d``.
 
 These zero-constraints are applied inside the symbolic fixed-point loop,
@@ -322,7 +322,7 @@ substituting ``0`` for the relevant entries of ``M_1``, ``M_2``, and ``data``
 and propagating the resulting equations to resolve further symbolic variables.
 
 **Implementation.**  The function `is_strongly_fano` returns `true` when
-every Picard-basis coordinate of ``\omega_X^{-1} \otimes \det(E)^{-1}`` is
+every Picard-basis coordinate of ``\omega_X^{-1} \otimes \det(\mathcal{E})^{-1}`` is
 strictly positive — i.e. when ``\omega_Z^{-1}`` is the restriction of an
 ample bundle on ``X``, hence ample on ``Z``.  In that case Akizuki–Nakano
 vanishing is applied inside the symbolic loop.  When the check fails (some
@@ -331,11 +331,11 @@ to be Fano for reasons not visible from the ambient coordinates.
 
 A boundary case arises when ``X = \mathrm{Fl}(1,3;\,4) = A_3/P_{\{1,3\}}``
 (Picard rank 2, coordinates ``[\omega_1, \omega_3]``, anticanonical
-``\omega_X^{-1} = \mathcal{O}(3,3)``).  Take a bundle ``E``
-with ``\det(E) = \mathcal{O}(3, 0)``.  Then
+``\omega_X^{-1} = \mathcal{O}(3,3)``).  Take a bundle ``\mathcal{E}``
+with ``\det(\mathcal{E}) = \mathcal{O}(3, 0)``.  Then
 
 ```math
-\omega_Z^{-1} = \bigl(\omega_X^{-1} \otimes \det(E)^{-1}\bigr)\big|_Z
+\omega_Z^{-1} = \bigl(\omega_X^{-1} \otimes \det(\mathcal{E})^{-1}\bigr)\big|_Z
   = \mathcal{O}(3,3) \otimes \mathcal{O}(-3,0)\big|_Z
   = \mathcal{O}(0,3)\big|_Z.
 ```

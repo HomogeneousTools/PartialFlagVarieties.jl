@@ -27,10 +27,21 @@ export SpectralSequence,
 """
     SpectralSequence{T}
 
-A first-quadrant spectral sequence represented by its E₁ page, stored as a
-dictionary mapping positions `(p, q)` to entries of type `T`.  The entry at
-`(p, q)` sits in total degree `p + q`; differentials raise the total degree
-by 1 and strictly raise `q`.
+A spectral sequence represented by its E₁ page, stored as a dictionary
+mapping positions `(p, q)` to entries of type `T`.  The entry at `(p, q)`
+sits in total degree `p + q`; differentials raise the total degree by 1 and
+strictly raise `q`.
+
+For the spectral sequence of a filtered bundle the support is **not** the
+first quadrant but the horizontal band
+
+```math
+0 \\le q \\le s - 1, \\qquad 0 \\le p + q \\le \\dim X,
+```
+
+where ``s`` is the number of graded pieces: ``q`` indexes the pieces from
+the top of the filtration, the total degree is a cohomological degree, and
+``p = (p+q) - q`` may therefore be negative.
 
 The type parameter is either `WeylCharacter` (character-valued entries) or
 `Int` (multiplicities, as in an isotypical component).
@@ -53,7 +64,7 @@ E1_page(S::SpectralSequence) = S.E1
 """
     spectral_sequence(F::FilteredBundle) -> SpectralSequence{WeylCharacter}
 
-The spectral sequence ``E_1 = H^*(X, \\mathrm{gr}\\, F) \\Rightarrow H^*(X, F)``
+The spectral sequence ``E_1 = \\mathrm{H}^\\bullet(X, \\mathrm{gr}\\, F) \\Rightarrow \\mathrm{H}^\\bullet(X, F)``
 of a filtered bundle, with the E₁ page computed by Borel–Weil–Bott.
 
 The cohomology of the `q`-th graded piece **counted from the top** of the
@@ -61,8 +72,8 @@ filtration is placed in positions of second coordinate `q` (so `q = 0` is
 the top quotient), with the cohomological degree as total degree.  With
 this convention every differential raises the total degree by 1 and
 strictly raises `q`: for a two-step filtration ``0 \\to F_1 \\to F \\to
-\\mathrm{gr}_2 \\to 0`` the connecting map ``H^i(\\mathrm{gr}_2) \\to
-H^{i+1}(F_1)`` goes from `q = 0` to `q = 1`.
+\\mathrm{gr}_2 \\to 0`` the connecting map ``\\mathrm{H}^i(\\mathrm{gr}_2) \\to
+\\mathrm{H}^{i+1}(F_1)`` goes from `q = 0` to `q = 1`.
 
 # Examples
 ```jldoctest
@@ -193,7 +204,7 @@ end
 """
     _cohomology_filtered(F::FilteredBundle, var_counter) -> Vector{AffineExpr}
 
-``H^*(X, F)`` via the spectral sequence of the filtration, as a vector of
+``\\mathrm{H}^\\bullet(X, F)`` via the spectral sequence of the filtration, as a vector of
 affine expressions indexed by cohomological degree `0:dim(X)`.
 
 For each isotypical component, differentials can only cancel E₁ classes on
@@ -241,7 +252,7 @@ end
 """
     cohomology(F::FilteredBundle) -> Cohomology{AffineExpr}
 
-Compute ``H^*(X, F)`` via the spectral sequence of the filtration.
+Compute ``\\mathrm{H}^\\bullet(X, F)`` via the spectral sequence of the filtration.
 
 Entries are affine expressions: exact integers where the spectral sequence
 visibly degenerates (checked per isotypical component), and expressions in

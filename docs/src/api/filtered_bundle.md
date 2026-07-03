@@ -14,7 +14,7 @@ and this stratification yields a ``P``-equivariant filtration
 
 whose graded pieces ``\mathrm{gr}_k = F_k / F_{k-1}`` are completely reducible
 ``L``-representations. This filtration is key to computing
-``H^q(X, \Omega^p_X)`` via the associated spectral sequence, and to the
+``\mathrm{H}^q(X, \Omega^p_X)`` via the associated spectral sequence, and to the
 conormal filtration used in zero-locus Hodge number computations.
 
 ## API

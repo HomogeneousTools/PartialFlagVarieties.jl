@@ -7,16 +7,17 @@ mathematical conventions behind the API, see [Conventions & Notation](convention
 
 ```julia
 using Pkg
+Pkg.add("Semisimple")  # from the General registry
 Pkg.add([
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Base62"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Semisimple.jl"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
 ])
 ```
 
-This is currently necessary because `Base62`, `ZeroLocus62`, and `Semisimple.jl` are
-not available from the General registry.
+`Semisimple.jl` is available from the General registry.  The URL
+specifications are still needed for `Base62` and `ZeroLocus62`, which are
+not registered yet.
 
 ## The three basic objects
 
@@ -69,11 +70,15 @@ The most common bundles have single-letter **shorthands** that appear throughout
 the examples: `S(X)` (universal subbundle), `Q(X)` (quotient), `O(X, d)` (the line
 bundle ``\mathcal{O}(d)``, or `O(X, [d₁, …])` when the Picard rank exceeds one),
 `T(X)` (tangent bundle), and `E(X, weights)` (a bundle assembled directly from
-highest weights). Using them, the bundle above reads:
+highest weights). Direct sums also have **operator shorthands**: `+` is
+`direct_sum` and `n * E` is the ``n``-fold direct sum. Using them, the bundle
+above reads:
 
 ```julia
-E = direct_sum(O(X, 1), exterior_power(Q(X), 2))
+E = O(X, 1) + exterior_power(Q(X), 2)
 ```
+
+and, say, ``\mathcal{O}(1)^{\oplus 6}`` is simply `6 * O(X, 1)`.
 
 The package works primarily with **completely reducible** bundles. This is the
 right model for Borel–Weil–Bott computations. Filtered objects are available
@@ -88,11 +93,11 @@ L = line_bundle(X, 1)
 Hchar = cohomology(L)     # character-valued
 Hdim = dimensions(Hchar)  # dimension-valued
 
-Hdim[0]                   # H^0
-Hdim[1]                   # H^1
+Hdim[0] == 5              # dim H^0(P^4, O(1)) — the standard representation
 ```
 
-`Cohomology` objects use **0-based indexing**: `H[0]` means ``H^0``.
+`Cohomology` objects use **0-based indexing**: `H[0]` means ``\mathrm{H}^0``,
+so the line above reads off ``\mathrm{h}^0`` directly.
 
 ## 4. Form zero loci
 

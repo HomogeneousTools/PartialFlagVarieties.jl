@@ -46,8 +46,8 @@ julia> rank_bundle(universal_subbundle(OGr(3, 7)))
 ```
 
 ``\\mathcal{U}`` has no dominant weights (its ``\\rho``-shifted weights are
-singular), so ``H^0(\\mathcal{U}) = 0``,
-while ``H^0(\\mathcal{U}^\\vee)`` recovers the standard representation of the
+singular), so ``\\mathrm{H}^0(\\mathcal{U}) = 0``,
+while ``\\mathrm{H}^0(\\mathcal{U}^\\vee)`` recovers the standard representation of the
 structure group:
 ```jldoctest
 julia> using PartialFlagVarieties

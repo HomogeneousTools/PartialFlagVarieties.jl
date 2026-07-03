@@ -26,7 +26,7 @@ export print_hodge_diamond
 """
     hodge_numbers(X::PartialFlagVariety) -> Matrix{BigInt}
 
-Compute the Hodge numbers ``\\mathrm{h}^{p,q}(X) = \\dim H^q(X, \\Omega^p_X)``
+Compute the Hodge numbers ``\\mathrm{h}^{p,q}(X) = \\dim \\mathrm{H}^q(X, \\Omega^p_X)``
 of the partial flag variety ``X = G/P``.
 
 Since ``G/P`` is rational (and simply connected), the Hodge diamond is
@@ -74,10 +74,10 @@ end
 """
     twisted_hodge_numbers(X::PartialFlagVariety, j::Integer) -> Matrix{BigInt}
 
-Compute the twisted Hodge numbers ``h^q(X, \\Omega^p_X(j))`` for the
+Compute the twisted Hodge numbers ``\\mathrm{h}^q(X, \\Omega^p_X(j))`` for the
 twist ``j``.
 
-Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = h^q(X, \\Omega^p(j))``.
+Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^q(X, \\Omega^p(j))``.
 
 Here `j` means tensoring by the generator of ``\\operatorname{Pic}(X)``. This
 therefore requires ``X`` to have Picard rank 1, equivalently to be a
@@ -110,9 +110,11 @@ function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBund
 end
 
 function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
-  length(marked_nodes(X)) == 1 || throw(ArgumentError(
-    "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
-  ))
+  length(marked_nodes(X)) == 1 || throw(
+    ArgumentError(
+      "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
+    ),
+  )
   twisted_hodge_numbers(X, line_bundle(X, Int(j)))
 end
 
@@ -147,9 +149,9 @@ end
 
 The Hochschild–Kostant–Rosenberg decomposition of Hochschild cohomology:
 
-``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} H^q(X, \\bigwedge^p T_X)``
+``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} \\mathrm{H}^q(X, \\bigwedge^p \\mathrm{T}_X)``
 
-Stored as a matrix where entry ``[p+1, q+1] = h^q(X, \\bigwedge^p T_X)``.
+Stored as a matrix where entry ``[p+1, q+1] = \\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``.
 The type parameter `T` is `BigInt` when all entries are determined and
 [`AffineExpr`](@ref) when some entries depend on undetermined connecting-map
 ranks from long exact sequences (typically for zero loci).
@@ -172,7 +174,7 @@ _pp_zero(::Type{AffineExpr}) = AffineExpr(0)
 """
     getindex(P::PolyvectorParallelogram, p::Int, q::Int)
 
-Return ``h^q(X, \\bigwedge^p T_X)``. Uses 0-based indexing.
+Return ``\\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``. Uses 0-based indexing.
 """
 function Base.getindex(P::PolyvectorParallelogram{T}, p::Int, q::Int) where {T}
   0 <= p <= P.dim || return _pp_zero(T)
@@ -193,7 +195,7 @@ end
 """
     getindex(P::PolyvectorParallelogram, n::Int)
 
-Return ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} h^q(X, \\bigwedge^p T_X)``.
+Return ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} \\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``.
 """
 function Base.getindex(P::PolyvectorParallelogram{T}, n::Int) where {T}
   result = _pp_zero(T)
@@ -248,10 +250,10 @@ end
 
 Compute the Hochschild cohomology of ``X`` via the HKR decomposition:
 
-``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} H^q(X, \\bigwedge^p T_X)``
+``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} \\mathrm{H}^q(X, \\bigwedge^p \\mathrm{T}_X)``
 
 Returns a [`PolyvectorParallelogram`](@ref) encoding the full decomposition.
-Use `P[p, q]` to read the entry ``h^q(X, \\bigwedge^p T_X)``.
+Use `P[p, q]` to read the entry ``\\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``.
 
 # Examples
 ```jldoctest
@@ -387,11 +389,11 @@ symbolic form.
     The Lefschetz hyperplane theorem guarantees ``\\mathrm{Pic}(X) \\xrightarrow{\\sim}
     \\mathrm{Pic}(Z)`` only when ``Z`` is an ample *hypersurface* (codimension 1).
     For a zero locus of a rank-``r`` bundle with ``r > 1``, the Picard rank of
-    ``Z`` can strictly exceed that of the ambient ``X``, so ``h^{1,1}(Z) > b_2(X)``
+    ``Z`` can strictly exceed that of the ambient ``X``, so ``\\mathrm{h}^{1,1}(Z) > b_2(X)``
     is possible and may be left as a free symbolic variable by this function.
-    Do **not** assume ``h^{1,1}(Z) = \\mathrm{picard\\_rank}(X)``.
-    Example: ``b9 = (\\mathrm{Sym}^2 S^*)^{\\oplus 2}`` on ``\\mathrm{Gr}(2,7)``
-    has ``h^{1,1} = 8`` even though ``\\mathrm{Pic}(\\mathrm{Gr}(2,7)) \\cong \\mathbb{Z}``.
+    Do **not** assume ``\\mathrm{h}^{1,1}(Z) = \\mathrm{picard\\_rank}(X)``.
+    Example: ``b9 = (\\mathrm{Sym}^2 S^\\vee)^{\\oplus 2}`` on ``\\mathrm{Gr}(2,7)``
+    has ``\\mathrm{h}^{1,1} = 8`` even though ``\\mathrm{Pic}(\\mathrm{Gr}(2,7)) \\cong \\mathbb{Z}``.
 
 # Examples
 ```jldoctest
@@ -479,7 +481,7 @@ hodge_numbers_les(Z::ZeroLocus) = hodge_numbers(Z)
     GradedConormal
 
 Counts-level data for restricting the conormal terms
-``\\mathrm{Sym}^{p-j}(E^\\vee) \\otimes \\Omega^j_X \\otimes L`` of a zero locus
+``\\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes L`` of a zero locus
 ``Z = Z(s) \\subset X`` to ``Z``, for ``p \\le p_{\\max}``, together with the
 memoization state of the exact ``χ(\\Omega^p_Z \\otimes L)`` recursion.
 
@@ -551,7 +553,7 @@ function _conormal_data(Z::ZeroLocus, L::CompletelyReducibleBundle, pmax::Int)
   )
 end
 
-"""Restriction to ``Z`` of the conormal term ``\\mathrm{Sym}^{p-j}(E^\\vee) \\otimes \\Omega^j_X \\otimes L``."""
+"""Restriction to ``Z`` of the conormal term ``\\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes L``."""
 function _restrict_conormal_term(C::GradedConormal, p::Int, j::Int, var_counter::Ref{Int})
   f_counts = _tensor_product_counts(
     _tensor_product_counts(C.syms[p - j + 1], C.omegas[j + 1]), C.l_counts
@@ -567,12 +569,12 @@ end
 """
     _conormal_row(C, p, var_counter) -> Vector{AffineExpr}
 
-``H^q(Z, \\Omega^p_Z \\otimes L|_Z)`` for ``q = 0, \\ldots, \\dim Z``, where `C`
+``\\mathrm{H}^q(Z, \\Omega^p_Z \\otimes L|_Z)`` for ``q = 0, \\ldots, \\dim Z``, where `C`
 is a conormal backend from `_conormal_data`.
 
 Chains the conormal complex through `les_cokernel`, solving
-``0 \\to C_{j-1} \\to \\mathrm{Sym}^{p-j}(E^\\vee) \\otimes \\Omega^j_X \\otimes L|_Z \\to C_j \\to 0``
-for ``j = 1, \\ldots, p`` starting from ``C_0 = \\mathrm{Sym}^p(E^\\vee) \\otimes L|_Z``;
+``0 \\to C_{j-1} \\to \\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes L|_Z \\to C_j \\to 0``
+for ``j = 1, \\ldots, p`` starting from ``C_0 = \\mathrm{Sym}^p(\\mathcal{E}^\\vee) \\otimes L|_Z``;
 the last cokernel is ``\\Omega^p_Z \\otimes L|_Z``.  For ``p = \\dim Z`` the row is
 the line bundle ``\\omega_Z \\otimes L`` and plain Koszul restriction is used.
 """
@@ -662,7 +664,7 @@ end
 
 """
 Propagate Hodge symmetry, Serre duality, and Euler characteristic constraints
-through the ``(d+1) \\times (d+1)`` matrix `M` of ``h^{p,q}`` candidates, of
+through the ``(d+1) \\times (d+1)`` matrix `M` of ``\\mathrm{h}^{p,q}`` candidates, of
 which only rows ``p = 0, \\ldots, \\lfloor d/2 \\rfloor`` are filled (the others
 follow by Serre duality afterwards).  `chi_vals[p+1]` is the exact
 ``\\chi(\\Omega^p_Z)``.  Iterates to a fixed point.
@@ -729,7 +731,7 @@ end
 Resolve entries of the Hodge matrix via the Lefschetz hyperplane theorem.
 
 When ``E = E' \\oplus L`` with ``L`` an ample line bundle, ``Z = Z(E)`` is an
-ample divisor in ``Z' = Z(E')``, so ``h^{p,q}(Z) = h^{p,q}(Z')`` for
+ample divisor in ``Z' = Z(E')``, so ``\\mathrm{h}^{p,q}(Z) = \\mathrm{h}^{p,q}(Z')`` for
 ``p + q < \\dim Z``.  The Hodge numbers of ``Z'`` are computed recursively
 (further ample line-bundle summands strip off the same way; with no summand
 left they are the Hodge numbers of the ambient space) and the determined
@@ -857,7 +859,7 @@ end
 """
     twisted_hodge_numbers(Z::ZeroLocus, L::CompletelyReducibleBundle) -> Matrix{AffineExpr}
 
-Compute the twisted Hodge numbers ``h^q(Z, \\Omega^p_Z \\otimes L|_Z)``
+Compute the twisted Hodge numbers ``\\mathrm{h}^q(Z, \\Omega^p_Z \\otimes L|_Z)``
 for the zero locus ``Z = Z(s) \\subset X = G/P`` and a line bundle ``L``
 on ``X``.
 
@@ -866,7 +868,7 @@ from the ambient variety, computes each piece via the Koszul resolution,
 and chains the results symbolically.
 
 Returns a ``(d+1) \\times (d+1)`` matrix of `AffineExpr` entries where
-``d = \\dim Z`` and entry ``[p+1, q+1] = h^q(Z, \\Omega^p_Z \\otimes L|_Z)``.
+``d = \\dim Z`` and entry ``[p+1, q+1] = \\mathrm{h}^q(Z, \\Omega^p_Z \\otimes L|_Z)``.
 Fully determined entries display as integers; use `is_determined(M[p+1,q+1])`
 to check.
 
@@ -900,7 +902,7 @@ end
 """
     twisted_hodge_numbers(Z::ZeroLocus, j::Integer) -> Matrix{AffineExpr}
 
-Compute the twisted Hodge numbers ``h^q(Z, \\Omega^p_Z(j))`` where the
+Compute the twisted Hodge numbers ``\\mathrm{h}^q(Z, \\Omega^p_Z(j))`` where the
 twist is by ``\\mathcal{O}_X(j)|_Z``.
 
 Here `j` denotes the integer power of the Picard-rank-1 generator on the
@@ -926,9 +928,11 @@ julia> M[2, 2]  # h^1(Z, Ω¹_Z) = h^{1,1} = 1
 """
 function twisted_hodge_numbers(Z::ZeroLocus, j::Integer)
   X = Z.ambient
-  length(marked_nodes(X)) == 1 || throw(ArgumentError(
-    "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
-  ))
+  length(marked_nodes(X)) == 1 || throw(
+    ArgumentError(
+      "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
+    ),
+  )
   twisted_hodge_numbers(Z, line_bundle(X, Int(j)))
 end
 
@@ -945,14 +949,14 @@ end
 
 Compute the Hochschild cohomology of ``Z`` via the HKR decomposition:
 
-``\\mathrm{HH}^n(Z) = \\bigoplus_{p+q=n} H^q(Z, \\bigwedge^p T_Z)``
+``\\mathrm{HH}^n(Z) = \\bigoplus_{p+q=n} \\mathrm{H}^q(Z, \\bigwedge^p \\mathrm{T}_Z)``
 
-Uses the identity ``H^q(Z, \\bigwedge^p T_Z) = H^q(Z, \\Omega^{d-p}_Z
+Uses the identity ``\\mathrm{H}^q(Z, \\bigwedge^p \\mathrm{T}_Z) = \\mathrm{H}^q(Z, \\Omega^{d-p}_Z
 \\otimes \\omega_Z^{-1})`` where ``d = \\dim Z``, reducing the computation
 to twisted Hodge numbers with the anticanonical twist
-``L = \\omega_X^{-1} \\otimes \\det(E)^{-1}`` lifted to the ambient variety.
+``L = \\omega_X^{-1} \\otimes \\det(\\mathcal{E})^{-1}`` lifted to the ambient variety.
 
-Akizuki–Nakano vanishing (``h^q(\\bigwedge^p T_Z) = 0`` for ``q > p``) is
+Akizuki–Nakano vanishing (``\\mathrm{h}^q(\\bigwedge^p \\mathrm{T}_Z) = 0`` for ``q > p``) is
 applied when ``\\omega_Z^{-1}`` is *confirmed* ample from the ambient ``G/P``
 (i.e. all Picard-coordinate differences are strictly positive).  When some
 coordinate is zero the Fano status of ``Z`` is undetermined and vanishing is
@@ -963,7 +967,7 @@ fully determined entries display as integers, undetermined entries
 contain symbolic variables.
 
 As for the homogeneous case, use `P[p, q]` for the entry
-``h^q(Z, \\bigwedge^p T_Z)``.
+``\\mathrm{h}^q(Z, \\bigwedge^p \\mathrm{T}_Z)``.
 
 # Examples
 ```jldoctest

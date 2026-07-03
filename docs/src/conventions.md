@@ -58,7 +58,7 @@ examples and these guides:
 | `O(X, d)`, `O(X, [d₁, …])` | [`line_bundle`](@ref) | line bundle ``\mathcal{O}(d)`` |
 | `S(X)` | [`universal_subbundle`](@ref) | universal subbundle ``\mathcal{S}`` |
 | `Q(X)` | [`universal_quotient_bundle`](@ref) | universal quotient ``\mathcal{Q}`` |
-| `T(X)` | [`tangent_bundle`](@ref) | tangent bundle ``T_X`` |
+| `T(X)` | [`tangent_bundle`](@ref) | tangent bundle ``\mathrm{T}_X`` |
 | `E(X, weights)` | [`CompletelyReducibleBundle`](@ref) | bundle from highest weights |
 
 `S`, `Q`, `T`, and `E` are exported functions, so they occupy those names after
@@ -69,11 +69,11 @@ inside a function or `let` block — a local binding shadows the function there.
 
 Two indexing conventions show up repeatedly:
 
-1. [`Cohomology`](@ref) objects are **0-indexed**: `H[0]` means ``H^0``.
+1. [`Cohomology`](@ref) objects are **0-indexed**: `H[0]` means ``\mathrm{H}^0``.
 2. Hodge matrices use ordinary Julia matrix indexing, so the entry
    corresponding to ``(p,q)`` is stored at `[p+1, q+1]`.
 3. The Hochschild [`PolyvectorParallelogram`](@ref) is **0-indexed**:
-   `P[p, q]` is ``h^q(X, \bigwedge^p T_X)`` and `P[n]` is
+   `P[p, q]` is ``\mathrm{h}^q(X, \bigwedge^p \mathrm{T}_X)`` and `P[n]` is
    ``\dim \mathrm{HH}^n``.
 
 For example:
@@ -93,18 +93,22 @@ zero locus is nonempty.
 
 This assumption is used throughout the zero-locus, Hodge, and Hochschild APIs.
 
-## Picard-rank-1 twists
+## Integer and degree-vector twists
 
-Functions such as [`twisted_hodge_numbers`](@ref) use an integer twist only
-when the Picard group is rank 1. In that case `j` means tensoring by the
-generator normalized by the marked node:
+Functions such as [`twisted_hodge_numbers`](@ref) accept an integer twist
+when the Picard group is rank 1 (`j` means tensoring by the generator
+normalized by the marked node) and a **degree vector** with one entry per
+marked node otherwise, mirroring the `O(X, [d₁, …])` constructor:
 
 ```julia
 X = projective_space(4)
-twisted_hodge_numbers(X, 1)  # Ω^p_X(1)
+twisted_hodge_numbers(X, 1)        # Ω^p_X(1)
+
+Y = partial_flag_variety("A3", [1, 3])
+twisted_hodge_numbers(Y, [1, 2])   # Ω^p_Y ⊗ O(1, 2)
 ```
 
-For higher Picard rank, use an explicit line bundle instead of an integer.
+An explicit line bundle works as well in either case.
 
 ## Dynkin strings versus ZeroLocus62 labels
 

@@ -2,17 +2,17 @@
 
 Zero loci of sections of equivariant bundles on ``G/P``.
 
-Given an equivariant bundle ``E`` of rank ``r`` on ``X = G/P`` and a regular section
-``s \in H^0(X, E)``, the **zero locus** ``Z = Z(s) \subset X`` is a smooth
+Given an equivariant bundle ``\mathcal{E}`` of rank ``r`` on ``X = G/P`` and a regular section
+``s \in \mathrm{H}^0(X, E)``, the **zero locus** ``Z = Z(s) \subset X`` is a smooth
 subvariety of codimension ``r``. Its structure sheaf is resolved by the
 **Koszul complex**
 
 ```math
-0 \to \bigwedge^r E^* \to \cdots \to \bigwedge^2 E^* \to E^* \to \mathcal{O}_X \to \mathcal{O}_Z \to 0.
+0 \to \bigwedge^r \mathcal{E}^\vee \to \cdots \to \bigwedge^2 \mathcal{E}^\vee \to \mathcal{E}^\vee \to \mathcal{O}_X \to \mathcal{O}_Z \to 0.
 ```
 
-Twisting by any equivariant bundle ``F`` on ``X`` and taking the long exact
-sequence in cohomology, one recovers ``H^*(Z, F|_Z)`` from computable data on
+Twisting by any equivariant bundle ``\mathcal{F}`` on ``X`` and taking the long exact
+sequence in cohomology, one recovers ``\mathrm{H}^\bullet(Z, F|_Z)`` from computable data on
 ``X``. This is the basis for all invariants computed on zero loci:
 cohomology of restrictions, Hodge numbers, Hilbert polynomials, and the
 Calabi–Yau / Fano classification.
@@ -36,7 +36,7 @@ If you need compact serialization for datasets or classifications, see
     ``\ge 3`` (in particular for ample hypersurfaces). For zero loci of
     higher-rank bundles that do **not** split as sums of ample line bundles,
     the Picard rank of ``Z`` can exceed that of ``X``, so `hodge_numbers` may
-    leave ``h^{1,1}`` as an underdetermined symbolic variable — **this is
+    leave ``\mathrm{h}^{1,1}`` as an underdetermined symbolic variable — **this is
     correct behaviour**, not a bug.
 
 ## Type
@@ -77,7 +77,7 @@ euler_characteristic(::ZeroLocus, ::CompletelyReducibleBundle)
 ```@docs
 hodge_numbers_symbolic
 hodge_numbers_les
-hilbert_polynomial(::ZeroLocus)
+hilbert_polynomial(::ZeroLocus, ::CompletelyReducibleBundle)
 fano_index(::ZeroLocus)
 euler_characteristic_tangent_bundle
 ```

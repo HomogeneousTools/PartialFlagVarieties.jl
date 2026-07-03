@@ -414,7 +414,7 @@ function _propagate_intervals!(system::AbstractArray{AffineExpr})
 end
 
 """
-Impose the vanishing ``H^k = 0`` for ``k > d`` on a symbolic cohomology
+Impose the vanishing ``\\mathrm{H}^k = 0`` for ``k > d`` on a symbolic cohomology
 vector (indexed by degree ``0, \\ldots, \\mathrm{length} - 1``), eliminating
 symbolic variables where possible, and truncate to degrees ``0, \\ldots, d``.
 """
@@ -431,10 +431,10 @@ end
 
 """
 Compute bounds on the connecting-map ranks of a short exact sequence
-``0 \\to A \\to B \\to C \\to 0`` given numeric cohomology values for
-``A`` and ``B``.
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` given numeric cohomology values for
+``\\mathcal{A}`` and ``\\mathcal{B}``.
 
-Writing ``δ_i = \\mathrm{rank}(H^i(C) \\to H^{i+1}(A))``, exactness gives
+Writing ``δ_i = \\mathrm{rank}(\\mathrm{H}^i(\\mathcal{C}) \\to \\mathrm{H}^{i+1}(\\mathcal{A}))``, exactness gives
 ``c_i = b_i - a_i + δ_{i-1} + δ_i`` with ``0 \\le δ_i \\le a_{i+1}`` and
 ``δ_{i-1} + δ_i \\ge a_i - b_i``.  The bounds are propagated
 forward and backward until convergence.
@@ -488,14 +488,15 @@ end
     solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
       -> (Cohomology{BigInt}, Bool)
 
-Given ``H^*(A)`` and ``H^*(B)`` from a short exact sequence
-``0 \\to A \\to B \\to C \\to 0``, determine ``H^*(C)`` via the long
+Given ``\\mathrm{H}^\\bullet(\\mathcal{A})`` and ``\\mathrm{H}^\\bullet(\\mathcal{B})`` from a short exact sequence
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, determine ``\\mathrm{H}^\\bullet(\\mathcal{C})`` via the long
 exact sequence.
 
-Returns `(H*(C), determined)` where `determined` is `true` when
-the long exact sequence uniquely determines all cohomology groups.
-When `determined` is `false` the entries are lower bounds and must not
-be used as values; use the symbolic solvers instead.
+Returns the cohomology of ``\\mathcal{C}`` together with a Boolean flag
+`determined`, which is `true` when the long exact sequence uniquely
+determines all cohomology groups.  When the flag is `false` the entries are
+lower bounds and must not be used as values; use the symbolic solvers
+instead.
 """
 function solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
   d = a.dim_variety
@@ -524,20 +525,23 @@ end
       dim_zero_locus::Int
     ) -> (Cohomology{BigInt}, Bool)
 
-Given ``H^*(X, K_i)`` for the Koszul terms
-``K_i = F \\otimes \\wedge^i E^*`` (``i = 0, 1, \\ldots, r``),
-compute ``H^*(Z, F|_Z)`` by iterating through the short exact sequences
+Given ``\\mathrm{H}^\\bullet(X, \\mathcal{K}_i)`` for the Koszul terms
+``\\mathcal{K}_i = \\mathcal{F} \\otimes \\wedge^i \\mathcal{E}^\\vee`` (``i = 0, 1, \\ldots, r``),
+compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` by iterating through the short exact sequences
 arising from the Koszul filtration:
 
-```
-  C_r = K_r,  0 → C_{j+1} → K_j → C_j → 0   (j = r-1, …, 0)
+```math
+\\mathcal{C}_r = \\mathcal{K}_r, \\qquad
+0 \\to \\mathcal{C}_{j+1} \\to \\mathcal{K}_j \\to \\mathcal{C}_j \\to 0
+\\qquad (j = r-1, \\ldots, 0)
 ```
 
-where ``C_0 \\cong F|_Z`` (shifted to the zero locus dimension).
+where ``\\mathcal{C}_0 \\cong \\mathcal{F}|_Z`` (shifted to the zero locus dimension).
 
-Returns `(H*(F|_Z), determined)`.  When the chain of short exact sequences
+Returns the cohomology of ``\\mathcal{F}|_Z`` together with a `determined`
+flag.  When the chain of short exact sequences
 leaves some connecting maps open, a symbolic re-solve with the vanishing
-``H^k(Z, F|_Z) = 0`` for ``k > \\dim Z`` and the exact Euler characteristic
+``\\mathrm{H}^k(Z, \\mathcal{F}|_Z) = 0`` for ``k > \\dim Z`` and the exact Euler characteristic
 is attempted before giving up.
 """
 function solve_koszul_filtration(
@@ -585,13 +589,13 @@ end
     solve_ses_cohomology_symbolic(a, b, var_counter) -> Cohomology{AffineExpr}
 
 Symbolic version of [`solve_ses_cohomology`](@ref): solve
-``0 \\to A \\to B \\to C \\to 0`` for ``H^*(C)``, introducing a fresh
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` for ``\\mathrm{H}^\\bullet(\\mathcal{C})``, introducing a fresh
 symbolic variable for every connecting-map rank that is not forced.
 
 For numeric inputs (`Cohomology{BigInt}`) the connecting-map bounds are
 propagated first and variables are only introduced where a gap remains.
-For symbolic inputs each rank ``δ_i`` is zero when ``H^{i+1}(A) = 0``,
-equal to ``a_{i+1}`` when ``H^{i+1}(B) = 0`` (the connecting map is then
+For symbolic inputs each rank ``δ_i`` is zero when ``\\mathrm{H}^{i+1}(\\mathcal{A}) = 0``,
+equal to ``a_{i+1}`` when ``\\mathrm{H}^{i+1}(\\mathcal{B}) = 0`` (the connecting map is then
 surjective), and a fresh variable otherwise.
 
 The `var_counter` is advanced for each new variable; pass a shared counter
@@ -780,7 +784,7 @@ end
 
 """
 Interleave the cohomologies of a short exact sequence
-``0 \\to A \\to B \\to C \\to 0`` into its long exact sequence
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` into its long exact sequence
 ``(a_0, b_0, c_0, a_1, b_1, c_1, \\ldots)``.
 """
 function _les_interleave(
@@ -806,10 +810,10 @@ end
 """
     les_cokernel(a, b, var_counter; inequalities=nothing) -> Vector{AffineExpr}
 
-Given ``H^*(A)`` and ``H^*(B)`` from a short exact sequence
-``0 \\to A \\to B \\to C \\to 0``, compute ``H^*(C)``.
+Given ``\\mathrm{H}^\\bullet(\\mathcal{A})`` and ``\\mathrm{H}^\\bullet(\\mathcal{B})`` from a short exact sequence
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, compute ``\\mathrm{H}^\\bullet(\\mathcal{C})``.
 
-Creates a fresh symbolic variable for each ``H^i(C)``, then eliminates as
+Creates a fresh symbolic variable for each ``\\mathrm{H}^i(\\mathcal{C})``, then eliminates as
 many as possible using the alternating-sum equations of the long exact
 sequence (see `_les_equations`).  Fully determined numeric input is
 delegated to the bound-propagation solver first.
@@ -862,10 +866,10 @@ end
 """
     les_kernel(b, c, var_counter; inequalities=nothing) -> Vector{AffineExpr}
 
-Given ``H^*(B)`` and ``H^*(C)`` from a short exact sequence
-``0 \\to A \\to B \\to C \\to 0``, compute ``H^*(A)``.
+Given ``\\mathrm{H}^\\bullet(\\mathcal{B})`` and ``\\mathrm{H}^\\bullet(\\mathcal{C})`` from a short exact sequence
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, compute ``\\mathrm{H}^\\bullet(\\mathcal{A})``.
 
-Dual to [`les_cokernel`](@ref): the unknowns sit in the ``A``-slots of the
+Dual to [`les_cokernel`](@ref): the unknowns sit in the ``\\mathcal{A}``-slots of the
 long exact sequence.
 """
 function les_kernel(
@@ -898,8 +902,10 @@ end
 Given cohomology of terms `[K_r, K_{r-1}, …, K_0]` (reversed Koszul order),
 iteratively apply [`les_cokernel`](@ref) to compute the final cokernel:
 
-```
-  C_r = K_r,  0 → C_{j+1} → K_j → C_j → 0  (j = r-1, …, 0)
+```math
+\\mathcal{C}_r = \\mathcal{K}_r, \\qquad
+0 \\to \\mathcal{C}_{j+1} \\to \\mathcal{K}_j \\to \\mathcal{C}_j \\to 0
+\\qquad (j = r-1, \\ldots, 0)
 ```
 """
 function long_exact_sequence_cokernel(

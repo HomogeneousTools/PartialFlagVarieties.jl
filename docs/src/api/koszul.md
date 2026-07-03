@@ -10,14 +10,14 @@ uniquely determine all groups.
 
 ## Algorithm overview
 
-A **short exact sequence** of sheaves ``0 \to A \to B \to C \to 0`` induces a
+A **short exact sequence** of sheaves ``0 \to \mathcal{A} \to \mathcal{B} \to \mathcal{C} \to 0`` induces a
 long exact sequence in cohomology:
 
 ```math
-\cdots \to H^i(A) \to H^i(B) \to H^i(C) \xrightarrow{\delta_i} H^{i+1}(A) \to \cdots
+\cdots \to \mathrm{H}^i(\mathcal{A}) \to \mathrm{H}^i(\mathcal{B}) \to \mathrm{H}^i(\mathcal{C}) \xrightarrow{\delta_i} \mathrm{H}^{i+1}(\mathcal{A}) \to \cdots
 ```
 
-Given the dimensions ``a_i = h^i(A)``, ``b_i = h^i(B)``, ``c_i = h^i(C)``
+Given the dimensions ``a_i = \mathrm{h}^i(\mathcal{A})``, ``b_i = \mathrm{h}^i(\mathcal{B})``, ``c_i = \mathrm{h}^i(\mathcal{C})``
 (any two of the three known), the connecting map ``\delta_i`` has rank
 ``r_i`` satisfying the rank-nullity constraint ``0 \le r_i \le \min(c_i, a_{i+1})``.
 When ``b_i`` is the unknown, the relation
@@ -67,7 +67,7 @@ solve_koszul_filtration_symbolic
 ### Determined short exact sequence
 
 When one of the three sheaves in a short exact sequence
-``0 \to A \to B \to C \to 0`` has vanishing higher cohomology,
+``0 \to \mathcal{A} \to \mathcal{B} \to \mathcal{C} \to 0`` has vanishing higher cohomology,
 the connecting maps ``\delta_i`` are forced to be zero, and the
 remaining cohomology groups are uniquely determined.
 
@@ -124,7 +124,7 @@ indicate the answer is not unique. The symbolic solver instead
 introduces a variable ``x_0 = \mathrm{rk}(\delta_0)`` and expresses
 each ``c_i`` as an affine function of ``x_0``. The variable satisfies
 ``0 \le x_0 \le 2``, so the true
-``h^0(C)`` lies in ``\{2, 3, 4\}``.
+``\mathrm{h}^0(\mathcal{C})`` lies in ``\{2, 3, 4\}``.
 
 ### Geometric example: hypersurface (fully determined)
 
@@ -158,7 +158,7 @@ Koszul solver encountered no ambiguity.
 For a zero locus of a *higher-rank* bundle the Koszul filtration has
 multiple short exact sequences whose connecting-map ranks need not be
 forced. Consider the fourfold ``Z`` cut out by two copies of
-``\mathrm{Sym}^2 \mathcal{S}^*`` on ``\mathrm{Gr}(2,7)``:
+``\mathrm{Sym}^2 \mathcal{S}^\vee`` on ``\mathrm{Gr}(2,7)``:
 
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -188,12 +188,12 @@ false
 
 Here ``x_0`` is the unknown rank of a connecting homomorphism in one of
 the Koszul short exact sequences. Serre duality forces ``\mathrm{h}^{p,q} = \mathrm{h}^{n-p,n-q}``,
-and the Euler characteristic ``\chi(Z) = 1`` imposes a further linear
+and the Euler characteristic ``\chi(\mathcal{O}_Z) = 1`` imposes a further linear
 relation, but one degree of freedom remains: Grothendieck–Lefschetz pins
-down ``h^{1,1}`` for complete intersections of ample divisors, but ``Z`` is
+down ``\mathrm{h}^{1,1}`` for complete intersections of ample divisors, but ``Z`` is
 the zero locus of a higher-rank bundle that does not split into ample line
 bundles, so no Lefschetz-type argument applies.
-The true value (computable by other means) is ``h^{1,1}(Z) = 8``,
+The true value (computable by other means) is ``\mathrm{h}^{1,1}(Z) = 8``,
 corresponding to ``x_0 = 0``.
 
 ## Internals

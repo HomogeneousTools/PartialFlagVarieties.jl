@@ -300,7 +300,7 @@ end
     tangent_weights(mdt::MarkedDynkinType) -> Vector{WeightLatticeElem}
 
 Return the highest weights of the irreducible Levi-module decomposition of the
-tangent space ``T_{eP}(G/P)`` at the base point. Each weight corresponds to
+tangent space ``\\mathrm{T}_{eP}(G/P)`` at the base point. Each weight corresponds to
 a Levi-orbit of nonparabolic positive roots.
 """
 function tangent_weights(mdt::MarkedDynkinType)

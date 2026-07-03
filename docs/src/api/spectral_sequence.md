@@ -1,12 +1,20 @@
 # Spectral Sequences
 
-A [`FilteredBundle`](@ref) ``F`` on ``X = G/P`` determines a spectral sequence
+A [`FilteredBundle`](@ref) ``\mathcal{F}`` on ``X = G/P`` determines a
+spectral sequence
 
 ```math
-E_1 = H^*(X, \mathrm{gr}\, F) \Longrightarrow H^*(X, F)
+\mathrm{E}_1^{p,q} \Longrightarrow \mathrm{H}^{p+q}(X, \mathcal{F}),
 ```
 
-whose first page is computed by Borel–Weil–Bott on the graded pieces. On a
+where ``\mathrm{E}_1^{p,q}`` is the degree-``(p+q)`` cohomology of the
+``q``-th graded piece of ``\mathcal{F}``, counted from the top of the
+filtration, computed by Borel–Weil–Bott.  The page is supported on the
+horizontal band ``0 \le q \le s - 1``, ``0 \le p + q \le \dim X`` (with
+``s`` the number of graded pieces) — not on the first quadrant, since ``p``
+may be negative — and every differential
+``d_r \colon \mathrm{E}_r^{p,q} \to \mathrm{E}_r^{p+1-r,\, q+r}`` raises
+the total degree by exactly one and strictly raises ``q``. On a
 cominuscule ``G/P`` (abelian nilradical) the tangent bundle is completely
 reducible and nothing can degenerate; in general the differentials may be
 nonzero, and computing with the associated graded alone silently assumes

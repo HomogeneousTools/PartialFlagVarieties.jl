@@ -42,8 +42,8 @@ end
 Check whether `E` is an exceptional object in `D^b(G/P)`.
 
 An object `E` is **exceptional** if:
-- ``\\operatorname{Hom}(E, E) = \\mathbb{k}``  (i.e., ``h^0(E^\\vee \\otimes E) = 1``), and
-- ``\\operatorname{Ext}^i(E, E) = 0`` for all ``i > 0``  (i.e., ``h^i(E^\\vee \\otimes E) = 0``).
+- ``\\operatorname{Hom}(E, E) = \\mathbb{k}``  (i.e., ``\\mathrm{h}^0(E^\\vee \\otimes E) = 1``), and
+- ``\\operatorname{Ext}^i(E, E) = 0`` for all ``i > 0``  (i.e., ``\\mathrm{h}^i(E^\\vee \\otimes E) = 0``).
 
 Uses Borel–Weil–Bott to compute cohomology of ``E^\\vee \\otimes E``.
 
@@ -69,7 +69,7 @@ end
     is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
 
 Check whether `(E, F)` is an **exceptional pair**: ``\\operatorname{RHom}(F, E) = 0``,
-i.e., ``H^i(G/P,\\, F^\\vee \\otimes E) = 0`` for all ``i \\geq 0``.
+i.e., ``\\mathrm{H}^i(G/P,\\, F^\\vee \\otimes E) = 0`` for all ``i \\geq 0``.
 
 Note: this is the orthogonality condition; the pair is ordered so that
 ``(E_i, E_j)`` is an exceptional pair for ``i < j`` in an exceptional
@@ -134,7 +134,7 @@ end
     is_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle}) -> Bool
 
 Check whether `Es = [E₁, ..., Eₙ]` is an **exceptional sequence**:
-- Each ``E_i`` is exceptional (``\\operatorname{Ext}^*(E_i, E_i) = \\mathbb{k}``), and
+- Each ``E_i`` is exceptional (``\\operatorname{Ext}^\\vee(E_i, E_i) = \\mathbb{k}``), and
 - ``(E_i, E_j)`` is an exceptional pair (``\\operatorname{RHom}(E_j, E_i) = 0``) for all ``i < j``.
 
 # Examples
@@ -605,7 +605,7 @@ end
 Check whether the restriction ``E|_Z`` is an exceptional object on the
 zero locus ``Z``.
 
-Computes ``\\operatorname{Ext}^*(E|_Z, E|_Z) = H^*(Z, E^\\vee \\otimes E|_Z)``
+Computes ``\\operatorname{Ext}^\\vee(E|_Z, E|_Z) = \\mathrm{H}^\\bullet(Z, E^\\vee \\otimes E|_Z)``
 via the Koszul resolution and checks that ``\\operatorname{Hom} = \\mathbb{k}``
 and all higher Ext groups vanish.
 """

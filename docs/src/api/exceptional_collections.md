@@ -23,7 +23,7 @@ is_full_exceptional_sequence
 
 Given bundles ``E_i`` on the ambient variety ``X = G/P`` and a zero locus ``Z \subset X``,
 the following methods check exceptionality of the **restrictions** ``E_i|_Z``, computing
-``\operatorname{Ext}^*(E_i|_Z, E_j|_Z) = H^*(Z,\, E_i^\vee \otimes E_j|_Z)`` via the
+``\operatorname{Ext}^\vee(E_i|_Z, E_j|_Z) = \mathrm{H}^\bullet(Z,\, E_i^\vee \otimes E_j|_Z)`` via the
 Koszul resolution.
 
 ```@docs

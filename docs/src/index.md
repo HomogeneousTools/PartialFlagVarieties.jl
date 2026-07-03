@@ -5,7 +5,7 @@ A Julia package for computing with **partial flag varieties** ``G/P`` using
 
 The package is designed for three closely related tasks:
 
-1. **Model homogeneous spaces ``G/P``.** Construct partial flag varieties from
+1. **Construct homogeneous spaces ``G/P``.** Build partial flag varieties from
    Dynkin data or from named families such as Grassmannians, quadrics, and
    exceptional varieties.
 2. **Compute with equivariant bundles.** Build semisimplified equivariant
@@ -53,7 +53,7 @@ hodge_numbers(Z)
 ```
 
 The most important indexing convention is that [`Cohomology`](@ref) objects are
-**0-indexed**: `H[0]` means ``H^0``.
+**0-indexed**: `H[0]` means ``\mathrm{H}^0``.
 
 ## Mental model
 

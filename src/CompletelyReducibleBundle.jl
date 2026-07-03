@@ -612,7 +612,7 @@ end
 """
     T(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-Shorthand for [`tangent_bundle`](@ref): the tangent bundle ``T_{G/P}``.
+Shorthand for [`tangent_bundle`](@ref): the tangent bundle ``\\mathrm{T}_{G/P}``.
 
 # Examples
 ```jldoctest
@@ -627,7 +627,7 @@ T(X::PartialFlagVariety) = tangent_bundle(X)
 """
     cotangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The cotangent bundle ``\\Omega^1_{G/P} = T^*_{G/P}``.
+The cotangent bundle ``\\Omega^1_{G/P} = \\mathrm{T}^\\vee_{G/P}``.
 
 # Examples
 ```jldoctest
@@ -765,7 +765,7 @@ _trivial_semisimple_weight(X::PartialFlagVariety) =
 """
     dual(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
 
-The dual bundle ``E^*``.
+The dual bundle ``E^\\vee``.
 
 # Examples
 ```jldoctest
@@ -790,7 +790,7 @@ end
 
 The tensor product ``E \\otimes F``.
 
-Uses bilinearity: ``(\\bigoplus_i V_i) \\otimes (\\bigoplus_j W_j) = \\bigoplus_{i,j} V_i \\otimes W_j``
+Uses bilinearity: ``(\\bigoplus_i V_i) \\otimes (\\bigoplus_j \\mathrm{W}_j) = \\bigoplus_{i,j} V_i \\otimes \\mathrm{W}_j``
 
 # Examples
 ```jldoctest

@@ -14,7 +14,7 @@ the theorem statement.
 !!! note "0-based indexing"
     `Cohomology` objects are one of the few user-facing types in the package
     that do not follow ordinary Julia 1-based indexing. This is deliberate:
-    `H[0]`, `H[1]`, ... mirror the mathematical notation ``H^0``, ``H^1``, ...
+    `H[0]`, `H[1]`, ... mirror the mathematical notation ``\mathrm{H}^0``, ``\mathrm{H}^1``, ...
 
 ## Type
 

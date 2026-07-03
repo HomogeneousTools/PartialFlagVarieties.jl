@@ -31,10 +31,10 @@ export tangent_cohomology
 """
     ZeroLocus
 
-The zero locus ``Z(s)`` of a regular section ``s \\in H^0(X, E)`` of an
-equivariant bundle ``E`` on the partial flag variety ``X = G/P``.
+The zero locus ``Z(s)`` of a regular section ``s \\in \\mathrm{H}^0(X, \\mathcal{E})`` of an
+equivariant bundle ``\\mathcal{E}`` on the partial flag variety ``X = G/P``.
 
-Assumes the section is regular, so ``\\dim Z = \\dim X - \\mathrm{rank}(E)``.
+Assumes the section is regular, so ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})``.
 
 # Examples
 ```jldoctest
@@ -67,7 +67,7 @@ end
     zero_locus(E::CompletelyReducibleBundle) -> ZeroLocus
 
 Construct the zero locus of a regular section of the equivariant
-bundle ``E``.  Requires ``\\mathrm{rank}(E) \\le \\dim(X)``.
+bundle ``\\mathcal{E}``.  Requires ``\\mathrm{rank}(\\mathcal{E}) \\le \\dim(X)``.
 
 This constructor assumes such a regular section exists; it does not try to
 prove existence or regularity.
@@ -169,21 +169,21 @@ ambient_variety(Z::ZeroLocus) = Z.ambient
 """
     defining_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
 
-Return the bundle ``E`` whose section defines the zero locus.
+Return the bundle ``\\mathcal{E}`` whose section defines the zero locus.
 """
 defining_bundle(Z::ZeroLocus) = Z.defining_bundle
 
 """
     codimension(Z::ZeroLocus) -> Int
 
-Return the codimension of ``Z`` in ``X``, equal to ``\\mathrm{rank}(E)``.
+Return the codimension of ``Z`` in ``X``, equal to ``\\mathrm{rank}(\\mathcal{E})``.
 """
 codimension(Z::ZeroLocus)::Int = rank_bundle(Z.defining_bundle)
 
 """
     dimension(Z::ZeroLocus) -> Int
 
-Return the dimension ``\\dim Z = \\dim X - \\mathrm{rank}(E)`` of the zero locus.
+Return the dimension ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})`` of the zero locus.
 """
 dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 
@@ -197,7 +197,7 @@ normal_bundle(Z::ZeroLocus) = Z.defining_bundle
 """
     conormal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
 
-The conormal bundle ``N^*_{Z/X} \\cong E^*|_Z``.
+The conormal bundle ``N^\\vee_{Z/X} \\cong \\mathcal{E}^\\vee|_Z``.
 """
 conormal_bundle(Z::ZeroLocus) = dual(Z.defining_bundle)
 
@@ -210,9 +210,9 @@ conormal_bundle(Z::ZeroLocus) = dual(Z.defining_bundle)
       -> Vector{CompletelyReducibleBundle}
 
 Return the terms of the twisted Koszul complex:
-``[F \\otimes \\wedge^0 E^*, F \\otimes \\wedge^1 E^*, \\ldots,
-   F \\otimes \\wedge^r E^*]``
-where ``E`` is the defining bundle and ``r = \\mathrm{rank}(E)``.
+``[\\mathcal{F} \\otimes \\wedge^0 \\mathcal{E}^\\vee, \\mathcal{F} \\otimes \\wedge^1 \\mathcal{E}^\\vee, \\ldots,
+   \\mathcal{F} \\otimes \\wedge^r \\mathcal{E}^\\vee]``
+where ``\\mathcal{E}`` is the defining bundle and ``r = \\mathrm{rank}(\\mathcal{E})``.
 """
 function koszul_terms(Z::ZeroLocus, F::CompletelyReducibleBundle)
   marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
@@ -300,7 +300,7 @@ end
     _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
       -> Vector{Cohomology{BigInt}}
 
-Compute dimension-valued cohomology for each Koszul term ``F ⊗ ∧^i E^*``
+Compute dimension-valued cohomology for each Koszul term ``F ⊗ ∧^i \\mathcal{E}^\\vee``
 without materialising intermediate `CompletelyReducibleBundle` objects.
 
 Deduplicates F and wedge components into multiplicity dicts, then
@@ -379,7 +379,7 @@ end
 """
     euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle) -> BigInt
 
-Compute ``\\chi(Z, F|_Z) = \\sum_{i=0}^{r} (-1)^i \\chi(X, F \\otimes \\wedge^i E^*)``.
+Compute ``\\chi(Z, \\mathcal{F}|_Z) = \\sum_{i=0}^{r} (-1)^i \\chi(X, \\mathcal{F} \\otimes \\wedge^i \\mathcal{E}^\\vee)``.
 This is always exact — no long exact sequence ambiguity.
 
 # Examples
@@ -414,8 +414,8 @@ end
     euler_characteristic_tangent_bundle(Z::ZeroLocus) -> BigInt
 
 Compute the topological Euler characteristic of the tangent bundle of ``Z``,
-``\\chi(Z, T_Z) = \\chi(Z, T_X|_Z) - \\chi(Z, N_{Z/X})``,
-via the tangent normal sequence ``0 \\to T_Z \\to T_X|_Z \\to N_{Z/X} \\to 0``.
+``\\chi(Z, \\mathrm{T}_Z) = \\chi(Z, \\mathrm{T}_X|_Z) - \\chi(Z, N_{Z/X})``,
+via the tangent normal sequence ``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to N_{Z/X} \\to 0``.
 
 Both Euler characteristics are computed exactly via Koszul (no long exact
 sequence ambiguity), so the result is always a precise integer.
@@ -445,17 +445,17 @@ end
     cohomology_on_restriction(Z::ZeroLocus, F::CompletelyReducibleBundle)
       -> (Cohomology{BigInt}, Bool)
 
-Compute ``H^*(Z, F|_Z)`` by:
-1. Computing ``H^*(X, F \\otimes \\wedge^i E^*)`` for each Koszul term via BWB.
+Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` by:
+1. Computing ``\\mathrm{H}^\\bullet(X, \\mathcal{F} \\otimes \\wedge^i \\mathcal{E}^\\vee)`` for each Koszul term via BWB.
 2. Solving the Koszul filtration via the long exact sequence.
 
-Returns `(H*(F|_Z), determined)` where `determined` indicates whether
+Returns `(H*(\\mathcal{F}|_Z), determined)` where `determined` indicates whether
 all cohomology groups are uniquely determined by the LES.
 
 When the Koszul filtration leaves some groups undetermined, a Serre duality
-fallback is attempted: if ``H^*(Z, F^*|_Z)`` is fully determined, then
-``H^k(Z, F|_Z) = H^{d-k}(Z, F^*|_Z)`` by Serre duality (valid when
-``K_Z \\cong \\mathcal{O}_Z``, e.g. for Calabi–Yau and hyperkähler zero loci).
+fallback is attempted: if ``\\mathrm{H}^\\bullet(Z, F^\\vee|_Z)`` is fully determined, then
+``\\mathrm{H}^k(Z, \\mathcal{F}|_Z) = \\mathrm{H}^{d-k}(Z, F^\\vee|_Z)`` by Serre duality (valid when
+``\\mathrm{K}_Z \\cong \\mathcal{O}_Z``, e.g. for Calabi–Yau and hyperkähler zero loci).
 """
 function cohomology_on_restriction(
   Z::ZeroLocus,
@@ -473,7 +473,7 @@ function cohomology_on_restriction(
   (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
   determined && return (H, true)
 
-  # Serre duality fallback: H^k(Z, F|_Z) = H^{d-k}(Z, F^*|_Z), valid because
+  # Serre duality fallback: H^k(Z, \\mathcal{F}|_Z) = H^{d-k}(Z, F^*|_Z), valid because
   # is_calabi_yau guarantees ω_Z ≅ O_Z via adjunction.
   if is_calabi_yau(Z)
     koszul_cohos_dual = _koszul_dimensions(Z, dual(F))
@@ -490,7 +490,7 @@ end
 """
     cohomology_on_restriction(Z::ZeroLocus) -> (Cohomology{BigInt}, Bool)
 
-Compute ``H^*(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
+Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
 """
 function cohomology_on_restriction(Z::ZeroLocus)
   cohomology_on_restriction(Z, structure_sheaf(Z.ambient))
@@ -523,7 +523,7 @@ end
       Z::ZeroLocus, var_counter::Ref{Int}
     ) -> Cohomology{AffineExpr}
 
-Symbolic ``H^*(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
+Symbolic ``\\mathrm{H}^\\bullet(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
 """
 function cohomology_on_restriction_symbolic(
   Z::ZeroLocus,
@@ -539,7 +539,7 @@ end
 """
     _restrict_to_zero_locus_les(Z, F, var_counter) -> Vector{AffineExpr}
 
-Compute ``H^*(Z, F|_Z)`` using the alternative LES solver.
+Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` using the alternative LES solver.
 
 Instead of parametrising connecting-map ranks (``\\delta``-variables),
 creates a fresh symbolic variable for each output entry and applies
@@ -582,7 +582,7 @@ function _restrict_to_zero_locus_les(
   # Symbolic path: chain the Koszul LES over K_r, K_{r-1}, …, K_0, harvesting
   # the exactness inequalities of every long exact sequence along the way.
   # For ω_Z ≅ O_Z the dual bundle is chained as well, and Serre duality
-  # H^k(Z, F|_Z) = H^{d-k}(Z, F^∨|_Z) is imposed entry by entry: both chains
+  # H^k(Z, \\mathcal{F}|_Z) = H^{d-k}(Z, F^∨|_Z) is imposed entry by entry: both chains
   # are sound parametrizations, so equating them is a sound constraint
   # (unlike cross-validating two undetermined numeric guesses).
   inequalities = AffineExpr[]
@@ -599,7 +599,7 @@ function _restrict_to_zero_locus_les(
 
   # One combined system, so every substitution stays synchronized between the
   # two chains and the harvested inequalities: slots 1:chain_length hold the
-  # primal entries H^k(Z, F|_Z) for k = 0, …, d_X; the dual entries (if any)
+  # primal entries H^k(Z, \\mathcal{F}|_Z) for k = 0, …, d_X; the dual entries (if any)
   # follow; the inequalities come last.
   chain_length = length(primal)
   system = vcat(primal, dual_chain, inequalities)
@@ -645,9 +645,9 @@ end
     _restrict_to_zero_locus_les(Z, F::FilteredBundle, var_counter)
       -> Vector{AffineExpr}
 
-Compute ``H^*(Z, F|_Z)`` for a filtered bundle ``F`` on the ambient variety.
+Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` for a filtered bundle ``\\mathcal{F}`` on the ambient variety.
 
-Each Koszul term ``F ⊗ ∧^k E^*`` is again a filtered bundle; its cohomology
+Each Koszul term ``F ⊗ ∧^k \\mathcal{E}^\\vee`` is again a filtered bundle; its cohomology
 on ``X`` is the abutment of the spectral sequence of the filtration
 (see `_cohomology_filtered`), and the Koszul chain is then solved
 with the symbolic LES solver.  When every spectral sequence visibly
@@ -695,7 +695,7 @@ function _restrict_to_zero_locus_les(
   end
 
   # Symbolic Koszul chain in reversed order K_r, …, K_0, with the exactness
-  # inequalities, then vanishing H^k(Z, F|_Z) = 0 for k > dim Z and interval
+  # inequalities, then vanishing H^k(Z, \\mathcal{F}|_Z) = 0 for k > dim Z and interval
   # propagation over the combined system.
   inequalities = AffineExpr[]
   chain = long_exact_sequence_cokernel(reverse(koszul_entries), var_counter; inequalities)
@@ -715,7 +715,7 @@ end
     is_calabi_yau(Z::ZeroLocus) -> Bool
 
 Check whether the zero locus ``Z`` has trivial (anti)canonical bundle:
-``\\det(E) \\cong \\omega_X^{-1}``, equivalently ``c_1(Z) = 0``.
+``\\det(\\mathcal{E}) \\cong \\omega_X^{-1}``, equivalently ``c_1(Z) = 0``.
 
 This is a necessary condition for ``Z`` to be Calabi–Yau.  For the full
 Calabi–Yau check (including cohomology vanishing), see [`is_strict_calabi_yau`](@ref).
@@ -742,10 +742,10 @@ end
     is_strict_calabi_yau(Z::ZeroLocus) -> Bool
 
 Check whether the zero locus ``Z`` is a strict Calabi–Yau variety:
-1. ``c_1(Z) = 0`` (equivalently ``\\det(E) \\cong \\omega_X^{-1}``,
+1. ``c_1(Z) = 0`` (equivalently ``\\det(\\mathcal{E}) \\cong \\omega_X^{-1}``,
    or trivially when ``\\dim Z = 0``)
-2. ``H^0(Z, \\mathcal{O}_Z) = 1`` (``Z`` is connected)
-3. ``H^i(Z, \\mathcal{O}_Z) = 0`` for ``0 < i < \\dim Z``
+2. ``\\mathrm{H}^0(Z, \\mathcal{O}_Z) = 1`` (``Z`` is connected)
+3. ``\\mathrm{H}^i(Z, \\mathcal{O}_Z) = 0`` for ``0 < i < \\dim Z``
 
 # Examples
 ```jldoctest
@@ -774,8 +774,8 @@ end
 Check whether the zero locus ``Z`` is strongly Fano: the anticanonical bundle
 ``\\omega_Z^{-1}`` is ample on the ambient ``G/P``.
 
-By the adjunction formula ``\\omega_Z^{-1} = (\\omega_X^{-1} \\otimes \\det(E)^{-1})|_Z``,
-this holds when every Picard-basis coordinate of ``\\omega_X^{-1} \\otimes \\det(E)^{-1}``
+By the adjunction formula ``\\omega_Z^{-1} = (\\omega_X^{-1} \\otimes \\det(\\mathcal{E})^{-1})|_Z``,
+this holds when every Picard-basis coordinate of ``\\omega_X^{-1} \\otimes \\det(\\mathcal{E})^{-1}``
 is strictly positive.  Strong Fano implies (ordinary) Fano.
 
 # Examples
@@ -805,16 +805,16 @@ end
 
 The Fano index of the zero locus ``Z``, defined (when ``\\mathrm{Pic}(Z) \\cong
 \\mathbb{Z}``) as the unique positive integer ``r`` such that
-``-K_Z = r\\,H`` where ``H`` is the restriction of the ample generator of
+``\\omega_Z^\\vee = r\\,H`` where ``H`` is the restriction of the ample generator of
 ``\\mathrm{Pic}(X)`` to ``Z``.
 
-Computed via the adjunction formula: ``K_Z = (K_X \\otimes \\det E)|_Z``, giving
+Computed via the adjunction formula: ``\\mathrm{K}_Z = (\\mathrm{K}_X \\otimes \\det E)|_Z``, giving
 
 ```math
 r_Z = r_X - \\deg(\\det E),
 ```
 
-where ``r_X = \\mathop{\\mathrm{fano\\_index}}(X)`` and ``\\deg(\\det E)`` is the degree of ``\\det(E)`` as a multiple of the
+where ``r_X = \\mathop{\\mathrm{fano\\_index}}(X)`` and ``\\deg(\\det E)`` is the degree of ``\\det(\\mathcal{E})`` as a multiple of the
 ample generator ``\\omega_m``.
 
 Requires the ambient variety to have Picard rank 1 (i.e., `picard_rank(ambient_variety(Z)) == 1`).
@@ -860,8 +860,8 @@ end
 """
 Compute ``\\chi(\\Omega^p_Z)`` using the conormal recursion.
 
-From the conormal sequence ``0 \\to E^*|_Z \\to \\Omega_X|_Z \\to \\Omega_Z \\to 0``,
-the K-theory relation ``[\\wedge^p \\Omega_X|_Z] = \\sum_i [\\wedge^i E^*|_Z \\otimes
+From the conormal sequence ``0 \\to \\mathcal{E}^\\vee|_Z \\to \\Omega_X|_Z \\to \\Omega_Z \\to 0``,
+the K-theory relation ``[\\wedge^p \\Omega_X|_Z] = \\sum_i [\\wedge^i \\mathcal{E}^\\vee|_Z \\otimes
 \\Omega^{p-i}_Z]`` gives a recursion for ``\\chi(\\Omega^p_Z)`` in terms of
 Koszul-computable Euler characteristics on ``X``.
 """
@@ -890,10 +890,10 @@ function _tensor_product_counts(
 end
 
 """
-Compute ``\\chi(Z, F|_Z)`` from a multiplicity dict, without creating CRBs.
+Compute ``\\chi(Z, \\mathcal{F}|_Z)`` from a multiplicity dict, without creating CRBs.
 
 Uses the Koszul spectral sequence:
-``\\chi(Z, F|_Z) = \\sum_i (-1)^i \\chi(X, F \\otimes \\wedge^i E^*)``
+``\\chi(Z, \\mathcal{F}|_Z) = \\sum_i (-1)^i \\chi(X, \\mathcal{F} \\otimes \\wedge^i \\mathcal{E}^\\vee)``
 """
 function _euler_characteristic_from_counts(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}
@@ -994,18 +994,18 @@ end
 """
     tangent_cohomology(Z::ZeroLocus) -> Cohomology{AffineExpr}
 
-Compute ``H^*(Z, T_Z)`` via the normal bundle sequence
-``0 \\to T_Z \\to T_X|_Z \\to E|_Z \\to 0``.
+Compute ``\\mathrm{H}^\\bullet(Z, \\mathrm{T}_Z)`` via the normal bundle sequence
+``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to E|_Z \\to 0``.
 
-The restrictions ``T_X|_Z`` (through the spectral sequence of the height
-filtration when ``T_X`` is not completely reducible) and ``E|_Z`` are
+The restrictions ``\\mathrm{T}_X|_Z`` (through the spectral sequence of the height
+filtration when ``\\mathrm{T}_X`` is not completely reducible) and ``E|_Z`` are
 computed by the Koszul resolution, and the long exact sequence is solved
 for the kernel term with [`les_kernel`](@ref).  The exact Euler
-characteristic ``\\chi(T_Z) = \\chi(T_X|_Z) - \\chi(E|_Z)`` and, for a strict
-Calabi–Yau, the vanishing ``h^0(T_Z) = h^{d-1,0} = 0`` are imposed.
+characteristic ``\\chi(\\mathrm{T}_Z) = \\chi(\\mathrm{T}_X|_Z) - \\chi(E|_Z)`` and, for a strict
+Calabi–Yau, the vanishing ``\\mathrm{h}^0(\\mathrm{T}_Z) = \\mathrm{h}^{d-1,0} = 0`` are imposed.
 
 Entries are `AffineExpr`s: exact integers where the constraints determine
-them, symbolic otherwise.  ``H^1(Z, T_Z)`` is the space of first-order
+them, symbolic otherwise.  ``\\mathrm{H}^1(Z, \\mathrm{T}_Z)`` is the space of first-order
 deformations of ``Z``.
 
 # Examples

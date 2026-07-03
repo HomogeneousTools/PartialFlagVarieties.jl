@@ -95,7 +95,7 @@ end
 
 Sheaf cohomology of an equivariant bundle on a partial flag variety.
 
-Entries are 0-indexed: `H[i]` returns ``H^i(G/P, E)``.
+Entries are 0-indexed: `H[i]` returns ``\\mathrm{H}^i(G/P, E)``.
 
 # Type parameter
 - `T = WeylCharacter{DT,R}`: entries are virtual characters of ``G``
@@ -131,7 +131,7 @@ end
 """
     getindex(H::Cohomology, i::Int) -> T
 
-Return ``H^i(G/P, E)``. Uses 0-based indexing.
+Return ``\\mathrm{H}^i(G/P, E)``. Uses 0-based indexing.
 """
 function Base.getindex(H::Cohomology{T}, i::Int) where {T}
   0 <= i <= H.dim_variety || throw(BoundsError(H, i))
@@ -224,9 +224,9 @@ end
 """
     cohomology(E::CompletelyReducibleBundle) -> Cohomology{WeylCharacter}
 
-Compute the sheaf cohomology ``H^*(G/P, E)`` using the Borel–Weil–Bott theorem.
+Compute the sheaf cohomology ``\\mathrm{H}^\\bullet(G/P, E)`` using the Borel–Weil–Bott theorem.
 
-Returns character-valued cohomology: each ``H^i`` is a virtual character
+Returns character-valued cohomology: each ``\\mathrm{H}^i`` is a virtual character
 (Weyl character) of the ambient group ``G``.
 
 The partial flag variety is inferred from `E`.
@@ -236,7 +236,7 @@ The result is a 0-indexed [`Cohomology`](@ref) object.
 For each irreducible Levi component ``V_\\lambda`` of ``E``:
 1. Convert to ambient weight ``\\lambda``
 2. Apply BWB: `borel_weil_bott(λ)` → `(d, μ)` or `nothing`
-3. If non-singular, add ``V_\\mu`` to ``H^d``
+3. If non-singular, add ``V_\\mu`` to ``\\mathrm{H}^d``
 
 # Examples
 ```jldoctest
@@ -341,7 +341,7 @@ character-valued result.
 
 This is usually the most convenient entry point when only the dimensions of the
 cohomology groups matter. As for all [`Cohomology`](@ref) objects, the result is
-0-indexed: `H[0]` means ``H^0``.
+0-indexed: `H[0]` means ``\\mathrm{H}^0``.
 """
 function dimensions(E::CompletelyReducibleBundle)
   d = dimension(E.variety)
@@ -371,7 +371,7 @@ Base.iszero(H::Cohomology{<:WeylCharacter}) = all(χ -> isempty(χ.terms), H.ent
 """
     euler_characteristic(H::Cohomology{BigInt}) -> BigInt
 
-Compute the Euler characteristic ``\\chi(E) = \\sum_i (-1)^i \\dim H^i(G/P, E)``.
+Compute the Euler characteristic ``\\chi(E) = \\sum_i (-1)^i \\dim \\mathrm{H}^i(G/P, E)``.
 
 # Examples
 ```jldoctest

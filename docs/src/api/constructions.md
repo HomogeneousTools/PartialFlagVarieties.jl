@@ -6,6 +6,7 @@ Named convenience constructors for classical and exceptional varieties.
 
 ```@docs
 Gr
+grassmannian
 projective_space
 flag_variety
 ```

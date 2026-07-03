@@ -232,7 +232,7 @@ central_rank(X::PartialFlagVariety) = central_rank(marked_dynkin_type(X))
 """
     euler_characteristic(X::PartialFlagVariety) -> BigInt
 
-Return the topological Euler characteristic ``\\chi(G/P) = |W_G|/|W_L|``.
+Return the topological Euler characteristic ``\\chi(G/P) = |\\mathrm{W}_G|/|\\mathrm{W}_L|``.
 """
 function euler_characteristic(X::PartialFlagVariety)
   wG = weyl_order(dynkin_type(X))
@@ -246,9 +246,9 @@ end
 Return the Betti numbers of `X` in even degrees, i.e.
 ``[b_0, b_2, b_4, \\ldots, b_{2d}]``.
 
-Since ``G/P`` has no odd cohomology this completely describes ``\\mathrm{H}^*(X, \\mathbb{Z})``.
+Since ``G/P`` has no odd cohomology this completely describes ``\\mathrm{H}^\\bullet(X, \\mathbb{Z})``.
 Computed from the ratio of the Poincaré polynomials of the Weyl groups
-``W_G`` and ``W_L``.
+``\\mathrm{W}_G`` and ``\\mathrm{W}_L``.
 
 The entry at index `p + 1` is ``b_{2p}``.
 """
