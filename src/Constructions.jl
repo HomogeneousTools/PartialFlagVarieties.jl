@@ -7,6 +7,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export Gr, OGr, SGr, LGr, IGr
+export grassmannian
 export projective_space, quadric
 export cayley_plane, freudenthal_variety
 export adjoint_variety, coadjoint_variety
@@ -43,6 +44,22 @@ function Gr(k::Integer, n::Integer)
   DT = TypeA{n - 1}
   return partial_flag_variety(DT, (k,), "Gr($k, $n)")
 end
+
+"""
+    grassmannian(k::Integer, n::Integer) -> PartialFlagVariety
+
+The Grassmannian ``\\mathrm{Gr}(k, n)`` of ``k``-dimensional subspaces of an
+``n``-dimensional vector space; a spelled-out synonym of [`Gr`](@ref).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> grassmannian(2, 5) == Gr(2, 5)
+true
+```
+"""
+grassmannian(k::Integer, n::Integer) = Gr(k, n)
 
 """
     projective_space(n) -> PartialFlagVariety
