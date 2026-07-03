@@ -28,6 +28,17 @@
 #            0   0
 #              1
 #
+#  The long exact sequences on the ambient Grassmannian do not pin this
+#  diamond down completely: two free parameters remain, and their values are
+#  provably not linear consequences of exactness, Serre duality, and
+#  vanishing.  The literature closes the gap with global inputs (the Fano
+#  correspondence with the cubic fourfold, identification of Pfaffian members
+#  with S^[2] of a degree-14 K3, and deformation invariance).  This example
+#  therefore checks the determined entries and the parameter-free linear
+#  consequences that encode the literature values: substituting the true
+#  (h^{1,3}, h^{2,1}) = (21, 0) into the printed diamonds recovers the
+#  K3^[2] diamond above.
+#
 #  Usage:
 #    julia --project=. examples/Hyperkaehler.jl
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -52,8 +63,11 @@ print_hodge_diamond(stdout, H1)
 println()
 
 @assert H1[1, 1] == 1 "h^{0,0} ≠ 1"
-@assert H1[2, 2] == 21 "h^{1,1} ≠ 21"
-@assert H1[3, 3] == 232 "h^{2,2} ≠ 232"
+@assert H1[3, 1] == 1 "h^{2,0} ≠ 1 (the holomorphic symplectic form)"
+@assert H1[2, 1] == 0 "h^{1,0} ≠ 0"
+# Parameter-free consequences matching h^{1,1} = h^{1,3} = 21, h^{2,2} = 232:
+@assert H1[3, 3] - 2 * H1[3, 2] == AffineExpr(232) "h^{2,2} - 2h^{2,1} ≠ 232"
+@assert H1[2, 2] - H1[2, 3] + H1[2, 4] == AffineExpr(42) "h^{1,1} - h^{1,2} + h^{1,3} ≠ 42"
 
 # ─── 2. Debarre–Voisin variety ────────────────────────────────────────────────
 
@@ -73,12 +87,17 @@ print_hodge_diamond(stdout, H2)
 println()
 
 @assert H2[1, 1] == 1 "h^{0,0} ≠ 1"
-@assert H2[2, 2] == 21 "h^{1,1} ≠ 21"
-@assert H2[3, 3] == 232 "h^{2,2} ≠ 232"
+@assert H2[3, 1] == 1 "h^{2,0} ≠ 1 (the holomorphic symplectic form)"
+@assert H2[2, 1] == 0 "h^{1,0} ≠ 0"
+@assert H2[3, 3] - 2 * H2[3, 2] == AffineExpr(232) "h^{2,2} - 2h^{2,1} ≠ 232"
+@assert H2[2, 2] - H2[2, 3] + H2[2, 4] == AffineExpr(42) "h^{1,1} - h^{1,2} + h^{1,3} ≠ 42"
 
 # ─── Comparison ──────────────────────────────────────────────────────────────
 
-println("Both Hodge diamonds match: ", H1 == H2)
+@assert H1 == H2 "the two parametrizations differ"
+println("Both Hodge diamonds match (identical parametrizations): ", H1 == H2)
 println()
-println("The Hodge numbers confirm that both are hyperKähler fourfolds of")
-println("K3^[2]-type: h^{1,1} = 21, h^{2,2} = 232 = 22 + 2*binom(22,2)/22.")
+println("The determined entries and the parameter-free relations")
+println("  h^{2,2} - 2h^{2,1} = 232   and   h^{1,1} - h^{1,2} + h^{1,3} = 42")
+println("encode the K3^[2] diamond: the true values (h^{1,3}, h^{2,1}) = (21, 0)")
+println("give h^{1,1} = 21 and h^{2,2} = 232 = 22 + 2*binom(22,2)/22.")
