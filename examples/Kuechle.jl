@@ -177,17 +177,15 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 function compute_family(label, k, n, weights, desc)
-  @time X = Gr(k, n)
+  X = Gr(k, n)
   d = dimension(X)
-  @time E = bundle_from_gl_weights(X, k, n, weights)
+  E = bundle_from_gl_weights(X, k, n, weights)
   r = Int(rank_bundle(E))
 
   if d - r != 4
     @warn "  $label: dim(Z) = $(d - r) ≠ 4; skipping"
-    return nothing, 0.0
+    return nothing
   end
-
-  t_start = time()
 
   Z = zero_locus(E)
 
@@ -196,11 +194,8 @@ function compute_family(label, k, n, weights, desc)
   #   F_antiK = anticanonical_bundle(X) ⊗ dual(det(E)).
   h0aK = nothing
   try
-    @time anticanonical_bundle(X)
-    @time det(E)
-    @time dual(det(E))
-    @time F_antiK = anticanonical_bundle(X) ⊗ dual(det(E))
-    @time (H_antiK, _) = cohomology_on_restriction(Z, F_antiK)
+    F_antiK = anticanonical_bundle(X) ⊗ dual(det(E))
+    (H_antiK, _) = cohomology_on_restriction(Z, F_antiK)
     h0aK = H_antiK[0]
   catch e
     @warn "  $label h⁰(-K) failed: $(sprint(showerror, e))"
@@ -214,7 +209,7 @@ function compute_family(label, k, n, weights, desc)
   h22 = nothing
   h13 = nothing
   try
-    @time hm = hodge_numbers(Z)
+    hm = hodge_numbers(Z)
     # χ_top = Σ_{p,q} (-1)^{p+q} h^{p,q}
     chi = sum((-1)^(p + q) * hm[p + 1, q + 1] for p in 0:4, q in 0:4)
     β2 = hm[2, 2]                    # h^{1,1}
@@ -226,8 +221,7 @@ function compute_family(label, k, n, weights, desc)
     @warn "  $label Hodge failed: $(sprint(showerror, e))"
   end
 
-  elapsed = time() - t_start
-  FanoResult(label, desc, k, n, h0aK, chi, β2, β3, h11, h22, h13), elapsed
+  FanoResult(label, desc, k, n, h0aK, chi, β2, β3, h11, h22, h13)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -280,15 +274,13 @@ function main()
   println("\nComputing Küchle fourfold invariants...\n")
 
   kuechle_results = FanoResult[]
-  t_total = 0.0
-  for (label, k, n, weights, desc) in KUECHLE_FAMILIES
+  t_total = @elapsed for (label, k, n, weights, desc) in KUECHLE_FAMILIES
     print("  $label ... ")
     flush(stdout)
-    res, elapsed = compute_family(label, k, n, weights, desc)
+    res = compute_family(label, k, n, weights, desc)
     if res !== nothing
       push!(kuechle_results, res)
-      t_total += elapsed
-      println(@sprintf("done  (%.2fs)", elapsed))
+      println("done")
     end
   end
   println(@sprintf("\n  Total: %.2fs", t_total))
