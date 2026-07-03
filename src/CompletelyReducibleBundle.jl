@@ -685,7 +685,7 @@ end
 """
     anticanonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The anticanonical line bundle ``\\omega_{G/P}^{-1} = -K_{G/P}``.
+The anticanonical line bundle ``\\omega_{G/P}^\\vee = -K_{G/P}``.
 
 This is computed directly from the formula
 
@@ -723,7 +723,7 @@ end
 """
     fano_index(X::PartialFlagVariety) -> Int
 
-The Fano index of the partial flag variety ``G/P``, defined as the gcd of the
+The Fano index of the partial flag variety ``\\mathrm{G}/\\mathrm{P}``, defined as the gcd of the
 anticanonical degrees.
 
 For Picard-rank-1 varieties this is the unique positive integer ``r`` such that
@@ -732,7 +732,7 @@ For Picard-rank-1 varieties this is the unique positive integer ``r`` such that
 -K_{G/P} = r\\,\\omega_m
 ```
 
-where ``\\omega_m`` is the ample generator of ``\\mathrm{Pic}(G/P) \\cong \\mathbb{Z}``.
+where ``\\omega_m`` is the ample generator of ``\\mathrm{Pic}(\\mathrm{G}/\\mathrm{P}) \\cong \\mathbb{Z}``.
 
 All partial flag varieties are Fano (the anticanonical bundle is ample), so
 the Fano index is always a positive integer.
@@ -765,7 +765,7 @@ _trivial_semisimple_weight(X::PartialFlagVariety) =
 """
     dual(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
 
-The dual bundle ``E^\\vee``.
+The dual bundle ``\\mathcal{E}^\\vee``.
 
 # Examples
 ```jldoctest
@@ -788,7 +788,7 @@ end
 """
     tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
 
-The tensor product ``E \\otimes F``.
+The tensor product ``\\mathcal{E} \\otimes \\mathcal{F}``.
 
 Uses bilinearity: ``(\\bigoplus_i V_i) \\otimes (\\bigoplus_j \\mathrm{W}_j) = \\bigoplus_{i,j} V_i \\otimes \\mathrm{W}_j``
 
@@ -839,10 +839,10 @@ end
 """
     exterior_power(E::CompletelyReducibleBundle, k::Int) -> CompletelyReducibleBundle
 
-The k-th exterior power ``\\bigwedge^k E``.
+The k-th exterior power ``\\bigwedge\\nolimits^k \\mathcal{E}``.
 
-For a direct sum ``E = \\bigoplus_i V_i``, we use:
-``\\bigwedge^k E = \\bigoplus_{|\\alpha| = k} \\bigotimes_i \\bigwedge^{\\alpha_i} V_i``
+For a direct sum ``\\mathcal{E} = \\bigoplus_i V_i``, we use:
+``\\bigwedge\\nolimits^k \\mathcal{E} = \\bigoplus_{|\\alpha| = k} \\bigotimes_i \\bigwedge\\nolimits^{\\alpha_i} V_i``
 
 where ``\\alpha`` runs over compositions (multiexponents) of ``k`` in
 ``n = n_{\\rm components}`` parts.
@@ -1004,10 +1004,10 @@ end
 """
     symmetric_power(E::CompletelyReducibleBundle, k::Int) -> CompletelyReducibleBundle
 
-The k-th symmetric power ``\\mathrm{Sym}^k E``.
+The k-th symmetric power ``\\mathrm{Sym}^k \\mathcal{E}``.
 
-For a direct sum ``E = \\bigoplus_i V_i``, we use:
-``\\mathrm{Sym}^k E = \\bigoplus_{|\\alpha| = k} \\bigotimes_i \\mathrm{Sym}^{\\alpha_i} V_i``
+For a direct sum ``\\mathcal{E} = \\bigoplus_i V_i``, we use:
+``\\mathrm{Sym}^k \\mathcal{E} = \\bigoplus_{|\\alpha| = k} \\bigotimes_i \\mathrm{Sym}^{\\alpha_i} V_i``
 
 # Examples
 ```jldoctest
@@ -1036,7 +1036,7 @@ end
     det(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
     determinant(E::CompletelyReducibleBundle) -> CompletelyReducibleBundle
 
-The determinant line bundle ``\\det(E) = \\bigwedge^{\\mathrm{rk}(E)} E``.
+The determinant line bundle ``\\det(\\mathcal{E}) = \\bigwedge\\nolimits^{\\mathrm{rk}(\\mathcal{E})} \\mathcal{E}``.
 
 Each summand of `E` is the homogeneous bundle attached to an irreducible
 representation ``V`` of the Levi ``L``, and ``\\det`` distributes over direct
@@ -1047,14 +1047,14 @@ use the factorisation
 and semisimple part ``[L,L]``:
 
 - By Schur's lemma ``Z(L)`` acts on ``V`` through a single character ``\\chi``,
-  so it acts on ``\\det V = \\bigwedge^d V`` through ``\\chi^d``; the central
+  so it acts on ``\\det V = \\bigwedge\\nolimits^d V`` through ``\\chi^d``; the central
   charge of ``\\det V`` is therefore that of ``V`` scaled by ``d``.
 - ``[L,L]`` equals its own derived subgroup, so it carries no nontrivial
   characters. The determinant of any ``[L,L]``-representation is therefore
   trivial, and the semisimple highest weight of ``\\det V`` vanishes.
 
 Hence ``\\det V`` is the line bundle with central charge ``d\\,\\chi`` and
-trivial semisimple weight, and ``\\det E`` is the sum of these over the summands.
+trivial semisimple weight, and ``\\det \\mathcal{E}`` is the sum of these over the summands.
 
 # Examples
 ```jldoctest
@@ -1085,7 +1085,7 @@ determinant(E::CompletelyReducibleBundle) = det(E)
 """
     direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
 
-The direct sum ``E \\oplus F``.
+The direct sum ``\\mathcal{E} \\oplus \\mathcal{F}``.
 """
 function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   X = variety(E)
@@ -1105,8 +1105,8 @@ Base.:+(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) = direct_sum
 """
     twist(E::CompletelyReducibleBundle, i::Int, k::Int=1) -> CompletelyReducibleBundle
 
-Twist ``E`` by ``\\mathcal{O}(k)`` at the `i`-th marked node:
-``E(k) = E \\otimes \\mathcal{L}(k \\omega_{m_i})``.
+Twist ``\\mathcal{E}`` by ``\\mathcal{O}(k)`` at the `i`-th marked node:
+``E(k) = \\mathcal{E} \\otimes \\mathcal{L}(k \\omega_{m_i})``.
 
 # Examples
 ```jldoctest
@@ -1148,7 +1148,7 @@ Base.:*(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) = tensor_pro
 """
     n * E -> CompletelyReducibleBundle
 
-The `n`-fold direct sum ``E \\oplus \\cdots \\oplus E`` (n ≥ 1).
+The `n`-fold direct sum ``\\mathcal{E} \\oplus \\cdots \\oplus \\mathcal{E}`` (n ≥ 1).
 Returns the zero bundle when `n == 0` and throws for `n < 0`.
 """
 function Base.:*(n::Integer, E::CompletelyReducibleBundle)

@@ -68,7 +68,7 @@ true
 
 A *nonzero* singular weight, complementing the ``μ = 0`` example above. Note the
 test is applied to the dominant representative: a *dominant* weight is singular
-exactly when one Dynkin coordinate vanishes. On ``B_2`` the weight ``-ω_2`` has
+exactly when one Dynkin coordinate vanishes. On ``\\mathrm{B}_2`` the weight ``-ω_2`` has
 ``ρ``-shift ``μ = ω_1`` — dominant with one coordinate zero — so its cohomology
 vanishes, while a regular weight lands in a single positive degree:
 
@@ -95,7 +95,7 @@ end
 
 Sheaf cohomology of an equivariant bundle on a partial flag variety.
 
-Entries are 0-indexed: `H[i]` returns ``\\mathrm{H}^i(G/P, E)``.
+Entries are 0-indexed: `H[i]` returns ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})``.
 
 # Type parameter
 - `T = WeylCharacter{DT,R}`: entries are virtual characters of ``G``
@@ -131,7 +131,7 @@ end
 """
     getindex(H::Cohomology, i::Int) -> T
 
-Return ``\\mathrm{H}^i(G/P, E)``. Uses 0-based indexing.
+Return ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})``. Uses 0-based indexing.
 """
 function Base.getindex(H::Cohomology{T}, i::Int) where {T}
   0 <= i <= H.dim_variety || throw(BoundsError(H, i))
@@ -224,7 +224,7 @@ end
 """
     cohomology(E::CompletelyReducibleBundle) -> Cohomology{WeylCharacter}
 
-Compute the sheaf cohomology ``\\mathrm{H}^\\bullet(G/P, E)`` using the Borel–Weil–Bott theorem.
+Compute the sheaf cohomology ``\\mathrm{H}^\\bullet(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})`` using the Borel–Weil–Bott theorem.
 
 Returns character-valued cohomology: each ``\\mathrm{H}^i`` is a virtual character
 (Weyl character) of the ambient group ``G``.
@@ -233,7 +233,7 @@ The partial flag variety is inferred from `E`.
 The result is a 0-indexed [`Cohomology`](@ref) object.
 
 # Algorithm
-For each irreducible Levi component ``V_\\lambda`` of ``E``:
+For each irreducible Levi component ``V_\\lambda`` of ``\\mathcal{E}``:
 1. Convert to ambient weight ``\\lambda``
 2. Apply BWB: `borel_weil_bott(λ)` → `(d, μ)` or `nothing`
 3. If non-singular, add ``V_\\mu`` to ``\\mathrm{H}^d``
@@ -371,7 +371,7 @@ Base.iszero(H::Cohomology{<:WeylCharacter}) = all(χ -> isempty(χ.terms), H.ent
 """
     euler_characteristic(H::Cohomology{BigInt}) -> BigInt
 
-Compute the Euler characteristic ``\\chi(E) = \\sum_i (-1)^i \\dim \\mathrm{H}^i(G/P, E)``.
+Compute the Euler characteristic ``\\chi(\\mathcal{E}) = \\sum_i (-1)^i \\dim \\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})``.
 
 # Examples
 ```jldoctest
@@ -440,7 +440,7 @@ end
 """
     euler_characteristic(E::CompletelyReducibleBundle) -> BigInt
 
-Compute the Euler characteristic ``\\chi(G/P, E)`` directly via BWB,
+Compute the Euler characteristic ``\\chi(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})`` directly via BWB,
 without constructing intermediate `WeylCharacter` objects.
 
 For each irreducible Levi component, converts to the ambient weight,
@@ -480,14 +480,14 @@ chi(E::CompletelyReducibleBundle) = euler_characteristic(E)
                        L::CompletelyReducibleBundle;
                        max_degree::Int=20) -> Vector{Rational{BigInt}}
 
-Compute the Hilbert polynomial of a bundle ``E`` with respect to the
-polarization ``L``:
+Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to the
+polarization ``\\mathcal{L}``:
 ```math
-P(t) = \\chi(E \\otimes L^{\\otimes t}).
+P(t) = \\chi(\\mathcal{E} \\otimes \\mathcal{L}^{\\otimes t}).
 ```
 
-The polarization ``L`` must be a line bundle on the same variety as ``E``;
-for the result to be a genuine Hilbert polynomial, ``L`` should be ample.
+The polarization ``\\mathcal{L}`` must be a line bundle on the same variety as ``\\mathcal{E}``;
+for the result to be a genuine Hilbert polynomial, ``\\mathcal{L}`` should be ample.
 
 Returns polynomial coefficients ``[a_0, a_1, \\ldots, a_d]`` such that
 ``P(t) = a_0 + a_1 t + \\cdots + a_d t^d``.

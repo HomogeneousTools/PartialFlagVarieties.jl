@@ -1,6 +1,6 @@
 # Spectral Sequences
 
-A [`FilteredBundle`](@ref) ``\mathcal{F}`` on ``X = G/P`` determines a
+A [`FilteredBundle`](@ref) ``\mathcal{F}`` on ``X = \mathrm{G}/\mathrm{P}`` determines a
 spectral sequence
 
 ```math
@@ -15,7 +15,7 @@ horizontal band ``0 \le q \le s - 1``, ``0 \le p + q \le \dim X`` (with
 may be negative — and every differential
 ``d_r \colon \mathrm{E}_r^{p,q} \to \mathrm{E}_r^{p+1-r,\, q+r}`` raises
 the total degree by exactly one and strictly raises ``q``. On a
-cominuscule ``G/P`` (abelian nilradical) the tangent bundle is completely
+cominuscule ``\mathrm{G}/\mathrm{P}`` (abelian nilradical) the tangent bundle is completely
 reducible and nothing can degenerate; in general the differentials may be
 nonzero, and computing with the associated graded alone silently assumes
 degeneration. This module makes that step honest: all differentials are

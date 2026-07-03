@@ -1,9 +1,9 @@
 # PartialFlagVariety
 
-The primary user-facing type for partial flag varieties ``G/P``.
+The primary user-facing type for partial flag varieties ``\mathrm{G}/\mathrm{P}``.
 
 A `PartialFlagVariety` wraps a [`MarkedDynkinType`](@ref) and provides the
-high-level API for computing invariants of ``G/P``: dimension, Picard rank,
+high-level API for computing invariants of ``\mathrm{G}/\mathrm{P}``: dimension, Picard rank,
 Euler characteristic, Betti numbers, and classification predicates.
 
 For the package conventions behind the constructors and invariants on this

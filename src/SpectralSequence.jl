@@ -64,16 +64,16 @@ E1_page(S::SpectralSequence) = S.E1
 """
     spectral_sequence(F::FilteredBundle) -> SpectralSequence{WeylCharacter}
 
-The spectral sequence ``E_1 = \\mathrm{H}^\\bullet(X, \\mathrm{gr}\\, F) \\Rightarrow \\mathrm{H}^\\bullet(X, F)``
+The spectral sequence ``\\mathrm{E}_1 = \\mathrm{H}^\\bullet(X, \\mathrm{gr}\\, \\mathcal{F}) \\Rightarrow \\mathrm{H}^\\bullet(X, \\mathcal{F})``
 of a filtered bundle, with the E₁ page computed by Borel–Weil–Bott.
 
 The cohomology of the `q`-th graded piece **counted from the top** of the
 filtration is placed in positions of second coordinate `q` (so `q = 0` is
 the top quotient), with the cohomological degree as total degree.  With
 this convention every differential raises the total degree by 1 and
-strictly raises `q`: for a two-step filtration ``0 \\to F_1 \\to F \\to
-\\mathrm{gr}_2 \\to 0`` the connecting map ``\\mathrm{H}^i(\\mathrm{gr}_2) \\to
-\\mathrm{H}^{i+1}(F_1)`` goes from `q = 0` to `q = 1`.
+strictly raises `q`: for a two-step filtration ``0 \\to \\mathrm{F}_1 \\to \\mathcal{F} \\to
+\\mathrm{gr}_2 \\to 0`` the connecting map ``\\mathrm{H}^i(X, \\mathrm{gr}_2) \\to
+\\mathrm{H}^{i+1}(X, \\mathrm{F}_1)`` goes from `q = 0` to `q = 1`.
 
 # Examples
 ```jldoctest
@@ -141,7 +141,7 @@ i.e. no pair of E₁ entries in adjacent total degrees with strictly
 increasing `q`.
 
 This is a sufficient condition for degeneracy at E₁: when it holds,
-``E_1 = E_\\infty``.  When it fails the spectral sequence may still
+``\\mathrm{E}_1 = \\mathcal{E}_\\infty``.  When it fails the spectral sequence may still
 degenerate for other reasons, so `false` means "unknown".
 
 For a character-valued spectral sequence the test is applied to each
@@ -204,7 +204,7 @@ end
 """
     _cohomology_filtered(F::FilteredBundle, var_counter) -> Vector{AffineExpr}
 
-``\\mathrm{H}^\\bullet(X, F)`` via the spectral sequence of the filtration, as a vector of
+``\\mathrm{H}^\\bullet(X, \\mathcal{F})`` via the spectral sequence of the filtration, as a vector of
 affine expressions indexed by cohomological degree `0:dim(X)`.
 
 For each isotypical component, differentials can only cancel E₁ classes on
@@ -252,7 +252,7 @@ end
 """
     cohomology(F::FilteredBundle) -> Cohomology{AffineExpr}
 
-Compute ``\\mathrm{H}^\\bullet(X, F)`` via the spectral sequence of the filtration.
+Compute ``\\mathrm{H}^\\bullet(X, \\mathcal{F})`` via the spectral sequence of the filtration.
 
 Entries are affine expressions: exact integers where the spectral sequence
 visibly degenerates (checked per isotypical component), and expressions in

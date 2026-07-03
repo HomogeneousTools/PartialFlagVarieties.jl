@@ -10,7 +10,7 @@ in the Fano vanishing check.
 
 There are two rather different regimes:
 
-- for homogeneous varieties ``X = G/P``, Hodge-theoretic output is numerical;
+- for homogeneous varieties ``X = \mathrm{G}/\mathrm{P}``, Hodge-theoretic output is numerical;
 - for zero loci ``Z``, the package may return symbolic affine expressions when
   the long exact sequences do not force all connecting-map ranks.
 
@@ -27,7 +27,7 @@ print_hodge_diamond
 The Hochschild–Kostant–Rosenberg decomposition gives
 
 ```math
-\mathrm{HH}^n(X) = \bigoplus_{p+q=n} \mathrm{H}^q(X, \bigwedge^p \mathrm{T}_X)
+\mathrm{HH}^n(X) = \bigoplus_{p+q=n} \mathrm{H}^q(X, \bigwedge\nolimits^p \mathrm{T}_X)
 ```
 
 The result is stored in a [`PolyvectorParallelogram`](@ref), which uses

@@ -22,8 +22,8 @@ export flag_variety
 
 The Grassmannian ``\\mathrm{Gr}(k, n)`` of ``k``-planes in ``\\mathbb{C}^n``.
 
-It is the generalized Grassmannian ``A_{n-1}/P_k``, encoded by marking node
-``k`` in the Dynkin diagram of type ``A_{n-1}``.
+It is the generalized Grassmannian ``\\mathrm{A}_{n-1}/\\mathrm{P}_k``, encoded by marking node
+``k`` in the Dynkin diagram of type ``\\mathrm{A}_{n-1}``.
 
 # Examples
 ```jldoctest
@@ -95,7 +95,7 @@ end
     flag_variety(n, dimensions) -> PartialFlagVariety
 
 The type-``A`` partial flag variety
-``\\mathrm{Fl}(d_1, \\ldots, d_r; n) = A_{n-1}/P_{\\{d_1,\\ldots,d_r\\}}``.
+``\\mathrm{Fl}(d_1, \\ldots, d_r; n) = \\mathrm{A}_{n-1}/\\mathrm{P}_{\\{d_1,\\ldots,d_r\\}}``.
 
 Here `dimensions = (d_1, ..., d_r)` are the dimensions of the subspaces in the
 partial flag
@@ -141,7 +141,7 @@ type ``D_m`` mark node ``m``.
 
 When ``n = 2m`` and ``k = m``, the maximal orthogonal Grassmannian has two
 connected components. `OGr(m, 2m)` picks the component corresponding to node
-``m``; the other component is ``D_m/P_{m-1}``.
+``m``; the other component is ``D_m/\\mathrm{P}_{m-1}``.
 
 # Examples
 ```jldoctest
@@ -178,7 +178,7 @@ end
 The symplectic Grassmannian ``\\mathrm{SGr}(k, n)`` of isotropic ``k``-planes
 in ``\\mathbb{C}^n`` with a skew-symmetric form (``n`` must be even).
 
-Type ``C_{n/2}``, mark node ``k``.
+Type ``\\mathrm{C}_{n/2}``, mark node ``k``.
 
 # Examples
 ```jldoctest
@@ -282,7 +282,7 @@ end
 """
     cayley_plane() -> PartialFlagVariety
 
-The Cayley plane ``\\mathbb{OP}^2 = E_6 / P_1``, the 16-dimensional
+The Cayley plane ``\\mathbb{OP}^2 = \\mathrm{E}_6 / P_1``, the 16-dimensional
 cominuscule variety.
 
 # Examples
@@ -305,7 +305,7 @@ end
 """
     freudenthal_variety() -> PartialFlagVariety
 
-The Freudenthal variety ``E_7 / P_7``, the 27-dimensional cominuscule variety.
+The Freudenthal variety ``\\mathrm{E}_7 / P_7``, the 27-dimensional cominuscule variety.
 
 # Examples
 ```jldoctest

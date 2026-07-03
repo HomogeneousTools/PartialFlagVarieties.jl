@@ -19,7 +19,7 @@ export S, Q  # shorthands for universal_subbundle, universal_quotient_bundle
 """
     universal_subbundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-On a generalized Grassmannian ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/P_k``,
+On a generalized Grassmannian ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/\\mathrm{P}_k``,
 the irreducible equivariant bundle ``\\mathcal{U}`` corresponding to the
 standard representation of the Levi factor — geometrically the tautological
 rank-``k`` subbundle of the trivial bundle ``\\mathbb{C}^n``.
@@ -46,8 +46,8 @@ julia> rank_bundle(universal_subbundle(OGr(3, 7)))
 ```
 
 ``\\mathcal{U}`` has no dominant weights (its ``\\rho``-shifted weights are
-singular), so ``\\mathrm{H}^0(\\mathcal{U}) = 0``,
-while ``\\mathrm{H}^0(\\mathcal{U}^\\vee)`` recovers the standard representation of the
+singular), so ``\\mathrm{H}^0(X, \\mathcal{U}) = 0``,
+while ``\\mathrm{H}^0(X, \\mathcal{U}^\\vee)`` recovers the standard representation of the
 structure group:
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -73,7 +73,7 @@ end
 
 The universal quotient bundle ``\\mathcal{Q}`` on a generalized Grassmannian.
 
-On ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/P_k`` (type ``\\mathrm{A}``),
+On ``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/\\mathrm{P}_k`` (type ``\\mathrm{A}``),
 ``\\mathcal{Q}`` is the completely reducible equivariant bundle with highest
 weight ``\\omega_{n-1}`` — geometrically the rank-``(n-k)`` quotient
 ``\\mathbb{C}^n / \\mathcal{U}``.
@@ -248,11 +248,11 @@ end
 The spinor bundle on an orthogonal Grassmannian ``\\mathrm{OGr}(k, m)``. The two
 methods are mutually exclusive by Dynkin type.
 
-For type ``\\mathrm{B}_n/P_k`` (``\\mathrm{OGr}(k, 2n+1)``) there is a single
+For type ``\\mathrm{B}_n/\\mathrm{P}_k`` (``\\mathrm{OGr}(k, 2n+1)``) there is a single
 spinor bundle ``\\mathcal{S}`` corresponding to ``\\omega_n``; use the
 one-argument `spinor_bundle(X)`.
 
-For type ``\\mathrm{D}_n/P_k`` (``\\mathrm{OGr}(k, 2n)``) there are two
+For type ``\\mathrm{D}_n/\\mathrm{P}_k`` (``\\mathrm{OGr}(k, 2n)``) there are two
 half-spinor bundles ``\\mathcal{S}^+`` and ``\\mathcal{S}^-`` corresponding to
 ``\\omega_{n-1}`` and ``\\omega_n`` respectively; select one with
 `spinor_bundle(X, :plus)` or `spinor_bundle(X, :minus)`.
@@ -268,7 +268,7 @@ half-spinor bundle is the hyperplane line bundle of the spinor embedding and
 the other is a twist of the tautological rank-``n`` bundle.
 
 This constructor additionally accepts the two-marked variety
-``\\mathrm{D}_n/P_{n-1,\\,n} = \\mathrm{OGr}(n-1, 2n)`` — the ``(n-1)``-isotropic
+``\\mathrm{D}_n/\\mathrm{P}_{n-1,\\,n} = \\mathrm{OGr}(n-1, 2n)`` — the ``(n-1)``-isotropic
 Grassmannian, of Picard rank 2. There ``\\mathcal{S}^{\\pm}`` are the
 pull-backs of the hyperplane line bundles from ``\\mathrm{OGr}(n,2n)_{\\pm}``
 along the embedding
@@ -285,7 +285,7 @@ unique pair of maximal isotropics (one from each family) containing it.
 - Frassineti–Manivel, "Spinorial Fano manifolds", arXiv:2605.28712, §1
   ("Spin representations and spin bundles") — general ``\\mathrm{OGr}(k, m)``
   including the ``(n-1)``-isotropic case
-  ``\\mathrm{D}_n/P_{n-1, n} = \\mathrm{OGr}(n-1, 2n)`` (Picard rank 2,
+  ``\\mathrm{D}_n/\\mathrm{P}_{n-1, n} = \\mathrm{OGr}(n-1, 2n)`` (Picard rank 2,
   the two spinor bundles pulled back from the maximal spinor varieties).
 - Fulton–Harris, *Representation Theory: A First Course*, GTM 129
   (Springer, 1991), §20 — the underlying spin representations of
@@ -437,7 +437,7 @@ pieces ``[\\mathcal{U}, \\mathcal{R}]`` of the natural filtration
 ``0 \\subset \\mathcal{U} \\subset \\mathcal{U}^\\perp``. In Lagrangian /
 spinor cases ``\\mathcal{R}`` is the zero bundle.
 
-The two-marked spinorial variety ``\\mathrm{D}_n/P_{n-1, n}`` is also
+The two-marked spinorial variety ``\\mathrm{D}_n/\\mathrm{P}_{n-1, n}`` is also
 supported: it returns the two graded pieces of the unique
 ``(n-1) \\subset n`` isotropic flag (ranks ``[n-1, 1]``).
 

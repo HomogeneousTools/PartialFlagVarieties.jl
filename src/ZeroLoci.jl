@@ -32,7 +32,7 @@ export tangent_cohomology
     ZeroLocus
 
 The zero locus ``Z(s)`` of a regular section ``s \\in \\mathrm{H}^0(X, \\mathcal{E})`` of an
-equivariant bundle ``\\mathcal{E}`` on the partial flag variety ``X = G/P``.
+equivariant bundle ``\\mathcal{E}`` on the partial flag variety ``X = \\mathrm{G}/\\mathrm{P}``.
 
 Assumes the section is regular, so ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})``.
 
@@ -190,7 +190,7 @@ dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 """
     normal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
 
-The normal bundle ``N_{Z/X} \\cong E|_Z``.
+The normal bundle ``N_{Z/X} \\cong \\mathcal{E}|_Z``.
 """
 normal_bundle(Z::ZeroLocus) = Z.defining_bundle
 
@@ -300,7 +300,7 @@ end
     _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
       -> Vector{Cohomology{BigInt}}
 
-Compute dimension-valued cohomology for each Koszul term ``F ⊗ ∧^i \\mathcal{E}^\\vee``
+Compute dimension-valued cohomology for each Koszul term ``\\mathcal{F} ⊗ ∧^i \\mathcal{E}^\\vee``
 without materialising intermediate `CompletelyReducibleBundle` objects.
 
 Deduplicates F and wedge components into multiplicity dicts, then
@@ -453,8 +453,8 @@ Returns `(H*(\\mathcal{F}|_Z), determined)` where `determined` indicates whether
 all cohomology groups are uniquely determined by the LES.
 
 When the Koszul filtration leaves some groups undetermined, a Serre duality
-fallback is attempted: if ``\\mathrm{H}^\\bullet(Z, F^\\vee|_Z)`` is fully determined, then
-``\\mathrm{H}^k(Z, \\mathcal{F}|_Z) = \\mathrm{H}^{d-k}(Z, F^\\vee|_Z)`` by Serre duality (valid when
+fallback is attempted: if ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}^\\vee|_Z)`` is fully determined, then
+``\\mathrm{H}^k(Z, \\mathcal{F}|_Z) = \\mathrm{H}^{d-k}(Z, \\mathcal{F}^\\vee|_Z)`` by Serre duality (valid when
 ``\\mathrm{K}_Z \\cong \\mathcal{O}_Z``, e.g. for Calabi–Yau and hyperkähler zero loci).
 """
 function cohomology_on_restriction(
@@ -647,7 +647,7 @@ end
 
 Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` for a filtered bundle ``\\mathcal{F}`` on the ambient variety.
 
-Each Koszul term ``F ⊗ ∧^k \\mathcal{E}^\\vee`` is again a filtered bundle; its cohomology
+Each Koszul term ``\\mathcal{F} ⊗ ∧^k \\mathcal{E}^\\vee`` is again a filtered bundle; its cohomology
 on ``X`` is the abutment of the spectral sequence of the filtration
 (see `_cohomology_filtered`), and the Koszul chain is then solved
 with the symbolic LES solver.  When every spectral sequence visibly
@@ -715,7 +715,7 @@ end
     is_calabi_yau(Z::ZeroLocus) -> Bool
 
 Check whether the zero locus ``Z`` has trivial (anti)canonical bundle:
-``\\det(\\mathcal{E}) \\cong \\omega_X^{-1}``, equivalently ``c_1(Z) = 0``.
+``\\det(\\mathcal{E}) \\cong \\omega_X^\\vee``, equivalently ``c_1(Z) = 0``.
 
 This is a necessary condition for ``Z`` to be Calabi–Yau.  For the full
 Calabi–Yau check (including cohomology vanishing), see [`is_strict_calabi_yau`](@ref).
@@ -742,7 +742,7 @@ end
     is_strict_calabi_yau(Z::ZeroLocus) -> Bool
 
 Check whether the zero locus ``Z`` is a strict Calabi–Yau variety:
-1. ``c_1(Z) = 0`` (equivalently ``\\det(\\mathcal{E}) \\cong \\omega_X^{-1}``,
+1. ``c_1(Z) = 0`` (equivalently ``\\det(\\mathcal{E}) \\cong \\omega_X^\\vee``,
    or trivially when ``\\dim Z = 0``)
 2. ``\\mathrm{H}^0(Z, \\mathcal{O}_Z) = 1`` (``Z`` is connected)
 3. ``\\mathrm{H}^i(Z, \\mathcal{O}_Z) = 0`` for ``0 < i < \\dim Z``
@@ -772,10 +772,10 @@ end
     is_strongly_fano(Z::ZeroLocus) -> Bool
 
 Check whether the zero locus ``Z`` is strongly Fano: the anticanonical bundle
-``\\omega_Z^{-1}`` is ample on the ambient ``G/P``.
+``\\omega_Z^\\vee`` is ample on the ambient ``\\mathrm{G}/\\mathrm{P}``.
 
-By the adjunction formula ``\\omega_Z^{-1} = (\\omega_X^{-1} \\otimes \\det(\\mathcal{E})^{-1})|_Z``,
-this holds when every Picard-basis coordinate of ``\\omega_X^{-1} \\otimes \\det(\\mathcal{E})^{-1}``
+By the adjunction formula ``\\omega_Z^\\vee = (\\omega_X^\\vee \\otimes \\det(\\mathcal{E})^\\vee)|_Z``,
+this holds when every Picard-basis coordinate of ``\\omega_X^\\vee \\otimes \\det(\\mathcal{E})^\\vee``
 is strictly positive.  Strong Fano implies (ordinary) Fano.
 
 # Examples
@@ -808,13 +808,13 @@ The Fano index of the zero locus ``Z``, defined (when ``\\mathrm{Pic}(Z) \\cong
 ``\\omega_Z^\\vee = r\\,H`` where ``H`` is the restriction of the ample generator of
 ``\\mathrm{Pic}(X)`` to ``Z``.
 
-Computed via the adjunction formula: ``\\mathrm{K}_Z = (\\mathrm{K}_X \\otimes \\det E)|_Z``, giving
+Computed via the adjunction formula: ``\\mathrm{K}_Z = (\\mathrm{K}_X \\otimes \\det \\mathcal{E})|_Z``, giving
 
 ```math
-r_Z = r_X - \\deg(\\det E),
+r_Z = r_X - \\deg(\\det \\mathcal{E}),
 ```
 
-where ``r_X = \\mathop{\\mathrm{fano\\_index}}(X)`` and ``\\deg(\\det E)`` is the degree of ``\\det(\\mathcal{E})`` as a multiple of the
+where ``r_X = \\mathop{\\mathrm{fano\\_index}}(X)`` and ``\\deg(\\det \\mathcal{E})`` is the degree of ``\\det(\\mathcal{E})`` as a multiple of the
 ample generator ``\\omega_m``.
 
 Requires the ambient variety to have Picard rank 1 (i.e., `picard_rank(ambient_variety(Z)) == 1`).
@@ -995,13 +995,13 @@ end
     tangent_cohomology(Z::ZeroLocus) -> Cohomology{AffineExpr}
 
 Compute ``\\mathrm{H}^\\bullet(Z, \\mathrm{T}_Z)`` via the normal bundle sequence
-``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to E|_Z \\to 0``.
+``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to \\mathcal{E}|_Z \\to 0``.
 
 The restrictions ``\\mathrm{T}_X|_Z`` (through the spectral sequence of the height
-filtration when ``\\mathrm{T}_X`` is not completely reducible) and ``E|_Z`` are
+filtration when ``\\mathrm{T}_X`` is not completely reducible) and ``\\mathcal{E}|_Z`` are
 computed by the Koszul resolution, and the long exact sequence is solved
 for the kernel term with [`les_kernel`](@ref).  The exact Euler
-characteristic ``\\chi(\\mathrm{T}_Z) = \\chi(\\mathrm{T}_X|_Z) - \\chi(E|_Z)`` and, for a strict
+characteristic ``\\chi(\\mathrm{T}_Z) = \\chi(\\mathrm{T}_X|_Z) - \\chi(\\mathcal{E}|_Z)`` and, for a strict
 Calabi–Yau, the vanishing ``\\mathrm{h}^0(\\mathrm{T}_Z) = \\mathrm{h}^{d-1,0} = 0`` are imposed.
 
 Entries are `AffineExpr`s: exact integers where the constraints determine
@@ -1058,8 +1058,8 @@ end
     hilbert_polynomial(Z::ZeroLocus[, L::CompletelyReducibleBundle])
       -> Vector{Rational{BigInt}}
 
-Compute the Hilbert polynomial ``P(t) = \\chi(Z, L^{\\otimes t}|_Z)`` of the
-zero locus with respect to the polarization ``L``, as coefficients
+Compute the Hilbert polynomial ``P(t) = \\chi(Z, \\mathcal{L}^{\\otimes t}|_Z)`` of the
+zero locus with respect to the polarization ``\\mathcal{L}``, as coefficients
 ``[a_0, a_1, \\ldots, a_d]`` with ``P(t) = \\sum_k a_k t^k``.
 
 The polarization must be a line bundle on the ambient variety; for the

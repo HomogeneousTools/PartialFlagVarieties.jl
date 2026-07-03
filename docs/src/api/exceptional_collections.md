@@ -5,10 +5,10 @@ on partial flag varieties and their zero loci.
 
 ## Exceptionality predicates
 
-An object ``E`` on ``G/P`` is **exceptional** if ``\operatorname{RHom}(E,E) \cong \mathbb{k}``
-(concentrated in degree 0). A sequence ``\langle E_1, \ldots, E_r \rangle`` is an
-**exceptional sequence** if each ``E_i`` is exceptional and
-``\operatorname{RHom}(E_j, E_i) = 0`` for all ``i < j``.
+An object ``\mathcal{E}`` on ``\mathrm{G}/\mathrm{P}`` is **exceptional** if ``\operatorname{RHom}(\mathcal{E},\mathcal{E}) \cong \mathbb{C}``
+(concentrated in degree 0). A sequence ``\langle \mathrm{E}_1, \ldots, \mathcal{E}_r \rangle`` is an
+**exceptional sequence** if each ``\mathcal{E}_i`` is exceptional and
+``\operatorname{RHom}(\mathcal{E}_j, \mathcal{E}_i) = 0`` for all ``i < j``.
 
 ```@docs
 is_exceptional
@@ -21,9 +21,9 @@ is_full_exceptional_sequence
 
 ## Exceptionality on zero loci
 
-Given bundles ``E_i`` on the ambient variety ``X = G/P`` and a zero locus ``Z \subset X``,
-the following methods check exceptionality of the **restrictions** ``E_i|_Z``, computing
-``\operatorname{Ext}^\vee(E_i|_Z, E_j|_Z) = \mathrm{H}^\bullet(Z,\, E_i^\vee \otimes E_j|_Z)`` via the
+Given bundles ``\mathcal{E}_i`` on the ambient variety ``X = \mathrm{G}/\mathrm{P}`` and a zero locus ``Z \subset X``,
+the following methods check exceptionality of the **restrictions** ``\mathcal{E}_i|_Z``, computing
+``\operatorname{Ext}^\vee(\mathcal{E}_i|_Z, \mathcal{E}_j|_Z) = \mathrm{H}^\bullet(Z,\, \mathcal{E}_i^\vee \otimes \mathcal{E}_j|_Z)`` via the
 Koszul resolution.
 
 ```@docs

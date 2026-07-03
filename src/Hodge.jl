@@ -27,9 +27,9 @@ export print_hodge_diamond
     hodge_numbers(X::PartialFlagVariety) -> Matrix{BigInt}
 
 Compute the Hodge numbers ``\\mathrm{h}^{p,q}(X) = \\dim \\mathrm{H}^q(X, \\Omega^p_X)``
-of the partial flag variety ``X = G/P``.
+of the partial flag variety ``X = \\mathrm{G}/\\mathrm{P}``.
 
-Since ``G/P`` is rational (and simply connected), the Hodge diamond is
+Since ``\\mathrm{G}/\\mathrm{P}`` is rational (and simply connected), the Hodge diamond is
 diagonal: ``\\mathrm{h}^{p,q} = 0`` for ``p \\neq q``, and ``\\mathrm{h}^{p,p} = b_{2p}``
 where ``b_i`` are the Betti numbers.
 
@@ -149,9 +149,9 @@ end
 
 The Hochschild–Kostant–Rosenberg decomposition of Hochschild cohomology:
 
-``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} \\mathrm{H}^q(X, \\bigwedge^p \\mathrm{T}_X)``
+``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} \\mathrm{H}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``
 
-Stored as a matrix where entry ``[p+1, q+1] = \\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``.
+Stored as a matrix where entry ``[p+1, q+1] = \\mathrm{h}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``.
 The type parameter `T` is `BigInt` when all entries are determined and
 [`AffineExpr`](@ref) when some entries depend on undetermined connecting-map
 ranks from long exact sequences (typically for zero loci).
@@ -174,7 +174,7 @@ _pp_zero(::Type{AffineExpr}) = AffineExpr(0)
 """
     getindex(P::PolyvectorParallelogram, p::Int, q::Int)
 
-Return ``\\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``. Uses 0-based indexing.
+Return ``\\mathrm{h}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``. Uses 0-based indexing.
 """
 function Base.getindex(P::PolyvectorParallelogram{T}, p::Int, q::Int) where {T}
   0 <= p <= P.dim || return _pp_zero(T)
@@ -186,7 +186,7 @@ end
     euler_characteristic(P::PolyvectorParallelogram)
 
 Compute the Euler characteristic of Hochschild cohomology:
-``\\chi(\\mathrm{HH}^\\bullet(X)) = \\sum_{p,q} (-1)^{p+q} \\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``
+``\\chi(\\mathrm{HH}^\\bullet(X)) = \\sum_{p,q} (-1)^{p+q} \\mathrm{h}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``
 """
 function euler_characteristic(P::PolyvectorParallelogram{T}) where {T}
   sum(((-1)^(p + q) * P[p, q] for p in 0:(P.dim), q in 0:(P.dim)); init=_pp_zero(T))
@@ -195,7 +195,7 @@ end
 """
     getindex(P::PolyvectorParallelogram, n::Int)
 
-Return ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} \\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``.
+Return ``\\dim \\mathrm{HH}^n(X) = \\sum_{p+q=n} \\mathrm{h}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``.
 """
 function Base.getindex(P::PolyvectorParallelogram{T}, n::Int) where {T}
   result = _pp_zero(T)
@@ -250,10 +250,10 @@ end
 
 Compute the Hochschild cohomology of ``X`` via the HKR decomposition:
 
-``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} \\mathrm{H}^q(X, \\bigwedge^p \\mathrm{T}_X)``
+``\\mathrm{HH}^n(X) = \\bigoplus_{p+q=n} \\mathrm{H}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``
 
 Returns a [`PolyvectorParallelogram`](@ref) encoding the full decomposition.
-Use `P[p, q]` to read the entry ``\\mathrm{h}^q(X, \\bigwedge^p \\mathrm{T}_X)``.
+Use `P[p, q]` to read the entry ``\\mathrm{h}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``.
 
 # Examples
 ```jldoctest
@@ -481,9 +481,9 @@ hodge_numbers_les(Z::ZeroLocus) = hodge_numbers(Z)
     GradedConormal
 
 Counts-level data for restricting the conormal terms
-``\\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes L`` of a zero locus
+``\\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes \\mathcal{L}`` of a zero locus
 ``Z = Z(s) \\subset X`` to ``Z``, for ``p \\le p_{\\max}``, together with the
-memoization state of the exact ``χ(\\Omega^p_Z \\otimes L)`` recursion.
+memoization state of the exact ``χ(\\Omega^p_Z \\otimes \\mathcal{L})`` recursion.
 
 Only valid as a restriction backend when the tangent bundle of ``X`` is
 completely reducible; see [`FilteredConormal`](@ref) for the general case
@@ -553,7 +553,7 @@ function _conormal_data(Z::ZeroLocus, L::CompletelyReducibleBundle, pmax::Int)
   )
 end
 
-"""Restriction to ``Z`` of the conormal term ``\\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes L``."""
+"""Restriction to ``Z`` of the conormal term ``\\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes \\mathcal{L}``."""
 function _restrict_conormal_term(C::GradedConormal, p::Int, j::Int, var_counter::Ref{Int})
   f_counts = _tensor_product_counts(
     _tensor_product_counts(C.syms[p - j + 1], C.omegas[j + 1]), C.l_counts
@@ -569,14 +569,14 @@ end
 """
     _conormal_row(C, p, var_counter) -> Vector{AffineExpr}
 
-``\\mathrm{H}^q(Z, \\Omega^p_Z \\otimes L|_Z)`` for ``q = 0, \\ldots, \\dim Z``, where `C`
+``\\mathrm{H}^q(Z, \\Omega^p_Z \\otimes \\mathcal{L}|_Z)`` for ``q = 0, \\ldots, \\dim Z``, where `C`
 is a conormal backend from `_conormal_data`.
 
 Chains the conormal complex through `les_cokernel`, solving
-``0 \\to C_{j-1} \\to \\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes L|_Z \\to C_j \\to 0``
-for ``j = 1, \\ldots, p`` starting from ``C_0 = \\mathrm{Sym}^p(\\mathcal{E}^\\vee) \\otimes L|_Z``;
-the last cokernel is ``\\Omega^p_Z \\otimes L|_Z``.  For ``p = \\dim Z`` the row is
-the line bundle ``\\omega_Z \\otimes L`` and plain Koszul restriction is used.
+``0 \\to C_{j-1} \\to \\mathrm{Sym}^{p-j}(\\mathcal{E}^\\vee) \\otimes \\Omega^j_X \\otimes \\mathcal{L}|_Z \\to C_j \\to 0``
+for ``j = 1, \\ldots, p`` starting from ``\\mathrm{C}_0 = \\mathrm{Sym}^p(\\mathcal{E}^\\vee) \\otimes \\mathcal{L}|_Z``;
+the last cokernel is ``\\Omega^p_Z \\otimes \\mathcal{L}|_Z``.  For ``p = \\dim Z`` the row is
+the line bundle ``\\omega_Z \\otimes \\mathcal{L}`` and plain Koszul restriction is used.
 """
 function _conormal_row(
   C::Union{GradedConormal,FilteredConormal}, p::Int, var_counter::Ref{Int}
@@ -609,7 +609,7 @@ function _conormal_row(
   system[1:(d + 1)]
 end
 
-"""Exact ``\\chi(Z, \\Omega^p_Z \\otimes L|_Z)`` from K-theory, memoized in `C`."""
+"""Exact ``\\chi(Z, \\Omega^p_Z \\otimes \\mathcal{L}|_Z)`` from K-theory, memoized in `C`."""
 function _chi_row(C::Union{GradedConormal,FilteredConormal}, p::Int)
   G = _graded(C)
   _chi_omega_tensor_counts_cached(
@@ -730,7 +730,7 @@ end
 
 Resolve entries of the Hodge matrix via the Lefschetz hyperplane theorem.
 
-When ``E = E' \\oplus L`` with ``L`` an ample line bundle, ``Z = Z(E)`` is an
+When ``\\mathcal{E} = E' \\oplus \\mathcal{L}`` with ``\\mathcal{L}`` an ample line bundle, ``Z = Z(\\mathcal{E})`` is an
 ample divisor in ``Z' = Z(E')``, so ``\\mathrm{h}^{p,q}(Z) = \\mathrm{h}^{p,q}(Z')`` for
 ``p + q < \\dim Z``.  The Hodge numbers of ``Z'`` are computed recursively
 (further ample line-bundle summands strip off the same way; with no summand
@@ -859,8 +859,8 @@ end
 """
     twisted_hodge_numbers(Z::ZeroLocus, L::CompletelyReducibleBundle) -> Matrix{AffineExpr}
 
-Compute the twisted Hodge numbers ``\\mathrm{h}^q(Z, \\Omega^p_Z \\otimes L|_Z)``
-for the zero locus ``Z = Z(s) \\subset X = G/P`` and a line bundle ``L``
+Compute the twisted Hodge numbers ``\\mathrm{h}^q(Z, \\Omega^p_Z \\otimes \\mathcal{L}|_Z)``
+for the zero locus ``Z = Z(s) \\subset X = \\mathrm{G}/\\mathrm{P}`` and a line bundle ``\\mathcal{L}``
 on ``X``.
 
 Uses the conormal sequence to decompose ``\\Omega^p_Z`` into restrictions
@@ -868,7 +868,7 @@ from the ambient variety, computes each piece via the Koszul resolution,
 and chains the results symbolically.
 
 Returns a ``(d+1) \\times (d+1)`` matrix of `AffineExpr` entries where
-``d = \\dim Z`` and entry ``[p+1, q+1] = \\mathrm{h}^q(Z, \\Omega^p_Z \\otimes L|_Z)``.
+``d = \\dim Z`` and entry ``[p+1, q+1] = \\mathrm{h}^q(Z, \\Omega^p_Z \\otimes \\mathcal{L}|_Z)``.
 Fully determined entries display as integers; use `is_determined(M[p+1,q+1])`
 to check.
 
@@ -949,15 +949,15 @@ end
 
 Compute the Hochschild cohomology of ``Z`` via the HKR decomposition:
 
-``\\mathrm{HH}^n(Z) = \\bigoplus_{p+q=n} \\mathrm{H}^q(Z, \\bigwedge^p \\mathrm{T}_Z)``
+``\\mathrm{HH}^n(Z) = \\bigoplus_{p+q=n} \\mathrm{H}^q(Z, \\bigwedge\\nolimits^p \\mathrm{T}_Z)``
 
-Uses the identity ``\\mathrm{H}^q(Z, \\bigwedge^p \\mathrm{T}_Z) = \\mathrm{H}^q(Z, \\Omega^{d-p}_Z
-\\otimes \\omega_Z^{-1})`` where ``d = \\dim Z``, reducing the computation
+Uses the identity ``\\mathrm{H}^q(Z, \\bigwedge\\nolimits^p \\mathrm{T}_Z) = \\mathrm{H}^q(Z, \\Omega^{d-p}_Z
+\\otimes \\omega_Z^\\vee)`` where ``d = \\dim Z``, reducing the computation
 to twisted Hodge numbers with the anticanonical twist
-``L = \\omega_X^{-1} \\otimes \\det(\\mathcal{E})^{-1}`` lifted to the ambient variety.
+``L = \\omega_X^\\vee \\otimes \\det(\\mathcal{E})^\\vee`` lifted to the ambient variety.
 
-Akizuki–Nakano vanishing (``\\mathrm{h}^q(\\bigwedge^p \\mathrm{T}_Z) = 0`` for ``q > p``) is
-applied when ``\\omega_Z^{-1}`` is *confirmed* ample from the ambient ``G/P``
+Akizuki–Nakano vanishing (``\\mathrm{h}^q(\\bigwedge\\nolimits^p \\mathrm{T}_Z) = 0`` for ``q > p``) is
+applied when ``\\omega_Z^\\vee`` is *confirmed* ample from the ambient ``\\mathrm{G}/\\mathrm{P}``
 (i.e. all Picard-coordinate differences are strictly positive).  When some
 coordinate is zero the Fano status of ``Z`` is undetermined and vanishing is
 not assumed.
@@ -967,7 +967,7 @@ fully determined entries display as integers, undetermined entries
 contain symbolic variables.
 
 As for the homogeneous case, use `P[p, q]` for the entry
-``\\mathrm{h}^q(Z, \\bigwedge^p \\mathrm{T}_Z)``.
+``\\mathrm{h}^q(Z, \\bigwedge\\nolimits^p \\mathrm{T}_Z)``.
 
 # Examples
 ```jldoctest

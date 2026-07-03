@@ -1,18 +1,18 @@
 # Zero Loci
 
-Zero loci of sections of equivariant bundles on ``G/P``.
+Zero loci of sections of equivariant bundles on ``\mathrm{G}/\mathrm{P}``.
 
-Given an equivariant bundle ``\mathcal{E}`` of rank ``r`` on ``X = G/P`` and a regular section
-``s \in \mathrm{H}^0(X, E)``, the **zero locus** ``Z = Z(s) \subset X`` is a smooth
+Given an equivariant bundle ``\mathcal{E}`` of rank ``r`` on ``X = \mathrm{G}/\mathrm{P}`` and a regular section
+``s \in \mathrm{H}^0(X, \mathcal{E})``, the **zero locus** ``Z = Z(s) \subset X`` is a smooth
 subvariety of codimension ``r``. Its structure sheaf is resolved by the
 **Koszul complex**
 
 ```math
-0 \to \bigwedge^r \mathcal{E}^\vee \to \cdots \to \bigwedge^2 \mathcal{E}^\vee \to \mathcal{E}^\vee \to \mathcal{O}_X \to \mathcal{O}_Z \to 0.
+0 \to \bigwedge\nolimits^r \mathcal{E}^\vee \to \cdots \to \bigwedge\nolimits^2 \mathcal{E}^\vee \to \mathcal{E}^\vee \to \mathcal{O}_X \to \mathcal{O}_Z \to 0.
 ```
 
 Twisting by any equivariant bundle ``\mathcal{F}`` on ``X`` and taking the long exact
-sequence in cohomology, one recovers ``\mathrm{H}^\bullet(Z, F|_Z)`` from computable data on
+sequence in cohomology, one recovers ``\mathrm{H}^\bullet(Z, \mathcal{F}|_Z)`` from computable data on
 ``X``. This is the basis for all invariants computed on zero loci:
 cohomology of restrictions, Hodge numbers, Hilbert polynomials, and the
 Calabi–Yau / Fano classification.

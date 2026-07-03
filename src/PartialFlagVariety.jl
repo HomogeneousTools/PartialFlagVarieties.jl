@@ -11,7 +11,7 @@ export marked_dynkin_type, marked_nodes
 """
     PartialFlagVariety(mdt::MarkedDynkinType, name="")
 
-User-facing wrapper for a partial flag variety ``G/P``, storing its runtime
+User-facing wrapper for a partial flag variety ``\\mathrm{G}/\\mathrm{P}``, storing its runtime
 [`MarkedDynkinType`](@ref) together with an optional display name.
 
 Most users should create these through the named constructors (`Gr`, `quadric`,
@@ -29,7 +29,7 @@ PartialFlagVariety(mdt::MarkedDynkinType, name::String="") = PartialFlagVariety(
     partial_flag_variety(DT::Type{<:DynkinType}, marked, name="") -> PartialFlagVariety
     partial_flag_variety(s::AbstractString, marked, name="") -> PartialFlagVariety
 
-Construct the partial flag variety ``G/P_I`` with marked nodes `marked`.
+Construct the partial flag variety ``\\mathrm{G}/\\mathrm{P}_I`` with marked nodes `marked`.
 
 Pass either a Dynkin type `DT` such as `TypeA{4}` or a Dynkin-type string such
 as `"A4"` or `"A2xB3"`. The marked nodes may be given as a single integer, a
@@ -107,7 +107,7 @@ PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_
 """
     full_flag_variety(::Type{DT}, name="") -> PartialFlagVariety
 
-Construct the full flag variety ``G/B`` of type `DT`, i.e. the case where every
+Construct the full flag variety ``\\mathrm{G}/\\mathrm{B}`` of type `DT`, i.e. the case where every
 simple root is marked.
 """
 function full_flag_variety(::Type{DT}, name::String="") where {DT<:DynkinType}
@@ -213,7 +213,7 @@ rank(X::PartialFlagVariety) = rank(dynkin_type(X))
 """
     dimension(X::PartialFlagVariety) -> Int
 
-Return ``\\dim(G/P) = |\\Phi_G^+| - |\\Phi_L^+|``.
+Return ``\\dim(\\mathrm{G}/\\mathrm{P}) = |\\Phi_G^+| - |\\Phi_L^+|``.
 """
 dimension(X::PartialFlagVariety) = dimension(marked_dynkin_type(X))
 
@@ -232,7 +232,7 @@ central_rank(X::PartialFlagVariety) = central_rank(marked_dynkin_type(X))
 """
     euler_characteristic(X::PartialFlagVariety) -> BigInt
 
-Return the topological Euler characteristic ``\\chi(G/P) = |\\mathrm{W}_G|/|\\mathrm{W}_L|``.
+Return the topological Euler characteristic ``\\chi(\\mathrm{G}/\\mathrm{P}) = |\\mathrm{W}_G|/|\\mathrm{W}_L|``.
 """
 function euler_characteristic(X::PartialFlagVariety)
   wG = weyl_order(dynkin_type(X))
@@ -246,7 +246,7 @@ end
 Return the Betti numbers of `X` in even degrees, i.e.
 ``[b_0, b_2, b_4, \\ldots, b_{2d}]``.
 
-Since ``G/P`` has no odd cohomology this completely describes ``\\mathrm{H}^\\bullet(X, \\mathbb{Z})``.
+Since ``\\mathrm{G}/\\mathrm{P}`` has no odd cohomology this completely describes ``\\mathrm{H}^\\bullet(X, \\mathbb{Z})``.
 Computed from the ratio of the Poincaré polynomials of the Weyl groups
 ``\\mathrm{W}_G`` and ``\\mathrm{W}_L``.
 
@@ -291,7 +291,7 @@ end
 """
     is_generalized_grassmannian(X::PartialFlagVariety) -> Bool
 
-Return `true` for generalized Grassmannians, i.e. varieties ``G/P_i``
+Return `true` for generalized Grassmannians, i.e. varieties ``\\mathrm{G}/\\mathrm{P}_i``
 with exactly one marked node.
 """
 is_generalized_grassmannian(X::PartialFlagVariety) = length(marked_nodes(X)) == 1
@@ -299,7 +299,7 @@ is_generalized_grassmannian(X::PartialFlagVariety) = length(marked_nodes(X)) == 
 """
     is_full_flag_variety(X::PartialFlagVariety) -> Bool
 
-Return `true` for full flag varieties ``G/B`` (all nodes marked).
+Return `true` for full flag varieties ``\\mathrm{G}/\\mathrm{B}`` (all nodes marked).
 """
 is_full_flag_variety(X::PartialFlagVariety) = is_borel(marked_dynkin_type(X))
 
@@ -307,10 +307,10 @@ is_full_flag_variety(X::PartialFlagVariety) = is_borel(marked_dynkin_type(X))
     is_orthogonal_grassmannian(X::PartialFlagVariety) -> Bool
 
 Return `true` if `X` is a one-marked orthogonal Grassmannian, i.e.
-``\\mathrm{B}_n/P_k = \\mathrm{OGr}(k, 2n+1)`` or
-``\\mathrm{D}_n/P_k = \\mathrm{OGr}(k, 2n)``.
+``\\mathrm{B}_n/\\mathrm{P}_k = \\mathrm{OGr}(k, 2n+1)`` or
+``\\mathrm{D}_n/\\mathrm{P}_k = \\mathrm{OGr}(k, 2n)``.
 
-The two-marked ``\\mathrm{D}_n/P_{n-1, n}`` (the ``(n-1)``-isotropic
+The two-marked ``\\mathrm{D}_n/\\mathrm{P}_{n-1, n}`` (the ``(n-1)``-isotropic
 Grassmannian, of Picard rank 2) is **not** an orthogonal Grassmannian by this
 predicate; [`spinor_bundle`](@ref) accepts it as a separate special case.
 
@@ -339,15 +339,15 @@ end
 
 Return `true` if `X` is (isomorphic to) a projective space ``\\mathbb{P}^n``.
 
-In type A these are ``\\mathrm{A}_n/P_1 = \\mathrm{Gr}(1, n+1)`` and its dual
-``\\mathrm{A}_n/P_n = \\mathrm{Gr}(n, n+1)``. The remaining cases are low-rank
+In type A these are ``\\mathrm{A}_n/\\mathrm{P}_1 = \\mathrm{Gr}(1, n+1)`` and its dual
+``\\mathrm{A}_n/\\mathrm{P}_n = \\mathrm{Gr}(n, n+1)``. The remaining cases are low-rank
 accidental isomorphisms:
 
-- ``\\mathrm{C}_n/P_1 = \\mathbb{P}^{2n-1}`` — every line is isotropic for a
+- ``\\mathrm{C}_n/\\mathrm{P}_1 = \\mathbb{P}^{2n-1}`` — every line is isotropic for a
   symplectic form, so ``\\mathrm{SGr}(1, 2n) = \\mathbb{P}(\\mathbb{C}^{2n})``;
-- ``\\mathrm{B}_2/P_2 = \\mathbb{P}^3`` — the spinor variety ``\\mathrm{OGr}(2, 5)``,
+- ``\\mathrm{B}_2/\\mathrm{P}_2 = \\mathbb{P}^3`` — the spinor variety ``\\mathrm{OGr}(2, 5)``,
   via ``\\mathrm{Spin}(5) = \\mathrm{Sp}(4)``;
-- ``\\mathrm{D}_3/P_2 = \\mathrm{D}_3/P_3 = \\mathbb{P}^3`` — the two spinor
+- ``\\mathrm{D}_3/\\mathrm{P}_2 = \\mathrm{D}_3/\\mathrm{P}_3 = \\mathbb{P}^3`` — the two spinor
   varieties, via ``\\mathrm{D}_3 = \\mathrm{A}_3``.
 
 # Examples
@@ -384,7 +384,7 @@ end
     is_quadric(X::PartialFlagVariety) -> Bool
 
 Return `true` if `X` is a smooth quadric hypersurface ``Q^n``, i.e.
-``\\mathrm{B}_m/P_1`` (odd ``n = 2m-1``) or ``\\mathrm{D}_m/P_1`` (even ``n = 2m-2``).
+``\\mathrm{B}_m/\\mathrm{P}_1`` (odd ``n = 2m-1``) or ``\\mathrm{D}_m/\\mathrm{P}_1`` (even ``n = 2m-2``).
 
 # Examples
 ```jldoctest
@@ -407,13 +407,13 @@ end
     is_cominuscule(X::PartialFlagVariety) -> Bool
 
 Return `true` if `X` is a cominuscule flag variety, i.e., a generalized
-Grassmannian ``G/P_i`` whose highest root has coefficient 1 at node ``i``.
+Grassmannian ``\\mathrm{G}/\\mathrm{P}_i`` whose highest root has coefficient 1 at node ``i``.
 
 Cominuscule varieties include all Grassmannians (type A), spinor varieties
 ``\\mathrm{OGr}(n, 2n)``, Lagrangian Grassmannians ``\\mathrm{LGr}(n, 2n)``,
 the two connected components of the orthogonal Grassmannian in type D,
-the Cayley plane (``E_6/P_1``, ``E_6/P_6``), and the Freudenthal variety
-(``E_7/P_7``).
+the Cayley plane (``\\mathrm{E}_6/\\mathrm{P}_1``, ``\\mathrm{E}_6/\\mathrm{P}_6``), and the Freudenthal variety
+(``\\mathrm{E}_7/\\mathrm{P}_7``).
 """
 function is_cominuscule(X::PartialFlagVariety)
   DT = dynkin_type(X)
@@ -435,7 +435,7 @@ end
     is_minuscule(X::PartialFlagVariety) -> Bool
 
 Return `true` if `X` is a minuscule flag variety, i.e., a generalized
-Grassmannian ``G/P_i`` whose fundamental weight ``\\omega_i`` is minuscule
+Grassmannian ``\\mathrm{G}/\\mathrm{P}_i`` whose fundamental weight ``\\omega_i`` is minuscule
 (all coroot pairings are 0 or 1).
 
 Minuscule varieties are the same as cominuscule for simply laced types, but
@@ -492,7 +492,7 @@ Return `true` if the ambient Dynkin type contains an exceptional simple factor
 (``\\mathrm{E}_6``, ``\\mathrm{E}_7``, ``\\mathrm{E}_8``, ``\\mathrm{F}_4``, or ``\\mathrm{G}_2``).
 
 For product types, returns `true` if **any** component is exceptional. Note that
-``\\mathrm{G}_2/P_1 \\cong Q^5`` geometrically, but is still considered exceptional here since
+``\\mathrm{G}_2/\\mathrm{P}_1 \\cong Q^5`` geometrically, but is still considered exceptional here since
 the Lie type is ``\\mathrm{G}_2``.
 
 # Examples

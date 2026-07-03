@@ -1,11 +1,11 @@
 # PartialFlagVarieties.jl
 
-A Julia package for computing with **partial flag varieties** ``G/P`` using
+A Julia package for computing with **partial flag varieties** ``\mathrm{G}/\mathrm{P}`` using
 [Semisimple.jl](https://github.com/HomogeneousTools/Semisimple.jl).
 
 The package is designed for three closely related tasks:
 
-1. **Construct homogeneous spaces ``G/P``.** Build partial flag varieties from
+1. **Construct homogeneous spaces ``\mathrm{G}/\mathrm{P}``.** Build partial flag varieties from
    Dynkin data or from named families such as Grassmannians, quadrics, and
    exceptional varieties.
 2. **Compute with equivariant bundles.** Build semisimplified equivariant
@@ -94,3 +94,8 @@ Pages = [
   "api/cache_config.md",
 ]
 ```
+
+## Authors
+
+- Pieter Belmans <[pbelmans@uu.nl](mailto:pbelmans@uu.nl)>
+- Javier Fernández Píriz <[javier.fernandezpiriz@uni.lu](mailto:javier.fernandezpiriz@uni.lu)>

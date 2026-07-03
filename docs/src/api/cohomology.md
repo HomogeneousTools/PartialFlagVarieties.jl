@@ -2,8 +2,8 @@
 
 Sheaf cohomology via the Borel–Weil–Bott theorem.
 
-The central computation: given an equivariant bundle ``E`` on ``X = G/P``,
-decompose ``E`` into irreducible Levi summands, lift each to an ambient weight,
+The central computation: given an equivariant bundle ``\mathcal{E}`` on ``X = \mathrm{G}/\mathrm{P}``,
+decompose ``\mathcal{E}`` into irreducible Levi summands, lift each to an ambient weight,
 and apply the BWB theorem to determine which cohomology degree (if any) is
 nonzero. The result is a [`Cohomology`](@ref) object indexed from ``0``
 (i.e. `H[0]` is ``\mathrm{H}^0``).

@@ -9,7 +9,7 @@ The package uses the convention
 > **marked nodes = crossed-out nodes = nonparabolic nodes**
 
 So `marked_nodes(X)` lists the simple roots omitted from the Levi diagram.
-Equivalently, for ``X = G/P_I``, the marked set ``I`` is the set of crossed-out
+Equivalently, for ``X = \mathrm{G}/\mathrm{P}_I``, the marked set ``I`` is the set of crossed-out
 nodes in the Dynkin diagram.
 
 This is the opposite of the convention used in some parts of the literature, so
@@ -73,7 +73,7 @@ Two indexing conventions show up repeatedly:
 2. Hodge matrices use ordinary Julia matrix indexing, so the entry
    corresponding to ``(p,q)`` is stored at `[p+1, q+1]`.
 3. The Hochschild [`PolyvectorParallelogram`](@ref) is **0-indexed**:
-   `P[p, q]` is ``\mathrm{h}^q(X, \bigwedge^p \mathrm{T}_X)`` and `P[n]` is
+   `P[p, q]` is ``\mathrm{h}^q(X, \bigwedge\nolimits^p \mathrm{T}_X)`` and `P[n]` is
    ``\dim \mathrm{HH}^n``.
 
 For example:

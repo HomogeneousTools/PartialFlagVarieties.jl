@@ -1,8 +1,8 @@
 # CompletelyReducibleBundle
 
-Completely reducible equivariant vector bundles on ``G/P``.
+Completely reducible equivariant vector bundles on ``\mathrm{G}/\mathrm{P}``.
 
-An **equivariant vector bundle** on ``G/P`` corresponds to a representation
+An **equivariant vector bundle** on ``\mathrm{G}/\mathrm{P}`` corresponds to a representation
 of the parabolic subgroup ``P``. Because ``P`` is not reductive (it has a
 nontrivial unipotent radical ``U``), such a representation need not be
 completely reducible. However, the Levi factor ``L = P/U`` **is** reductive,

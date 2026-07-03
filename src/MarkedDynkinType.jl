@@ -10,7 +10,7 @@ export is_exceptional_type
 """
     MarkedDynkinType(DT::Type{<:DynkinType}, marked)
 
-Runtime description of a partial flag variety ``G/P``, given by a Dynkin type
+Runtime description of a partial flag variety ``\\mathrm{G}/\\mathrm{P}``, given by a Dynkin type
 `DT` and the tuple of marked simple roots defining the parabolic subgroup ``P``.
 
 The marked nodes are stored as runtime data rather than type parameters, while
@@ -178,7 +178,7 @@ unmarked_nodes(mdt::MarkedDynkinType) = _mdt_data(mdt).unmarked
 
 Return the rank of the center ``\\operatorname{Z}(L)^\\circ`` of the Levi factor, equal to
 the number of marked nodes ``|I|``. This also equals the Picard rank
-``\\mathrm{rk}\\,\\mathrm{Pic}(G/P_I)``.
+``\\mathrm{rk}\\,\\mathrm{Pic}(\\mathrm{G}/\\mathrm{P}_I)``.
 """
 central_rank(mdt::MarkedDynkinType) = length(marked_nodes(mdt))
 
@@ -186,7 +186,7 @@ central_rank(mdt::MarkedDynkinType) = length(marked_nodes(mdt))
     levi_type(mdt::MarkedDynkinType) -> Union{Nothing, Type{<:DynkinType}}
 
 Return the Dynkin type of the semisimple part ``[L, L]`` of the Levi factor,
-or `nothing` when all nodes are marked (the full flag variety ``G/B``, where
+or `nothing` when all nodes are marked (the full flag variety ``\\mathrm{G}/\\mathrm{B}``, where
 ``L = T`` is a maximal torus and ``[L, L]`` is trivial).
 """
 levi_type(mdt::MarkedDynkinType) = _mdt_data(mdt).levi
@@ -202,7 +202,7 @@ levi_rank(mdt::MarkedDynkinType) = length(unmarked_nodes(mdt))
 """
     is_borel(mdt::MarkedDynkinType) -> Bool
 
-Return `true` if `mdt` encodes a full flag variety ``G/B`` (all nodes
+Return `true` if `mdt` encodes a full flag variety ``\\mathrm{G}/\\mathrm{B}`` (all nodes
 marked, so ``P = B`` is the Borel subgroup).
 """
 is_borel(mdt::MarkedDynkinType) = isempty(unmarked_nodes(mdt))
@@ -258,7 +258,7 @@ rank(mdt::MarkedDynkinType) = rank(dynkin_type(mdt))
 """
     dimension(mdt::MarkedDynkinType) -> Int
 
-Return ``\\dim(G/P) = |\\Phi_G^+| - |\\Phi_L^+|``, the number of positive
+Return ``\\dim(\\mathrm{G}/\\mathrm{P}) = |\\Phi_G^+| - |\\Phi_L^+|``, the number of positive
 roots of ``G`` minus the number of positive roots of the Levi subalgebra.
 """
 dimension(mdt::MarkedDynkinType) = _mdt_data(mdt).dimension
@@ -272,7 +272,7 @@ end
 
 Return all positive roots of the ambient Lie algebra that have positive
 coefficient on at least one marked simple root (i.e., the roots not in the
-Levi subalgebra). These span the tangent directions of ``G/P``.
+Levi subalgebra). These span the tangent directions of ``\\mathrm{G}/\\mathrm{P}``.
 """
 function positive_nonparabolic_roots(mdt::MarkedDynkinType)
   RS = RootSystem(dynkin_type(mdt))
@@ -300,7 +300,7 @@ end
     tangent_weights(mdt::MarkedDynkinType) -> Vector{WeightLatticeElem}
 
 Return the highest weights of the irreducible Levi-module decomposition of the
-tangent space ``\\mathrm{T}_{eP}(G/P)`` at the base point. Each weight corresponds to
+tangent space ``\\mathrm{T}_{eP}(\\mathrm{G}/\\mathrm{P})`` at the base point. Each weight corresponds to
 a Levi-orbit of nonparabolic positive roots.
 """
 function tangent_weights(mdt::MarkedDynkinType)

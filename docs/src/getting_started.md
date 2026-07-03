@@ -25,8 +25,8 @@ Most computations revolve around three kinds of values:
 
 | Object | Meaning | Typical constructors |
 |:-------|:--------|:---------------------|
-| `PartialFlagVariety` | the ambient homogeneous space ``G/P`` | `Gr`, `quadric`, `partial_flag_variety` |
-| `CompletelyReducibleBundle` | a semisimplified equivariant bundle on ``G/P`` | `line_bundle`, `tangent_bundle`, `direct_sum`, `exterior_power` |
+| `PartialFlagVariety` | the ambient homogeneous space ``\mathrm{G}/\mathrm{P}`` | `Gr`, `quadric`, `partial_flag_variety` |
+| `CompletelyReducibleBundle` | a semisimplified equivariant bundle on ``\mathrm{G}/\mathrm{P}`` | `line_bundle`, `tangent_bundle`, `direct_sum`, `exterior_power` |
 | `ZeroLocus` | the zero locus of a regular section of such a bundle | `zero_locus(E)` |
 
 If you are new to the package, prefer the **named constructors** and the

@@ -14,10 +14,10 @@ A **short exact sequence** of sheaves ``0 \to \mathcal{A} \to \mathcal{B} \to \m
 long exact sequence in cohomology:
 
 ```math
-\cdots \to \mathrm{H}^i(\mathcal{A}) \to \mathrm{H}^i(\mathcal{B}) \to \mathrm{H}^i(\mathcal{C}) \xrightarrow{\delta_i} \mathrm{H}^{i+1}(\mathcal{A}) \to \cdots
+\cdots \to \mathrm{H}^i(X, \mathcal{A}) \to \mathrm{H}^i(X, \mathcal{B}) \to \mathrm{H}^i(X, \mathcal{C}) \xrightarrow{\delta_i} \mathrm{H}^{i+1}(X, \mathcal{A}) \to \cdots
 ```
 
-Given the dimensions ``a_i = \mathrm{h}^i(\mathcal{A})``, ``b_i = \mathrm{h}^i(\mathcal{B})``, ``c_i = \mathrm{h}^i(\mathcal{C})``
+Given the dimensions ``a_i = \mathrm{h}^i(X, \mathcal{A})``, ``b_i = \mathrm{h}^i(X, \mathcal{B})``, ``c_i = \mathrm{h}^i(X, \mathcal{C})``
 (any two of the three known), the connecting map ``\delta_i`` has rank
 ``r_i`` satisfying the rank-nullity constraint ``0 \le r_i \le \min(c_i, a_{i+1})``.
 When ``b_i`` is the unknown, the relation
@@ -29,7 +29,7 @@ b_i = c_i - r_i + a_i - r_{i-1}
 determines ``b_i`` exactly if and only if each ``r_i`` is forced by the bounds.
 
 **Dimension-valued solver.** When the bounds force all ranks uniquely (which
-is the typical case for cohomology on ``G/P``), `solve_ses_cohomology` returns
+is the typical case for cohomology on ``\mathrm{G}/\mathrm{P}``), `solve_ses_cohomology` returns
 exact `BigInt` dimensions.
 
 **Symbolic solver.** When the bounds leave genuine ambiguity, each unknown rank
@@ -124,12 +124,12 @@ indicate the answer is not unique. The symbolic solver instead
 introduces a variable ``x_0 = \mathrm{rk}(\delta_0)`` and expresses
 each ``c_i`` as an affine function of ``x_0``. The variable satisfies
 ``0 \le x_0 \le 2``, so the true
-``\mathrm{h}^0(\mathcal{C})`` lies in ``\{2, 3, 4\}``.
+``\mathrm{h}^0(X, \mathcal{C})`` lies in ``\{2, 3, 4\}``.
 
 ### Geometric example: hypersurface (fully determined)
 
 For a *hypersurface* zero locus the Koszul complex has a single short
-exact sequence ``0 \to L^{-1} \to \mathcal{O}_X \to \mathcal{O}_Z \to 0``
+exact sequence ``0 \to \mathcal{L}^\vee \to \mathcal{O}_X \to \mathcal{O}_Z \to 0``
 in which both ambient terms are known from Borel–Weil–Bott, so the solver
 determines the result with no rank ambiguity. The quintic threefold
 ``Z \subset \mathbb{P}^4`` is the classic example:

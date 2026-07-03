@@ -1,6 +1,6 @@
 # MarkedDynkinType
 
-The core type encoding a partial flag variety ``G/P_I`` and the
+The core type encoding a partial flag variety ``\mathrm{G}/\mathrm{P}_I`` and the
 Levi factor of the parabolic subgroup ``P_I``.
 
 A `MarkedDynkinType` stores the ambient Dynkin type of ``G`` together with a

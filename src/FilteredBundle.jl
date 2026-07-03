@@ -23,7 +23,7 @@ export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
 """
   FilteredBundle
 
-An equivariant vector bundle on ``G/P`` equipped with a filtration by
+An equivariant vector bundle on ``\\mathrm{G}/\\mathrm{P}`` equipped with a filtration by
 equivariant subbundles. Stored as an ordered list of associated graded
 pieces (each a [`CompletelyReducibleBundle`](@ref)).
 
@@ -263,8 +263,8 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-Shared construction of ``\\wedge^k F`` and ``\\mathrm{Sym}^k F`` for a filtered
-bundle ``F``: the associated graded of the induced filtration is
+Shared construction of ``\\wedge^k \\mathcal{F}`` and ``\\mathrm{Sym}^k \\mathcal{F}`` for a filtered
+bundle ``\\mathcal{F}``: the associated graded of the induced filtration is
 
 ```math
 \\bigoplus_{|\\alpha|=k} P^{\\alpha_1}(\\mathrm{gr}_1) \\otimes \\cdots \\otimes P^{\\alpha_s}(\\mathrm{gr}_s)
@@ -309,7 +309,7 @@ end
 """
     exterior_power(F::FilteredBundle, k::Integer) -> FilteredBundle
 
-The ``k``-th exterior power ``\\bigwedge^k F`` of a filtered bundle, equipped
+The ``k``-th exterior power ``\\bigwedge\\nolimits^k \\mathcal{F}`` of a filtered bundle, equipped
 with the induced filtration (see [`_graded_power`](@ref)).
 
 # Examples
@@ -329,7 +329,7 @@ exterior_power(F::FilteredBundle, k::Integer) = _graded_power(exterior_power, F,
 """
     symmetric_power(F::FilteredBundle, k::Integer) -> FilteredBundle
 
-The ``k``-th symmetric power ``\\mathrm{Sym}^k F`` of a filtered bundle,
+The ``k``-th symmetric power ``\\mathrm{Sym}^k \\mathcal{F}`` of a filtered bundle,
 equipped with the induced filtration (see [`_graded_power`](@ref)).
 
 # Examples
@@ -349,9 +349,9 @@ symmetric_power(F::FilteredBundle, k::Integer) = _graded_power(symmetric_power, 
 """
     dual(F::FilteredBundle) -> FilteredBundle
 
-The dual of a filtered bundle. The filtration is reversed: if ``F`` has
+The dual of a filtered bundle. The filtration is reversed: if ``\\mathcal{F}`` has
 pieces ``\\mathrm{gr}_1, \\ldots, \\mathrm{gr}_s`` (bottom to top), then
-``F^\\vee`` has pieces ``\\mathrm{gr}_s^\\vee, \\ldots, \\mathrm{gr}_1^\\vee``
+``\\mathcal{F}^\\vee`` has pieces ``\\mathrm{gr}_s^\\vee, \\ldots, \\mathrm{gr}_1^\\vee``
 (the dual reverses the filtration order).
 """
 function dual(F::FilteredBundle)

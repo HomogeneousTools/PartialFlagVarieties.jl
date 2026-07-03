@@ -2,17 +2,17 @@
 
 Equivariant bundles equipped with a filtration by subbundles.
 
-The primary source of filtered bundles is the **tangent bundle** of ``G/P``.
+The primary source of filtered bundles is the **tangent bundle** of ``\mathrm{G}/\mathrm{P}``.
 As a ``P``-representation, the tangent space ``\mathfrak{g}/\mathfrak{p}``
 has a natural **root height filtration**: the roots ``\alpha \in \Phi^+ \setminus
 \Phi^+_L`` are stratified by height (the sum of their simple root coefficients),
 and this stratification yields a ``P``-equivariant filtration
 
 ```math
-0 = F_0 \subset F_1 \subset \cdots \subset F_s = \mathrm{T}_{G/P}
+0 = \mathrm{F}_0 \subset \mathrm{F}_1 \subset \cdots \subset \mathcal{F}_s = \mathrm{T}_{G/P}
 ```
 
-whose graded pieces ``\mathrm{gr}_k = F_k / F_{k-1}`` are completely reducible
+whose graded pieces ``\mathrm{gr}_k = \mathcal{F}_k / \mathcal{F}_{k-1}`` are completely reducible
 ``L``-representations. This filtration is key to computing
 ``\mathrm{H}^q(X, \Omega^p_X)`` via the associated spectral sequence, and to the
 conormal filtration used in zero-locus Hodge number computations.
@@ -33,12 +33,12 @@ Filtered bundles support exterior powers, symmetric powers, duals, and
 tensor products with completely reducible bundles. These operations
 preserve and refine the filtration structure.
 
-For a filtered bundle ``F`` with graded pieces ``\mathrm{gr}_1, \ldots, \mathrm{gr}_s``,
-the ``k``-th exterior power ``\bigwedge^k F`` has an induced filtration whose
+For a filtered bundle ``\mathcal{F}`` with graded pieces ``\mathrm{gr}_1, \ldots, \mathrm{gr}_s``,
+the ``k``-th exterior power ``\bigwedge\nolimits^k \mathcal{F}`` has an induced filtration whose
 associated graded is
 
 ```math
-\bigoplus_{|\alpha|=k} \bigwedge^{\alpha_1} \mathrm{gr}_1 \otimes \cdots \otimes \bigwedge^{\alpha_s} \mathrm{gr}_s
+\bigoplus_{|\alpha|=k} \bigwedge\nolimits^{\alpha_1} \mathrm{gr}_1 \otimes \cdots \otimes \bigwedge\nolimits^{\alpha_s} \mathrm{gr}_s
 ```
 
 ordered by the filtration weight ``\sum_i i \cdot \alpha_i``.

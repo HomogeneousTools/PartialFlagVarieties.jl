@@ -42,7 +42,7 @@ end
 Check whether `E` is an exceptional object in `D^b(G/P)`.
 
 An object `E` is **exceptional** if:
-- ``\\operatorname{Hom}(\\mathcal{E}, \\mathcal{E}) = \\mathbb{k}``  (i.e., ``\\mathrm{h}^0(\\mathcal{E}^\\vee \\otimes \\mathcal{E}) = 1``), and
+- ``\\operatorname{Hom}(\\mathcal{E}, \\mathcal{E}) = \\mathbb{C}``  (i.e., ``\\mathrm{h}^0(\\mathcal{E}^\\vee \\otimes \\mathcal{E}) = 1``), and
 - ``\\operatorname{Ext}^i(\\mathcal{E}, \\mathcal{E}) = 0`` for all ``i > 0``  (i.e., ``\\mathrm{h}^i(\\mathcal{E}^\\vee \\otimes \\mathcal{E}) = 0``).
 
 Uses Borel–Weil–Bott to compute cohomology of ``\\mathcal{E}^\\vee \\otimes \\mathcal{E}``.
@@ -69,7 +69,7 @@ end
     is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
 
 Check whether `(E, F)` is an **exceptional pair**: ``\\operatorname{RHom}(\\mathcal{F}, \\mathcal{E}) = 0``,
-i.e., ``\\mathrm{H}^i(G/P,\\, \\mathcal{F}^\\vee \\otimes \\mathcal{E}) = 0`` for all ``i \\geq 0``.
+i.e., ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P},\\, \\mathcal{F}^\\vee \\otimes \\mathcal{E}) = 0`` for all ``i \\geq 0``.
 
 Note: this is the orthogonality condition; the pair is ordered so that
 ``(\\mathcal{E}_i, \\mathcal{E}_j)`` is an exceptional pair for ``i < j`` in an exceptional
@@ -134,7 +134,7 @@ end
     is_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle}) -> Bool
 
 Check whether `Es = [E₁, ..., Eₙ]` is an **exceptional sequence**:
-- Each ``\\mathcal{E}_i`` is exceptional (``\\operatorname{Ext}^\\vee(\\mathcal{E}_i, \\mathcal{E}_i) = \\mathbb{k}``), and
+- Each ``\\mathcal{E}_i`` is exceptional (``\\operatorname{Ext}^\\vee(\\mathcal{E}_i, \\mathcal{E}_i) = \\mathbb{C}``), and
 - ``(\\mathcal{E}_i, \\mathcal{E}_j)`` is an exceptional pair (``\\operatorname{RHom}(\\mathcal{E}_j, \\mathcal{E}_i) = 0``) for all ``i < j``.
 
 # Examples
@@ -231,11 +231,11 @@ The **Beilinson exceptional collection** on projective space ``\\mathbb{P}^n``:
 
 This is a full strong exceptional collection on ``\\mathbb{P}^n``.
 
-`X` must be a **type-A** projective space, i.e. ``\\mathrm{A}_n/P_1`` or
-``\\mathrm{A}_n/P_n``. Beilinson's construction is intrinsically type A, so the
+`X` must be a **type-A** projective space, i.e. ``\\mathrm{A}_n/\\mathrm{P}_1`` or
+``\\mathrm{A}_n/\\mathrm{P}_n``. Beilinson's construction is intrinsically type A, so the
 other models of ``\\mathbb{P}^n`` recognised by `is_projective_space`
-(``\\mathrm{C}_n/P_1``, ``\\mathrm{B}_2/P_2``, ``\\mathrm{D}_3/P_2``,
-``\\mathrm{D}_3/P_3``) are rejected.
+(``\\mathrm{C}_n/\\mathrm{P}_1``, ``\\mathrm{B}_2/\\mathrm{P}_2``, ``\\mathrm{D}_3/\\mathrm{P}_2``,
+``\\mathrm{D}_3/\\mathrm{P}_3``) are rejected.
 
 # Examples
 ```jldoctest
@@ -271,13 +271,13 @@ The **dual Beilinson exceptional collection** on ``\\mathbb{P}^n``:
 
 ``\\langle \\Omega^n(n), \\Omega^{n-1}(n-1), \\ldots, \\Omega^1(1), \\mathcal{O} \\rangle``
 
-where ``\\Omega^k(k) = \\bigwedge^k \\Omega^1_{\\mathbb{P}^n} \\otimes \\mathcal{O}(k)``.
+where ``\\Omega^k(k) = \\bigwedge\\nolimits^k \\Omega^1_{\\mathbb{P}^n} \\otimes \\mathcal{O}(k)``.
 
-`X` must be a **type-A** projective space, i.e. ``\\mathrm{A}_n/P_1`` or
-``\\mathrm{A}_n/P_n``. The construction is intrinsically type A: for the other
+`X` must be a **type-A** projective space, i.e. ``\\mathrm{A}_n/\\mathrm{P}_1`` or
+``\\mathrm{A}_n/\\mathrm{P}_n``. The construction is intrinsically type A: for the other
 models of ``\\mathbb{P}^n`` recognised by `is_projective_space`
-(``\\mathrm{C}_n/P_1``, ``\\mathrm{B}_2/P_2``, ``\\mathrm{D}_3/P_2``,
-``\\mathrm{D}_3/P_3``) the homogeneous cotangent bundle does not reproduce
+(``\\mathrm{C}_n/\\mathrm{P}_1``, ``\\mathrm{B}_2/\\mathrm{P}_2``, ``\\mathrm{D}_3/\\mathrm{P}_2``,
+``\\mathrm{D}_3/\\mathrm{P}_3``) the homogeneous cotangent bundle does not reproduce
 ``\\Omega^k(k)``, so they are rejected.
 
 # Examples
@@ -321,14 +321,14 @@ end
 
 The **Kapranov exceptional collection** on a smooth quadric ``Q^n``.
 
-- **Odd quadric** ``Q^{2m-1}`` (``B_m/P_1``):
+- **Odd quadric** ``Q^{2m-1}`` (``B_m/\\mathrm{P}_1``):
   ``\\langle \\mathcal{O},\\; \\Sigma,\\; \\mathcal{O}(1),\\; \\ldots,\\; \\mathcal{O}(n-1) \\rangle``
   where ``\\Sigma`` is the spinor bundle.
-- **Even quadric** ``Q^{n}`` (``D_{n/2+1}/P_1``):
+- **Even quadric** ``Q^{n}`` (``\\mathrm{D}_{n/2+1}/\\mathrm{P}_1``):
   ``\\langle \\mathcal{O},\\; \\Sigma^+,\\; \\Sigma^-,\\; \\mathcal{O}(1),\\; \\ldots,\\; \\mathcal{O}(n-1) \\rangle``
   where ``\\Sigma^\\pm`` are the two half-spinor bundles.
 
-`X` must be a quadric (``B_m/P_1`` or ``D_m/P_1``).
+`X` must be a quadric (``B_m/\\mathrm{P}_1`` or ``D_m/\\mathrm{P}_1``).
 
 # References
 - M. Kapranov, *On the derived categories of coherent sheaves on some homogeneous
@@ -385,18 +385,18 @@ end
         -> CompletelyReducibleBundle
 
 The Schur functor ``\\Sigma^\\alpha \\mathcal{U}^\\vee`` on the Grassmannian
-``\\mathrm{Gr}(k, n) = A_{n-1}/P_k``, where ``\\alpha`` is a Young diagram
+``\\mathrm{Gr}(k, n) = \\mathrm{A}_{n-1}/\\mathrm{P}_k``, where ``\\alpha`` is a Young diagram
 with rows given by `partition`.
 
 The partition must fit in a ``k \\times (n-k)`` box:
 rows ``\\alpha_1 \\geq \\alpha_2 \\geq \\ldots \\geq \\alpha_k \\geq 0``, all ``\\leq n-k``.
 
-The ambient weight in ``A_{n-1}`` is
+The ambient weight in ``\\mathrm{A}_{n-1}`` is
 ```math
 \\lambda = \\sum_{i=1}^{k-1} (\\alpha_i - \\alpha_{i+1})\\,\\omega_i + \\alpha_k\\,\\omega_k
 ```
 where ``\\omega_1, \\ldots, \\omega_k`` are the first ``k`` fundamental weights of
-``A_{n-1}`` (corresponding to the semisimple ``A_{k-1}``-part of the Levi at nodes
+``\\mathrm{A}_{n-1}`` (corresponding to the semisimple ``A_{k-1}``-part of the Levi at nodes
 ``1, \\ldots, k-1`` and the central character at the marked node ``k``).
 
 `X` must be a Type-A generalized Grassmannian.
@@ -606,7 +606,7 @@ Check whether the restriction ``\\mathcal{E}|_Z`` is an exceptional object on th
 zero locus ``Z``.
 
 Computes ``\\operatorname{Ext}^\\vee(\\mathcal{E}|_Z, \\mathcal{E}|_Z) = \\mathrm{H}^\\bullet(Z, \\mathcal{E}^\\vee \\otimes \\mathcal{E}|_Z)``
-via the Koszul resolution and checks that ``\\operatorname{Hom} = \\mathbb{k}``
+via the Koszul resolution and checks that ``\\operatorname{Hom} = \\mathbb{C}``
 and all higher Ext groups vanish.
 """
 function is_exceptional(E::CompletelyReducibleBundle, Z::ZeroLocus)

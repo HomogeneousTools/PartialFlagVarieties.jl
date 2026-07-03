@@ -434,7 +434,7 @@ Compute bounds on the connecting-map ranks of a short exact sequence
 ``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` given numeric cohomology values for
 ``\\mathcal{A}`` and ``\\mathcal{B}``.
 
-Writing ``δ_i = \\mathrm{rank}(\\mathrm{H}^i(\\mathcal{C}) \\to \\mathrm{H}^{i+1}(\\mathcal{A}))``, exactness gives
+Writing ``δ_i = \\mathrm{rank}(\\mathrm{H}^i(X, \\mathcal{C}) \\to \\mathrm{H}^{i+1}(X, \\mathcal{A}))``, exactness gives
 ``c_i = b_i - a_i + δ_{i-1} + δ_i`` with ``0 \\le δ_i \\le a_{i+1}`` and
 ``δ_{i-1} + δ_i \\ge a_i - b_i``.  The bounds are propagated
 forward and backward until convergence.
@@ -488,8 +488,8 @@ end
     solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
       -> (Cohomology{BigInt}, Bool)
 
-Given ``\\mathrm{H}^\\bullet(\\mathcal{A})`` and ``\\mathrm{H}^\\bullet(\\mathcal{B})`` from a short exact sequence
-``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, determine ``\\mathrm{H}^\\bullet(\\mathcal{C})`` via the long
+Given ``\\mathrm{H}^\\bullet(X, \\mathcal{A})`` and ``\\mathrm{H}^\\bullet(X, \\mathcal{B})`` from a short exact sequence
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, determine ``\\mathrm{H}^\\bullet(X, \\mathcal{C})`` via the long
 exact sequence.
 
 Returns the cohomology of ``\\mathcal{C}`` together with a Boolean flag
@@ -589,13 +589,13 @@ end
     solve_ses_cohomology_symbolic(a, b, var_counter) -> Cohomology{AffineExpr}
 
 Symbolic version of [`solve_ses_cohomology`](@ref): solve
-``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` for ``\\mathrm{H}^\\bullet(\\mathcal{C})``, introducing a fresh
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` for ``\\mathrm{H}^\\bullet(X, \\mathcal{C})``, introducing a fresh
 symbolic variable for every connecting-map rank that is not forced.
 
 For numeric inputs (`Cohomology{BigInt}`) the connecting-map bounds are
 propagated first and variables are only introduced where a gap remains.
-For symbolic inputs each rank ``δ_i`` is zero when ``\\mathrm{H}^{i+1}(\\mathcal{A}) = 0``,
-equal to ``a_{i+1}`` when ``\\mathrm{H}^{i+1}(\\mathcal{B}) = 0`` (the connecting map is then
+For symbolic inputs each rank ``δ_i`` is zero when ``\\mathrm{H}^{i+1}(X, \\mathcal{A}) = 0``,
+equal to ``a_{i+1}`` when ``\\mathrm{H}^{i+1}(X, \\mathcal{B}) = 0`` (the connecting map is then
 surjective), and a fresh variable otherwise.
 
 The `var_counter` is advanced for each new variable; pass a shared counter
@@ -810,10 +810,10 @@ end
 """
     les_cokernel(a, b, var_counter; inequalities=nothing) -> Vector{AffineExpr}
 
-Given ``\\mathrm{H}^\\bullet(\\mathcal{A})`` and ``\\mathrm{H}^\\bullet(\\mathcal{B})`` from a short exact sequence
-``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, compute ``\\mathrm{H}^\\bullet(\\mathcal{C})``.
+Given ``\\mathrm{H}^\\bullet(X, \\mathcal{A})`` and ``\\mathrm{H}^\\bullet(X, \\mathcal{B})`` from a short exact sequence
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, compute ``\\mathrm{H}^\\bullet(X, \\mathcal{C})``.
 
-Creates a fresh symbolic variable for each ``\\mathrm{H}^i(\\mathcal{C})``, then eliminates as
+Creates a fresh symbolic variable for each ``\\mathrm{H}^i(X, \\mathcal{C})``, then eliminates as
 many as possible using the alternating-sum equations of the long exact
 sequence (see `_les_equations`).  Fully determined numeric input is
 delegated to the bound-propagation solver first.
@@ -866,8 +866,8 @@ end
 """
     les_kernel(b, c, var_counter; inequalities=nothing) -> Vector{AffineExpr}
 
-Given ``\\mathrm{H}^\\bullet(\\mathcal{B})`` and ``\\mathrm{H}^\\bullet(\\mathcal{C})`` from a short exact sequence
-``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, compute ``\\mathrm{H}^\\bullet(\\mathcal{A})``.
+Given ``\\mathrm{H}^\\bullet(X, \\mathcal{B})`` and ``\\mathrm{H}^\\bullet(X, \\mathcal{C})`` from a short exact sequence
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0``, compute ``\\mathrm{H}^\\bullet(X, \\mathcal{A})``.
 
 Dual to [`les_cokernel`](@ref): the unknowns sit in the ``\\mathcal{A}``-slots of the
 long exact sequence.
