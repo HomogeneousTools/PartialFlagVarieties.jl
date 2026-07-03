@@ -636,7 +636,9 @@ Interleave the cohomologies of a short exact sequence
 ``0 \\to A \\to B \\to C \\to 0`` into its long exact sequence
 ``(a_0, b_0, c_0, a_1, b_1, c_1, \\ldots)``.
 """
-function _les_interleave(a::Vector{AffineExpr}, b::Vector{AffineExpr}, c::Vector{AffineExpr})
+function _les_interleave(
+  a::Vector{AffineExpr}, b::Vector{AffineExpr}, c::Vector{AffineExpr}
+)
   n = length(a)
   les = Vector{AffineExpr}(undef, 3n)
   for i in 1:n

@@ -238,7 +238,8 @@ function filtered_tangent_bundle(X::PartialFlagVariety)
   height_data = _root_heights(mdt)
 
   FilteredBundle(
-    X, CompletelyReducibleBundle[CompletelyReducibleBundle(X, ws) for (_, ws) in height_data]
+    X,
+    CompletelyReducibleBundle[CompletelyReducibleBundle(X, ws) for (_, ws) in height_data]
   )
 end
 

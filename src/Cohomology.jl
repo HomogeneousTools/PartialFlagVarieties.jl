@@ -396,7 +396,9 @@ function euler_characteristic(H::Cohomology{BigInt})
 end
 
 function _alternating_euler_characteristic(cohos::AbstractVector{<:Cohomology{BigInt}})
-  sum(((-1)^(i - 1) * euler_characteristic(H) for (i, H) in enumerate(cohos)); init=BigInt(0))
+  sum(
+    ((-1)^(i - 1) * euler_characteristic(H) for (i, H) in enumerate(cohos)); init=BigInt(0)
+  )
 end
 
 function euler_characteristic(H::Cohomology{<:WeylCharacter})

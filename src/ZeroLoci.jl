@@ -396,7 +396,7 @@ julia> euler_characteristic(Z)
 """
 function euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle)
   marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
-    ArgumentError("euler_characteristic requires a bundle on the ambient variety."),
+    ArgumentError("euler_characteristic requires a bundle on the ambient variety.")
   )
   _euler_characteristic_from_counts(Z, _to_counts(F))
 end
@@ -985,8 +985,9 @@ function tangent_cohomology(Z::ZeroLocus)
   entries = les_kernel(HT, HE, var_counter)
 
   # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
-  chi = euler_characteristic(Z, tangent_bundle(Z.ambient)) -
-        euler_characteristic(Z, Z.defining_bundle)
+  chi =
+    euler_characteristic(Z, tangent_bundle(Z.ambient)) -
+    euler_characteristic(Z, Z.defining_bundle)
   _apply_equation!(entries, _alternating_sum(entries) - AffineExpr(chi))
 
   # For a strict Calabi–Yau, T_Z ≅ Ω^{d-1}_Z ⊗ ω_Z^{-1} ≅ Ω^{d-1}_Z, and
