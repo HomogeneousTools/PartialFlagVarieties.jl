@@ -579,12 +579,12 @@ function _conormal_row(
 
   # Vanishing H^k(Z, ·) = 0 for k > dim Z, then interval propagation over the
   # row entries and the harvested exactness inequalities.
-  sys = vcat(row, inequalities)
+  system = vcat(row, inequalities)
   for k in (d + 1):(length(row) - 1)
-    is_zero_expr(sys[k + 1]) || _apply_equation!(sys, sys[k + 1])
+    is_zero_expr(system[k + 1]) || _apply_equation!(system, system[k + 1])
   end
-  _propagate_intervals!(sys)
-  sys[1:(d + 1)]
+  _propagate_intervals!(system)
+  system[1:(d + 1)]
 end
 
 """Exact ``\\chi(Z, \\Omega^p_Z \\otimes L|_Z)`` from K-theory, memoized in `C`."""

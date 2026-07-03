@@ -9,6 +9,26 @@
 #  determines it.  Undetermined connecting-map ranks are either reported
 #  (numeric solvers, which return a `determined` flag) or turned into
 #  symbolic variables (the `AffineExpr`-valued solvers).
+#
+#  Layout:
+#   1. AffineExpr        — integer affine expressions c + Σ kⱼ xⱼ, with
+#                          substitution, elimination, and renumbering.
+#   2. Intervals         — bound-consistency propagation over systems of
+#                          nonnegative affine quantities.
+#   3. Numeric solvers   — connecting-rank bound propagation, `determined`
+#                          flag (solve_ses_cohomology, solve_koszul_filtration).
+#   4. δ-based solvers   — one symbolic variable per open connecting rank
+#                          (solve_ses_cohomology_symbolic and the filtration
+#                          chain).
+#   5. Entry-based solvers — one symbolic variable per unknown entry, with
+#                          equations *and inequalities* harvested from
+#                          exactness (les_cokernel, les_kernel).
+#
+#  Conventions: short exact sequences are written 0 → A → B → C → 0, with
+#  aᵢ = dim Hⁱ(A) and so on; δᵢ = rank(Hⁱ(C) → Hⁱ⁺¹(A)) is the connecting
+#  rank, so exactness reads cᵢ = bᵢ - aᵢ + δᵢ₋₁ + δᵢ.  Every symbolic
+#  variable is a nonnegative integer (a dimension, a rank, or a rank shifted
+#  by a known lower bound).
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export solve_ses_cohomology, solve_koszul_filtration
@@ -40,7 +60,11 @@ symbolic_variable(var_id::Int) = AffineExpr(
   BigInt(0), Dict{Int,BigInt}(var_id => BigInt(1))
 )
 
-"""Create a fresh symbolic variable and advance the counter."""
+"""
+Create a fresh symbolic variable and advance the counter.  Ids only need to
+be distinct within one computation; the user-facing output is compacted by
+`_renumber_variables!` at the end.
+"""
 function _fresh_variable(var_counter::Ref{Int})
   x = symbolic_variable(var_counter[])
   var_counter[] += 1
@@ -59,14 +83,17 @@ _as_affine(v::Vector{AffineExpr}) = copy(v)
 _as_affine(v::Vector{BigInt}) = AffineExpr.(v)
 
 # ─── Arithmetic ──────────────────────────────────────────────────────────────
+#
+# AffineExpr is treated as immutable throughout: every operation returns a
+# fresh expression (sharing is safe, mutation never happens in place).
 
 function _merge_coeffs(op, a::Dict{Int,BigInt}, b::Dict{Int,BigInt})
-  result = copy(a)
-  for (k, v) in b
-    result[k] = op(get(result, k, BigInt(0)), v)
-    result[k] == 0 && delete!(result, k)
+  merged = copy(a)
+  for (var, coeff) in b
+    merged[var] = op(get(merged, var, BigInt(0)), coeff)
+    merged[var] == 0 && delete!(merged, var)
   end
-  result
+  merged
 end
 
 function Base.:+(a::AffineExpr, b::AffineExpr)
@@ -113,12 +140,11 @@ Base.:+(c::Integer, a::AffineExpr) = a + c
 Base.:-(a::AffineExpr, c::Integer) = a - AffineExpr(c)
 Base.:-(c::Integer, a::AffineExpr) = AffineExpr(c) - a
 
+"""Alternating sum ``e_1 - e_2 + e_3 - \\cdots`` of the entries."""
 function _alternating_sum(entries::AbstractVector{AffineExpr})
   total = AffineExpr(0)
-  add_term = true
-  for entry in entries
-    total = add_term ? total + entry : total - entry
-    add_term = !add_term
+  for (i, entry) in enumerate(entries)
+    total = isodd(i) ? total + entry : total - entry
   end
   total
 end
@@ -130,48 +156,28 @@ end
 # ─── Display ─────────────────────────────────────────────────────────────────
 
 function Base.show(io::IO, e::AffineExpr)
-  if isempty(e.coeffs)
-    print(io, e.constant)
-    return nothing
-  end
-  sorted_vars = sort(collect(e.coeffs); by=first)
-  first_term = true
-  if e.constant != 0
-    print(io, e.constant)
-    first_term = false
-  end
-  for (var_id, coeff) in sorted_vars
-    if first_term
-      if coeff == 1
-        print(io, "x_$var_id")
-      elseif coeff == -1
-        print(io, "-x_$var_id")
-      else
-        print(io, "$coeff * x_$var_id")
-      end
-      first_term = false
+  is_determined(e) && return print(io, e.constant)
+  leading = e.constant == 0
+  leading || print(io, e.constant)
+  for (var_id, coeff) in sort(collect(e.coeffs); by=first)
+    if leading
+      # First printed term: sign is attached, "1" is suppressed.
+      coeff == 1 || print(io, coeff == -1 ? "-" : "$coeff * ")
+      leading = false
     else
-      if coeff > 0
-        coeff == 1 ? print(io, " + x_$var_id") : print(io, " + $coeff * x_$var_id")
-      else
-        coeff == -1 ? print(io, " - x_$var_id") : print(io, " - $(-coeff) * x_$var_id")
-      end
+      print(io, coeff > 0 ? " + " : " - ")
+      abs(coeff) == 1 || print(io, abs(coeff), " * ")
     end
+    print(io, "x_$var_id")
   end
 end
 
 function Base.show(io::IO, H::Cohomology{AffineExpr})
-  parts = String[]
-  for i in 0:(H.dim_variety)
-    v = H[i]
-    is_zero_expr(v) && continue
-    push!(parts, "H$(_superscript(i)) = $(sprint(show, v))")
-  end
-  if isempty(parts)
-    print(io, "H* = 0")
-  else
-    print(io, join(parts, "\n"))
-  end
+  parts = [
+    "H$(_superscript(i)) = $(sprint(show, H[i]))" for
+    i in 0:(H.dim_variety) if !is_zero_expr(H[i])
+  ]
+  print(io, isempty(parts) ? "H* = 0" : join(parts, "\n"))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -188,15 +194,17 @@ function _substitute_var!(
 )
   changed = false
   for i in eachindex(M)
-    e = M[i]
-    haskey(e.coeffs, var_id) || continue
-    c = e.coeffs[var_id]
-    new_constant = e.constant + c * replacement.constant
-    new_coeffs = copy(e.coeffs)
+    entry = M[i]
+    haskey(entry.coeffs, var_id) || continue
+    factor = entry.coeffs[var_id]
+
+    # entry = (rest) + factor * x_{var_id}  ⟶  (rest) + factor * replacement
+    new_constant = entry.constant + factor * replacement.constant
+    new_coeffs = copy(entry.coeffs)
     delete!(new_coeffs, var_id)
-    for (k, v) in replacement.coeffs
-      new_coeffs[k] = get(new_coeffs, k, BigInt(0)) + c * v
-      new_coeffs[k] == 0 && delete!(new_coeffs, k)
+    for (var, coeff) in replacement.coeffs
+      new_coeffs[var] = get(new_coeffs, var, BigInt(0)) + factor * coeff
+      new_coeffs[var] == 0 && delete!(new_coeffs, var)
     end
     M[i] = AffineExpr(new_constant, new_coeffs)
     changed = true
@@ -206,27 +214,39 @@ end
 
 """
 Solve the linear equation ``\\mathrm{expr} = 0`` for one of its variables:
-the one with the smallest id whose coefficient divides all other
-coefficients (so the substitution stays integral).  Returns
-`var_id => solution`, or `nothing` when no variable qualifies.
+the candidate with the smallest id whose coefficient divides the constant
+and all other coefficients, so that the substitution stays integral.
+Returns `var_id => solution`, or `nothing` when no variable qualifies.
 
-The choice depends on the equation only, never on the array the solution is
-applied to: fixed-point loops that apply one equation to several arrays
-must eliminate the *same* variable everywhere, otherwise two arrays can
-trade variables back and forth without ever converging.
+With `among` given, only variables from that set are candidates (the
+solution itself still involves all variables of the equation).
+
+The default choice depends on the equation only, never on the array the
+solution is applied to: fixed-point loops that apply one equation to
+several arrays must eliminate the *same* variable everywhere, otherwise two
+arrays can trade variables back and forth without ever converging.
 """
-function _solve_for_variable(expr::AffineExpr)
-  for var_id in sort!(collect(keys(expr.coeffs)))
+function _solve_for_variable(expr::AffineExpr; among::Union{Nothing,Set{Int}}=nothing)
+  candidates = if among === nothing
+    collect(keys(expr.coeffs))
+  else
+    [var for var in keys(expr.coeffs) if var in among]
+  end
+
+  for var_id in sort!(candidates)
     coeff = expr.coeffs[var_id]
     rest_coeffs = copy(expr.coeffs)
     delete!(rest_coeffs, var_id)
+
+    # Integrality check: x_{var_id} = -(constant + rest) / coeff must have
+    # integer coefficients, since every variable is an integer.
     expr.constant % coeff == 0 || continue
     all(v % coeff == 0 for (_, v) in rest_coeffs) || continue
 
-    sub_const = -(expr.constant ÷ coeff)
-    sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
-    filter!(p -> p.second != 0, sub_coeffs)
-    return var_id => AffineExpr(sub_const, sub_coeffs)
+    solution_constant = -(expr.constant ÷ coeff)
+    solution_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
+    filter!(p -> p.second != 0, solution_coeffs)
+    return var_id => AffineExpr(solution_constant, solution_coeffs)
   end
   nothing
 end
@@ -254,30 +274,13 @@ function _apply_equation_in_vars!(M::AbstractArray{AffineExpr}, expr::AffineExpr
   isempty(expr.coeffs) && return false
 
   array_vars = Set{Int}()
-  for e in M, v in keys(e.coeffs)
-    push!(array_vars, v)
+  for entry in M, var in keys(entry.coeffs)
+    push!(array_vars, var)
   end
 
-  restricted_coeffs = Dict{Int,BigInt}(
-    v => c for (v, c) in expr.coeffs if v in array_vars
-  )
-  isempty(restricted_coeffs) && return false
-
-  # Solve, but only allow eliminating a variable present in M: keep the
-  # full equation (all variables) as the solution content.
-  for var_id in sort!(collect(keys(restricted_coeffs)))
-    coeff = expr.coeffs[var_id]
-    rest_coeffs = copy(expr.coeffs)
-    delete!(rest_coeffs, var_id)
-    expr.constant % coeff == 0 || continue
-    all(v % coeff == 0 for (_, v) in rest_coeffs) || continue
-
-    sub_const = -(expr.constant ÷ coeff)
-    sub_coeffs = Dict{Int,BigInt}(k => -(v ÷ coeff) for (k, v) in rest_coeffs)
-    filter!(p -> p.second != 0, sub_coeffs)
-    return _substitute_var!(M, var_id, AffineExpr(sub_const, sub_coeffs))
-  end
-  false
+  solution = _solve_for_variable(expr; among=array_vars)
+  solution === nothing && return false
+  _substitute_var!(M, solution.first, solution.second)
 end
 
 """
@@ -286,8 +289,8 @@ Renumber the symbolic variables of an `AffineExpr` array to contiguous ids
 """
 function _renumber_variables!(M::AbstractArray{AffineExpr})
   old_ids = Set{Int}()
-  for e in M, v in keys(e.coeffs)
-    push!(old_ids, v)
+  for entry in M, var in keys(entry.coeffs)
+    push!(old_ids, var)
   end
   isempty(old_ids) && return M
 
@@ -295,14 +298,18 @@ function _renumber_variables!(M::AbstractArray{AffineExpr})
     old_id => new_id - 1 for (new_id, old_id) in enumerate(sort!(collect(old_ids)))
   )
   for i in eachindex(M)
-    e = M[i]
-    isempty(e.coeffs) && continue
+    entry = M[i]
+    isempty(entry.coeffs) && continue
     M[i] = AffineExpr(
-      e.constant, Dict{Int,BigInt}(mapping[k] => v for (k, v) in e.coeffs)
+      entry.constant, Dict{Int,BigInt}(mapping[k] => v for (k, v) in entry.coeffs)
     )
   end
   M
 end
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Interval propagation
+# ═══════════════════════════════════════════════════════════════════════════════
 
 _infeasible_intervals() = error(
   "inconsistent long exact sequence constraints: the input data admits no " *
@@ -329,8 +336,8 @@ information the equation-only solvers discard: for example the entries
 ``(x - 20, 21 - x, 20 - x + y)`` pin ``x = 20`` and then bound ``y``.
 """
 function _propagate_intervals!(sys::AbstractArray{AffineExpr})
-  lo = Dict{Int,BigInt}()  # absent: 0
-  hi = Dict{Int,BigInt}()  # absent: unbounded
+  lower = Dict{Int,BigInt}()  # absent: 0 (every variable is a nonnegative integer)
+  upper = Dict{Int,BigInt}()  # absent: unbounded
 
   pinned_any = false
   # The sweep cap is a backstop: bounds tighten monotonically, so feasible
@@ -338,53 +345,57 @@ function _propagate_intervals!(sys::AbstractArray{AffineExpr})
   for _ in 1:64
     changed = false
 
-    for e in sys
-      if isempty(e.coeffs)
-        e.constant >= 0 || _infeasible_intervals()
+    for constraint in sys
+      if isempty(constraint.coeffs)
+        constraint.constant >= 0 || _infeasible_intervals()
         continue
       end
-      for (v, k) in e.coeffs
-        # Bound x_v using c + Σ_{j≠v} k_j x_j ≤ resid, the box maximum of the
-        # other terms; skip when that maximum is unbounded.
-        resid = e.constant
+      for (var, coeff) in constraint.coeffs
+        # From c + Σⱼ kⱼ xⱼ ≥ 0, isolate the term of `var`:
+        #     coeff * x_var ≥ -(c + Σ_{j≠var} kⱼ xⱼ) ≥ -residual,
+        # where `residual` is the box maximum of c + Σ_{j≠var} kⱼ xⱼ
+        # (upper bounds for positive kⱼ, lower bounds for negative kⱼ).
+        # Skip when that maximum is unbounded.
+        residual = constraint.constant
         bounded = true
-        for (j, kj) in e.coeffs
-          j == v && continue
-          if kj > 0
-            hj = get(hi, j, nothing)
-            hj === nothing && (bounded=false; break)
-            resid += kj * hj
+        for (other, other_coeff) in constraint.coeffs
+          other == var && continue
+          if other_coeff > 0
+            other_upper = get(upper, other, nothing)
+            other_upper === nothing && (bounded=false; break)
+            residual += other_coeff * other_upper
           else
-            resid += kj * get(lo, j, BigInt(0))
+            residual += other_coeff * get(lower, other, BigInt(0))
           end
         end
         bounded || continue
 
-        if k < 0
-          # (-k) x_v ≤ resid
-          new_hi = fld(resid, -k)
-          if new_hi < get(hi, v, new_hi + 1)
-            hi[v] = new_hi
+        if coeff < 0
+          # (-coeff) * x_var ≤ residual, so x_var ≤ ⌊residual / (-coeff)⌋.
+          new_upper = fld(residual, -coeff)
+          if new_upper < get(upper, var, new_upper + 1)
+            upper[var] = new_upper
             changed = true
-            new_hi < get(lo, v, BigInt(0)) && _infeasible_intervals()
+            new_upper < get(lower, var, BigInt(0)) && _infeasible_intervals()
           end
         else
-          # k x_v ≥ -resid
-          new_lo = cld(-resid, k)
-          if new_lo > get(lo, v, BigInt(0))
-            lo[v] = new_lo
+          # coeff * x_var ≥ -residual, so x_var ≥ ⌈-residual / coeff⌉.
+          new_lower = cld(-residual, coeff)
+          if new_lower > get(lower, var, BigInt(0))
+            lower[var] = new_lower
             changed = true
-            new_lo > get(hi, v, new_lo) && _infeasible_intervals()
+            new_lower > get(upper, var, new_lower) && _infeasible_intervals()
           end
         end
       end
     end
 
-    for v in collect(keys(hi))
-      if get(lo, v, BigInt(0)) == hi[v]
-        _substitute_var!(sys, v, AffineExpr(hi[v]))
-        delete!(hi, v)
-        delete!(lo, v)
+    # A collapsed interval turns the variable into a known constant.
+    for var in collect(keys(upper))
+      if get(lower, var, BigInt(0)) == upper[var]
+        _substitute_var!(sys, var, AffineExpr(upper[var]))
+        delete!(upper, var)
+        delete!(lower, var)
         changed = true
         pinned_any = true
       end
@@ -425,33 +436,41 @@ Returns `(lb, ub)`, vectors of length `d + 2` indexed for ``δ_{-1}, …, δ_d``
 """
 function _ses_delta_bounds(a_vals::Vector{BigInt}, b_vals::Vector{BigInt}, d::Int)
   lb = zeros(BigInt, d + 2)
+  # 10^18 stands in for +∞; actual cohomology dimensions are far smaller, and
+  # BigInt arithmetic keeps the sentinel exact.
   ub = fill(BigInt(10)^18, d + 2)
 
-  ub[1] = BigInt(0)      # δ_{-1} = 0
-  ub[d + 2] = BigInt(0)  # δ_d = 0
+  ub[1] = BigInt(0)      # δ_{-1} = 0: there is no H^{-1}(C)
+  ub[d + 2] = BigInt(0)  # δ_d = 0: there is no H^{d+1}(A)
 
-  # δ_i ≤ a_{i+1}; δ_i ≥ a_{i+1} - b_{i+1} (the map H^{i+1}(A) → H^{i+1}(B)
-  # has rank ≥ a_{i+1} - δ_i and at most b_{i+1})
+  # δ_i ≤ a_{i+1} (the connecting map lands in H^{i+1}(A)), and
+  # δ_i ≥ a_{i+1} - b_{i+1} (exactness at H^{i+1}(A): the kernel of
+  # H^{i+1}(A) → H^{i+1}(B) is the image of the connecting map).
   for i in 0:(d - 1)
     ub[i + 2] = min(ub[i + 2], a_vals[i + 2])
     lb[i + 2] = max(lb[i + 2], a_vals[i + 2] - b_vals[i + 2])
   end
 
+  # Each pass can only push information one slot along the sequence, so
+  # d + 2 passes reach the fixed point.
   for _ in 1:(d + 2)
     changed = false
 
-    # c_i ≥ 0 gives δ_{i-1} + δ_i ≥ a_i - b_i; propagate in both directions.
+    # c_i ≥ 0 gives δ_{i-1} + δ_i ≥ a_i - b_i: a small upper bound on either
+    # rank forces a lower bound on the other.
     for i in 0:d
       needed = a_vals[i + 1] - b_vals[i + 1]
-      for (j, k) in ((i + 2, i + 1), (i + 1, i + 2))
-        new_lb = needed - ub[k]
-        if new_lb > lb[j]
-          lb[j] = new_lb
+      for (target, partner) in ((i + 2, i + 1), (i + 1, i + 2))
+        new_lb = needed - ub[partner]
+        if new_lb > lb[target]
+          lb[target] = new_lb
           changed = true
         end
       end
     end
 
+    # Clamp: an interval that would empty is truncated (the caller treats
+    # lb == ub as determined and anything else as open).
     for j in 1:(d + 2)
       lb[j] > ub[j] && (lb[j] = ub[j])
     end
@@ -524,11 +543,13 @@ function solve_koszul_filtration(
 )
   r = length(koszul_cohos) - 1  # rank of the defining bundle
 
-  current = koszul_cohos[r + 1]  # C_r = K_r
+  # Chain from the top of the filtration downwards: C_r = K_r, and each step
+  # solves 0 → C_{j+1} → K_j → C_j → 0 for its cokernel.
+  current = koszul_cohos[r + 1]
   all_determined = true
   for j in (r - 1):-1:0
-    (current, det) = solve_ses_cohomology(current, koszul_cohos[j + 1])
-    all_determined = all_determined && det
+    (current, determined) = solve_ses_cohomology(current, koszul_cohos[j + 1])
+    all_determined = all_determined && determined
   end
 
   result = Cohomology{BigInt}(BigInt[current[i] for i in 0:dim_zero_locus], dim_zero_locus)
@@ -554,7 +575,7 @@ function solve_koszul_filtration(
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Short exact sequence solvers (symbolic)
+#  Short exact sequence solvers (symbolic, δ-based)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -588,14 +609,12 @@ function solve_ses_cohomology_symbolic(
   b_vals = BigInt[b[i] for i in 0:d]
   (lb, ub) = _ses_delta_bounds(a_vals, b_vals, d)
 
-  δ = Vector{AffineExpr}(undef, d + 2)
-  for j in 1:(d + 2)
-    δ[j] = if lb[j] == ub[j]
-      AffineExpr(lb[j])
-    else
-      AffineExpr(lb[j]) + _fresh_variable(var_counter)
-    end
-  end
+  # δ_j = lb_j exactly when the bounds meet, and lb_j plus a fresh
+  # nonnegative variable otherwise.
+  δ = AffineExpr[
+    lb[j] == ub[j] ? AffineExpr(lb[j]) : AffineExpr(lb[j]) + _fresh_variable(var_counter)
+    for j in 1:(d + 2)
+  ]
 
   entries = AffineExpr[
     AffineExpr(b_vals[i + 1] - a_vals[i + 1]) + δ[i + 1] + δ[i + 2] for i in 0:d
@@ -628,9 +647,9 @@ function solve_ses_cohomology_symbolic(
   δ[d + 2] = AffineExpr(0)  # δ_d = 0
   for i in 0:(d - 1)
     δ[i + 2] = if is_zero_expr(a[i + 1])
-      AffineExpr(0)
+      AffineExpr(0)         # nothing to land in
     elseif is_zero_expr(b[i + 1])
-      a[i + 1]  # surjective connecting map
+      a[i + 1]              # surjective connecting map
     else
       _fresh_variable(var_counter)
     end
@@ -645,12 +664,12 @@ function solve_ses_cohomology_symbolic(
   var_counter::Ref{Int},
 )
   d = b.dim_variety
-  b_affine = Cohomology{AffineExpr}(AffineExpr[AffineExpr(b[i]) for i in 0:d], d)
+  b_affine = Cohomology{AffineExpr}(_as_affine(BigInt[b[i] for i in 0:d]), d)
   solve_ses_cohomology_symbolic(a, b_affine, var_counter)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Koszul filtration solver (symbolic)
+#  Koszul filtration solver (symbolic, δ-based)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -676,7 +695,9 @@ function solve_koszul_filtration_symbolic(
     return Cohomology{AffineExpr}(entries, dim_zero_locus)
   end
 
-  # C_r = K_r, then 0 → C_{j+1} → K_j → C_j → 0 for j = r-1, …, 0.
+  # C_r = K_r, then 0 → C_{j+1} → K_j → C_j → 0 for j = r-1, …, 0.  The first
+  # step consumes K_r and K_{r-1} at once (both numeric), which is why the
+  # loop starts at j = r - 2.
   current = solve_ses_cohomology_symbolic(
     koszul_cohos[r + 1], koszul_cohos[r], var_counter
   )
@@ -695,7 +716,8 @@ end
 #  symbolic variable for each *unknown* entry of the long exact sequence and
 #  derive linear equations from the alternating-sum condition on the maximal
 #  nonzero segments.  This matches the approach in Macaulay2's
-#  `shortExactSequenceCoker`.
+#  `shortExactSequenceCoker`.  The partial alternating sums additionally
+#  provide inequalities, consumed by `_propagate_intervals!`.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -735,13 +757,15 @@ Returns one expression per proper partial sum (the full sum is the usual
 equality and is omitted), each of which is a nonnegative quantity.  These
 encode every linear consequence of exactness, in particular the bounds
 ``r_k \\le \\min(s_k, s_{k+1})`` that the equation-only solvers discard.
+Unlike `_les_equations` this needs no segmentation: the whole interleaved
+sequence is exact with zero flanks.
 """
 function _les_inequalities(les::Vector{AffineExpr})
   inequalities = AffineExpr[]
-  partial = AffineExpr(0)
+  partial_sum = AffineExpr(0)
   for k in 1:(length(les) - 1)
-    partial = isodd(k) ? partial + les[k] : partial - les[k]
-    rank_k = isodd(k) ? partial : -partial
+    partial_sum = isodd(k) ? partial_sum + les[k] : partial_sum - les[k]
+    rank_k = isodd(k) ? partial_sum : -partial_sum
     is_determined(rank_k) || push!(inequalities, rank_k)
   end
   inequalities
@@ -773,7 +797,7 @@ function _numeric_les_cokernel(a::Vector{BigInt}, b::Vector{BigInt})
 end
 
 """
-    les_cokernel(a, b, var_counter) -> Vector{AffineExpr}
+    les_cokernel(a, b, var_counter; inequalities=nothing) -> Vector{AffineExpr}
 
 Given ``H^*(A)`` and ``H^*(B)`` from a short exact sequence
 ``0 \\to A \\to B \\to C \\to 0``, compute ``H^*(C)``.
@@ -782,6 +806,10 @@ Creates a fresh symbolic variable for each ``H^i(C)``, then eliminates as
 many as possible using the alternating-sum equations of the long exact
 sequence (see `_les_equations`).  Fully determined numeric input is
 delegated to the bound-propagation solver first.
+
+When an `inequalities` vector is passed, the partial alternating-sum
+inequalities of the sequence (see `_les_inequalities`) are appended to it,
+in terms of the surviving variables, for later interval propagation.
 """
 function les_cokernel(
   a::Vector{AffineExpr}, b::Vector{AffineExpr},
@@ -793,18 +821,25 @@ function les_cokernel(
     ArgumentError("les_cokernel: a and b must have equal length, got $n and $(length(b))")
   )
 
+  # H^*(A) = 0 makes B → C an isomorphism on cohomology.
   all(is_zero_expr, a) && return copy(b)
 
+  # Fully numeric input: bound propagation is sharper than the segment
+  # equations, use it whenever it determines the answer.
   if all(is_determined, a) && all(is_determined, b)
     numeric = _numeric_les_cokernel(_determined_bigints(a), _determined_bigints(b))
     numeric !== nothing && return numeric
   end
 
+  # One fresh variable per unknown entry of C, then eliminate through the
+  # alternating-sum equations of the interleaved sequence.
   c = AffineExpr[_fresh_variable(var_counter) for _ in 1:n]
   for eq in _les_equations(_les_interleave(a, b, c))
     _apply_equation_in_vars!(c, eq)
   end
   if inequalities !== nothing
+    # Harvest after elimination so the inequalities are stated in the
+    # variables that actually survive.
     append!(inequalities, _les_inequalities(_les_interleave(a, b, c)))
   end
   c
@@ -818,7 +853,7 @@ function les_cokernel(
 end
 
 """
-    les_kernel(b, c, var_counter) -> Vector{AffineExpr}
+    les_kernel(b, c, var_counter; inequalities=nothing) -> Vector{AffineExpr}
 
 Given ``H^*(B)`` and ``H^*(C)`` from a short exact sequence
 ``0 \\to A \\to B \\to C \\to 0``, compute ``H^*(A)``.
@@ -836,6 +871,7 @@ function les_kernel(
     ArgumentError("les_kernel: b and c must have equal length, got $n and $(length(c))")
   )
 
+  # H^*(C) = 0 makes A → B an isomorphism on cohomology.
   all(is_zero_expr, c) && return copy(b)
 
   a = AffineExpr[_fresh_variable(var_counter) for _ in 1:n]
@@ -849,7 +885,8 @@ function les_kernel(
 end
 
 """
-    long_exact_sequence_cokernel(terms, var_counter) -> Vector{AffineExpr}
+    long_exact_sequence_cokernel(terms, var_counter; inequalities=nothing)
+      -> Vector{AffineExpr}
 
 Given cohomology of terms `[K_r, K_{r-1}, …, K_0]` (reversed Koszul order),
 iteratively apply [`les_cokernel`](@ref) to compute the final cokernel:

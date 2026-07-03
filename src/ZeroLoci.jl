@@ -598,35 +598,42 @@ function _restrict_to_zero_locus_les(
     )
   end
 
-  # One combined system so every substitution stays synchronized between the
-  # entries and the harvested inequalities.
-  n = length(primal)
-  sys = vcat(primal, dual_chain, inequalities)
+  # One combined system, so every substitution stays synchronized between the
+  # two chains and the harvested inequalities: slots 1:chain_length hold the
+  # primal entries H^k(Z, F|_Z) for k = 0, …, d_X; the dual entries (if any)
+  # follow; the inequalities come last.
+  chain_length = length(primal)
+  system = vcat(primal, dual_chain, inequalities)
 
+  # The structural equations — vanishing above dim Z on both chains, and the
+  # entrywise Serre duality between them — are re-applied whenever interval
+  # propagation pins a variable, since each substitution can make a
+  # previously unusable equation solvable.
   apply_structure! = function ()
     applied = false
-    for k in (d_Z + 1):(n - 1)
-      # vanishing H^k(Z, ·) = 0 above dim Z, on both chains
-      is_zero_expr(sys[k + 1]) || (applied |= _apply_equation!(sys, sys[k + 1]))
+    for k in (d_Z + 1):(chain_length - 1)
+      is_zero_expr(system[k + 1]) || (applied |= _apply_equation!(system, system[k + 1]))
       if !isempty(dual_chain)
-        is_zero_expr(sys[n + k + 1]) || (applied |= _apply_equation!(sys, sys[n + k + 1]))
+        dual_slot = chain_length + k + 1
+        is_zero_expr(system[dual_slot]) ||
+          (applied |= _apply_equation!(system, system[dual_slot]))
       end
     end
     if !isempty(dual_chain)
       for k in 0:d_Z
-        eq = sys[k + 1] - sys[n + d_Z - k + 1]
-        is_zero_expr(eq) || (applied |= _apply_equation!(sys, eq))
+        serre_pair = system[k + 1] - system[chain_length + d_Z - k + 1]
+        is_zero_expr(serre_pair) || (applied |= _apply_equation!(system, serre_pair))
       end
     end
     applied
   end
 
   apply_structure!()
-  while _propagate_intervals!(sys)
+  while _propagate_intervals!(system)
     apply_structure!() || break
   end
 
-  sys[1:(d_Z + 1)]
+  system[1:(d_Z + 1)]
 end
 
 """Extract the Koszul cohomologies as plain vectors in reversed order K_r, …, K_0."""
@@ -683,15 +690,16 @@ function _restrict_to_zero_locus_les(
   end
 
   # Symbolic Koszul chain in reversed order K_r, …, K_0, with the exactness
-  # inequalities, then vanishing H^k(Z, F|_Z) = 0 for k > dim Z.
+  # inequalities, then vanishing H^k(Z, F|_Z) = 0 for k > dim Z and interval
+  # propagation over the combined system.
   inequalities = AffineExpr[]
   chain = long_exact_sequence_cokernel(reverse(koszul), var_counter; inequalities)
-  sys = vcat(chain, inequalities)
+  system = vcat(chain, inequalities)
   for k in (d_Z + 1):d_X
-    is_zero_expr(sys[k + 1]) || _apply_equation!(sys, sys[k + 1])
+    is_zero_expr(system[k + 1]) || _apply_equation!(system, system[k + 1])
   end
-  _propagate_intervals!(sys)
-  sys[1:(d_Z + 1)]
+  _propagate_intervals!(system)
+  system[1:(d_Z + 1)]
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1014,16 +1022,18 @@ function tangent_cohomology(Z::ZeroLocus)
   HE = _restrict_to_zero_locus_les(Z, _to_counts(Z.defining_bundle), var_counter)
   inequalities = AffineExpr[]
   kernel = les_kernel(HT, HE, var_counter; inequalities)
-  sys = vcat(kernel, inequalities)
+  system = vcat(kernel, inequalities)
 
   # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
   chi =
     euler_characteristic(Z, tangent_bundle(Z.ambient)) -
     euler_characteristic(Z, Z.defining_bundle)
-  n = length(kernel)
-  _apply_equation!(sys, _alternating_sum(@view sys[1:n]) - AffineExpr(chi))
-  _propagate_intervals!(sys)
-  entries = sys[1:n]
+  kernel_length = length(kernel)
+  _apply_equation!(
+    system, _alternating_sum(@view system[1:kernel_length]) - AffineExpr(chi)
+  )
+  _propagate_intervals!(system)
+  entries = system[1:kernel_length]
 
   # For a strict Calabi–Yau, T_Z ≅ Ω^{d-1}_Z ⊗ ω_Z^{-1} ≅ Ω^{d-1}_Z, and
   # h^0(Ω^{d-1}_Z) = h^{d-1,0} = h^{d-1}(O_Z) = 0.
