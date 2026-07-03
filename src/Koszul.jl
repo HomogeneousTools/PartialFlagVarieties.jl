@@ -556,7 +556,7 @@ function solve_koszul_filtration(
   all_determined = true
   for j in (r - 1):-1:0
     (current, determined) = solve_ses_cohomology(current, koszul_cohos[j + 1])
-    all_determined = all_determined && determined
+    all_determined &= determined
   end
 
   result = Cohomology{BigInt}(BigInt[current[i] for i in 0:dim_zero_locus], dim_zero_locus)

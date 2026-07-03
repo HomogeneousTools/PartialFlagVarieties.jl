@@ -470,8 +470,8 @@ function cohomology_on_restriction(
 
   koszul_cohos = _koszul_dimensions(Z, F)
 
-  (H, det) = solve_koszul_filtration(koszul_cohos, d_Z)
-  det && return (H, true)
+  (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
+  determined && return (H, true)
 
   # Serre duality fallback: H^k(Z, F|_Z) = H^{d-k}(Z, F^*|_Z), valid because
   # is_calabi_yau guarantees ω_Z ≅ O_Z via adjunction.
@@ -562,7 +562,6 @@ function _restrict_to_zero_locus_les(
 
   # Compute Koszul cohomologies once (memory-efficient path)
   koszul_cohos = _koszul_dimensions(Z, f_counts, wedge_counts)
-  d_ambient = koszul_cohos[1].dim_variety
 
   # Try numeric solve first
   (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
@@ -638,8 +637,8 @@ end
 
 """Extract the Koszul cohomologies as plain vectors in reversed order K_r, …, K_0."""
 function _reversed_koszul_vecs(koszul_cohos::Vector{Cohomology{BigInt}})
-  d_ambient = koszul_cohos[1].dim_variety
-  Vector{BigInt}[BigInt[kc[i] for i in 0:d_ambient] for kc in reverse(koszul_cohos)]
+  d_X = koszul_cohos[1].dim_variety
+  Vector{BigInt}[BigInt[kc[i] for i in 0:d_X] for kc in reverse(koszul_cohos)]
 end
 
 """
@@ -670,8 +669,8 @@ function _restrict_to_zero_locus_les(
 
   if all(is_determined, Iterators.flatten(koszul))
     cohos = [Cohomology{BigInt}(_determined_bigints(k), d_X) for k in koszul]
-    (H, det) = solve_koszul_filtration(cohos, d_Z)
-    det && return AffineExpr[AffineExpr(H[k]) for k in 0:d_Z]
+    (H, determined) = solve_koszul_filtration(cohos, d_Z)
+    determined && return AffineExpr[AffineExpr(H[k]) for k in 0:d_Z]
 
     # Serre duality fallback: sound when ω_Z ≅ O_Z, provided the spectral
     # sequences of the dual Koszul terms degenerate as well.

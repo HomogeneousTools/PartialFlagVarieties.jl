@@ -188,43 +188,37 @@ function _cohomology_generic(
 )
   Base.@nospecialize sentinel
 
-  dynkin = typeof(sentinel).parameters[1]
-  zero_character = WeylCharacter(dynkin)
-  entries = [WeylCharacter(dynkin) for _ in 0:d]
+  DT = typeof(sentinel).parameters[1]
+  entries = [WeylCharacter(DT) for _ in 0:d]
   weight_counts = _weight_counts(comps, sentinel)
 
   for (λ, mult) in weight_counts
     result = borel_weil_bott(λ)
-    if result !== nothing
-      (deg, μ) = result
-      if 0 <= deg <= d
-        χμ = WeylCharacter(μ)
-        for _ in 1:mult
-          add!(entries[deg + 1], χμ)
-        end
-      end
+    result === nothing && continue
+    (deg, μ) = result
+    0 <= deg <= d || continue
+    χμ = WeylCharacter(μ)
+    for _ in 1:mult
+      add!(entries[deg + 1], χμ)
     end
   end
 
-  Cohomology{typeof(zero_character)}(entries, d)
+  Cohomology{eltype(entries)}(entries, d)
 end
 
 function _cohomology_single(d::Int, λ::WeightLatticeElem)
   Base.@nospecialize λ
 
-  dynkin = typeof(λ).parameters[1]
-  zero_character = WeylCharacter(dynkin)
-  entries = [WeylCharacter(dynkin) for _ in 0:d]
+  DT = typeof(λ).parameters[1]
+  entries = [WeylCharacter(DT) for _ in 0:d]
 
   result = borel_weil_bott(λ)
   if result !== nothing
     deg, μ = result
-    if 0 <= deg <= d
-      add!(entries[deg + 1], WeylCharacter(μ))
-    end
+    0 <= deg <= d && add!(entries[deg + 1], WeylCharacter(μ))
   end
 
-  Cohomology{typeof(zero_character)}(entries, d)
+  Cohomology{eltype(entries)}(entries, d)
 end
 
 """
@@ -291,7 +285,7 @@ julia> dims[0]
 5
 ```
 """
-function dimensions(H::Cohomology{<:WeylCharacter{DT,R}}) where {DT,R}
+function dimensions(H::Cohomology{<:WeylCharacter})
   entries = BigInt[
     sum((BigInt(mult) * degree(weight) for (weight, mult) in χ); init=BigInt(0)) for
     χ in H.entries

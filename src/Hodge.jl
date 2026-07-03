@@ -61,10 +61,8 @@ function hodge_numbers(X::PartialFlagVariety)
   # For G/P: h^{p,q} = δ_{p,q} * b_{2p}
   # betti_numbers returns only even Betti numbers: betti[i] = b_{2(i-1)}
   H = zeros(BigInt, d + 1, d + 1)
-  for p in 0:d
-    if p + 1 <= length(betti)
-      H[p + 1, p + 1] = betti[p + 1]  # betti[p+1] = b_{2p}
-    end
+  for p in 0:min(d, length(betti) - 1)
+    H[p + 1, p + 1] = betti[p + 1]  # betti[p+1] = b_{2p}
   end
   H
 end
@@ -1029,9 +1027,7 @@ function hochschild_cohomology(Z::ZeroLocus)
     # 2. χ(∧^p T_Z) = exact value from conormal recursion
     for p in 0:d
       eq = _alternating_sum(data, p + 1, d) - AffineExpr(chi_polyvector[p + 1])
-      if !isempty(eq.coeffs)
-        constraint_changed = _apply_equation!(data, eq) || constraint_changed
-      end
+      isempty(eq.coeffs) || (constraint_changed |= _apply_equation!(data, eq))
     end
 
     # Akizuki–Nakano vanishing (for confirmed Fano) is already applied

@@ -318,8 +318,6 @@ function tangent_weights(mdt::MarkedDynkinType)
   WeightLatticeElem[WeightLatticeElem(α) for α in highest]
 end
 
-_ambient_type(mdt::MarkedDynkinType) = dynkin_type(mdt)
-
 function Base.show(io::IO, mdt::MarkedDynkinType)
   print(
     io, "$(Semisimple._type_name(dynkin_type(mdt))) / P_{$(join(marked_nodes(mdt), ","))}"
@@ -335,18 +333,18 @@ the marked nodes highlighted (enclosed in square brackets).
 function marked_dynkin_diagram(mdt::MarkedDynkinType)
   DT = dynkin_type(mdt)
   marked = marked_nodes(mdt)
+
+  if DT <: SimpleDynkinType
+    # D and E types have their own two-dimensional layouts.
+    DT <: TypeD && return _marked_diagram_D(DT, marked)
+    DT <: TypeE && return _marked_diagram_E(DT, marked)
+  end
+
   diagram = string(dynkin_diagram(DT))
   lines = split(diagram, '\n')
   marked_set = Set(marked)
 
   if DT <: SimpleDynkinType
-    if DT <: TypeD
-      return _marked_diagram_D(DT, marked)
-    end
-    if DT <: TypeE
-      return _marked_diagram_E(DT, marked)
-    end
-
     node_line = lines[1]
     result_chars = collect(node_line)
     node_idx = 0

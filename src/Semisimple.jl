@@ -258,9 +258,7 @@ Returns `nothing` if the vector is empty.
 """
 function _cartan_type_to_dynkin_type(ct::Vector{Tuple{Symbol,Int}})
   isempty(ct) && return nothing
-  types = [_symbol_to_simple_type(fam, rk) for (fam, rk) in ct]
-  length(types) == 1 && return types[1]
-  return ProductDynkinType{Tuple{types...}}
+  _combine_dynkin_factors(DataType[_symbol_to_simple_type(fam, rk) for (fam, rk) in ct])
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -317,12 +315,7 @@ function parse_dynkin_type(s::AbstractString)
   end
 
   isempty(types) && throw(ArgumentError("No valid Dynkin type components found in \"$s\""))
-
-  if length(types) == 1
-    return types[1]
-  else
-    return ProductDynkinType{Tuple{types...}}
-  end
+  _combine_dynkin_factors(types)
 end
 
 """

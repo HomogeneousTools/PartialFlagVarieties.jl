@@ -326,8 +326,6 @@ julia> dimension(V)
 ```
 """
 function adjoint_variety(::Type{DT}) where {DT<:SimpleDynkinType}
-  R = rank(DT)
-
   # Determine the adjoint node
   DT <: TypeA && return _adjoint_A(DT)
   DT <: TypeB && return partial_flag_variety(DT, (2,), "Adj($(Semisimple._type_name(DT)))")
@@ -366,8 +364,6 @@ julia> dimension(V)
 ```
 """
 function coadjoint_variety(::Type{DT}) where {DT<:SimpleDynkinType}
-  R = rank(DT)
-
   DT <: TypeA && return _adjoint_A(DT)  # self-dual
   DT <: TypeB &&
     return partial_flag_variety(DT, (1,), "Coadj($(Semisimple._type_name(DT)))")

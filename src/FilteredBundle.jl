@@ -157,10 +157,8 @@ is ``\\sum_{j \\in I} a_j`` where ``I`` is the set of marked (crossed-out)
 nodes.
 """
 function _root_heights(mdt::MarkedDynkinType)
-  DT = _ambient_type(mdt)
-  R = rank(DT)
-  RS = RootSystem(DT)
-  Marked = marked_nodes(mdt)
+  RS = RootSystem(dynkin_type(mdt))
+  marked = marked_nodes(mdt)
   unmarked = unmarked_nodes(mdt)
 
   nonpar_roots = positive_nonparabolic_roots(mdt)
@@ -168,7 +166,7 @@ function _root_heights(mdt::MarkedDynkinType)
   # Group roots by nonparabolic height
   height_groups = Dict{Int,Vector{typeof(first(nonpar_roots))}}()
   for α in nonpar_roots
-    h = _nonparabolic_height(coefficients(α), Marked)
+    h = _nonparabolic_height(coefficients(α), marked)
     push!(get!(height_groups, h, typeof(α)[]), α)
   end
 

@@ -153,11 +153,8 @@ false
 ```
 """
 function does_E1_degenerate(S::SpectralSequence{Int})
-  positions = keys(E1_page(S))
-  !any(
-    a[1] + a[2] + 1 == b[1] + b[2] && a[2] < b[2]
-    for a in positions for b in positions
-  )
+  diagonals = Set(p[1] + p[2] for p in keys(E1_page(S)))
+  !any(_has_potential_diff(S, i) for i in diagonals)
 end
 
 function does_E1_degenerate(S::SpectralSequence{<:WeylCharacter})

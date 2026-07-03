@@ -143,7 +143,7 @@ function IrrepLevi(
   mdt::MarkedDynkinType, central::Vector{Rational{Int}}, semisimple::WeightLatticeElem
 )
   sf = central_scaling_factor(mdt)
-  central_scaled = Int[c * sf for c in central]
+  central_scaled = Int.(central .* sf)
   IrrepLevi(mdt, central_scaled, semisimple)
 end
 
@@ -249,11 +249,7 @@ function _tensor_product_terms_uncached(a::IrrepLevi, b::IrrepLevi)
   end
 
   χ = _tensor_product_character_generic(ss_a, ss_b)
-  result = Pair{IrrepLevi,Int}[]
-  for (hw, mult) in χ
-    push!(result, IrrepLevi(mdt, new_central, hw) => Int(mult))
-  end
-  result
+  Pair{IrrepLevi,Int}[IrrepLevi(mdt, new_central, hw) => Int(mult) for (hw, mult) in χ]
 end
 
 """

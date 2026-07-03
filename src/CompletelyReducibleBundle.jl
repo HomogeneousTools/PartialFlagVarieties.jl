@@ -409,13 +409,7 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
   marked = marked_nodes(X)
   length(degrees) == length(marked) || throw(
     ArgumentError(
-      string(
-        "Expected ",
-        length(marked),
-        " degrees (one per marked node), got ",
-        length(degrees),
-        ".",
-      ),
+      "Expected $(length(marked)) degrees (one per marked node), got $(length(degrees))."
     ),
   )
 
@@ -576,12 +570,7 @@ end
 
 function _tangent_reps(mdt::MarkedDynkinType)
   get!(_tangent_reps_cache, mdt) do
-    tw = tangent_weights(mdt)
-    result = Vector{IrrepLevi}(undef, length(tw))
-    for i in eachindex(tw)
-      result[i] = IrrepLevi(mdt, tw[i])
-    end
-    result
+    IrrepLevi[IrrepLevi(mdt, w) for w in tangent_weights(mdt)]
   end
 end
 
@@ -1142,11 +1131,9 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
   λ = k * ω
   twist_rep = IrrepLevi(mdt, λ)
 
-  result = IrrepLevi[]
-  for c in E.components
-    append!(result, tensor_product(c, twist_rep))
-  end
-  CompletelyReducibleBundle(E.variety, result)
+  CompletelyReducibleBundle(
+    E.variety, IrrepLevi[t for c in E.components for t in tensor_product(c, twist_rep)]
+  )
 end
 
 # ─── Arithmetic operators ───────────────────────────────────────────────────
