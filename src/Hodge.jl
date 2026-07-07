@@ -99,25 +99,32 @@ julia> H[1, 1]  # h^0(ℙ³, 𝒪)
 1
 ```
 """
-function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBundle)
-  rank_bundle(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
-
-  d = dimension(X)
-
-  # H^q(Ω^p ⊗ L) through the spectral sequence of the filtration on Ω^p, so no
-  # E₁-degeneration is assumed; a shared counter keeps the p separate.
+# Fill the (d+1)×(d+1) matrix H[p+1, q+1] = H^q(wedge(p)) through the spectral
+# sequence of each filtered bundle wedge(p), sharing one variable counter so the
+# potential differentials of different p stay independent, then compact.
+function _filtered_hodge_matrix(d::Int, wedge)
   var_counter = Ref(0)
   H = Matrix{AffineExpr}(undef, d + 1, d + 1)
   for p in 0:d
-    Hp = _cohomology_filtered(
-      tensor_product(_filtered_cotangent_power(X, p), L), var_counter
-    )
+    Hp = _cohomology_filtered(wedge(p), var_counter)
     for q in 0:d
       H[p + 1, q + 1] = Hp[q + 1]
     end
   end
   _renumber_variables!(H)
+  H
+end
+
+# Collapse a determined symbolic matrix to plain integers (the cominuscule case).
+_collapse_determined(H::Matrix{AffineExpr}) =
   all(is_determined, H) ? map(e -> e.constant, H) : H
+
+function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBundle)
+  rank_bundle(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
+  d = dimension(X)
+  _collapse_determined(
+    _filtered_hodge_matrix(d, p -> tensor_product(_filtered_cotangent_power(X, p), L))
+  )
 end
 
 function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
@@ -182,12 +189,9 @@ end
 _pp_zero(::Type{BigInt}) = BigInt(0)
 _pp_zero(::Type{AffineExpr}) = AffineExpr(0)
 
-# Wrap a symbolic HKR matrix, collapsing to a plain BigInt parallelogram when
-# every entry is determined (the cominuscule / type-A case).
-function _polyvector_parallelogram(data::Matrix{AffineExpr}, d::Int)
-  all(is_determined, data) || return PolyvectorParallelogram(data, d)
-  PolyvectorParallelogram(map(e -> e.constant, data), d)
-end
+# Wrap an HKR matrix, collapsing to plain integers when fully determined.
+_polyvector_parallelogram(data::Matrix{AffineExpr}, d::Int) =
+  PolyvectorParallelogram(_collapse_determined(data), d)
 
 """
     getindex(P::PolyvectorParallelogram, p::Int, q::Int)
@@ -299,21 +303,9 @@ julia> P[2, 0]  # h⁰(∧²T) = h⁰(𝒪(3)) for ℙ²
 function hochschild_cohomology(X::PartialFlagVariety)
   d = dimension(X)
   TX = filtered_tangent_bundle(X)
-
   # H^q(∧^p T_X) through the spectral sequence of the height filtration, so no
-  # E₁-degeneration is assumed.  A shared variable counter keeps the potential
-  # differentials of different exterior powers independent.
-  var_counter = Ref(0)
-  data = Matrix{AffineExpr}(undef, d + 1, d + 1)
-  for p in 0:d
-    Hp = _cohomology_filtered(exterior_power(TX, p), var_counter)
-    for q in 0:d
-      data[p + 1, q + 1] = Hp[q + 1]
-    end
-  end
-  _renumber_variables!(data)
-
-  _polyvector_parallelogram(data, d)
+  # E₁-degeneration is assumed.
+  _polyvector_parallelogram(_filtered_hodge_matrix(d, p -> exterior_power(TX, p)), d)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
