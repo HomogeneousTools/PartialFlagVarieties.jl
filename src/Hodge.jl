@@ -312,6 +312,36 @@ end
 #  Hodge numbers of zero loci
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Künneth helpers: for a product Z = A × B both the Hodge diamond and the
+# polyvector parallelogram are (p,q)-bigraded and multiply by convolution,
+#   C[p,q] = Σ_{a+c=p, b+d=q} A[a,b] · B[c,d].
+#
+# Symbolic entries: a product of two symbolic entries is quadratic, which an
+# `AffineExpr` cannot hold, so we never convolve symbolic matrices. The callers
+# apply the Künneth shortcut only when *every* factor is fully determined
+# (`all(is_determined, ...)`); then we convolve plain integers and wrap the result
+# back up. If a factor is itself symbolic (rare — a factor is lower-dimensional
+# and irreducible, so this shows up mainly for the polyvector parallelogram of,
+# say, a cubic threefold), the caller falls through to the monolithic solver,
+# which returns the same symbolic answer as before. The product path therefore
+# only ever *improves* determinacy; it never errors or discards information.
+_hodge_intmat(M::AbstractMatrix) = [Int(M[p, q].constant) for p in axes(M, 1), q in axes(M, 2)]
+
+function _kunneth_conv(A::AbstractMatrix{<:Integer}, B::AbstractMatrix{<:Integer})
+  da = size(A, 1) - 1
+  db = size(B, 1) - 1
+  C = zeros(BigInt, da + db + 1, da + db + 1)
+  for pa in 0:da, qa in 0:da, pb in 0:db, qb in 0:db
+    C[pa + pb + 1, qa + qb + 1] += A[pa + 1, qa + 1] * B[pb + 1, qb + 1]
+  end
+  return C
+end
+
+function _kunneth_bigraded(mats)
+  M = reduce(_kunneth_conv, (_hodge_intmat(m) for m in mats); init = fill(BigInt(1), 1, 1))
+  return [AffineExpr(M[p, q]) for p in axes(M, 1), q in axes(M, 2)]
+end
+
 """
     hodge_numbers(Z::ZeroLocus) -> Matrix{AffineExpr}
 
@@ -366,6 +396,13 @@ julia> h[3, 2]  # h^{2,1}
 ```
 """
 function hodge_numbers(Z::ZeroLocus)
+  # A product Z = Z_1 × ⋯ × Z_k has Hodge diamond the Künneth convolution of the
+  # factors', which pins entries the monolithic solver below leaves symbolic.
+  if n_factors(Z) >= 2
+    diamonds = map(hodge_numbers, factors(Z))
+    all(diamond -> all(is_determined, diamond), diamonds) && return _kunneth_bigraded(diamonds)
+  end
+
   d = dimension(Z)
   half = d ÷ 2
   var_counter = Ref(0)
@@ -1016,6 +1053,16 @@ julia> P[3, 0]  # h⁰(∧³T_Z) = h⁰(ω_Z⁻¹) = 1 (CY3)
 ```
 """
 function hochschild_cohomology(Z::ZeroLocus)
+  # T_{A×B} = T_A ⊞ T_B, so the polyvector parallelogram of a product is the
+  # Künneth convolution of the factors' — pinning otherwise-symbolic entries.
+  if n_factors(Z) >= 2
+    boxes = map(hochschild_cohomology, factors(Z))
+    if all(box -> all(is_determined, box.data), boxes)
+      data = _kunneth_bigraded([box.data for box in boxes])
+      return PolyvectorParallelogram(data, sum(box -> box.dim, boxes))
+    end
+  end
+
   X = Z.ambient
   E = Z.defining_bundle
   d = dimension(Z)

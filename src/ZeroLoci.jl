@@ -13,6 +13,7 @@
 
 export ZeroLocus
 export zero_locus, ambient_variety, defining_bundle
+export factors, n_factors
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction, cohomology_on_restriction_symbolic
 export is_calabi_yau, is_strict_calabi_yau
@@ -139,6 +140,88 @@ function product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...)
 end
 
 Base.:*(Z1::ZeroLocus, Z2::ZeroLocus) = product(Z1, Z2)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Product decomposition
+# ═══════════════════════════════════════════════════════════════════════════════
+
+"""
+    factors(Z::ZeroLocus) -> Vector{ZeroLocus}
+
+Decompose `Z` into its product factors. Two ambient factors are *linked* when
+some summand of the defining bundle is nontrivial on both; the connected
+components of that relation give `Z = Z_1 × ⋯ × Z_k`, and this returns the
+`Z_i` on their sub-product ambients. An ambient factor touched by no summand
+splits off as the whole flag variety. Returns the singleton `[Z]` when `Z` is
+irreducible in this "partition the ambient factors" sense.
+
+A factor is kept when it is positive-dimensional or a set of `m ≥ 2` points (the
+latter disconnects `Z` into `m` copies); a single reduced point is a Künneth
+identity and is dropped. `n_factors` counts the kept factors.
+
+`hodge_numbers`, `hochschild_cohomology` and `tangent_cohomology` recombine the
+factors by the Künneth formula, which determines diamonds/parallelograms the
+monolithic long-exact-sequence solver leaves symbolic. (The remaining
+invariants — `euler_characteristic`, `hilbert_polynomial`, the anticanonical
+degree — are already exact for a product via Koszul, so need no special path.)
+"""
+function factors(Z::ZeroLocus)
+  ambient_factors = _mdt_to_factors(marked_dynkin_type(Z.ambient))
+  length(ambient_factors) == 1 && return [Z]
+  factor_ranks = Int[factor.rank for factor in ambient_factors]
+
+  # Per summand, the per-ambient-factor weight blocks and the set of ambient
+  # factors it actually twists (its support).
+  summand_rows = [_weight_to_summand_row(p_dominant_weight(summand), factor_ranks)
+                  for summand in components(Z.defining_bundle)]
+  supports = [findall(block -> any(!iszero, block), row) for row in summand_rows]
+
+  blocks = _connected_ambient_factors(supports, length(ambient_factors))
+  length(blocks) == 1 && return [Z]
+
+  parts = ZeroLocus[]
+  for block in blocks
+    subvariety = PartialFlagVariety(_factors_to_mdt(ambient_factors[block]))
+    subtype = dynkin_type(subvariety)
+    weights = [_summand_row_to_weight(row[block], subtype)
+               for (row, support) in zip(summand_rows, supports) if support ⊆ block && !isempty(support)]
+    subbundle = isempty(weights) ? zero_bundle(subvariety) : CompletelyReducibleBundle(subvariety, weights)
+    # An over-cut component makes the whole product empty; hand that back to the
+    # monolithic solver rather than build an invalid (rank > dim) zero locus.
+    rank_bundle(subbundle) > dimension(subvariety) && return [Z]
+    push!(parts, zero_locus(subbundle))
+  end
+  # Keep positive-dimensional factors and multi-point (m ≥ 2) sets; drop single
+  # reduced points, which are Künneth identities. `dimension >= 1` short-circuits,
+  # so χ(𝒪) is evaluated only on 0-dimensional parts, where it equals h⁰·⁰, the
+  # number of points (a cheap BWB alternating sum).
+  filter(part -> dimension(part) >= 1 || euler_characteristic(part) >= 2, parts)
+end
+
+# Partition the ambient factors `1:n` into connected blocks, joining two factors
+# whenever some bundle summand is supported on both (union–find with path
+# compression). Untouched factors form singleton blocks.
+function _connected_ambient_factors(supports, n)
+  parent = collect(1:n)
+  root(i) = parent[i] == i ? i : (parent[i] = root(parent[i]))
+  for support in supports, factor in support
+    parent[root(factor)] = root(first(support))
+  end
+  blocks = [Int[] for _ in 1:n]
+  for factor in 1:n
+    push!(blocks[root(factor)], factor)
+  end
+  return filter(!isempty, blocks)
+end
+
+"""
+    n_factors(Z::ZeroLocus) -> Int
+
+Number of product factors of `Z` (see [`factors`](@ref)); equals `1` for an
+irreducible `Z`. Invariant computations decompose via Künneth exactly when
+`n_factors(Z) >= 2`.
+"""
+n_factors(Z::ZeroLocus) = length(factors(Z))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Accessors
@@ -407,6 +490,8 @@ end
 Compute ``\\chi(Z, \\mathcal{O}_Z)``.
 """
 function euler_characteristic(Z::ZeroLocus)
+  # χ(𝒪) is multiplicative over products: χ(A × B) = χ(A)·χ(B).
+  n_factors(Z) >= 2 && return prod(euler_characteristic, factors(Z))
   euler_characteristic(Z, structure_sheaf(Z.ambient))
 end
 
@@ -1022,6 +1107,15 @@ H² = 1
 """
 function tangent_cohomology(Z::ZeroLocus)
   d_Z = dimension(Z)
+
+  # For a product, H^q(T_Z) is the ∧¹T row of the (Künneth) polyvector
+  # parallelogram. Only that row has to be determined — higher rows may stay
+  # symbolic without forcing the monolithic fallback.
+  if n_factors(Z) >= 2
+    tangent_row = [hochschild_cohomology(Z)[1, q] for q in 0:d_Z]
+    all(is_determined, tangent_row) && return Cohomology{AffineExpr}(tangent_row, d_Z)
+  end
+
   var_counter = Ref(0)
 
   HT = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(Z.ambient), var_counter)

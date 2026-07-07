@@ -2247,6 +2247,44 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test all(is_determined(x) && x.constant == 0 for x in h)
   end
 
+  @testset "ZeroLocus: product decomposition and Künneth invariants" begin
+    W = zero_locus(line_bundle(projective_space(4), 3))    # cubic 3-fold: h^{1,1}=1, h^{2,1}=5
+    P1 = zero_locus(zero_bundle(projective_space(1)))       # P^1
+    Z = product(W, P1)                                       # P^1 × cubic 3-fold, dim 4
+
+    # recognition
+    @test n_factors(W) == 1                                 # irreducible
+    @test length(factors(W)) == 1
+    @test n_factors(Z) == 2
+    @test sort(dimension.(factors(Z))) == [1, 3]
+
+    # Hodge diamond via Künneth: P^1 × (cubic 3-fold) is diagonal 1,2,2,2,1 with h^{2,1}=5
+    H = hodge_numbers(Z)
+    @test all(is_determined, H)
+    @test H[2, 2] == 2 && H[3, 3] == 2      # h^{1,1}, h^{2,2}
+    @test H[3, 2] == 5 && H[2, 3] == 5      # h^{2,1}, h^{1,2}
+
+    # polyvector parallelogram and tangent cohomology also come out via Künneth
+    @test all(is_determined, hochschild_cohomology(Z).data)
+    @test length(tangent_cohomology(Z)) == dimension(Z) + 1
+
+    # χ(𝒪) is multiplicative over the product
+    @test euler_characteristic(Z) == euler_characteristic(W) * euler_characteristic(P1)
+
+    # a single reduced point is a Künneth identity and is dropped from the factors;
+    # a set of m ≥ 2 points is kept and disconnects Z into m copies.
+    one_point = zero_locus(direct_sum(line_bundle(projective_space(2), 1),
+                                      line_bundle(projective_space(2), 1)))
+    @test dimension(one_point) == 0 && euler_characteristic(one_point) == 1
+    @test n_factors(product(W, one_point)) == 1
+
+    two_points = zero_locus(line_bundle(projective_space(1), 2))
+    @test dimension(two_points) == 0 && euler_characteristic(two_points) == 2
+    Z2 = product(W, two_points)
+    @test n_factors(Z2) == 2
+    @test hodge_numbers(Z2)[1, 1] == 2      # two connected components
+  end
+
   @testset "ZeroLocus: Hodge numbers (Grassmannian)" begin
     # O(1)^4 on Gr(2,6): Küchle c6, h^{1,1}=1, h^{2,2}=8
     X = Gr(2, 6)
