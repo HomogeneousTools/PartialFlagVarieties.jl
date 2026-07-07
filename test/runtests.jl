@@ -2276,7 +2276,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # a set of m ≥ 2 points is kept and disconnects Z into m copies.
     one_point = zero_locus(
       direct_sum(line_bundle(projective_space(2), 1),
-        line_bundle(projective_space(2), 1))
+        line_bundle(projective_space(2), 1)),
     )
     @test dimension(one_point) == 0 && euler_characteristic(one_point) == 1
     @test n_factors(product(W, one_point)) == 1
