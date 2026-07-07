@@ -72,12 +72,16 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    twisted_hodge_numbers(X::PartialFlagVariety, j::Integer) -> Matrix{BigInt}
+    twisted_hodge_numbers(X::PartialFlagVariety, j::Integer) -> Matrix
 
 Compute the twisted Hodge numbers ``\\mathrm{h}^q(X, \\Omega^p_X(j))`` for the
 twist ``j``.
 
 Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^q(X, \\Omega^p(j))``.
+Each entry is computed through the spectral sequence of the filtration on
+``\\Omega^p_X``, so no ``E_1``-degeneration is assumed: the matrix is
+`Matrix{BigInt}` when every entry is determined (the cominuscule case) and
+`Matrix{`[`AffineExpr`](@ref)`}` when some are symbolic.
 
 Here `j` means tensoring by the generator of ``\\operatorname{Pic}(X)``. This
 therefore requires ``X`` to have Picard rank 1, equivalently to be a
@@ -99,14 +103,21 @@ function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBund
   rank_bundle(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
 
   d = dimension(X)
-  H = zeros(BigInt, d + 1, d + 1)
+
+  # H^q(Ω^p ⊗ L) through the spectral sequence of the filtration on Ω^p, so no
+  # E₁-degeneration is assumed; a shared counter keeps the p separate.
+  var_counter = Ref(0)
+  H = Matrix{AffineExpr}(undef, d + 1, d + 1)
   for p in 0:d
-    Hp = dimensions(tensor_product(exterior_power(cotangent_bundle(X; graded=true), p), L))
+    Hp = _cohomology_filtered(
+      tensor_product(_filtered_cotangent_power(X, p), L), var_counter
+    )
     for q in 0:d
-      H[p + 1, q + 1] = Hp[q]
+      H[p + 1, q + 1] = Hp[q + 1]
     end
   end
-  H
+  _renumber_variables!(H)
+  all(is_determined, H) ? map(e -> e.constant, H) : H
 end
 
 function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
@@ -170,6 +181,13 @@ end
 
 _pp_zero(::Type{BigInt}) = BigInt(0)
 _pp_zero(::Type{AffineExpr}) = AffineExpr(0)
+
+# Wrap a symbolic HKR matrix, collapsing to a plain BigInt parallelogram when
+# every entry is determined (the cominuscule / type-A case).
+function _polyvector_parallelogram(data::Matrix{AffineExpr}, d::Int)
+  all(is_determined, data) || return PolyvectorParallelogram(data, d)
+  PolyvectorParallelogram(map(e -> e.constant, data), d)
+end
 
 """
     getindex(P::PolyvectorParallelogram, p::Int, q::Int)
@@ -255,6 +273,14 @@ Compute the Hochschild cohomology of ``X`` via the HKR decomposition:
 Returns a [`PolyvectorParallelogram`](@ref) encoding the full decomposition.
 Use `P[p, q]` to read the entry ``\\mathrm{h}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)``.
 
+Each ``\\mathrm{H}^q(X, \\bigwedge\\nolimits^p \\mathrm{T}_X)`` is computed through the spectral
+sequence of the tangent bundle's height filtration (see
+[`filtered_tangent_bundle`](@ref)), so no ``E_1``-degeneration is assumed.  On
+cominuscule ``X`` (and in type A) the filtration degenerates and every entry is
+a determined integer; on flags with a non-abelian nilradical some entries can
+be symbolic [`AffineExpr`](@ref)s in undetermined differential ranks, rather
+than an overcounted integer.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -272,19 +298,22 @@ julia> P[2, 0]  # h⁰(∧²T) = h⁰(𝒪(3)) for ℙ²
 """
 function hochschild_cohomology(X::PartialFlagVariety)
   d = dimension(X)
-  data = zeros(BigInt, d + 1, d + 1)
+  TX = filtered_tangent_bundle(X)
 
-  TX = tangent_bundle(X; graded=true)
-
+  # H^q(∧^p T_X) through the spectral sequence of the height filtration, so no
+  # E₁-degeneration is assumed.  A shared variable counter keeps the potential
+  # differentials of different exterior powers independent.
+  var_counter = Ref(0)
+  data = Matrix{AffineExpr}(undef, d + 1, d + 1)
   for p in 0:d
-    wedge_p = exterior_power(TX, p)
-    Hp = dimensions(wedge_p)
+    Hp = _cohomology_filtered(exterior_power(TX, p), var_counter)
     for q in 0:d
-      data[p + 1, q + 1] = Hp[q]
+      data[p + 1, q + 1] = Hp[q + 1]
     end
   end
+  _renumber_variables!(data)
 
-  PolyvectorParallelogram(data, d)
+  _polyvector_parallelogram(data, d)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

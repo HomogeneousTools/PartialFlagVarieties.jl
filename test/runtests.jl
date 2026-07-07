@@ -1751,6 +1751,37 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test P1[1, 1] == 0   # h^1(T_ℙ¹) = 0
   end
 
+  @testset "Hochschild cohomology: non-cominuscule filtration (regression)" begin
+    # H^q(∧^p T) goes through the spectral sequence of the tangent bundle's
+    # height filtration, so no E₁-degeneration is assumed.
+    #
+    # Ground truth: for a full flag G/B with G simple, H^0(T_{G/B}) = 𝔤
+    # (Demazure), so h^0(T) = dim 𝔤.
+
+    # Type A: the filtration degenerates → entries determined and correct.
+    @test hochschild_cohomology(full_flag_variety(TypeA{2}))[1, 0] == 8   # dim 𝔰𝔩₃
+    @test hochschild_cohomology(full_flag_variety(TypeA{3}))[1, 0] == 15  # dim 𝔰𝔩₄
+
+    # Non-simply-laced full flags: the graded (E₁) shortcut overcounts h^0(T)
+    # — 15 for B₂, 21 for G₂ — while the true value is dim 𝔤 (10, 14).  Rather
+    # than reporting the wrong integer, hochschild_cohomology now leaves the
+    # entry symbolic (determined only up to undetermined differential ranks).
+    for X in (full_flag_variety(TypeB{2}), full_flag_variety(TypeG2))
+      @test !is_determined(hochschild_cohomology(X)[1, 0])
+    end
+
+    # The graded shortcut still overcounts (hence it is not the default):
+    let X = full_flag_variety(TypeB{2})
+      @test dimensions(exterior_power(tangent_bundle(X; graded=true), 1))[0] == 15
+    end
+
+    # χ is exact regardless (the alternating sum kills the differential ranks):
+    @test is_determined(
+      AffineExpr(0) +
+      euler_characteristic(hochschild_cohomology(full_flag_variety(TypeB{2}))),
+    )
+  end
+
   @testset "HH^n via P[n]" begin
     P = hochschild_cohomology(projective_space(3))
     @test P[0] == 1
