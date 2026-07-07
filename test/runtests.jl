@@ -2235,6 +2235,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test h_4[3, 3] == 142 # h^{2,2}
   end
 
+  @testset "ZeroLocus: Hodge numbers (empty zero locus)" begin
+    # P^1 x P^5 cut by O(1,0) + O(1,0) (both O(1) on the P^1): the two sections
+    # have empty common zero (c_top = a^2 = 0), so Z = ∅ and every Hodge number
+    # vanishes. Regression: the long exact sequences otherwise leave the middle
+    # rows symbolic instead of collapsing to the zero diamond.
+    X = product(projective_space(1), projective_space(5))
+    Z = zero_locus(direct_sum(line_bundle(X, [1, 0]), line_bundle(X, [1, 0])))
+    @test dimension(Z) == 4
+    h = hodge_numbers(Z)
+    @test all(is_determined(x) && x.constant == 0 for x in h)
+  end
+
   @testset "ZeroLocus: Hodge numbers (Grassmannian)" begin
     # O(1)^4 on Gr(2,6): Küchle c6, h^{1,1}=1, h^{2,2}=8
     X = Gr(2, 6)

@@ -382,6 +382,14 @@ function hodge_numbers(Z::ZeroLocus)
   chi_vals = BigInt[_chi_row(C, p) for p in 0:half]
   _propagate_hodge_constraints!(M, chi_vals, d)
 
+  # Empty zero locus: h^{0,0} = h^0(O_Z) = 0 forces every Hodge number to vanish.
+  # The long exact sequences otherwise leave the middle rows symbolic, so collapse
+  # to the zero diamond explicitly (matching hochschild_cohomology, which already
+  # returns the zero parallelogram for an empty zero locus).
+  if is_determined(M[1, 1]) && M[1, 1].constant == 0
+    return fill(AffineExpr(0), d + 1, d + 1)
+  end
+
   # The Lefschetz hyperplane theorem can pin down entries the long exact
   # sequences leave open.
   if _lefschetz_inject!(M, Z)
