@@ -325,7 +325,8 @@ end
 # say, a cubic threefold), the caller falls through to the monolithic solver,
 # which returns the same symbolic answer as before. The product path therefore
 # only ever *improves* determinacy; it never errors or discards information.
-_hodge_intmat(M::AbstractMatrix) = [Int(M[p, q].constant) for p in axes(M, 1), q in axes(M, 2)]
+_hodge_intmat(M::AbstractMatrix) =
+  [Int(M[p, q].constant) for p in axes(M, 1), q in axes(M, 2)]
 
 function _kunneth_conv(A::AbstractMatrix{<:Integer}, B::AbstractMatrix{<:Integer})
   da = size(A, 1) - 1
@@ -338,7 +339,7 @@ function _kunneth_conv(A::AbstractMatrix{<:Integer}, B::AbstractMatrix{<:Integer
 end
 
 function _kunneth_bigraded(mats)
-  M = reduce(_kunneth_conv, (_hodge_intmat(m) for m in mats); init = fill(BigInt(1), 1, 1))
+  M = reduce(_kunneth_conv, (_hodge_intmat(m) for m in mats); init=fill(BigInt(1), 1, 1))
   return [AffineExpr(M[p, q]) for p in axes(M, 1), q in axes(M, 2)]
 end
 
@@ -400,7 +401,8 @@ function hodge_numbers(Z::ZeroLocus)
   # factors', which pins entries the monolithic solver below leaves symbolic.
   if n_factors(Z) >= 2
     diamonds = map(hodge_numbers, factors(Z))
-    all(diamond -> all(is_determined, diamond), diamonds) && return _kunneth_bigraded(diamonds)
+    all(diamond -> all(is_determined, diamond), diamonds) &&
+      return _kunneth_bigraded(diamonds)
   end
 
   d = dimension(Z)

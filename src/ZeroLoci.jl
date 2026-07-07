@@ -172,8 +172,10 @@ function factors(Z::ZeroLocus)
 
   # Per summand, the per-ambient-factor weight blocks and the set of ambient
   # factors it actually twists (its support).
-  summand_rows = [_weight_to_summand_row(p_dominant_weight(summand), factor_ranks)
-                  for summand in components(Z.defining_bundle)]
+  summand_rows = [
+    _weight_to_summand_row(p_dominant_weight(summand), factor_ranks)
+    for summand in components(Z.defining_bundle)
+  ]
   supports = [findall(block -> any(!iszero, block), row) for row in summand_rows]
 
   blocks = _connected_ambient_factors(supports, length(ambient_factors))
@@ -183,9 +185,16 @@ function factors(Z::ZeroLocus)
   for block in blocks
     subvariety = PartialFlagVariety(_factors_to_mdt(ambient_factors[block]))
     subtype = dynkin_type(subvariety)
-    weights = [_summand_row_to_weight(row[block], subtype)
-               for (row, support) in zip(summand_rows, supports) if support ⊆ block && !isempty(support)]
-    subbundle = isempty(weights) ? zero_bundle(subvariety) : CompletelyReducibleBundle(subvariety, weights)
+    weights = [
+      _summand_row_to_weight(row[block], subtype)
+      for
+      (row, support) in zip(summand_rows, supports) if support ⊆ block && !isempty(support)
+    ]
+    subbundle = if isempty(weights)
+      zero_bundle(subvariety)
+    else
+      CompletelyReducibleBundle(subvariety, weights)
+    end
     # An over-cut component makes the whole product empty; hand that back to the
     # monolithic solver rather than build an invalid (rank > dim) zero locus.
     rank_bundle(subbundle) > dimension(subvariety) && return [Z]
