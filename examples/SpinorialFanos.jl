@@ -158,7 +158,7 @@ function compute(v::Variety)
   Z = zero_locus(E)
   t_h = @elapsed H = hodge_numbers(Z)
   t_l = @elapsed begin
-    (H_T, _) = cohomology_on_restriction(Z, tangent_bundle(X))
+    (H_T, _) = cohomology_on_restriction(Z, tangent_bundle(X; graded=true))
     (H_E, _) = cohomology_on_restriction(Z, E)
   end
   Result(v, Z, H, H_T[1], H_E[1], t_h, t_l)

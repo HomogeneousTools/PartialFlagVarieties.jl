@@ -25,6 +25,7 @@ graded_pieces
 n_filtration_steps
 total_bundle
 filtered_tangent_bundle
+filtered_cotangent_bundle
 ```
 
 ## Operations

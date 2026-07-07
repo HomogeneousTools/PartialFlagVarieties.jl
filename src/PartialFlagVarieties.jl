@@ -83,7 +83,8 @@ export n_components
 export tangent_weights, positive_nonparabolic_roots, positive_parabolic_roots
 export direct_sum, twist, product
 export cartan_type, cartan_type_with_ordering, parse_dynkin_type
-export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
+export graded_pieces, total_bundle, filtered_tangent_bundle, filtered_cotangent_bundle
+export n_filtration_steps
 export universal_subbundle, universal_quotient_bundle, spinor_bundle
 export is_ample_line_bundle
 export is_orthogonal_grassmannian, is_projective_space, is_quadric

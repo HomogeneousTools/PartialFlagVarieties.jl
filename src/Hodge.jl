@@ -101,7 +101,7 @@ function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBund
   d = dimension(X)
   H = zeros(BigInt, d + 1, d + 1)
   for p in 0:d
-    Hp = dimensions(tensor_product(exterior_power(cotangent_bundle(X), p), L))
+    Hp = dimensions(tensor_product(exterior_power(cotangent_bundle(X; graded=true), p), L))
     for q in 0:d
       H[p + 1, q + 1] = Hp[q]
     end
@@ -274,7 +274,7 @@ function hochschild_cohomology(X::PartialFlagVariety)
   d = dimension(X)
   data = zeros(BigInt, d + 1, d + 1)
 
-  TX = tangent_bundle(X)
+  TX = tangent_bundle(X; graded=true)
 
   for p in 0:d
     wedge_p = exterior_power(TX, p)

@@ -43,7 +43,7 @@ internals, but they are not the recommended entry point.
 using PartialFlagVarieties
 
 X = Gr(2, 5)
-T = tangent_bundle(X)
+T = tangent_bundle(X; graded=true)
 
 dimension(X)              # 6
 dimensions(T)[0]          # h^0(X, T_X)

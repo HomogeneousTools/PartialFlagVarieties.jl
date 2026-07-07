@@ -34,7 +34,7 @@ The usual pattern is:
 
 ```julia
 X = Gr(2, 5)
-E = exterior_power(tangent_bundle(X), 2)
+E = exterior_power(tangent_bundle(X; graded=true), 2)
 
 H = dimensions(E)
 H[0]

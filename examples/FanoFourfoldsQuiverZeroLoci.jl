@@ -551,7 +551,7 @@ Compute χ(T_Z) using additivity: χ(T_Z) = χ(T_X|_Z) - χ(E|_Z).
 function compute_chi_tangent(
   Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
 )
-  chi_TX = euler_characteristic(Z, tangent_bundle(X))
+  chi_TX = euler_characteristic(Z, tangent_bundle(X; graded=true))
   chi_E = euler_characteristic(Z, E)
   Int(chi_TX - chi_E)
 end
@@ -566,7 +566,7 @@ Returns `(h0, h1, h0_determined, h1_determined)`.
 function compute_tangent_cohomology(
   Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
 )
-  coh_TX, det_TX = cohomology_on_restriction(Z, tangent_bundle(X))
+  coh_TX, det_TX = cohomology_on_restriction(Z, tangent_bundle(X; graded=true))
   coh_E, det_E = cohomology_on_restriction(Z, E)
 
   if !(det_TX && det_E)

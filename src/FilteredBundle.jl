@@ -14,7 +14,8 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export FilteredBundle
-export graded_pieces, total_bundle, filtered_tangent_bundle, n_filtration_steps
+export graded_pieces, total_bundle, filtered_tangent_bundle, filtered_cotangent_bundle
+export n_filtration_steps
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -243,6 +244,76 @@ function filtered_tangent_bundle(X::PartialFlagVariety)
   )
 end
 
+"""
+    filtered_cotangent_bundle(X::PartialFlagVariety) -> FilteredBundle
+
+The cotangent bundle ``\\Omega^1_{G/P}`` with its natural filtration, i.e. the
+dual of [`filtered_tangent_bundle`](@ref).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> F = filtered_cotangent_bundle(full_flag_variety(TypeB{2}));
+
+julia> n_filtration_steps(F)
+3
+```
+"""
+filtered_cotangent_bundle(X::PartialFlagVariety) = dual(filtered_tangent_bundle(X))
+
+"""
+    tangent_bundle(X::PartialFlagVariety; graded=false) -> FilteredBundle
+
+The tangent bundle ``\\mathrm{T}_{G/P}``.
+
+By default this is the genuine filtered bundle (see
+[`filtered_tangent_bundle`](@ref)), whose cohomology is computed through the
+spectral sequence of the filtration and so makes no unjustified degeneration
+assumption.
+
+Pass `graded=true` for the associated graded, a completely reducible
+[`CompletelyReducibleBundle`](@ref) with one irreducible Levi summand per
+maximal nonparabolic root class.  Its K-theory class (hence every Euler
+characteristic) agrees with the filtered bundle, but reading individual
+cohomology group dimensions off the graded pieces silently assumes the
+filtration degenerates: correct in the cominuscule case, an overcount in
+general.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle(tangent_bundle(Gr(2, 4)))
+4
+
+julia> n_components(tangent_bundle(Gr(2, 4); graded=true))
+1
+```
+"""
+tangent_bundle(X::PartialFlagVariety; graded::Bool=false) =
+  graded ? _graded_tangent_bundle(X) : filtered_tangent_bundle(X)
+
+"""
+    cotangent_bundle(X::PartialFlagVariety; graded=false) -> FilteredBundle
+
+The cotangent bundle ``\\Omega^1_{G/P} = \\mathrm{T}^\\vee_{G/P}``.
+
+Filtered by default (see [`filtered_cotangent_bundle`](@ref)); pass
+`graded=true` for the associated graded completely reducible bundle.  See
+[`tangent_bundle`](@ref) for what the `graded` keyword changes.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> rank_bundle(cotangent_bundle(Gr(2, 4)))
+4
+```
+"""
+cotangent_bundle(X::PartialFlagVariety; graded::Bool=false) =
+  graded ? _graded_cotangent_bundle(X) : filtered_cotangent_bundle(X)
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Exterior and symmetric powers of a FilteredBundle
 #
@@ -365,3 +436,8 @@ function Base.show(io::IO, F::FilteredBundle)
   r = rank_bundle(F)
   print(io, "FilteredBundle(rank $r, $n layer(s))")
 end
+
+Base.:(==)(F::FilteredBundle, G::FilteredBundle) =
+  F.variety == G.variety && F.pieces == G.pieces
+
+Base.hash(F::FilteredBundle, h::UInt) = hash(F.pieces, hash(F.variety, h))

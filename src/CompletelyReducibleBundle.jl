@@ -56,7 +56,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> T = tangent_bundle(X);
+julia> T = tangent_bundle(X; graded=true);
 
 julia> rank_bundle(T)
 4
@@ -580,37 +580,19 @@ function _cotangent_reps(mdt::MarkedDynkinType)
   end
 end
 
-"""
-    tangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
-
-The tangent bundle ``\\mathrm{T}_{G/P}``.
-
-The tangent space at the identity coset decomposes as the direct sum of
-root spaces for the positive nonparabolic roots. The tangent bundle
-(as an equivariant bundle) is the semisimplification: for each maximal
-nonparabolic root class, we get one irreducible Levi summand.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = Gr(2, 4);
-
-julia> T = tangent_bundle(X);
-
-julia> n_components(T)
-1
-
-julia> rank_bundle(T)
-4
-```
-"""
-function tangent_bundle(X::PartialFlagVariety)
+# The associated graded (completely reducible) tangent/cotangent bundles: one
+# irreducible Levi summand per maximal nonparabolic root class.  These are the
+# `graded=true` branch of the public `tangent_bundle`/`cotangent_bundle`, which
+# are defined in FilteredBundle.jl (they need the FilteredBundle type for the
+# default filtered branch).
+_graded_tangent_bundle(X::PartialFlagVariety) =
   CompletelyReducibleBundle(X, _tangent_reps(marked_dynkin_type(X)))
-end
+
+_graded_cotangent_bundle(X::PartialFlagVariety) =
+  CompletelyReducibleBundle(X, _cotangent_reps(marked_dynkin_type(X)))
 
 """
-    T(X::PartialFlagVariety) -> CompletelyReducibleBundle
+    T(X::PartialFlagVariety) -> FilteredBundle
 
 Shorthand for [`tangent_bundle`](@ref): the tangent bundle ``\\mathrm{T}_{G/P}``.
 
@@ -623,25 +605,6 @@ julia> rank_bundle(T(Gr(2, 4)))
 ```
 """
 T(X::PartialFlagVariety) = tangent_bundle(X)
-
-"""
-    cotangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
-
-The cotangent bundle ``\\Omega^1_{G/P} = \\mathrm{T}^\\vee_{G/P}``.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = Gr(2, 4);
-
-julia> rank_bundle(cotangent_bundle(X)) == rank_bundle(tangent_bundle(X))
-true
-```
-"""
-function cotangent_bundle(X::PartialFlagVariety)
-  CompletelyReducibleBundle(X, _cotangent_reps(marked_dynkin_type(X)))
-end
 
 """
     canonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
@@ -773,7 +736,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> E = tangent_bundle(X);
+julia> E = tangent_bundle(X; graded=true);
 
 julia> rank_bundle(dual(E)) == rank_bundle(E)
 true
@@ -798,7 +761,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = tangent_bundle(X);
+julia> E = tangent_bundle(X; graded=true);
 
 julia> S = structure_sheaf(X);
 
@@ -853,7 +816,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = tangent_bundle(X);
+julia> E = tangent_bundle(X; graded=true);
 
 julia> rank_bundle(exterior_power(E, 0))
 1
@@ -1015,7 +978,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> E = tangent_bundle(X);
+julia> E = tangent_bundle(X; graded=true);
 
 julia> rank_bundle(symmetric_power(E, 0))
 1
@@ -1062,7 +1025,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> rank_bundle(det(tangent_bundle(X)))
+julia> rank_bundle(det(tangent_bundle(X; graded=true)))
 1
 ```
 """

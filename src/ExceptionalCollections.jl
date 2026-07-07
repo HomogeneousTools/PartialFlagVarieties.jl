@@ -304,7 +304,7 @@ function beilinson_collection_dual(X::PartialFlagVariety)
       "non-type-A model of projective space (Cₙ/P₁, B₂/P₂, D₃/P₂, or D₃/P₃)"),
   )
   n = dimension(X)
-  Omega = cotangent_bundle(X)
+  Omega = cotangent_bundle(X; graded=true)
   # Omega^k(k) = ∧^k Omega ⊗ O(k) for k = n, …, 1, followed by O.
   collection = CompletelyReducibleBundle[
     twist(exterior_power(Omega, k), 1, k) for k in n:-1:1
