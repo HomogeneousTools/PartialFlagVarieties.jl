@@ -30,7 +30,7 @@ bundles = [
   ("O(2)", O(X, 2)),
   ("O(-1)", O(X, -1)),
   ("T", T(X)),
-  ("Ω", cotangent_bundle(X; graded=true)),
+  ("Ω", cotangent_bundle(X)),
 ]
 
 data = [Any[name, is_exceptional(E)] for (name, E) in bundles]

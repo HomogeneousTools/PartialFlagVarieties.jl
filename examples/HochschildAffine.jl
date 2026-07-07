@@ -209,7 +209,7 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
   X = partial_flag_variety(DT, k)
   mdt = marked_dynkin_type(X)
   d = dimension(X)
-  T = tangent_bundle(X; graded=true)
+  T = tangent_bundle(X)
   n_bun = n_components(T)
 
   println(io, "=" ^ 72)

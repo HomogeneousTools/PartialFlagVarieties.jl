@@ -254,7 +254,7 @@ end
 function _cotangent_power(X::PartialFlagVariety, j::Int)
   mdt = marked_dynkin_type(X)
   get!(_COTANGENT_POWER_CACHE, (mdt, j)) do
-    exterior_power(cotangent_bundle(X; graded=true), j)
+    exterior_power(cotangent_bundle(X), j)
   end
 end
 
@@ -434,7 +434,7 @@ julia> euler_characteristic_tangent_bundle(Z)
 """
 function euler_characteristic_tangent_bundle(Z::ZeroLocus)
   X = ambient_variety(Z)
-  euler_characteristic(Z, tangent_bundle(X; graded=true)) -
+  euler_characteristic(Z, tangent_bundle(X)) -
   euler_characteristic(Z, defining_bundle(Z))
 end
 
@@ -1032,7 +1032,7 @@ function tangent_cohomology(Z::ZeroLocus)
 
   # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
   chi =
-    euler_characteristic(Z, tangent_bundle(Z.ambient; graded=true)) -
+    euler_characteristic(Z, tangent_bundle(Z.ambient)) -
     euler_characteristic(Z, Z.defining_bundle)
   kernel_length = length(kernel)
   _apply_equation!(

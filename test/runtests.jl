@@ -645,7 +645,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Bundle operations" begin
     X = projective_space(4)
     O = structure_sheaf(X)
-    T = tangent_bundle(X; graded=true)
+    T = tangent_bundle(X)
 
     # O ⊗ T = T
     @test rank_bundle(tensor_product(O, T)) == rank_bundle(T)
@@ -673,7 +673,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "Determinant bundle" begin
     X = Gr(2, 4)
-    T = tangent_bundle(X; graded=true)
+    T = tangent_bundle(X)
     det_T = det(T)
     @test rank_bundle(det_T) == 1
 
@@ -697,12 +697,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test_throws ArgumentError picard_degrees(
       direct_sum(line_bundle(P3, 1), line_bundle(P3, 2))
     )
-    @test_throws ArgumentError picard_degrees(tangent_bundle(P3; graded=true))
+    @test_throws ArgumentError picard_degrees(tangent_bundle(P3))
   end
 
   @testset "det(tangent_bundle) == anticanonical_bundle" begin
     det_tangent_is_anticanonical(X) =
-      det(tangent_bundle(X; graded=true)) == anticanonical_bundle(X)
+      det(tangent_bundle(X)) == anticanonical_bundle(X)
 
     @test det_tangent_is_anticanonical(projective_space(1))
     @test det_tangent_is_anticanonical(projective_space(2))
@@ -940,7 +940,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Polarization must be a line bundle on the same variety as E.
     @test_throws ArgumentError hilbert_polynomial(
-      structure_sheaf(P3), tangent_bundle(P3; graded=true)
+      structure_sheaf(P3), tangent_bundle(P3)
     )
     @test_throws ArgumentError hilbert_polynomial(structure_sheaf(P3),
       line_bundle(projective_space(2), 1))
@@ -1149,14 +1149,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "IrrepLevi display uses ambient node indices" begin
     # Gr(3,8) = A7/P3: tangent bundle weight should show ω7 (not ω6)
     X = Gr(3, 8)
-    T = tangent_bundle(X; graded=true)
+    T = tangent_bundle(X)
     s = sprint(show, T)
     @test occursin("ω7", s)
     @test !occursin("ω6", s)
 
     # D4/P1: tangent bundle should show ω2 (ambient D4 node 2)
     X_D4 = partial_flag_variety(TypeD{4}, (1,))
-    T_D4 = tangent_bundle(X_D4; graded=true)
+    T_D4 = tangent_bundle(X_D4)
     s_D4 = sprint(show, T_D4)
     @test occursin("ω2", s_D4)
   end
@@ -1167,7 +1167,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "Scalar multiplication on bundles" begin
     X = Gr(2, 4)
-    T = tangent_bundle(X; graded=true)
+    T = tangent_bundle(X)
 
     @test rank_bundle(2 * T) == 2 * rank_bundle(T)
     @test n_components(2 * T) == 2 * n_components(T)
@@ -1241,26 +1241,26 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "H⁰(∧ᵏT): A-types" begin
-    T = tangent_bundle(Gr(2, 4); graded=true)
+    T = tangent_bundle(Gr(2, 4))
     @test dimensions(exterior_power(T, 0))[0] == 1
     @test dimensions(exterior_power(T, 1))[0] == 15
     @test dimensions(exterior_power(T, 2))[0] == 90
     @test dimensions(exterior_power(T, 3))[0] == 175
     @test dimensions(exterior_power(T, 4))[0] == 105
 
-    T2 = tangent_bundle(Gr(2, 5); graded=true)
+    T2 = tangent_bundle(Gr(2, 5))
     @test dimensions(exterior_power(T2, 1))[0] == 24
     @test dimensions(exterior_power(T2, 2))[0] == 252
     @test dimensions(exterior_power(T2, 3))[0] == 1248
     @test dimensions(exterior_power(T2, 6))[0] == 1176
 
-    T3 = tangent_bundle(Gr(3, 8); graded=true)
+    T3 = tangent_bundle(Gr(3, 8))
     @test dimensions(exterior_power(T3, 1))[0] == 63
     @test dimensions(exterior_power(T3, 2))[0] == 1890
   end
 
   @testset "H⁰(∧ᵏT): B-types" begin
-    T = tangent_bundle(partial_flag_variety(TypeB{3}, (1,)); graded=true)
+    T = tangent_bundle(partial_flag_variety(TypeB{3}, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 21
     @test dimensions(exterior_power(T, 2))[0] == 189
     @test dimensions(exterior_power(T, 3))[0] == 616
@@ -1269,7 +1269,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "H⁰(∧ᵏT): C-types" begin
-    T = tangent_bundle(partial_flag_variety(TypeC{3}, (1,)); graded=true)
+    T = tangent_bundle(partial_flag_variety(TypeC{3}, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 35
     @test dimensions(exterior_power(T, 2))[0] == 280
     @test dimensions(exterior_power(T, 3))[0] == 840
@@ -1278,7 +1278,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "H⁰(∧ᵏT): D-types" begin
-    T = tangent_bundle(partial_flag_variety(TypeD{4}, (1,)); graded=true)
+    T = tangent_bundle(partial_flag_variety(TypeD{4}, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 28
     @test dimensions(exterior_power(T, 2))[0] == 350
     @test dimensions(exterior_power(T, 3))[0] == 1680
@@ -1286,7 +1286,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "H⁰(∧ᵏT): G2" begin
-    T = tangent_bundle(partial_flag_variety(TypeG2, (1,)); graded=true)
+    T = tangent_bundle(partial_flag_variety(TypeG2, (1,)))
     @test dimensions(exterior_power(T, 1))[0] == 21
     @test dimensions(exterior_power(T, 2))[0] == 189
     @test dimensions(exterior_power(T, 3))[0] == 616
@@ -1339,7 +1339,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "Bundle type hierarchy" begin
     X = Gr(2, 4)
-    T = tangent_bundle(X; graded=true)
+    T = tangent_bundle(X)
     @test T isa Bundle
     @test T isa CompletelyReducibleBundle
     @test variety(T) === X
@@ -1375,7 +1375,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Total bundle of filtered tangent = graded tangent bundle (same components)
     X4 = Gr(2, 5)
     F4 = filtered_tangent_bundle(X4)
-    T4 = tangent_bundle(X4; graded=true)
+    T4 = tangent_bundle(X4)
     @test rank_bundle(total_bundle(F4)) == rank_bundle(T4)
 
     # Tensor product with structure sheaf preserves filtration
@@ -1772,7 +1772,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # The graded shortcut still overcounts (hence it is not the default):
     let X = full_flag_variety(TypeB{2})
-      @test dimensions(exterior_power(tangent_bundle(X; graded=true), 1))[0] == 15
+      @test dimensions(exterior_power(tangent_bundle(X), 1))[0] == 15
     end
 
     # χ is exact regardless (the alternating sum kills the differential ranks):
@@ -2332,8 +2332,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_exceptional(structure_sheaf(X))
     @test is_exceptional(line_bundle(X, 1))
     @test is_exceptional(line_bundle(X, -1))
-    @test is_exceptional(tangent_bundle(X; graded=true))
-    @test is_exceptional(cotangent_bundle(X; graded=true))
+    @test is_exceptional(tangent_bundle(X))
+    @test is_exceptional(cotangent_bundle(X))
   end
 
   @testset "is_exceptional_pair: line bundles on ℙ³" begin

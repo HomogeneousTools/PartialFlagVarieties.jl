@@ -27,7 +27,7 @@ Returns the q, or -1 if no failure found up to max_q.
 """
 function find_bott_vanishing_q(X; max_q=20)
   d = dimension(X)
-  Ω = cotangent_bundle(X; graded=true)
+  Ω = cotangent_bundle(X)
 
   for q in 1:max_q
     for i in 0:d
@@ -52,7 +52,7 @@ For the given q, find all (i, p) such that H^p(X, Ω^i(q)) ≠ 0 and p > 0.
 """
 function find_bott_vanishing_witnesses(X, q)
   d = dimension(X)
-  Ω = cotangent_bundle(X; graded=true)
+  Ω = cotangent_bundle(X)
   witnesses = Tuple{Int,Int,BigInt}[]
 
   for i in 0:d
