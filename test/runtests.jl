@@ -2054,19 +2054,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "ZeroLocus: Euler characteristic" begin
-    # Quintic CY3: χ(O_Z) = 0
+    # euler_characteristic(Z) is the topological χ; the 2-argument form gives χ(𝒪_Z).
     X = projective_space(4)
-    Z = zero_locus(line_bundle(X, 5))
-    @test euler_characteristic(Z) == 0
+    Z = zero_locus(line_bundle(X, 5))                          # quintic Calabi–Yau 3-fold
+    @test euler_characteristic(Z, structure_sheaf(X)) == 0     # χ(O_Z)
+    @test euler_characteristic(Z) == -200                      # χ_top
 
-    # Quartic K3: χ(O_Z) = 2
     X3 = projective_space(3)
-    Z3 = zero_locus(line_bundle(X3, 4))
-    @test euler_characteristic(Z3) == 2
+    Z3 = zero_locus(line_bundle(X3, 4))                        # quartic K3
+    @test euler_characteristic(Z3, structure_sheaf(X3)) == 2   # χ(O_Z)
+    @test euler_characteristic(Z3) == 24                       # χ_top
 
-    # Quadric surface in P^3: χ(O_Z) = 1
-    Z_q = zero_locus(line_bundle(X3, 2))
-    @test euler_characteristic(Z_q) == 1
+    Z_q = zero_locus(line_bundle(X3, 2))                       # quadric surface ≅ P¹×P¹
+    @test euler_characteristic(Z_q, structure_sheaf(X3)) == 1  # χ(O_Z)
+    @test euler_characteristic(Z_q) == 4                       # χ_top
   end
 
   @testset "ZeroLocus: CY detection" begin
@@ -2722,7 +2723,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       Z = zero_locus(E)
 
       @test dimension(Z) == 6
-      @test euler_characteristic(Z) == 1
+      @test euler_characteristic(Z, structure_sheaf(X)) == 1   # χ(O_Z)
 
       h = hodge_numbers(Z)
 

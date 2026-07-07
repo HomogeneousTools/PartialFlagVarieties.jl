@@ -48,8 +48,8 @@ julia> Z = zero_locus(line_bundle(X, 5));
 julia> dimension(Z)
 3
 
-julia> euler_characteristic(Z)
-0
+julia> euler_characteristic(Z)   # topological χ of the quintic Calabi–Yau
+-200
 ```
 """
 mutable struct ZeroLocus
@@ -473,7 +473,7 @@ julia> X = projective_space(4);
 
 julia> Z = zero_locus(line_bundle(X, 5));
 
-julia> euler_characteristic(Z)
+julia> euler_characteristic(Z, structure_sheaf(X))
 0
 ```
 """
@@ -487,12 +487,18 @@ end
 """
     euler_characteristic(Z::ZeroLocus) -> BigInt
 
-Compute ``\\chi(Z, \\mathcal{O}_Z)``.
+Topological Euler characteristic ``\\chi_{\\mathrm{top}}(Z) = \\sum_p (-1)^p \\chi(Z, \\Omega^p_Z)``,
+the alternating sum of the Euler characteristics of the exterior powers of the
+cotangent bundle. Each term is exact (no long-exact-sequence ambiguity), so the
+result is determined even when the Hodge diamond is not, and it is multiplicative
+over products. For ``\\chi(Z, \\mathcal{O}_Z)`` use
+`euler_characteristic(Z, structure_sheaf(ambient_variety(Z)))`.
 """
 function euler_characteristic(Z::ZeroLocus)
-  # χ(𝒪) is multiplicative over products: χ(A × B) = χ(A)·χ(B).
   n_factors(Z) >= 2 && return prod(euler_characteristic, factors(Z))
-  euler_characteristic(Z, structure_sheaf(Z.ambient))
+  d = dimension(Z)
+  conormal = _conormal_data(Z, structure_sheaf(Z.ambient), d)
+  sum((-1)^p * _chi_row(conormal, p) for p in 0:d)
 end
 
 """
