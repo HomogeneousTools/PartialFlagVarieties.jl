@@ -62,7 +62,7 @@ Let ``\mu = \lambda + \rho`` where ``\rho`` is the Weyl vector.
   - ``\mathrm{H}^i(\mathrm{G}/\mathrm{B}, \mathcal{L}_\lambda) = 0`` for ``i \neq \ell(w)``
 
 For a bundle on ``\mathrm{G}/\mathrm{P}``, we apply this to each irreducible Levi summand by
-converting back to an ambient weight via the special matrix.
+converting back to an ambient weight via the decomposition matrix.
 
 ## Topological invariants
 
