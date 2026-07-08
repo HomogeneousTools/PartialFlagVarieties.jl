@@ -115,7 +115,7 @@ Decompose a character-valued spectral sequence into its isotypical
 components: for each highest weight appearing on the E₁ page, the
 integer-valued spectral sequence of its multiplicities.
 
-The differentials are ``G``-equivariant, so they preserve this
+The differentials are ``\\mathrm{G}``-equivariant, so they preserve this
 decomposition; any statement proved componentwise (degeneracy, surviving
 dimensions) holds for the full spectral sequence.
 """

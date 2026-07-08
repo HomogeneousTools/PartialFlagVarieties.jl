@@ -98,7 +98,7 @@ Sheaf cohomology of an equivariant bundle on a partial flag variety.
 Entries are 0-indexed: `H[i]` returns ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})``.
 
 # Type parameter
-- `T = WeylCharacter{DT,R}`: entries are virtual characters of ``G``
+- `T = WeylCharacter{DT,R}`: entries are virtual characters of ``\\mathrm{G}``
 - `T = BigInt`: entries are dimensions
 
 The object behaves like a vector indexed by cohomological degree rather than by
@@ -227,7 +227,7 @@ end
 Compute the sheaf cohomology ``\\mathrm{H}^\\bullet(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})`` using the Borel–Weil–Bott theorem.
 
 Returns character-valued cohomology: each ``\\mathrm{H}^i`` is a virtual character
-(Weyl character) of the ambient group ``G``.
+(Weyl character) of the ambient group ``\\mathrm{G}``.
 
 The partial flag variety is inferred from `E`.
 The result is a 0-indexed [`Cohomology`](@ref) object.

@@ -19,7 +19,7 @@ cominuscule ``\mathrm{G}/\mathrm{P}`` (abelian nilradical) the tangent bundle is
 reducible and nothing can degenerate; in general the differentials may be
 nonzero, and computing with the associated graded alone silently assumes
 degeneration. This module makes that step honest: all differentials are
-``G``-equivariant, so the spectral sequence splits into isotypical components,
+``\mathrm{G}``-equivariant, so the spectral sequence splits into isotypical components,
 and both the degeneracy test and the cohomology of the abutment
 (`cohomology(F::FilteredBundle)`, with symbolic entries where differentials
 remain possible) work per component.

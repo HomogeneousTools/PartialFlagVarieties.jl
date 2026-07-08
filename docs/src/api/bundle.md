@@ -3,11 +3,11 @@
 Completely reducible equivariant vector bundles on ``\mathrm{G}/\mathrm{P}``.
 
 An **equivariant vector bundle** on ``\mathrm{G}/\mathrm{P}`` corresponds to a representation
-of the parabolic subgroup ``P``. Because ``P`` is not reductive (it has a
-nontrivial unipotent radical ``U``), such a representation need not be
-completely reducible. However, the Levi factor ``L = P/U`` **is** reductive,
-so every finite-dimensional ``L``-module is completely reducible — a direct sum
-of irreducibles. Passing from ``P``-representations to ``L``-representations
+of the parabolic subgroup ``\mathrm{P}``. Because ``\mathrm{P}`` is not reductive (it has a
+nontrivial unipotent radical ``\mathrm{U}``), such a representation need not be
+completely reducible. However, the Levi factor ``\mathrm{L} = \mathrm{P}/\mathrm{U}`` **is** reductive,
+so every finite-dimensional ``\mathrm{L}``-module is completely reducible — a direct sum
+of irreducibles. Passing from ``\mathrm{P}``-representations to ``\mathrm{L}``-representations
 amounts to taking the **semisimplification** of the bundle: one forgets the
 extensions between the composition factors.
 

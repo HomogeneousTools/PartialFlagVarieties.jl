@@ -198,7 +198,7 @@ end
 """
     filtered_tangent_bundle(X::PartialFlagVariety) -> FilteredBundle
 
-The tangent bundle ``\\mathrm{T}_{G/P}`` with its natural filtration by
+The tangent bundle ``\\mathrm{T}_{\\mathrm{G}/\\mathrm{P}}`` with its natural filtration by
 nonparabolic root height.
 
 The associated graded pieces are indexed by the root height levels
@@ -247,7 +247,7 @@ end
 """
     filtered_cotangent_bundle(X::PartialFlagVariety) -> FilteredBundle
 
-The cotangent bundle ``\\Omega^1_{G/P}`` with its natural filtration, i.e. the
+The cotangent bundle ``\\Omega^1_{\\mathrm{G}/\\mathrm{P}}`` with its natural filtration, i.e. the
 dual of [`filtered_tangent_bundle`](@ref).
 
 # Examples

@@ -12,24 +12,24 @@ via [`components`](@ref), or when doing advanced representation-theoretic work.
 ## Mathematical background
 
 The Levi factor of a parabolic subgroup decomposes as
-``L = \operatorname{Z}(L)^\circ \cdot [L,L]``, where ``\operatorname{Z}(L)^\circ`` is the connected center
-(a torus of rank equal to the number of marked nodes ``|I|``) and ``[L,L]``
+``\mathrm{L} = \operatorname{Z}(\mathrm{L})^\circ \cdot [\mathrm{L},\mathrm{L}]``, where ``\operatorname{Z}(\mathrm{L})^\circ`` is the connected center
+(a torus of rank equal to the number of marked nodes ``|I|``) and ``[\mathrm{L},\mathrm{L}]``
 is the semisimple part (whose Dynkin diagram is the sub-diagram on the
 unmarked nodes).
 
-Every irreducible ``L``-representation therefore splits as
+Every irreducible ``\mathrm{L}``-representation therefore splits as
 
 ```math
 V = \chi \otimes W
 ```
 
-where ``\chi`` is a **character** of the center ``\operatorname{Z}(L)^\circ`` and ``W`` is
-an **irreducible** representation of ``[L,L]`` with highest weight ``\mu``.
+where ``\chi`` is a **character** of the center ``\operatorname{Z}(\mathrm{L})^\circ`` and ``W`` is
+an **irreducible** representation of ``[\mathrm{L},\mathrm{L}]`` with highest weight ``\mu``.
 
 An `IrrepLevi` stores this decomposition: the central part is a vector of
 integers (the character coordinates times the
 [`central_scaling_factor`](@ref)), and the semisimple part is a
-`WeightLatticeElem` for ``[L,L]``.
+`WeightLatticeElem` for ``[\mathrm{L},\mathrm{L}]``.
 
 ## Design notes
 

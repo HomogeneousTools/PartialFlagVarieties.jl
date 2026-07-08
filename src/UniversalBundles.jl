@@ -565,7 +565,7 @@ isotropic subspaces; entry ``i`` is the corresponding tautological
 subbundle ``\\mathcal{U}_{m_i}``. In types B and C and in type D away
 from the spinor nodes, ``\\mathrm{rank}(\\mathcal{U}_{m_i}) = m_i``.
 
-In type D, the parabolics ``P_{n-1}`` and ``P_n`` correspond to the two
+In type D, the parabolics ``\\mathrm{P}_{n-1}`` and ``\\mathrm{P}_n`` correspond to the two
 families of *maximal* isotropic subspaces (both of dimension ``n``). When a
 last marked node ``m_k \\in \\{n-1, n\\}`` appears in a multi-step flag,
 the corresponding ``\\mathcal{U}_{m_k}`` is the rank-``n`` maximal

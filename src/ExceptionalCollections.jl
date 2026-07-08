@@ -187,10 +187,10 @@ end
 Check whether `Es` is a **full exceptional sequence** on `X`.
 
 Necessary condition used: the sequence is exceptional and its length equals
-the Euler characteristic ``\\chi(X) = \\sum_i b_{2i}`` (which for G/P equals
+the Euler characteristic ``\\chi(X) = \\sum_i b_{2i}`` (which for ``\\mathrm{G}/\\mathrm{P}`` equals
 the total number of Schubert cells / the number of T-fixed points).
 
-For G/P, which has only even cohomology, ``\\chi(X) = \\sum b_i``.
+For ``\\mathrm{G}/\\mathrm{P}``, which has only even cohomology, ``\\chi(X) = \\sum b_i``.
 
 !!! note
     This is a necessary, not sufficient, condition for fullness.
@@ -321,14 +321,14 @@ end
 
 The **Kapranov exceptional collection** on a smooth quadric ``Q^n``.
 
-- **Odd quadric** ``Q^{2m-1}`` (``B_m/\\mathrm{P}_1``):
+- **Odd quadric** ``Q^{2m-1}`` (``\\mathrm{B}_m/\\mathrm{P}_1``):
   ``\\langle \\mathcal{O},\\; \\Sigma,\\; \\mathcal{O}(1),\\; \\ldots,\\; \\mathcal{O}(n-1) \\rangle``
   where ``\\Sigma`` is the spinor bundle.
 - **Even quadric** ``Q^{n}`` (``\\mathrm{D}_{n/2+1}/\\mathrm{P}_1``):
   ``\\langle \\mathcal{O},\\; \\Sigma^+,\\; \\Sigma^-,\\; \\mathcal{O}(1),\\; \\ldots,\\; \\mathcal{O}(n-1) \\rangle``
   where ``\\Sigma^\\pm`` are the two half-spinor bundles.
 
-`X` must be a quadric (``B_m/\\mathrm{P}_1`` or ``D_m/\\mathrm{P}_1``).
+`X` must be a quadric (``\\mathrm{B}_m/\\mathrm{P}_1`` or ``\\mathrm{D}_m/\\mathrm{P}_1``).
 
 # References
 - M. Kapranov, *On the derived categories of coherent sheaves on some homogeneous
@@ -396,7 +396,7 @@ The ambient weight in ``\\mathrm{A}_{n-1}`` is
 \\lambda = \\sum_{i=1}^{k-1} (\\alpha_i - \\alpha_{i+1})\\,\\omega_i + \\alpha_k\\,\\omega_k
 ```
 where ``\\omega_1, \\ldots, \\omega_k`` are the first ``k`` fundamental weights of
-``\\mathrm{A}_{n-1}`` (corresponding to the semisimple ``A_{k-1}``-part of the Levi at nodes
+``\\mathrm{A}_{n-1}`` (corresponding to the semisimple ``\\mathrm{A}_{k-1}``-part of the Levi at nodes
 ``1, \\ldots, k-1`` and the central character at the marked node ``k``).
 
 `X` must be a Type-A generalized Grassmannian.
