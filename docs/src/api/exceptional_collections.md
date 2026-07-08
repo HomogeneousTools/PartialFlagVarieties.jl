@@ -6,7 +6,7 @@ on partial flag varieties and their zero loci.
 ## Exceptionality predicates
 
 An object ``\mathcal{E}`` on ``\mathrm{G}/\mathrm{P}`` is **exceptional** if ``\operatorname{RHom}(\mathcal{E},\mathcal{E}) \cong \mathbb{C}``
-(concentrated in degree 0). A sequence ``\langle \mathrm{E}_1, \ldots, \mathcal{E}_r \rangle`` is an
+(concentrated in degree 0). A sequence ``\langle \mathcal{E}_1, \ldots, \mathcal{E}_r \rangle`` is an
 **exceptional sequence** if each ``\mathcal{E}_i`` is exceptional and
 ``\operatorname{RHom}(\mathcal{E}_j, \mathcal{E}_i) = 0`` for all ``i < j``.
 

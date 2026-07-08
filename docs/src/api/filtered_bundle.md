@@ -9,7 +9,7 @@ has a natural **root height filtration**: the roots ``\alpha \in \Phi^+ \setminu
 and this stratification yields a ``P``-equivariant filtration
 
 ```math
-0 = \mathrm{F}_0 \subset \mathrm{F}_1 \subset \cdots \subset \mathcal{F}_s = \mathrm{T}_{G/P}
+0 = \mathcal{F}_0 \subset \mathcal{F}_1 \subset \cdots \subset \mathcal{F}_s = \mathrm{T}_{G/P}
 ```
 
 whose graded pieces ``\mathrm{gr}_k = \mathcal{F}_k / \mathcal{F}_{k-1}`` are completely reducible
