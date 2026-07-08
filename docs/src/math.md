@@ -194,7 +194,7 @@ substitution until a fixed point is reached; see
 [Hochschild cohomology of zero loci](@ref) below for the full algorithm.
 
 **Limits.**  All of the above are linear consequences of exactness on the
-ambient variety, and some Hodge diamonds are provably not determined by
+ambient variety, and some Hodge diamonds are probably not determined by
 them.  The model cases are the hyperkähler fourfolds of Beauville–Donagi
 (``Z(\mathrm{Sym}^3 \mathcal{U}^\vee) \subset \mathrm{Gr}(2,6)``) and
 Debarre–Voisin (``Z(\wedge^3 \mathcal{U}^\vee) \subset \mathrm{Gr}(6,10)``),
