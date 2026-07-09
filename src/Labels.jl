@@ -151,7 +151,7 @@ end
 Encode a zero locus (ambient variety + defining bundle) as a ZeroLocus62 label.
 
 Each irreducible summand of the defining bundle contributes one summand row
-whose entries are the fundamental-weight coefficients of its ``P``-dominant weight,
+whose entries are the fundamental-weight coefficients of its ``\\mathrm{P}``-dominant weight,
 split by ambient factor.
 
 The label records the ambient variety and defining bundle only. It does not

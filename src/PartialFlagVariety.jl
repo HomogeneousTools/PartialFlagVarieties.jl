@@ -213,7 +213,7 @@ rank(X::PartialFlagVariety) = rank(dynkin_type(X))
 """
     dimension(X::PartialFlagVariety) -> Int
 
-Return ``\\dim(\\mathrm{G}/\\mathrm{P}) = |\\Phi_G^+| - |\\Phi_L^+|``.
+Return ``\\dim(\\mathrm{G}/\\mathrm{P}) = |\\Phi_{\\mathrm{G}}^+| - |\\Phi_{\\mathrm{L}}^+|``.
 """
 dimension(X::PartialFlagVariety) = dimension(marked_dynkin_type(X))
 
@@ -232,7 +232,7 @@ central_rank(X::PartialFlagVariety) = central_rank(marked_dynkin_type(X))
 """
     euler_characteristic(X::PartialFlagVariety) -> BigInt
 
-Return the topological Euler characteristic ``\\chi(\\mathrm{G}/\\mathrm{P}) = |\\mathrm{W}_G|/|\\mathrm{W}_L|``.
+Return the topological Euler characteristic ``\\chi(\\mathrm{G}/\\mathrm{P}) = |\\mathrm{W}_{\\mathrm{G}}|/|\\mathrm{W}_{\\mathrm{L}}|``.
 """
 function euler_characteristic(X::PartialFlagVariety)
   wG = weyl_order(dynkin_type(X))
@@ -248,7 +248,7 @@ Return the Betti numbers of `X` in even degrees, i.e.
 
 Since ``\\mathrm{G}/\\mathrm{P}`` has no odd cohomology this completely describes ``\\mathrm{H}^\\bullet(X, \\mathbb{Z})``.
 Computed from the ratio of the Poincaré polynomials of the Weyl groups
-``\\mathrm{W}_G`` and ``\\mathrm{W}_L``.
+``\\mathrm{W}_{\\mathrm{G}}`` and ``\\mathrm{W}_{\\mathrm{L}}``.
 
 The entry at index `p + 1` is ``b_{2p}``.
 """
@@ -547,8 +547,8 @@ divisor ``-\\mathrm{K}_X = \\sum_j a_j [D_j]`` in the marked-node basis of
 The basis is ordered by [`marked_nodes(X)`](@ref).
 
 Computed via the formula
-``a_j = \\langle 2(\\rho_G - \\rho_P),\\, \\alpha_j^\\vee \\rangle``
-where ``\\rho_G`` is the Weyl vector of ``G`` and ``\\rho_P`` is the Weyl
+``a_j = \\langle 2(\\rho_{\\mathrm{G}} - \\rho_{\\mathrm{P}}),\\, \\alpha_j^\\vee \\rangle``
+where ``\\rho_{\\mathrm{G}}`` is the Weyl vector of ``\\mathrm{G}`` and ``\\rho_{\\mathrm{P}}`` is the Weyl
 vector of the Levi factor.
 """
 function anticanonical_degrees(X::PartialFlagVariety)

@@ -3,17 +3,17 @@
 Equivariant bundles equipped with a filtration by subbundles.
 
 The primary source of filtered bundles is the **tangent bundle** of ``\mathrm{G}/\mathrm{P}``.
-As a ``P``-representation, the tangent space ``\mathfrak{g}/\mathfrak{p}``
+As a ``\mathrm{P}``-representation, the tangent space ``\mathfrak{g}/\mathfrak{p}``
 has a natural **root height filtration**: the roots ``\alpha \in \Phi^+ \setminus
-\Phi^+_L`` are stratified by height (the sum of their simple root coefficients),
-and this stratification yields a ``P``-equivariant filtration
+\Phi^+_{\mathrm{L}}`` are stratified by height (the sum of their simple root coefficients),
+and this stratification yields a ``\mathrm{P}``-equivariant filtration
 
 ```math
-0 = \mathrm{F}_0 \subset \mathrm{F}_1 \subset \cdots \subset \mathcal{F}_s = \mathrm{T}_{G/P}
+0 = \mathcal{F}_0 \subset \mathcal{F}_1 \subset \cdots \subset \mathcal{F}_s = \mathrm{T}_{\mathrm{G}/\mathrm{P}}
 ```
 
 whose graded pieces ``\mathrm{gr}_k = \mathcal{F}_k / \mathcal{F}_{k-1}`` are completely reducible
-``L``-representations. This filtration is key to computing
+``\mathrm{L}``-representations. This filtration is key to computing
 ``\mathrm{H}^q(X, \Omega^p_X)`` via the associated spectral sequence, and to the
 conormal filtration used in zero-locus Hodge number computations.
 

@@ -1,11 +1,11 @@
 # MarkedDynkinType
 
 The core type encoding a partial flag variety ``\mathrm{G}/\mathrm{P}_I`` and the
-Levi factor of the parabolic subgroup ``P_I``.
+Levi factor of the parabolic subgroup ``\mathrm{P}_I``.
 
-A `MarkedDynkinType` stores the ambient Dynkin type of ``G`` together with a
+A `MarkedDynkinType` stores the ambient Dynkin type of ``\mathrm{G}`` together with a
 set of **marked nodes** ``I \subseteq \{1, \ldots, r\}`` that specify the
-parabolic ``P_I``. Structural invariants — the Levi type, decomposition matrix,
+parabolic ``\mathrm{P}_I``. Structural invariants — the Levi type, decomposition matrix,
 root data, dimension, Euler characteristic, Betti numbers — are computed on
 demand and cached per marked Dynkin type.
 
@@ -30,8 +30,8 @@ is_borel
 ## Decomposition matrix
 
 The **decomposition matrix** ``M`` performs the change of basis from the
-fundamental weight coordinates of ``G`` to the (center + semisimple) coordinate
-system of the Levi factor ``L = \operatorname{Z}(L)^\circ \cdot [L, L]``. Concretely, for
+fundamental weight coordinates of ``\mathrm{G}`` to the (center + semisimple) coordinate
+system of the Levi factor ``\mathrm{L} = \operatorname{Z}(\mathrm{L})^\circ \cdot [\mathrm{L}, \mathrm{L}]``. Concretely, for
 the marked nodes ``I`` the matrix ``M`` has ``|I|`` rows from the inverse
 Cartan matrix ``C^{-1}`` and identity rows for the unmarked nodes, after
 reordering via `levi_permutation`.

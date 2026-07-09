@@ -6,7 +6,7 @@ export to_ambient_weight, fiber_dimension, p_dominant_weight
     IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
 
 An irreducible representation of the Levi factor attached to `mdt`, stored by
-its ambient ``P``-dominant weight together with its central and semisimple Levi
+its ambient ``\\mathrm{P}``-dominant weight together with its central and semisimple Levi
 
 # Examples
 ```jldoctest
@@ -39,8 +39,8 @@ marked_dynkin_type(rep::IrrepLevi) = rep.mdt
 """
     p_dominant_weight(rep::IrrepLevi) -> WeightLatticeElem
 
-Return the ambient ``P``-dominant weight ``\\lambda`` of the irreducible Levi
-representation `rep`. This is the weight of ``G`` in fundamental weight
+Return the ambient ``\\mathrm{P}``-dominant weight ``\\lambda`` of the irreducible Levi
+representation `rep`. This is the weight of ``\\mathrm{G}`` in fundamental weight
 coordinates from which the central and semisimple parts were derived via
 the decomposition matrix.
 """
@@ -150,7 +150,7 @@ end
 """
     to_ambient_weight(rep::IrrepLevi) -> WeightLatticeElem
 
-Return the ambient `P`-dominant weight of `rep` in the fundamental weight basis
+Return the ambient ``\\mathrm{P}``-dominant weight of `rep` in the fundamental weight basis
 of the ambient Lie algebra.
 """
 to_ambient_weight(rep::IrrepLevi) = p_dominant_weight(rep)

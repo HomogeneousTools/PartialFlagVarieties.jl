@@ -134,14 +134,14 @@ end
 The orthogonal Grassmannian ``\\mathrm{OGr}(k, n)`` of isotropic ``k``-planes
 in ``\\mathbb{C}^n`` with a symmetric bilinear form.
 
-For ``n = 2m + 1`` (odd): type ``B_m``, mark node ``k``.
-For ``n = 2m`` (even) and ``k < m``: type ``D_m``, mark node ``k``.
+For ``n = 2m + 1`` (odd): type ``\\mathrm{B}_m``, mark node ``k``.
+For ``n = 2m`` (even) and ``k < m``: type ``\\mathrm{D}_m``, mark node ``k``.
 For ``n = 2m`` and ``k = m``: this is the spinor variety ``\\mathrm{OGr}_+(m, 2m)``,
-type ``D_m`` mark node ``m``.
+type ``\\mathrm{D}_m`` mark node ``m``.
 
 When ``n = 2m`` and ``k = m``, the maximal orthogonal Grassmannian has two
 connected components. `OGr(m, 2m)` picks the component corresponding to node
-``m``; the other component is ``D_m/\\mathrm{P}_{m-1}``.
+``m``; the other component is ``\\mathrm{D}_m/\\mathrm{P}_{m-1}``.
 
 # Examples
 ```jldoctest
@@ -236,8 +236,8 @@ IGr(k::Integer, n::Integer) = OGr(k, n)
 
 The smooth quadric hypersurface ``Q_n \\subset \\mathbb{P}^{n+1}``.
 
-For odd ``n = 2m - 1``: ``\\mathrm{OGr}(1, 2m + 1)`` = ``B_m / P_1``.
-For even ``n = 2m - 2``: ``\\mathrm{OGr}(1, 2m)`` = ``D_m / P_1``.
+For odd ``n = 2m - 1``: ``\\mathrm{OGr}(1, 2m + 1)`` = ``\\mathrm{B}_m / \\mathrm{P}_1``.
+For even ``n = 2m - 2``: ``\\mathrm{OGr}(1, 2m)`` = ``\\mathrm{D}_m / \\mathrm{P}_1``.
 
 Equivalently, `quadric(n)` is the isotropic-line Grassmannian
 ``\\mathrm{OGr}(1, n+2)``.
@@ -282,7 +282,7 @@ end
 """
     cayley_plane() -> PartialFlagVariety
 
-The Cayley plane ``\\mathbb{OP}^2 = \\mathrm{E}_6 / P_1``, the 16-dimensional
+The Cayley plane ``\\mathbb{OP}^2 = \\mathrm{E}_6 / \\mathrm{P}_1``, the 16-dimensional
 cominuscule variety.
 
 # Examples
@@ -305,7 +305,7 @@ end
 """
     freudenthal_variety() -> PartialFlagVariety
 
-The Freudenthal variety ``\\mathrm{E}_7 / P_7``, the 27-dimensional cominuscule variety.
+The Freudenthal variety ``\\mathrm{E}_7 / \\mathrm{P}_7``, the 27-dimensional cominuscule variety.
 
 # Examples
 ```jldoctest

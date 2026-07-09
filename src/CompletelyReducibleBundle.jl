@@ -264,7 +264,7 @@ end
     O(X::PartialFlagVariety) -> CompletelyReducibleBundle
     structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The trivial line bundle ``\\mathcal{O}_{G/P}``.
+The trivial line bundle ``\\mathcal{O}_{\\mathrm{G}/\\mathrm{P}}``.
 
 # Examples
 ```jldoctest
@@ -317,7 +317,7 @@ O(X::PartialFlagVariety, degrees::Vector{<:Integer}) = line_bundle(X, degrees)
 """
     structure_sheaf(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The trivial line bundle ``\\mathcal{O}_{G/P}``. Alias for `O`.
+The trivial line bundle ``\\mathcal{O}_{\\mathrm{G}/\\mathrm{P}}``. Alias for `O`.
 
 # Examples
 ```jldoctest
@@ -583,7 +583,7 @@ end
 """
     tangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The tangent bundle ``\\mathrm{T}_{G/P}`` as its associated graded: the completely
+The tangent bundle ``\\mathrm{T}_{\\mathrm{G}/\\mathrm{P}}`` as its associated graded: the completely
 reducible bundle with one irreducible Levi summand per maximal nonparabolic
 root class.
 
@@ -614,7 +614,7 @@ tangent_bundle(X::PartialFlagVariety) =
 """
     T(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-Shorthand for [`tangent_bundle`](@ref): the tangent bundle ``\\mathrm{T}_{G/P}``.
+Shorthand for [`tangent_bundle`](@ref): the tangent bundle ``\\mathrm{T}_{\\mathrm{G}/\\mathrm{P}}``.
 
 # Examples
 ```jldoctest
@@ -629,7 +629,7 @@ T(X::PartialFlagVariety) = tangent_bundle(X)
 """
     cotangent_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The cotangent bundle ``\\Omega^1_{G/P} = \\mathrm{T}^\\vee_{G/P}`` as its associated
+The cotangent bundle ``\\Omega^1_{\\mathrm{G}/\\mathrm{P}} = \\mathrm{T}^\\vee_{\\mathrm{G}/\\mathrm{P}}`` as its associated
 graded.  See [`tangent_bundle`](@ref) for what "associated graded" entails, and
 [`filtered_cotangent_bundle`](@ref) for the genuine filtered bundle.
 
@@ -649,13 +649,13 @@ cotangent_bundle(X::PartialFlagVariety) =
 """
     canonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The canonical line bundle ``\\omega_{G/P} = K_{G/P}``.
+The canonical line bundle ``\\omega_{\\mathrm{G}/\\mathrm{P}} = K_{\\mathrm{G}/\\mathrm{P}}``.
 
 This is computed directly from the formula
 
 ```math
-K_{G/P} = -\\sum_{i \\in \\mathrm{marked}} a_i\\,\\omega_i,
-\\qquad a_i = \\langle 2(\\rho_G - \\rho_P),\\,\\alpha_i^\\vee\\rangle,
+K_{\\mathrm{G}/\\mathrm{P}} = -\\sum_{i \\in \\mathrm{marked}} a_i\\,\\omega_i,
+\\qquad a_i = \\langle 2(\\rho_{\\mathrm{G}} - \\rho_{\\mathrm{P}}),\\,\\alpha_i^\\vee\\rangle,
 ```
 
 without constructing the (co)tangent bundle.  See `anticanonical_degrees`.
@@ -688,13 +688,13 @@ end
 """
     anticanonical_bundle(X::PartialFlagVariety) -> CompletelyReducibleBundle
 
-The anticanonical line bundle ``\\omega_{G/P}^\\vee = -K_{G/P}``.
+The anticanonical line bundle ``\\omega_{\\mathrm{G}/\\mathrm{P}}^\\vee = -K_{\\mathrm{G}/\\mathrm{P}}``.
 
 This is computed directly from the formula
 
 ```math
--K_{G/P} = \\sum_{i \\in \\mathrm{marked}} a_i\\,\\omega_i,
-\\qquad a_i = \\langle 2(\\rho_G - \\rho_P),\\,\\alpha_i^\\vee\\rangle.
+-K_{\\mathrm{G}/\\mathrm{P}} = \\sum_{i \\in \\mathrm{marked}} a_i\\,\\omega_i,
+\\qquad a_i = \\langle 2(\\rho_{\\mathrm{G}} - \\rho_{\\mathrm{P}}),\\,\\alpha_i^\\vee\\rangle.
 ```
 
 See `anticanonical_degrees`.
@@ -732,7 +732,7 @@ anticanonical degrees.
 For Picard-rank-1 varieties this is the unique positive integer ``r`` such that
 
 ```math
--K_{G/P} = r\\,\\omega_m
+-K_{\\mathrm{G}/\\mathrm{P}} = r\\,\\omega_m
 ```
 
 where ``\\omega_m`` is the ample generator of ``\\mathrm{Pic}(\\mathrm{G}/\\mathrm{P}) \\cong \\mathbb{Z}``.
@@ -1042,18 +1042,18 @@ end
 The determinant line bundle ``\\det(\\mathcal{E}) = \\bigwedge\\nolimits^{\\mathrm{rk}(\\mathcal{E})} \\mathcal{E}``.
 
 Each summand of `E` is the homogeneous bundle attached to an irreducible
-representation ``V`` of the Levi ``L``, and ``\\det`` distributes over direct
+representation ``V`` of the Levi ``\\mathrm{L}``, and ``\\det`` distributes over direct
 sums, ``\\det\\bigl(\\bigoplus_i V_i\\bigr) = \\bigotimes_i \\det V_i``, so the
 weights add. For a single ``d``-dimensional irreducible representation ``V`` we
 use the factorisation
-``L = Z(L)\\cdot [L,L]`` of the reductive Levi into its central torus ``Z(L)``
-and semisimple part ``[L,L]``:
+``\\mathrm{L} = Z(\\mathrm{L})\\cdot [\\mathrm{L},\\mathrm{L}]`` of the reductive Levi into its central torus ``Z(\\mathrm{L})``
+and semisimple part ``[\\mathrm{L},\\mathrm{L}]``:
 
-- By Schur's lemma ``Z(L)`` acts on ``V`` through a single character ``\\chi``,
+- By Schur's lemma ``Z(\\mathrm{L})`` acts on ``V`` through a single character ``\\chi``,
   so it acts on ``\\det V = \\bigwedge\\nolimits^d V`` through ``\\chi^d``; the central
   charge of ``\\det V`` is therefore that of ``V`` scaled by ``d``.
-- ``[L,L]`` equals its own derived subgroup, so it carries no nontrivial
-  characters. The determinant of any ``[L,L]``-representation is therefore
+- ``[\\mathrm{L},\\mathrm{L}]`` equals its own derived subgroup, so it carries no nontrivial
+  characters. The determinant of any ``[\\mathrm{L},\\mathrm{L}]``-representation is therefore
   trivial, and the semisimple highest weight of ``\\det V`` vanishes.
 
 Hence ``\\det V`` is the line bundle with central charge ``d\\,\\chi`` and
