@@ -13,7 +13,7 @@ concurrency:
 jobs:
   test:
     name: Julia ${{ matrix.version }} — ${{ matrix.os }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.version == 'nightly' }}
     strategy:
       fail-fast: false
@@ -57,7 +57,7 @@ jobs:
 
   doctest:
     name: Doctests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5.0.1
       - uses: julia-actions/setup-julia@v3.0.1
@@ -73,7 +73,7 @@ jobs:
 
   examples:
     name: Example — ${{ matrix.example }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
