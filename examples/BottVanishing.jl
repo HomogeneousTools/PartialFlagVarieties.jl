@@ -33,7 +33,7 @@ function find_bott_vanishing_q(X; max_q=20)
     for i in 0:d
       Ei = exterior_power(Ω, i)
       Et = twist(Ei, 1, q)
-      H = dimensions(Et)
+      H = cohomology(Et)
 
       for p in 1:d
         if H[p] != 0
@@ -58,7 +58,7 @@ function find_bott_vanishing_witnesses(X, q)
   for i in 0:d
     Ei = exterior_power(Ω, i)
     Et = twist(Ei, 1, q)
-    H = dimensions(Et)
+    H = cohomology(Et)
     for p in 1:d
       if H[p] != 0
         push!(witnesses, (i, p, H[p]))

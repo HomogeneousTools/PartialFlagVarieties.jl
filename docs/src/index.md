@@ -46,7 +46,7 @@ X = Gr(2, 5)
 T = tangent_bundle(X)
 
 dimension(X)              # 6
-dimensions(T)[0]          # h^0(X, T_X)
+cohomology(T)[0]          # h^0(X, T_X)
 
 Z = zero_locus(O(X, 1))
 hodge_numbers(Z)

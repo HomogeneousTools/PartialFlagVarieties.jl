@@ -61,7 +61,7 @@ true
 ```
 """
 function is_exceptional(E::CompletelyReducibleBundle)
-  H = dimensions(cohomology(dual(E) ⊗ E))
+  H = cohomology(dual(E) ⊗ E)
   H[0] == 1 && all(H[i] == 0 for i in 1:(H.dim_variety))
 end
 
@@ -92,7 +92,7 @@ true
 function is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   # Ext^i(F, E) = H^i(F^∨ ⊗ E)
   FvE = dual(F) ⊗ E
-  return iszero(dimensions(cohomology(FvE)))
+  return iszero(cohomology(FvE))
 end
 
 """
@@ -126,7 +126,7 @@ function is_strong_exceptional_pair(
 end
 
 function _has_no_positive_exts(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
-  H = dimensions(cohomology(dual(E) ⊗ F))
+  H = cohomology(dual(E) ⊗ F)
   all(H[i] == 0 for i in 1:(H.dim_variety))
 end
 

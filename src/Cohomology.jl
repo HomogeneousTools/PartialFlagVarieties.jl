@@ -112,7 +112,7 @@ julia> X = partial_flag_variety(TypeA{4}, (1,));
 
 julia> E = structure_sheaf(X);
 
-julia> H = cohomology(E);
+julia> H = cohomology(E; characters=true);
 
 julia> H[0]  # H⁰(ℙ⁴, 𝒪) = k
 A4(0, 0, 0, 0)
@@ -222,12 +222,15 @@ function _cohomology_single(d::Int, λ::WeightLatticeElem)
 end
 
 """
-    cohomology(E::CompletelyReducibleBundle) -> Cohomology{WeylCharacter}
+    cohomology(E::CompletelyReducibleBundle; characters=false) -> Cohomology
 
 Compute the sheaf cohomology ``\\mathrm{H}^\\bullet(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})`` using the Borel–Weil–Bott theorem.
 
-Returns character-valued cohomology: each ``\\mathrm{H}^i`` is a virtual character
-(Weyl character) of the ambient group ``\\mathrm{G}``.
+By default the result is dimension-valued (`Cohomology{BigInt}`): each ``\\mathrm{H}^i``
+is given by its dimension, computed directly without materializing the characters.
+Pass `characters=true` to get character-valued cohomology (`Cohomology{WeylCharacter}`)
+instead, where each ``\\mathrm{H}^i`` is a virtual character (Weyl character) of the
+ambient group ``\\mathrm{G}``.
 
 The partial flag variety is inferred from `E`.
 The result is a 0-indexed [`Cohomology`](@ref) object.
@@ -236,7 +239,7 @@ The result is a 0-indexed [`Cohomology`](@ref) object.
 For each irreducible Levi component ``V_\\lambda`` of ``\\mathcal{E}``:
 1. Convert to ambient weight ``\\lambda``
 2. Apply BWB: `borel_weil_bott(λ)` → `(d, μ)` or `nothing`
-3. If non-singular, add ``V_\\mu`` to ``\\mathrm{H}^d``
+3. If non-singular, add ``V_\\mu`` (or just its dimension) to ``\\mathrm{H}^d``
 
 # Examples
 ```jldoctest
@@ -244,22 +247,28 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> H = cohomology(line_bundle(X, 1));
+julia> cohomology(line_bundle(X, 1))[0]  # h⁰(ℙ⁴, 𝒪(1)) = 5
+5
 
-julia> degree(H[0])  # H⁰(ℙ⁴, 𝒪(1)) = V(ω₁) of dim 5
+julia> degree(cohomology(line_bundle(X, 1); characters=true)[0])  # V(ω₁), dim 5
 5
 ```
 """
-function cohomology(E::CompletelyReducibleBundle)
+function cohomology(E::CompletelyReducibleBundle; characters::Bool=false)
   d = dimension(E.variety)
   comps = components(E)
-  length(comps) == 1 && return _cohomology_single(d, p_dominant_weight(only(comps)))
-  sentinel = if isempty(comps)
-    WeightLatticeElem(dynkin_type(marked_dynkin_type(variety(E))))
-  else
-    p_dominant_weight(first(comps))
+  if characters
+    length(comps) == 1 && return _cohomology_single(d, p_dominant_weight(only(comps)))
+    sentinel = if isempty(comps)
+      WeightLatticeElem(dynkin_type(marked_dynkin_type(variety(E))))
+    else
+      p_dominant_weight(first(comps))
+    end
+    return _cohomology_generic(comps, d, sentinel)
   end
-  _cohomology_generic(comps, d, sentinel)
+  isempty(comps) && return Cohomology{BigInt}(zeros(BigInt, d + 1), d)
+  length(comps) == 1 && return _dimensions_single(d, p_dominant_weight(only(comps)))
+  _dimensions_generic(comps, d, p_dominant_weight(first(comps)))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -277,7 +286,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> H = cohomology(line_bundle(X, 1));
+julia> H = cohomology(line_bundle(X, 1); characters=true);
 
 julia> dims = dimensions(H);
 
@@ -333,23 +342,9 @@ function _dimensions_single(d::Int, λ::WeightLatticeElem)
   Cohomology{BigInt}(entries, d)
 end
 
-"""
-    dimensions(E::CompletelyReducibleBundle) -> Cohomology{BigInt}
-
-Compute dimension-valued cohomology directly, without first materializing the
-character-valued result.
-
-This is usually the most convenient entry point when only the dimensions of the
-cohomology groups matter. As for all [`Cohomology`](@ref) objects, the result is
-0-indexed: `H[0]` means ``\\mathrm{H}^0``.
-"""
-function dimensions(E::CompletelyReducibleBundle)
-  d = dimension(E.variety)
-  comps = components(E)
-  isempty(comps) && return Cohomology{BigInt}(zeros(BigInt, d + 1), d)
-  length(comps) == 1 && return _dimensions_single(d, p_dominant_weight(only(comps)))
-  _dimensions_generic(comps, d, p_dominant_weight(first(comps)))
-end
+# `dimensions(E)` on a bundle is superseded by `cohomology(E)`, which is now
+# dimension-valued by default. Kept as a deprecated alias for one minor version.
+@deprecate dimensions(E::CompletelyReducibleBundle) cohomology(E)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  iszero
@@ -379,7 +374,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> H = dimensions(line_bundle(X, 1));
+julia> H = cohomology(line_bundle(X, 1));
 
 julia> euler_characteristic(H)
 5

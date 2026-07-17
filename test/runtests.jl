@@ -774,29 +774,29 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # K_{P^1} = O(-2): H^1(P^1, O(-2)) = 1
     X1 = projective_space(1)
     K = canonical_bundle(X1)
-    @test dimensions(K)[1] == 1
-    @test dimensions(K)[0] == 0
+    @test cohomology(K)[1] == 1
+    @test cohomology(K)[0] == 0
 
     # -K_{P^1} = O(2): H^0(P^1, O(2)) = 3
     aK = anticanonical_bundle(X1)
-    @test dimensions(aK)[0] == 3
+    @test cohomology(aK)[0] == 3
 
     # K_{P^4} = O(-5): H^4(P^4, O(-5)) = 1, H^0 = 0
     X4 = projective_space(4)
     K4 = canonical_bundle(X4)
-    @test dimensions(K4)[4] == 1
-    @test dimensions(K4)[0] == 0
+    @test cohomology(K4)[4] == 1
+    @test cohomology(K4)[0] == 0
 
     # -K_{Gr(2,4)} = O(4): H^0(Gr(2,4), O(4)) = 105
     G24 = Gr(2, 4)
     aK24 = anticanonical_bundle(G24)
     @test rank_bundle(aK24) == 1
-    @test dimensions(aK24)[0] == 105
+    @test cohomology(aK24)[0] == 105
 
     # canonical ⊗ anticanonical = structure sheaf (trivial bundle)
     X = projective_space(2)
     product_bundle = canonical_bundle(X) ⊗ anticanonical_bundle(X)
-    @test dimensions(product_bundle)[0] == 1  # H^0(O) = 1
+    @test cohomology(product_bundle)[0] == 1  # H^0(O) = 1
   end
 
   @testset "Fano index: ambient varieties" begin
@@ -850,7 +850,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Cohomology: H*(ℙⁿ, 𝒪)" begin
     X = projective_space(4)
     O = structure_sheaf(X)
-    H = cohomology(O)
+    H = cohomology(O; characters=true)
     dims = dimensions(H)
 
     # H⁰(ℙ⁴, 𝒪) = 1, Hⁱ = 0 for i > 0
@@ -865,17 +865,17 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # H⁰(ℙ⁴, 𝒪(1)) = 5 (standard rep of SL(5))
     L1 = line_bundle(X, 1)
-    H1 = dimensions(cohomology(L1))
+    H1 = cohomology(L1)
     @test H1[0] == 5
 
     # H⁰(ℙ⁴, 𝒪(2)) = C(6,2) = 15
     L2 = twist(structure_sheaf(X), 1, 2)
-    H2 = dimensions(cohomology(L2))
+    H2 = cohomology(L2)
     @test H2[0] == 15
 
     # H⁰(ℙ⁴, 𝒪(3)) = C(7,3) = 35
     L3 = twist(structure_sheaf(X), 1, 3)
-    H3 = dimensions(cohomology(L3))
+    H3 = cohomology(L3)
     @test H3[0] == 35
   end
 
@@ -893,7 +893,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = Gr(2, 5)
     S = universal_subbundle(X)
     Sym2 = symmetric_power(dual(S), 2)
-    H = dimensions(cohomology(Sym2))
+    H = cohomology(Sym2)
     @test H[0] == 15
     for i in 1:6
       @test H[i] == 0
@@ -905,7 +905,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     Q4 = universal_quotient_bundle(X4)
     T = tensor_product(dual(S4), Q4)
     @test rank_bundle(T) == 4
-    HT = dimensions(cohomology(T))
+    HT = cohomology(T)
     @test HT[0] == 15
     for i in 1:4
       @test HT[i] == 0
@@ -915,7 +915,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     S5 = universal_subbundle(X5)
     W = exterior_power(dual(S5), 2)
     @test rank_bundle(W) == 1
-    HW = dimensions(cohomology(W))
+    HW = cohomology(W)
     @test HW[0] == 10
   end
 
@@ -949,7 +949,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Cohomology: 0-based indexing" begin
     X = projective_space(2)
     O = structure_sheaf(X)
-    H = dimensions(cohomology(O))
+    H = cohomology(O)
     @test firstindex(H) == 0
     @test lastindex(H) == 2
     @test length(H) == 3
@@ -1242,56 +1242,56 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "H⁰(∧ᵏT): A-types" begin
     T = tangent_bundle(Gr(2, 4))
-    @test dimensions(exterior_power(T, 0))[0] == 1
-    @test dimensions(exterior_power(T, 1))[0] == 15
-    @test dimensions(exterior_power(T, 2))[0] == 90
-    @test dimensions(exterior_power(T, 3))[0] == 175
-    @test dimensions(exterior_power(T, 4))[0] == 105
+    @test cohomology(exterior_power(T, 0))[0] == 1
+    @test cohomology(exterior_power(T, 1))[0] == 15
+    @test cohomology(exterior_power(T, 2))[0] == 90
+    @test cohomology(exterior_power(T, 3))[0] == 175
+    @test cohomology(exterior_power(T, 4))[0] == 105
 
     T2 = tangent_bundle(Gr(2, 5))
-    @test dimensions(exterior_power(T2, 1))[0] == 24
-    @test dimensions(exterior_power(T2, 2))[0] == 252
-    @test dimensions(exterior_power(T2, 3))[0] == 1248
-    @test dimensions(exterior_power(T2, 6))[0] == 1176
+    @test cohomology(exterior_power(T2, 1))[0] == 24
+    @test cohomology(exterior_power(T2, 2))[0] == 252
+    @test cohomology(exterior_power(T2, 3))[0] == 1248
+    @test cohomology(exterior_power(T2, 6))[0] == 1176
 
     T3 = tangent_bundle(Gr(3, 8))
-    @test dimensions(exterior_power(T3, 1))[0] == 63
-    @test dimensions(exterior_power(T3, 2))[0] == 1890
+    @test cohomology(exterior_power(T3, 1))[0] == 63
+    @test cohomology(exterior_power(T3, 2))[0] == 1890
   end
 
   @testset "H⁰(∧ᵏT): B-types" begin
     T = tangent_bundle(partial_flag_variety(TypeB{3}, (1,)))
-    @test dimensions(exterior_power(T, 1))[0] == 21
-    @test dimensions(exterior_power(T, 2))[0] == 189
-    @test dimensions(exterior_power(T, 3))[0] == 616
-    @test dimensions(exterior_power(T, 4))[0] == 819
-    @test dimensions(exterior_power(T, 5))[0] == 378
+    @test cohomology(exterior_power(T, 1))[0] == 21
+    @test cohomology(exterior_power(T, 2))[0] == 189
+    @test cohomology(exterior_power(T, 3))[0] == 616
+    @test cohomology(exterior_power(T, 4))[0] == 819
+    @test cohomology(exterior_power(T, 5))[0] == 378
   end
 
   @testset "H⁰(∧ᵏT): C-types" begin
     T = tangent_bundle(partial_flag_variety(TypeC{3}, (1,)))
-    @test dimensions(exterior_power(T, 1))[0] == 35
-    @test dimensions(exterior_power(T, 2))[0] == 280
-    @test dimensions(exterior_power(T, 3))[0] == 840
-    @test dimensions(exterior_power(T, 4))[0] == 1050
-    @test dimensions(exterior_power(T, 5))[0] == 462
+    @test cohomology(exterior_power(T, 1))[0] == 35
+    @test cohomology(exterior_power(T, 2))[0] == 280
+    @test cohomology(exterior_power(T, 3))[0] == 840
+    @test cohomology(exterior_power(T, 4))[0] == 1050
+    @test cohomology(exterior_power(T, 5))[0] == 462
   end
 
   @testset "H⁰(∧ᵏT): D-types" begin
     T = tangent_bundle(partial_flag_variety(TypeD{4}, (1,)))
-    @test dimensions(exterior_power(T, 1))[0] == 28
-    @test dimensions(exterior_power(T, 2))[0] == 350
-    @test dimensions(exterior_power(T, 3))[0] == 1680
-    @test dimensions(exterior_power(T, 6))[0] == 1386
+    @test cohomology(exterior_power(T, 1))[0] == 28
+    @test cohomology(exterior_power(T, 2))[0] == 350
+    @test cohomology(exterior_power(T, 3))[0] == 1680
+    @test cohomology(exterior_power(T, 6))[0] == 1386
   end
 
   @testset "H⁰(∧ᵏT): G2" begin
     T = tangent_bundle(partial_flag_variety(TypeG2, (1,)))
-    @test dimensions(exterior_power(T, 1))[0] == 21
-    @test dimensions(exterior_power(T, 2))[0] == 189
-    @test dimensions(exterior_power(T, 3))[0] == 616
-    @test dimensions(exterior_power(T, 4))[0] == 819
-    @test dimensions(exterior_power(T, 5))[0] == 378
+    @test cohomology(exterior_power(T, 1))[0] == 21
+    @test cohomology(exterior_power(T, 2))[0] == 189
+    @test cohomology(exterior_power(T, 3))[0] == 616
+    @test cohomology(exterior_power(T, 4))[0] == 819
+    @test cohomology(exterior_power(T, 5))[0] == 378
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1435,7 +1435,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(U) == 3
     @test rank_bundle(R) == 4
     @test rank_bundle(universal_quotient_bundle(X4)) == 7
-    @test dimensions(cohomology(dual(R) ⊗ U))[1] == 1
+    @test cohomology(dual(R) ⊗ U)[1] == 1
 
     #OGr(4,12)
     X5 = OGr(4, 12)
@@ -1444,7 +1444,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(U) == 4
     @test rank_bundle(R) == 4
     @test rank_bundle(universal_quotient_bundle(X5)) == 8
-    @test dimensions(cohomology(dual(R) ⊗ U))[1] == 1
+    @test cohomology(dual(R) ⊗ U)[1] == 1
 
     # Fl(1,2,4; 5)
     X6 = flag_variety(5, [1, 2, 4])
@@ -1454,11 +1454,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank_bundle(τ[1]) == 1
     @test rank_bundle(τ[2]) == 1
     @test rank_bundle(τ[3]) == 2
-    @test dimensions(cohomology(dual(τ[3]) ⊗ τ[2]))[1] == 1
-    @test dimensions(cohomology(dual(τ[2]) ⊗ τ[1]))[1] == 1
+    @test cohomology(dual(τ[3]) ⊗ τ[2])[1] == 1
+    @test cohomology(dual(τ[2]) ⊗ τ[1])[1] == 1
     @test rank_bundle(Us[1]) == 1
     @test rank_bundle(universal_subbundles(X6)[3]) == 4
-    @test dimensions(cohomology(dual(τ[3]) ⊗ Us[2].pieces[2]))[1] == 1
+    @test cohomology(dual(τ[3]) ⊗ Us[2].pieces[2])[1] == 1
 
     # universal_subbundle with explicit i > 1
     @test rank_bundle(universal_subbundle(X6, 2)) == 2
@@ -1772,7 +1772,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # The graded shortcut still overcounts (hence it is not the default):
     let X = full_flag_variety(TypeB{2})
-      @test dimensions(exterior_power(tangent_bundle(X), 1))[0] == 15
+      @test cohomology(exterior_power(tangent_bundle(X), 1))[0] == 15
     end
 
     # χ is exact regardless (the alternating sum kills the differential ranks):
@@ -2044,7 +2044,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # t=3: both give 2652
     for t in 0:3
       (H_Z, _) = cohomology_on_restriction(Z, line_bundle(X_E6, t))
-      H_F4 = dimensions(cohomology(line_bundle(Y_F4, t)))
+      H_F4 = cohomology(line_bundle(Y_F4, t))
       @test H_Z[0] == H_F4[0]
     end
 

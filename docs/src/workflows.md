@@ -36,13 +36,13 @@ The usual pattern is:
 X = Gr(2, 5)
 E = exterior_power(tangent_bundle(X), 2)
 
-H = dimensions(E)
+H = cohomology(E)
 H[0]
 chi(H)
 ```
 
-Use `cohomology(E)` when you want the full ambient representation in each
-cohomology group, and `dimensions(E)` when only the dimensions matter.
+`cohomology(E)` returns dimensions by default; pass `characters=true` when you
+want the full ambient representation in each cohomology group.
 
 ## Build standard bundles
 

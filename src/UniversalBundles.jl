@@ -54,10 +54,10 @@ julia> using PartialFlagVarieties
 
 julia> U = universal_subbundle(Gr(2, 5));
 
-julia> degree(cohomology(U)[0])
+julia> degree(cohomology(U; characters=true)[0])
 0
 
-julia> degree(cohomology(dual(U))[0])
+julia> degree(cohomology(dual(U); characters=true)[0])
 5
 ```
 """
@@ -96,7 +96,7 @@ julia> Q = universal_quotient_bundle(Gr(2, 5));
 julia> rank_bundle(Q)
 3
 
-julia> degree(cohomology(Q)[0])  # H⁰(Q) is the standard representation of A_4
+julia> degree(cohomology(Q; characters=true)[0])  # H⁰(Q) is the standard representation of A_4
 5
 ```
 """
@@ -184,7 +184,7 @@ julia> using PartialFlagVarieties
 julia> rank_bundle(residual_bundle(SGr(3, 6)))  # Lagrangian: R vanishes
 0
 
-julia> degree(cohomology(residual_bundle(OGr(2, 7)))[0])  # acyclic on OGr(2, 7)
+julia> degree(cohomology(residual_bundle(OGr(2, 7)); characters=true)[0])  # acyclic on OGr(2, 7)
 0
 ```
 """
@@ -319,7 +319,7 @@ julia> using PartialFlagVarieties
 
 julia> X = quadric(5);  # B_3/P_1
 
-julia> degree(cohomology(spinor_bundle(X))[0])  # spin representation of Spin(7)
+julia> degree(cohomology(spinor_bundle(X); characters=true)[0])  # spin representation of Spin(7)
 8
 ```
 """

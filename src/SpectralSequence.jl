@@ -95,7 +95,7 @@ function spectral_sequence(F::FilteredBundle)
   E = Dict{Tuple{Int,Int},WeylCharacter{DT,R}}()
   for (k, piece) in enumerate(reverse(graded_pieces(F)))
     q = k - 1
-    H = cohomology(piece)
+    H = cohomology(piece; characters=true)
     for i in 0:d
       isempty(H[i].terms) || (E[(i - q, q)] = H[i])
     end
@@ -221,7 +221,7 @@ function _cohomology_filtered(F::FilteredBundle, var_counter::Ref{Int})
 
   # A one-step filtration has nothing to degenerate: E₁ = E_∞ exactly.
   if n_filtration_steps(F) <= 1
-    H = dimensions(total_bundle(F))
+    H = cohomology(total_bundle(F))
     return AffineExpr[AffineExpr(H[i]) for i in 0:d]
   end
 

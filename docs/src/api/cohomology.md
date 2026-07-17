@@ -30,9 +30,9 @@ borel_weil_bott
 
 ## Computation
 
-In practice, [`dimensions(E)`](@ref) is often the most convenient entry point
-when you only need numerical cohomology, while [`cohomology(E)`](@ref) keeps
-the full ambient representation in each cohomology group.
+By default [`cohomology(E)`](@ref) returns dimensions, which is what you want
+for numerical work; pass `characters=true` to keep the full ambient
+representation in each cohomology group.
 
 ```@docs
 cohomology

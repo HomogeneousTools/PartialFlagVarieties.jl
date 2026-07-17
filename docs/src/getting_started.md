@@ -90,8 +90,8 @@ separately when the order of the filtration matters.
 X = projective_space(4)
 L = line_bundle(X, 1)
 
-Hchar = cohomology(L)     # character-valued
-Hdim = dimensions(Hchar)  # dimension-valued
+Hdim = cohomology(L)                    # dimension-valued (default)
+Hchar = cohomology(L; characters=true)  # character-valued
 
 Hdim[0] == 5              # dim H^0(P^4, O(1)) — the standard representation
 ```
