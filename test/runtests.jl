@@ -1111,22 +1111,27 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "levi_permutation" begin
-    # For type A, canonical ordering = natural ordering → identity permutation
-    perm_A4 = levi_permutation(mdt(TypeA{4}, (2,)))
-    @test collect(perm_A4) == [1, 2, 3]
+    # the entries are nodes of the ambient diagram, in the Bourbaki order of the Levi
 
-    # D4/P1: unmarked nodes (2,3,4) of D4 form an A3 sub-diagram
-    # cartan_type_with_ordering finds the canonical A3 ordering = [2,1,3]
-    perm_D4 = levi_permutation(mdt(TypeD{4}, (1,)))
-    @test collect(perm_D4) == [2, 1, 3]
+    # A4/P2: unmarked nodes (1,3,4) already sit in canonical A1 x A2 order
+    @test collect(levi_permutation(mdt(TypeA{4}, (2,)))) == [1, 3, 4]
 
-    # B3/P1: unmarked nodes (2,3) form a B2 sub-diagram → identity
-    perm_B3 = levi_permutation(mdt(TypeB{3}, (1,)))
-    @test length(perm_B3) == 2
+    # D4/P1: unmarked nodes (2,3,4) of D4 form an A3 sub-diagram whose middle node
+    # is the former branch node 2, so the path runs 3 - 2 - 4
+    @test collect(levi_permutation(mdt(TypeD{4}, (1,)))) == [3, 2, 4]
+
+    # B3/P1: unmarked nodes (2,3) form a B2 sub-diagram in the natural order
+    @test collect(levi_permutation(mdt(TypeB{3}, (1,)))) == [2, 3]
 
     # G2/P1: unmarked node (2) → trivial A1 sub-diagram
-    perm_G2 = levi_permutation(mdt(TypeG2, (1,)))
-    @test collect(perm_G2) == [1]
+    @test collect(levi_permutation(mdt(TypeG2, (1,)))) == [2]
+
+    # the ordering always lists exactly the unmarked nodes
+    for (DT, marked) in
+        [(TypeA{4}, (2,)), (TypeD{6}, (3,)), (TypeE{6}, (2, 4)), (TypeF4, (2,))]
+      m = mdt(DT, marked)
+      @test sort(collect(levi_permutation(m))) == sort(collect(unmarked_nodes(m)))
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════

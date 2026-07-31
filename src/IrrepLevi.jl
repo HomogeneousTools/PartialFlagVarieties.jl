@@ -104,7 +104,7 @@ function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
   else
     LT = levi_type(mdt)
     perm = levi_permutation(mdt)
-    WeightLatticeElem(LT, Int[λ_ivec[unmarked[perm[j]]] for j in 1:rank(LT)])
+    WeightLatticeElem(LT, Int[λ_ivec[perm[j]] for j in 1:rank(LT)])
   end
 
   IrrepLevi(mdt, λ, central, semisimple)
@@ -130,8 +130,7 @@ function IrrepLevi(
 
   ss_vec = coefficients(semisimple)
   if !isempty(unmarked) && !isempty(ss_vec)
-    inverse_perm = invperm(collect(levi_permutation(mdt)))
-    coords_full[collect(unmarked)] .= ss_vec[inverse_perm] .* sf_total
+    coords_full[collect(levi_permutation(mdt))] .= ss_vec .* sf_total
   end
 
   λ = WeightLatticeElem(DT, div.(_apply_Minv_int(mdt, coords_full), sf_total^2))

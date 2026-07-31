@@ -121,7 +121,7 @@ function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
     ct = cartan_type(C_sub)
     levi = _cartan_type_to_dynkin_type(ct)
     _, ord = cartan_type_with_ordering(C_sub)
-    perm = Tuple(ord)
+    perm = Tuple(idx[ord])
   end
 
   Cinv = cartan_matrix_inverse(DT)
@@ -210,14 +210,14 @@ is_borel(mdt::MarkedDynkinType) = isempty(unmarked_nodes(mdt))
 """
     levi_permutation(mdt::MarkedDynkinType) -> Tuple{Vararg{Int}}
 
-Return the permutation that sends the natural ordering of the unmarked
-nodes to the canonical Bourbaki ordering of the sub-Cartan matrix of
-``[\\mathrm{L}, \\mathrm{L}]``.
+Return the unmarked nodes in the Bourbaki order of the Levi type: the ``j``-th entry is
+the node of the ambient diagram playing the role of the ``j``-th simple root of
+[`levi_type`](@ref).
 
-This is the identity for types ``\\mathrm{A}``, ``\\mathrm{B}``, and
-``\\mathrm{C}``, but is nontrivial for types ``\\mathrm{D}`` and
-``\\mathrm{E}`` where the sub-diagram nodes may not appear in canonical
-order within the ambient diagram.
+This is the natural order of the unmarked nodes for types ``\\mathrm{A}``,
+``\\mathrm{B}``, and ``\\mathrm{C}``, but not for types ``\\mathrm{D}`` and
+``\\mathrm{E}``, where the sub-diagram nodes need not appear in canonical order within
+the ambient diagram.
 """
 levi_permutation(mdt::MarkedDynkinType) = _mdt_data(mdt).levi_permutation
 
