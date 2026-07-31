@@ -115,13 +115,9 @@ function _compute_marked_dynkin_data(mdt::MarkedDynkinType)
     levi = nothing
     perm = ()
   else
-    C = Semisimple._cartan_matrix_data(DT)
-    idx = collect(unmarked)
-    C_sub = C[idx, idx]
-    ct = cartan_type(C_sub)
-    levi = _cartan_type_to_dynkin_type(ct)
-    _, ord = cartan_type_with_ordering(C_sub)
-    perm = Tuple(idx[ord])
+    sub, ordering = sub_dynkin_type_with_ordering(DT, unmarked)
+    levi = sub
+    perm = Tuple(ordering)
   end
 
   Cinv = cartan_matrix_inverse(DT)

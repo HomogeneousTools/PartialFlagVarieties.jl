@@ -25,6 +25,7 @@ ZeroLocus62 = {rev = "main", subdir = "julia", url = "https://github.com/Homogen
 
 [compat]
 Base62 = "1"
+Semisimple = "1.2"
 Combinatorics = "1"
 Distributed = "1"
 JSON = "1"

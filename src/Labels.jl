@@ -68,11 +68,7 @@ Convert a vector of `ZeroLocus62.Factor` objects back to a `MarkedDynkinType`.
 function _factors_to_mdt(factors::Vector{Factor})
   length(factors) >= 1 || throw(ArgumentError("Need at least one factor"))
 
-  simple_types = DataType[
-    _symbol_to_simple_type(Symbol(f.group), f.rank) for f in factors
-  ]
-
-  DT = _combine_dynkin_factors(simple_types)
+  DT = parse_dynkin_type(join(("$(f.group)$(f.rank)" for f in factors), "x"))
 
   global_marked = Int[]
   offset = 0

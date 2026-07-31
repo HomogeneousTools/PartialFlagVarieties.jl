@@ -59,11 +59,9 @@ marked_dynkin_diagram
 
 ## Semisimple.jl utilities
 
-Convenience functions for working with Dynkin types, built on top of
-[Semisimple.jl](https://github.com/HomogeneousTools/Semisimple.jl).
-
-```@docs
-parse_dynkin_type
-cartan_type
-cartan_type_with_ordering
-```
+Working with Dynkin types themselves is
+[Semisimple.jl](https://github.com/HomogeneousTools/Semisimple.jl)'s job, and this package
+re-exports the three functions used most often alongside a `MarkedDynkinType`:
+`parse_dynkin_type` reads a type such as `"A2xB3"` from a string, while `sub_dynkin_type`
+and `sub_dynkin_ordering` identify the sub-diagram induced on a set of nodes, which is what
+[`levi_type`](@ref) and [`levi_permutation`](@ref) are built on.

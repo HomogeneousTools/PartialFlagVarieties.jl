@@ -90,8 +90,7 @@ function central_part(rep::IrrepLevi)
 end
 
 function _trivial_semisimple_weight(mdt::MarkedDynkinType)
-  trivial_type = is_borel(mdt) ? TypeA{1} : levi_type(mdt)
-  WeightLatticeElem(trivial_type, zeros(Int, rank(trivial_type)))
+  WeightLatticeElem(is_borel(mdt) ? TypeA{1} : levi_type(mdt))
 end
 
 function IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)

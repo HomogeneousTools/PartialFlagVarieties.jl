@@ -12,73 +12,17 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 @testset "PartialFlagVarieties.jl" begin
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  Semisimple.jl extensions: cartan_type, parse_dynkin_type
+  #  Dynkin type strings
   #
-  #  REMINDER: cartan_type, cartan_type_with_ordering, and parse_dynkin_type are
-  #  defined in src/Semisimple.jl as staging code "for inclusion in the
-  #  Semisimple.jl package" (see that file's header). They are currently owned
-  #  and exported by PartialFlagVarieties, so their tests live here. When these
-  #  functions are upstreamed into Semisimple.jl, the cartan_type and
-  #  parse_dynkin_type testsets below should move into Semisimple.jl's own suite.
+  #  parse_dynkin_type itself is Semisimple.jl's, and tested there; what belongs
+  #  here is that its guard still fires through a variety constructor.
   # ═══════════════════════════════════════════════════════════════════════════
 
-  @testset "cartan_type" begin
-    # A3 Cartan matrix
-    C_A3 = cartan_matrix(TypeA{3})
-    @test cartan_type(C_A3) == [(:A, 3)]
-    ct_ord = cartan_type_with_ordering(C_A3)
-    @test ct_ord[1] == [(:A, 3)]
-    @test length(ct_ord[2]) == 3
-
-    # B3 Cartan matrix
-    C_B3 = cartan_matrix(TypeB{3})
-    @test cartan_type(C_B3) == [(:B, 3)]
-
-    # Product type A1 × A2 (block-diagonal Cartan matrix)
-    C_prod = cartan_matrix(ProductDynkinType{Tuple{TypeA{1},TypeA{2}}})
-    ct = cartan_type(C_prod)
-    @test length(ct) == 2
-    # Should contain A1 and A2 components (order may vary)
-    types = Set(ct)
-    @test (:A, 1) in types
-    @test (:A, 2) in types
-  end
-
-  @testset "parse_dynkin_type" begin
-    @test parse_dynkin_type("A3") === TypeA{3}
-    @test parse_dynkin_type("B4") === TypeB{4}
-    @test parse_dynkin_type("G2") === TypeG2
-    @test parse_dynkin_type("E6") === TypeE{6}
-
-    # Product types
-    DT = parse_dynkin_type("A2xB3")
-    @test DT === ProductDynkinType{Tuple{TypeA{2},TypeB{3}}}
-
-    # Whitespace tolerance
-    @test parse_dynkin_type(" A3 ") === TypeA{3}
-  end
-
-  @testset "parse_dynkin_type: malformed input" begin
-    # Empty or whitespace-only input.
-    @test_throws ArgumentError parse_dynkin_type("")
-    @test_throws ArgumentError parse_dynkin_type("   ")
-    # No rank digits, or digits before the letter.
-    @test_throws ArgumentError parse_dynkin_type("A")
-    @test_throws ArgumentError parse_dynkin_type("3A")
-    # Letter outside the A–G family alphabet.
-    @test_throws ArgumentError parse_dynkin_type("Z9")
-    # Separator with no parseable component on either side.
-    @test_throws ArgumentError parse_dynkin_type("xx")
-    # Well-formed letter+digit, but not a valid Cartan rank for that family.
-    @test_throws ArgumentError parse_dynkin_type("A0")  # A needs rank >= 1
-    @test_throws ArgumentError parse_dynkin_type("B1")  # B needs rank >= 2
-    @test_throws ArgumentError parse_dynkin_type("D3")  # D needs rank >= 4
-    @test_throws ArgumentError parse_dynkin_type("E5")  # E only ranks 6, 7, 8
-    @test_throws ArgumentError parse_dynkin_type("F3")  # F only rank 4
-    @test_throws ArgumentError parse_dynkin_type("G3")  # G only rank 2
-    # The same guard fires when a bad string reaches a variety constructor.
+  @testset "Dynkin type strings reaching a variety constructor" begin
+    @test dynkin_type(partial_flag_variety("A3", 1)) === TypeA{3}
     @test_throws ArgumentError partial_flag_variety("Q7", 1)
     @test_throws ArgumentError partial_flag_variety("", 1)
+    @test_throws ArgumentError partial_flag_variety("B1", 1)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
