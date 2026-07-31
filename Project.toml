@@ -1,6 +1,6 @@
 name = "PartialFlagVarieties"
 uuid = "965b632c-8f0e-44b9-bcdc-fceb5db1f8c7"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Pieter Belmans <p.belmans@uu.nl>"]
 
 [deps]
