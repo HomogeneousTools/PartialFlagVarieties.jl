@@ -74,12 +74,12 @@ function _graded_branching!(
   ord_D = levi_permutation(mdt_D)   # node of the L_J diagram ↦ ambient node
   contracted = Tuple(k for k in eachindex(ord) if !(ord[k] in ord_D))
 
-  # ponytail: one vector per weight of the fibre, so the cost scales with the
-  # number of weights of V_{L_I}(λ), and the bookkeeping dominates: 28 MiB for a
+  # One vector per weight of the fibre, so the cost scales with the number of
+  # weights of V_{L_I}(λ) and the bookkeeping dominates: 28 MiB for a
   # 3248-weight fibre on the Cayley plane, of which only 1 MiB is the weight
-  # system itself.  Cheap upgrade if it ever shows up in a profile: keep the
-  # per-weight data in tuples rather than vectors.  Asymptotic one: a branching
-  # rule producing highest weights directly, saving the |W_{L_J}| factor.
+  # system itself.  Keeping the per-weight data in tuples would cut the constant
+  # factor; a branching rule producing highest weights directly would remove the
+  # |W_{L_J}| factor altogether.
   buckets = Dict{Vector{Int},Vector{Pair{Vector{Int},BigInt}}}()
   for (ν, mult) in freudenthal_formula(ss)
     d = Int.(Cinv * (coefficients(ss) - ν))   # the d_k, since ss - ν = Σ_k d_k α_k
