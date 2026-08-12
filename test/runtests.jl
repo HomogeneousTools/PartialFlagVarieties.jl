@@ -2953,6 +2953,138 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  Projections q: G/P_J → G/P_I
+  #
+  #  Fibres of `pullback` are materialised weight by weight, so every bundle
+  #  appearing below is deliberately of small rank.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Projections: argument validation" begin
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+
+    # Not a projection: the marked nodes of the target must be a subset.
+    @test_throws ArgumentError pullback(X, structure_sheaf(D))
+    @test_throws ArgumentError pullback(
+      partial_flag_variety(TypeA{3}, (1, 2)),
+      structure_sheaf(partial_flag_variety(TypeA{3}, (3,)))
+    )
+
+    # Different ambient groups.
+    @test_throws ArgumentError pullback(
+      full_flag_variety(TypeB{2}), structure_sheaf(Gr(2, 4))
+    )
+  end
+
+  @testset "pullback: tautological filtration on Fl(k, l; n)" begin
+    # Pulling U_l back from Gr(l, n) reproduces 0 → U_k → U_l → U_l/U_k → 0,
+    # with U_k the subbundle, i.e. the piece of maximal grading.
+    for (n, k, l) in [(6, 1, 3), (6, 2, 4), (7, 2, 5), (5, 1, 2)]
+      D = flag_variety(n, [k, l])
+      F = pullback(D, universal_subbundle(Gr(l, n)))
+
+      @test F isa FilteredBundle
+      @test variety(F) == D
+      @test n_filtration_steps(F) == 2
+      @test graded_pieces(F) == tautological_bundles(D)
+      @test graded_pieces(F)[1] == universal_subbundle(D, 1)
+      @test rank_bundle.(graded_pieces(F)) == [k, l - k]
+      @test rank_bundle(F) == l
+    end
+  end
+
+  @testset "pullback: top quotient carries the highest weight" begin
+    # The piece of grading zero contains the highest weight of the fibre, and it
+    # is the last one, so `graded_pieces` runs from subbundle to quotient.
+    for (X, D) in [
+      (Gr(3, 6), flag_variety(6, [1, 3])),
+      (Gr(2, 5), full_flag_variety(TypeA{4})),
+      (partial_flag_variety(TypeB{3}, (3,)), full_flag_variety(TypeB{3})),
+      (partial_flag_variety(TypeC{3}, (2,)), partial_flag_variety(TypeC{3}, (1, 2))),
+    ]
+      E = universal_subbundle(X)
+      F = pullback(D, E)
+      λ = PartialFlagVarieties.p_dominant_weight(only(components(E)))
+      tops = PartialFlagVarieties.p_dominant_weight.(components(graded_pieces(F)[end]))
+      @test λ in tops
+      @test !any(
+        λ in PartialFlagVarieties.p_dominant_weight.(components(p)) for
+        p in graded_pieces(F)[1:(end - 1)]
+      )
+    end
+  end
+
+  @testset "pullback: line bundles and the identity projection" begin
+    # A line bundle stays a line bundle, of degree zero at the contracted nodes.
+    F = pullback(flag_variety(4, [1, 2]), line_bundle(Gr(2, 4), 3))
+    @test n_filtration_steps(F) == 1
+    @test picard_degrees(total_bundle(F)) == [0, 3]
+
+    F2 = pullback(partial_flag_variety(TypeB{3}, (1, 2, 3)), line_bundle(quadric(5), 2))
+    @test rank_bundle(F2) == 1
+    @test picard_degrees(total_bundle(F2)) == [2, 0, 0]
+
+    # Nothing contracted: q is the identity and the filtration is trivial.
+    E = universal_subbundle(Gr(2, 4))
+    Fid = pullback(Gr(2, 4), E)
+    @test n_filtration_steps(Fid) == 1
+    @test only(graded_pieces(Fid)) == E
+
+    # The zero bundle pulls back to rank zero.
+    @test rank_bundle(pullback(flag_variety(4, [1, 2]), zero_bundle(Gr(2, 4)))) == 0
+  end
+
+  @testset "pullback: to the full flag variety the pieces are line bundles" begin
+    # For D = G/B the Levi is a torus, so the graded pieces are the individual
+    # weights of the fibre.
+    for (X, E) in [
+      (Gr(2, 4), universal_subbundle(Gr(2, 4))),
+      (Gr(2, 5), dual(universal_subbundle(Gr(2, 5)))),
+      (quadric(3), universal_subbundle(quadric(3))),
+    ]
+      B = full_flag_variety(dynkin_type(X))
+      F = pullback(B, E)
+      @test rank_bundle(F) == rank_bundle(E)
+      @test all(rank_bundle(p) == 1 for p in graded_pieces(F))
+      @test n_filtration_steps(F) == rank_bundle(E)
+    end
+  end
+
+  @testset "pullback: direct sums merge by grading" begin
+    D = flag_variety(4, [1, 2])
+    X = Gr(2, 4)
+    E = direct_sum(universal_subbundle(X), line_bundle(X, 1))
+    F = pullback(D, E)
+
+    # U contributes ranks 1 and 1, the line bundle only at grading zero.
+    @test rank_bundle.(graded_pieces(F)) == [1, 2]
+    @test rank_bundle(F) == rank_bundle(E)
+  end
+
+  @testset "pullback: rank and Euler characteristic are preserved" begin
+    # q^*E has the same fibre dimension as E, and Rq_*O_D = O_X gives
+    # χ(D, q^*E) = χ(X, E); χ is additive over the graded pieces.
+    for (DT, I, J) in [
+      (TypeA{3}, (2,), (1, 2)),
+      (TypeA{4}, (1, 3), (1, 2, 3)),
+      (TypeA{4}, (), (2,)),
+      (TypeB{3}, (2,), (1, 2, 3)),
+      (TypeC{3}, (1,), (1, 3)),
+      (TypeD{4}, (2,), (2, 3, 4)),
+      (TypeG2, (1,), (1, 2)),
+      (TypeF4, (4,), (1, 4)),
+    ]
+      X = partial_flag_variety(DT, I)
+      D = partial_flag_variety(DT, J)
+      for coeffs in [zeros(Int, rank(DT)), ones(Int, rank(DT))]
+        E = CompletelyReducibleBundle(X, coeffs)
+        tot = total_bundle(pullback(D, E))
+        @test rank_bundle(tot) == rank_bundle(E)
+        @test euler_characteristic(tot) == euler_characteristic(E)
+      end
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  Hodge numbers over ambients with filtered tangent bundle
   # ═══════════════════════════════════════════════════════════════════════════
 
