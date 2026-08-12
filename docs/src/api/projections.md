@@ -1,6 +1,6 @@
 # Projections
 
-Pullback along a projection between partial flag varieties.
+Pullback and pushforward along a projection between partial flag varieties.
 
 Marked nodes ``I \subseteq J`` give ``\mathrm{P}_J \subseteq \mathrm{P}_I``, hence a
 projection
@@ -11,7 +11,8 @@ q \colon D = \mathrm{G}/\mathrm{P}_J \longrightarrow \mathrm{G}/\mathrm{P}_I = X
 
 whose fibre ``\mathrm{P}_I/\mathrm{P}_J \cong \mathrm{L}_I/(\mathrm{L}_I \cap \mathrm{P}_J)``
 is again a partial flag variety, for the Levi factor ``\mathrm{L}_I`` in place of
-``\mathrm{G}``.
+``\mathrm{G}``. Both directions along ``q`` stay inside the world of equivariant
+bundles, and each is a familiar construction relative to ``\mathrm{L}_I``.
 
 ## Pullback
 
@@ -38,9 +39,30 @@ with ``\mathcal{U}_k`` first.
 pullback
 ```
 
+## Pushforward
+
+``\mathrm{R}q_*`` is the Borel–Weil–Bott theorem for ``\mathrm{L}_I`` rather than
+for ``\mathrm{G}``: the same ``\rho``-shifted fold into a dominant chamber, but
+reflecting only in the nodes unmarked in ``I``. As in the absolute case, an
+irreducible pushes forward to a single shifted irreducible or to zero, so no
+branching is involved. Taking ``I = \emptyset``, where ``X`` is a point, recovers
+[`cohomology`](@ref).
+
+Since ``\mathrm{R}q_*`` of an irreducible sits in a single degree ``d``, the Leray
+spectral sequence degenerates and
+
+```math
+\mathrm{H}^i(D, \mathcal{E}) = \mathrm{H}^{i-d}(X, \mathrm{R}^dq_*\mathcal{E}).
+```
+
+```@docs
+pushforward
+```
+
 ## Internals
 
 ```@docs
 PartialFlagVarieties._projection_nodes
 PartialFlagVarieties._graded_branching!
+PartialFlagVarieties._fold_dominant_in
 ```

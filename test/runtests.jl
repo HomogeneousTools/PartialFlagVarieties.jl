@@ -2964,14 +2964,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Not a projection: the marked nodes of the target must be a subset.
     @test_throws ArgumentError pullback(X, structure_sheaf(D))
+    @test_throws ArgumentError pushforward(D, structure_sheaf(X))
     @test_throws ArgumentError pullback(
       partial_flag_variety(TypeA{3}, (1, 2)),
-      structure_sheaf(partial_flag_variety(TypeA{3}, (3,)))
+      structure_sheaf(partial_flag_variety(TypeA{3}, (3,))),
     )
 
     # Different ambient groups.
     @test_throws ArgumentError pullback(
       full_flag_variety(TypeB{2}), structure_sheaf(Gr(2, 4))
+    )
+    @test_throws ArgumentError pushforward(
+      Gr(2, 4), structure_sheaf(full_flag_variety(TypeB{2}))
     )
   end
 
@@ -3080,6 +3084,112 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         tot = total_bundle(pullback(D, E))
         @test rank_bundle(tot) == rank_bundle(E)
         @test euler_characteristic(tot) == euler_characteristic(E)
+      end
+    end
+  end
+
+  @testset "pushforward: structure sheaf and the identity projection" begin
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+    Rq = pushforward(X, structure_sheaf(D))
+
+    @test Rq isa Cohomology{CompletelyReducibleBundle}
+    @test lastindex(Rq) == dimension(D) - dimension(X)
+    @test Rq[0] == structure_sheaf(X)
+    @test isempty(components(Rq[1]))
+    @test sprint(show, Rq) == "R⁰ = E(0)"
+
+    # Nothing contracted: Rq_* is the identity, concentrated in degree zero.
+    E = universal_subbundle(X)
+    Rid = pushforward(X, E)
+    @test lastindex(Rid) == 0
+    @test Rid[0] == E
+  end
+
+  @testset "pushforward: vanishing and degree shift" begin
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+
+    # λ + ρ singular for a root of L_I: everything vanishes.
+    Rq = pushforward(X, CompletelyReducibleBundle(D, [-1, 0, 0]))
+    @test all(isempty(components(Rq[i])) for i in 0:lastindex(Rq))
+    @test sprint(show, Rq) == "R* = 0"
+
+    # A genuine shift into degree one, matching the Leray spectral sequence.
+    E = CompletelyReducibleBundle(D, [-2, 1, 0])
+    Rq1 = pushforward(X, E)
+    @test isempty(components(Rq1[0]))
+    @test Rq1[1] == structure_sheaf(X)
+    @test cohomology(E)[1] == cohomology(Rq1[1])[0]
+  end
+
+  @testset "pushforward: q_* q^* is the identity" begin
+    # Rq_*q^*E = E ⊗ Rq_*O_D = E, in degree zero.
+    for (X, D, E) in [
+      (Gr(3, 6), flag_variety(6, [1, 3]), universal_subbundle(Gr(3, 6))),
+      (Gr(2, 4), flag_variety(4, [1, 2]), universal_subbundle(Gr(2, 4))),
+      (Gr(2, 4), full_flag_variety(TypeA{3}), line_bundle(Gr(2, 4), 2)),
+      (
+        partial_flag_variety(TypeB{3}, (2,)),
+        full_flag_variety(TypeB{3}),
+        line_bundle(partial_flag_variety(TypeB{3}, (2,)), 2),
+      ),
+    ]
+      Rq = pushforward(X, total_bundle(pullback(D, E)))
+      @test Rq[0] == E
+      @test all(isempty(components(Rq[i])) for i in 1:lastindex(Rq))
+    end
+  end
+
+  @testset "pushforward: I = ∅ recovers cohomology" begin
+    # For X a point, R^i q_* is H^i as a representation of G, so its rank is h^i.
+    for (D, E) in [
+      (Gr(2, 4), dual(universal_subbundle(Gr(2, 4)))),
+      (Gr(2, 5), line_bundle(Gr(2, 5), 1)),
+      (
+        flag_variety(4, [1, 2]),
+        CompletelyReducibleBundle(flag_variety(4, [1, 2]), [-2, 1, 0]),
+      ),
+      (quadric(5), tangent_bundle(quadric(5))),
+      (full_flag_variety(TypeG2), line_bundle(full_flag_variety(TypeG2), [1, -3])),
+    ]
+      pt = partial_flag_variety(dynkin_type(D), ())
+      Rq = pushforward(pt, E)
+      H = cohomology(E)
+      @test dimension(pt) == 0
+      @test lastindex(Rq) == dimension(D)
+      @test all(rank_bundle(Rq[i]) == H[i] for i in 0:lastindex(H))
+    end
+  end
+
+  @testset "pushforward: Leray degeneration across types" begin
+    # Rq_* of an irreducible sits in a single degree d, so the Leray spectral
+    # sequence degenerates and H^i(D, E) = H^{i-d}(X, R^d q_* E) exactly.
+    for (DT, I, J, coeffs) in [
+      (TypeA{3}, (2,), (1, 2), [-2, 1, 0]),
+      (TypeA{3}, (1,), (1, 2, 3), [1, -3, 1]),
+      (TypeA{4}, (1, 3), (1, 2, 3), [0, -2, 1, 0]),
+      (TypeB{3}, (2,), (1, 2), [-3, 1, 0]),
+      (TypeC{3}, (1,), (1, 3), [1, 0, -4]),
+      (TypeD{4}, (2,), (2, 3), [0, 1, -3, 1]),
+      (TypeG2, (1,), (1, 2), [-1, 2]),
+      (TypeF4, (4,), (3, 4), [0, 0, -2, 1]),
+    ]
+      X = partial_flag_variety(DT, I)
+      D = partial_flag_variety(DT, J)
+      E = CompletelyReducibleBundle(D, coeffs)
+      Rq = pushforward(X, E)
+      H = cohomology(E)
+
+      nonzero = [i for i in 0:lastindex(Rq) if !isempty(components(Rq[i]))]
+      @test length(nonzero) <= 1
+
+      if isempty(nonzero)
+        @test all(iszero(H[i]) for i in 0:lastindex(H))
+      else
+        d = only(nonzero)
+        HR = cohomology(Rq[d])
+        for i in 0:lastindex(H)
+          @test H[i] == (0 <= i - d <= lastindex(HR) ? HR[i - d] : big(0))
+        end
       end
     end
   end
