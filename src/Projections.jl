@@ -135,7 +135,13 @@ function _peel!(
     lift[c] = w
   end
   χ = character_from_weights(LT_J, mults)
-  append!(reps, (IrrepLevi(mdt_D, lift[coefficients(ω)]) for (ω, m) in χ for _ in 1:Int(m)))
+  for (ω, m) in χ
+    # `character_from_weights` returns a virtual character in general; a negative
+    # multiplicity here would mean the fibre was not a genuine representation,
+    # and `1:(-2)` would drop it without trace.
+    m > 0 || throw(ArgumentError("Branching produced multiplicity $m for $ω."))
+    append!(reps, Iterators.repeated(IrrepLevi(mdt_D, lift[coefficients(ω)]), Int(m)))
+  end
 end
 
 """
@@ -365,6 +371,9 @@ function pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle)
     result = borel_weil_bott(p_dominant_weight(rep), S)
     result === nothing && continue          # λ + ρ singular for L_I
     len, μ = result
+    # `len` is in range because λ is P_J-dominant, which the `has_fiber` guard
+    # above is what enforces: for such a λ the fold is a minimal-length coset
+    # representative, so ℓ(w) <= |Φ_S⁺| - |Φ_T⁺| = d.
     push!(pieces[len + 1], IrrepLevi(mdt_X, μ))
   end
 
