@@ -80,9 +80,8 @@ function _graded_branching(mdt_D::MarkedDynkinType, rep::IrrepLevi)
   for (ν, mult) in freudenthal_formula(ss)
     d = Int.(Cinv * (coefficients(ss) - ν))   # the d_k, since ss - ν = Σ_k d_k α_k
     w = Int[λ[i] - sum(d[k] * C[i, ord[k]] for k in eachindex(ord)) for i in eachindex(λ)]
-    push!(
-      get!(buckets, Int[d[k] for k in contracted], Pair{Vector{Int},BigInt}[]), w => mult
-    )
+    key = Int[d[k] for k in contracted]
+    push!(get!(() -> Pair{Vector{Int},BigInt}[], buckets, key), w => mult)
   end
 
   LT_D = levi_type(mdt_D)
@@ -91,16 +90,24 @@ function _graded_branching(mdt_D::MarkedDynkinType, rep::IrrepLevi)
     reps = get!(pieces, sum(key), IrrepLevi[])
     if LT_D === nothing
       # D = G/B: the Levi is a torus, so each bucket is a single fibre weight.
-      append!(reps, (IrrepLevi(mdt_D, w) for (w, m) in entries for _ in 1:m))
+      append!(reps, (IrrepLevi(mdt_D, w) for (w, m) in entries for _ in 1:Int(m)))
       continue
     end
     r = rank(LT_D)
-    coords(w) = SVector{r,Int}(Int[w[j] for j in ord_D])
-    χ = character_from_weights(
-      LT_D, Dict{SVector{r,Int},BigInt}(coords(w) => m for (w, m) in entries)
+    mults = Dict{SVector{r,Int},BigInt}()
+    lift = Dict{SVector{r,Int},Vector{Int}}()
+    for (w, m) in entries
+      c = SVector{r,Int}(ntuple(j -> w[ord_D[j]], r))
+      # `c` is injective on a bucket, so this never merges in practice;
+      # accumulating rather than overwriting keeps a violation from silently
+      # shrinking the rank.
+      mults[c] = get(mults, c, zero(BigInt)) + m
+      lift[c] = w
+    end
+    χ = character_from_weights(LT_D, mults)
+    append!(
+      reps, (IrrepLevi(mdt_D, lift[coefficients(ω)]) for (ω, m) in χ for _ in 1:Int(m))
     )
-    lift = Dict(coords(w) => w for (w, _) in entries)
-    append!(reps, (IrrepLevi(mdt_D, lift[coefficients(ω)]) for (ω, m) in χ for _ in 1:m))
   end
   pieces
 end
