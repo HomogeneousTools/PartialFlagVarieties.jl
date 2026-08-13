@@ -1,6 +1,6 @@
 export IrrepLevi
 export central_part, semisimple_part
-export to_ambient_weight, fiber_dimension, has_fiber, p_dominant_weight
+export to_ambient_weight, fiber_dimension, is_p_dominant, p_dominant_weight
 
 """
     IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
@@ -175,21 +175,23 @@ function fiber_dimension(rep::IrrepLevi)::Int
 end
 
 """
-    has_fiber(rep::IrrepLevi) -> Bool
+    is_p_dominant(rep::IrrepLevi) -> Bool
 
-Whether `rep` carries a representation at all, i.e. whether
-[`fiber_dimension`](@ref) is nonzero. A non-dominant Levi weight is no highest
-weight of anything, and counts as the zero representation.
+Whether the weight of `rep` is dominant for ``\\mathrm{P}``, equivalently
+whether its [`semisimple_part`](@ref) is dominant for the Levi. Only then is it
+the highest weight of a representation, so only then does `rep` describe
+anything: a non-dominant weight is the highest weight of nothing, rather than of
+a zero-dimensional something.
 
-Deliberately not routed through `fiber_dimension`: that would run the Weyl
-dimension formula only to learn the answer is nonzero, and every construction of
-a bundle asks this question once per summand.
+This is what [`CompletelyReducibleBundle`](@ref) checks of every summand, so it
+runs once per summand per bundle constructed. It therefore tests dominance
+directly rather than asking [`fiber_dimension`](@ref) for a number, which would
+run the Weyl dimension formula only to learn the answer is nonzero.
 
-Dominance of the semisimple part is the whole test. The full flag variety needs
-no special case: there the semisimple part is the zero weight of the `TypeA{1}`
-stand-in, which is dominant.
+The full flag variety needs no special case: there the semisimple part is the
+zero weight of the `TypeA{1}` stand-in, which is dominant.
 """
-has_fiber(rep::IrrepLevi) = is_dominant(semisimple_part(rep))
+is_p_dominant(rep::IrrepLevi) = is_dominant(semisimple_part(rep))
 
 function Base.show(io::IO, rep::IrrepLevi)
   print(io, "(", sprint(show, p_dominant_weight(rep)), ")")

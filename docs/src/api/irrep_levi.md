@@ -76,7 +76,7 @@ central_part
 semisimple_part
 p_dominant_weight
 fiber_dimension
-has_fiber
+is_p_dominant
 to_ambient_weight
 ```
 

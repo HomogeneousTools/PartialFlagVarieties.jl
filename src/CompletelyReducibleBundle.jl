@@ -81,7 +81,7 @@ struct CompletelyReducibleBundle <: Bundle
       # defines no bundle. Rejecting it here keeps every summand a genuine
       # representation, rather than leaving a formal symbol that some consumers
       # read as zero and others happily push through Borel–Weil–Bott.
-      has_fiber(component) || throw(
+      is_p_dominant(component) || throw(
         ArgumentError(
           "Bundle component $idx has weight $(p_dominant_weight(component)), which is not dominant for the Levi of $bundle_mdt."
         ),

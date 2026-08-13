@@ -3234,14 +3234,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # by `rank_bundle` while `cohomology` pushed it through Borel–Weil–Bott.
     D = flag_variety(4, [1, 2])   # only node 3 is unmarked
     for coeffs in [[0, 0, -2], [0, 0, -1], [1, 0, -3]]
-      @test !has_fiber(IrrepLevi(marked_dynkin_type(D), coeffs))
+      @test !is_p_dominant(IrrepLevi(marked_dynkin_type(D), coeffs))
       @test_throws ArgumentError CompletelyReducibleBundle(D, coeffs)
     end
 
     # Dominant at the unmarked node is all that is asked; the marked
     # coordinates are free, since they only twist by a character.
     for coeffs in [[0, 0, 0], [-5, 3, 0], [7, -9, 2]]
-      @test has_fiber(IrrepLevi(marked_dynkin_type(D), coeffs))
+      @test is_p_dominant(IrrepLevi(marked_dynkin_type(D), coeffs))
       @test rank_bundle(CompletelyReducibleBundle(D, coeffs)) > 0
     end
 
