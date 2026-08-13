@@ -2996,6 +2996,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
   end
 
+  @testset "pullback: pieces holding several irreducibles" begin
+    # Every other pullback test uses a fibre that branches into one irreducible
+    # per grading, so nothing would catch a wrong grading function.  Contracting
+    # three nodes puts two irreducibles in the middle piece.
+    F = pullback(flag_variety(6, [1, 3, 5]), tangent_bundle(Gr(3, 6)))
+    @test length.(components.(graded_pieces(F))) == [1, 2, 1]
+    @test rank_bundle.(graded_pieces(F)) == [4, 4, 1]
+    @test rank_bundle(F) == dimension(Gr(3, 6))
+
+    G = pullback(full_flag_variety(TypeA{4}), tangent_bundle(Gr(2, 5)))
+    @test length.(components.(graded_pieces(G))) == [1, 2, 2, 1]
+    @test rank_bundle(G) == dimension(Gr(2, 5))
+  end
+
   @testset "pullback: top quotient carries the highest weight" begin
     # The piece of grading zero contains the highest weight of the fibre, and it
     # is the last one, so `graded_pieces` runs from subbundle to quotient.
