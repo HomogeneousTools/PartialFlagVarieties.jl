@@ -97,6 +97,10 @@ recovers the absolute one.
 Unlike the absolute case this is not memoized, since it is called once per
 irreducible summand rather than from an inner loop.
 
+The shift is still ``\\rho = \\rho_{\\mathrm{G}}``: the difference
+``\\rho_{\\mathrm{G}} - \\rho_S`` pairs to zero with every coroot in ``S``, so it
+is ``\\mathrm{W}_S``-invariant and drops out.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -110,7 +114,11 @@ julia> borel_weil_bott(λ, (2,))    # already dominant for the second node alone
 (0, -2ω1 + ω2)
 ```
 """
-borel_weil_bott(λ::WeightLatticeElem, nodes) = Semisimple.borel_weil_bott(λ, nodes)
+function borel_weil_bott(λ::WeightLatticeElem, nodes)
+  ρ = weyl_vector(typeof(λ).parameters[1])
+  μ_dom, d = conjugate_dominant_weight_with_length(λ + ρ, nodes)
+  any(s -> iszero(coefficients(μ_dom)[s]), nodes) ? nothing : (d, μ_dom - ρ)
+end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition (0-based indexing)
