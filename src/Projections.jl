@@ -346,6 +346,9 @@ end
 Replace each higher direct image by its rank, as [`dimensions`](@ref) does for
 character-valued cohomology.
 
+The result is indexed by the degree of the direct image and runs to the relative
+dimension, so it is not cohomology of `X` despite printing with an `H`.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties
@@ -366,6 +369,9 @@ end
 The rank of ``\\sum_i (-1)^i [\\mathrm{R}^iq_*\\mathcal{E}]`` in the Grothendieck
 group of `X`. For ``\\mathcal{E} = q^*\\mathcal{F}`` this is the rank of
 ``\\mathcal{F}``, since ``\\mathrm{R}q_*q^*\\mathcal{F} = \\mathcal{F}``.
+
+This is *not* ``\\chi(X, -)`` of anything: the entries are bundles on `X`, not
+cohomology groups. See the warning on [`chi`](@ref).
 """
 euler_characteristic(Rq::Cohomology{CompletelyReducibleBundle}) =
   euler_characteristic(dimensions(Rq))

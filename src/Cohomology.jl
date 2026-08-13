@@ -134,6 +134,10 @@ Entries are 0-indexed: `H[i]` returns ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \
 # Type parameter
 - `T = WeylCharacter{DT,R}`: entries are virtual characters of ``\\mathrm{G}``
 - `T = BigInt`: entries are dimensions
+- `T = CompletelyReducibleBundle`: entries are the higher direct images
+  ``\\mathrm{R}^iq_*`` of [`pushforward`](@ref), which live on the target of a
+  projection rather than being cohomology of anything. For that parametrization
+  `H[i]` is a bundle and the index runs to the relative dimension.
 
 The object behaves like a vector indexed by cohomological degree rather than by
 Julia's usual `1:length(H)` convention.
@@ -156,8 +160,11 @@ julia> H[1]  # H¹(ℙ⁴, 𝒪) = 0
 ```
 """
 struct Cohomology{T}
-  entries::Vector{T}   # entries[i+1] = Hⁱ, i = 0, ..., dim
-  dim_variety::Int      # dimension of the variety
+  entries::Vector{T}   # entries[i+1] = the degree-i part, i = 0, ..., dim_variety
+  # Highest degree that can carry something, not always a dimension of a
+  # variety: `dim X` for sheaf cohomology on `X`, but the *relative* dimension
+  # for the higher direct images returned by `pushforward`.
+  dim_variety::Int
 end
 
 # ─── 0-based indexing ────────────────────────────────────────────────────────
@@ -432,6 +439,15 @@ end
     chi(H::Cohomology) -> BigInt
 
 Synonym for [`euler_characteristic(H)`](@ref).
+
+!!! warning "Two different invariants"
+    For `Cohomology{BigInt}` and `Cohomology{<:WeylCharacter}` this is the
+    alternating sum of the dimensions of the cohomology groups. For
+    `Cohomology{CompletelyReducibleBundle}` the entries are bundles, not
+    cohomology, so it is the alternating sum of their *ranks*: the rank of the
+    class of ``\\mathrm{R}q_*\\mathcal{E}`` in the Grothendieck group, which is
+    not ``\\chi`` of any sheaf. Generic code taking an `H::Cohomology` and
+    reporting `chi(H)` gets whichever of the two matches the element type.
 """
 chi(H::Cohomology) = euler_characteristic(H)
 
