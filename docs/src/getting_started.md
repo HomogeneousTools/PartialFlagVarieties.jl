@@ -9,15 +9,13 @@ mathematical conventions behind the API, see [Conventions & Notation](convention
 using Pkg
 Pkg.add("Semisimple")  # from the General registry
 Pkg.add([
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/Base62"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
   Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
 ])
 ```
 
 `Semisimple.jl` is available from the General registry.  The URL
-specifications are still needed for `Base62` and `ZeroLocus62`, which are
-not registered yet.
+specification is still needed for `ZeroLocus62`, which is not registered yet.
 
 ## The three basic objects
 

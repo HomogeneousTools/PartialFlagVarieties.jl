@@ -4,7 +4,6 @@ version = "0.3.0"
 authors = ["Pieter Belmans <p.belmans@uu.nl>"]
 
 [deps]
-Base62 = "212a889c-07c6-4e8f-8766-fb0aa2ea40c2"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
@@ -19,12 +18,10 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
 
 [sources]
-Base62 = {rev = "main", url = "https://github.com/HomogeneousTools/Base62.jl"}
 Semisimple = {rev = "main", url = "https://github.com/HomogeneousTools/Semisimple.jl"}
 ZeroLocus62 = {rev = "main", subdir = "julia", url = "https://github.com/HomogeneousTools/ZeroLocus62"}
 
 [compat]
-Base62 = "1"
 Semisimple = "1.3"
 Combinatorics = "1"
 Distributed = "1"
