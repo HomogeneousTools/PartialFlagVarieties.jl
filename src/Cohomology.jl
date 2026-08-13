@@ -36,16 +36,6 @@ const _BWB_WEIGHT_CACHE = let b = _default_cache_budget()
   )
 end
 
-function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
-  get!(_BWB_WEIGHT_CACHE, λ) do
-    DT = typeof(λ).parameters[1]
-    ρ = weyl_vector(DT)
-    μ = λ + ρ
-    μ_dom, d = conjugate_dominant_weight_with_length(μ)
-    any(==(0), μ_dom.vec) ? nothing : (d, μ_dom - ρ)
-  end
-end
-
 """
     borel_weil_bott(λ::WeightLatticeElem{DT,R}) -> Union{Nothing, Tuple{Int, WeightLatticeElem{DT,R}}}
 
@@ -88,7 +78,11 @@ julia> borel_weil_bott(WeightLatticeElem(TypeB{2}, [1, -4]))          # regular:
 ```
 """
 function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
-  _borel_weil_bott_generic(λ)
+  # The absolute statement is the relative one with every node available, so the
+  # fold lives in the two-argument method and this adds only the cache.
+  get!(_BWB_WEIGHT_CACHE, λ) do
+    borel_weil_bott(λ, Base.OneTo(R))
+  end
 end
 
 """
@@ -127,12 +121,10 @@ julia> borel_weil_bott(λ, (2,))    # already dominant for the second node alone
 ```
 """
 function borel_weil_bott(λ::WeightLatticeElem, nodes)
-  # Deliberately not `@nospecialize`, unlike its siblings in this file: those
-  # loop over the components of a bundle and are recompiled per ambient rank,
-  # while this is four lines and the compile cost sits in Semisimple's `@inline`
-  # fold, which specialises regardless.  Measured over all 242 parabolic pairs
-  # of A5: annotating cuts specialisations from 7 to 2, saves no latency, and
-  # costs 12% throughput.
+  # Deliberately not `@nospecialize`, unlike the bundle loops further down: this
+  # is four lines and the compile cost sits in Semisimple's `@inline` fold, which
+  # specialises regardless.  Measured, annotating it saves no latency and costs
+  # throughput on both callers, the cached absolute one included.
   ρ = weyl_vector(typeof(λ).parameters[1])
   μ_dom, d = conjugate_dominant_weight_with_length(λ + ρ, nodes)
   any(s -> iszero(coefficients(μ_dom)[s]), nodes) ? nothing : (d, μ_dom - ρ)
