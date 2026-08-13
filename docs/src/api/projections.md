@@ -57,7 +57,6 @@ spectral sequence degenerates and
 
 ```@docs
 pushforward
-borel_weil_bott(::WeightLatticeElem, ::Any)
 ```
 
 ## Internals
