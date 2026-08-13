@@ -32,7 +32,7 @@ Preferences = "1.5.2"
 PrettyTables = "3.2.3"
 ProgressMeter = "1.11.0"
 StaticArrays = "1"
-ZeroLocus62 = "3"
+ZeroLocus62 = "3.1.2"
 julia = "1.11"
 
 [extras]
