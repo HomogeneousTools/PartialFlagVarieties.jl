@@ -313,13 +313,12 @@ euler_characteristic(Rq::Cohomology{CompletelyReducibleBundle}) =
 
 Whether every higher direct image vanishes.
 """
-Base.iszero(Rq::Cohomology{CompletelyReducibleBundle}) =
-  all(E -> rank_bundle(E) == 0, Rq.entries)
+Base.iszero(Rq::Cohomology{CompletelyReducibleBundle}) = all(iszero, Rq.entries)
 
 function Base.show(io::IO, Rq::Cohomology{CompletelyReducibleBundle})
   parts = [
     "R$(_superscript(i)) = $(Rq[i])" for i in 0:lastindex(Rq) if
-                                         !isempty(components(Rq[i]))
+                                         !iszero(Rq[i])
   ]
   print(io, isempty(parts) ? "R* = 0" : join(parts, "\n"))
 end

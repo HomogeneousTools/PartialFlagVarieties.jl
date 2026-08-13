@@ -3099,7 +3099,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test euler_characteristic(Rq) == 1
     @test !iszero(Rq)
     @test Rq[0] == structure_sheaf(X)
-    @test isempty(components(Rq[1]))
+    @test iszero(Rq[1])
     @test sprint(show, Rq) == "R⁰ = E(0)"
 
     # Nothing contracted: Rq_* is the identity, concentrated in degree zero.
@@ -3114,13 +3114,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # λ + ρ singular for a root of L_I: everything vanishes.
     Rq = pushforward(X, CompletelyReducibleBundle(D, [-1, 0, 0]))
-    @test all(isempty(components(Rq[i])) for i in 0:lastindex(Rq))
+    @test iszero(Rq)
     @test sprint(show, Rq) == "R* = 0"
 
     # A genuine shift into degree one, matching the Leray spectral sequence.
     E = CompletelyReducibleBundle(D, [-2, 1, 0])
     Rq1 = pushforward(X, E)
-    @test isempty(components(Rq1[0]))
+    @test iszero(Rq1[0])
     @test Rq1[1] == structure_sheaf(X)
     @test cohomology(E)[1] == cohomology(Rq1[1])[0]
   end
@@ -3155,7 +3155,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     let X = Gr(2, 4), D = flag_variety(4, [1, 2]), E = line_bundle(X, 2)
       Rq = pushforward(X, total_bundle(pullback(D, E)))
       @test Rq[0] == E
-      @test all(isempty(components(Rq[i])) for i in 1:lastindex(Rq))
+      @test all(iszero(Rq[i]) for i in 1:lastindex(Rq))
     end
   end
 
@@ -3165,7 +3165,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X, D = Gr(2, 4), flag_variety(4, [1, 2])
     for coeffs in [[0, 0, -2], [0, 0, -1], [1, 0, -3]]
       E = CompletelyReducibleBundle(D, coeffs)
+      # Rank zero but not `iszero`: the component is there, it just has no
+      # fibre.  This is exactly the case the guard in `pushforward` must catch.
       @test rank_bundle(E) == 0
+      @test !iszero(E)
       @test iszero(pushforward(X, E))
     end
 
@@ -3222,7 +3225,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       Rq = pushforward(X, E)
       H = cohomology(E)
 
-      nonzero = [i for i in 0:lastindex(Rq) if !isempty(components(Rq[i]))]
+      nonzero = [i for i in 0:lastindex(Rq) if !iszero(Rq[i])]
       @test length(nonzero) <= 1
 
       if isempty(nonzero)
