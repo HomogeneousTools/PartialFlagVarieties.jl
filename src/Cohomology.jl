@@ -81,7 +81,7 @@ function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
   # The absolute statement is the relative one with every node available, so the
   # fold lives in the two-argument method and this adds only the cache.
   get!(_BWB_WEIGHT_CACHE, λ) do
-    borel_weil_bott(λ, Base.OneTo(R))
+    borel_weil_bott(λ, 1:R)
   end
 end
 
