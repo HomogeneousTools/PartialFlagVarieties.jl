@@ -3121,18 +3121,34 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test cohomology(E)[1] == cohomology(Rq1[1])[0]
   end
 
-  @testset "pushforward: q_* q^* is the identity" begin
-    # Rq_*q^*E = E ⊗ Rq_*O_D = E, in degree zero.
+  @testset "pushforward: q_* q^* is the identity in K-theory" begin
+    # Rq_*q^*E = E ⊗ Rq_*O_D = E.  Only the class survives applying `pushforward`
+    # to the associated graded: `total_bundle` forgets the filtration, and Rq_*
+    # of the graded pieces need not be concentrated in degree zero even when
+    # Rq_*q^*E is.  So the identity to test is the alternating sum, both of
+    # ranks and of Euler characteristics.
     for (X, D, E) in [
       (Gr(3, 6), flag_variety(6, [1, 3]), universal_subbundle(Gr(3, 6))),
       (Gr(2, 4), flag_variety(4, [1, 2]), universal_subbundle(Gr(2, 4))),
       (Gr(2, 4), full_flag_variety(TypeA{3}), line_bundle(Gr(2, 4), 2)),
+      # Spread over more than one degree: R⁰ and R¹ have ranks 9 and 3 here.
+      (Gr(3, 6), flag_variety(6, [1, 3]),
+        symmetric_power(dual(universal_subbundle(Gr(3, 6))), 2)),
       (
         partial_flag_variety(TypeB{3}, (2,)),
         full_flag_variety(TypeB{3}),
         line_bundle(partial_flag_variety(TypeB{3}, (2,)), 2),
       ),
     ]
+      Rq = pushforward(X, total_bundle(pullback(D, E)))
+      @test sum((-1)^i * rank_bundle(Rq[i]) for i in 0:lastindex(Rq)) == rank_bundle(E)
+      @test sum((-1)^i * euler_characteristic(Rq[i]) for i in 0:lastindex(Rq)) ==
+        euler_characteristic(E)
+    end
+
+    # When the pullback stays in one graded piece there is nothing for the
+    # filtration to hide, and the strong form does hold.
+    let X = Gr(2, 4), D = flag_variety(4, [1, 2]), E = line_bundle(X, 2)
       Rq = pushforward(X, total_bundle(pullback(D, E)))
       @test Rq[0] == E
       @test all(isempty(components(Rq[i])) for i in 1:lastindex(Rq))
@@ -3155,8 +3171,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     Rq = pushforward(X, E)
     @test [rank_bundle(Rq[i]) for i in 0:lastindex(Rq)] == [1, 0]
 
-    # `pullback` agrees: the identity projection is not a separate code path, so
-    # the zero bundle gives no graded pieces either way.
+    # And `pullback` keeps agreeing with it: the identity projection is no
+    # longer a separate code path, so the zero bundle gives no graded pieces.
     @test rank_bundle(pullback(X, zero_bundle(X))) == 0
     @test n_filtration_steps(pullback(X, zero_bundle(X))) ==
       n_filtration_steps(pullback(D, zero_bundle(X)))
