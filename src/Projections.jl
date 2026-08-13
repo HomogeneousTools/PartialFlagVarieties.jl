@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Projections — pullback and pushforward along q: G/P_J → G/P_I
+#  Projections: pullback and pushforward along q: G/P_J → G/P_I
 #
 #  For I ⊆ J we have P_J ⊆ P_I, hence a projection
 #
