@@ -64,4 +64,5 @@ pushforward
 ```@docs
 PartialFlagVarieties._check_projection
 PartialFlagVarieties._graded_branching
+PartialFlagVarieties._fibre_buckets
 ```
