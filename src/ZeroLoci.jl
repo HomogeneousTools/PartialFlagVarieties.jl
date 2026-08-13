@@ -87,7 +87,7 @@ julia> dimension(Z)
 """
 function zero_locus(E::CompletelyReducibleBundle)
   X = E.variety
-  r = Int(rank_bundle(E))
+  r = Int(rank(E))
   d = dimension(X)
   r <= d || throw(ArgumentError(
     "Bundle rank $r exceeds ambient dimension $d."
@@ -197,7 +197,7 @@ function factors(Z::ZeroLocus)
     end
     # An over-cut component makes the whole product empty; hand that back to the
     # monolithic solver rather than build an invalid (rank > dim) zero locus.
-    rank_bundle(subbundle) > dimension(subvariety) && return [Z]
+    rank(subbundle) > dimension(subvariety) && return [Z]
     push!(parts, zero_locus(subbundle))
   end
   # Keep positive-dimensional factors and multi-point (m ≥ 2) sets; drop single
@@ -244,7 +244,7 @@ different twists are requested.
 """
 function _koszul_wedges!(Z::ZeroLocus)
   if Z.koszul_wedges === nothing
-    r = Int(rank_bundle(Z.defining_bundle))
+    r = Int(rank(Z.defining_bundle))
     E_dual = dual(Z.defining_bundle)
     Z.koszul_wedges = CompletelyReducibleBundle[exterior_power(E_dual, i) for i in 0:r]
   end
@@ -270,7 +270,7 @@ defining_bundle(Z::ZeroLocus) = Z.defining_bundle
 
 Return the codimension of ``Z`` in ``X``, equal to ``\\mathrm{rank}(\\mathcal{E})``.
 """
-codimension(Z::ZeroLocus)::Int = rank_bundle(Z.defining_bundle)
+codimension(Z::ZeroLocus)::Int = rank(Z.defining_bundle)
 
 """
     dimension(Z::ZeroLocus) -> Int
@@ -1196,7 +1196,7 @@ function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
   marked_dynkin_type(variety(L)) == marked_dynkin_type(Z.ambient) || throw(
     ArgumentError("the polarization must live on the ambient variety.")
   )
-  rank_bundle(L) == 1 || throw(
+  rank(L) == 1 || throw(
     ArgumentError("the polarization must be a line bundle (rank 1).")
   )
 

@@ -58,7 +58,7 @@ E
 variety
 components
 n_components
-rank_bundle
+rank(::CompletelyReducibleBundle)
 ```
 
 ## Positivity

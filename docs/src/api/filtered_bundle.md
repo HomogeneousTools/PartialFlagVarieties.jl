@@ -21,6 +21,7 @@ conormal filtration used in zero-locus Hodge number computations.
 
 ```@docs
 FilteredBundle
+rank(::FilteredBundle)
 graded_pieces
 n_filtration_steps
 total_bundle

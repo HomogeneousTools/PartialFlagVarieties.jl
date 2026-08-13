@@ -215,7 +215,7 @@ function compute_family(spec::CY3Family)
   E = spec.build(X)
 
   ambient_dim = Int(dimension(X))
-  bundle_rank = Int(rank_bundle(E))
+  bundle_rank = Int(rank(E))
   expected_rank = ambient_dim - 3
 
   bundle_rank == expected_rank || error(

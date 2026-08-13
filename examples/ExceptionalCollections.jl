@@ -65,7 +65,7 @@ println("=" ^ 70)
 Ed = beilinson_collection_dual(X4)
 bundle_names = ["Ω⁴(4)", "Ω³(3)", "Ω²(2)", "Ω¹(1)", "O"]
 println("Collection: ⟨Ω⁴(4), Ω³(3), Ω²(2), Ω(1), O⟩")
-println("  Ranks           : ", [rank_bundle(E) for E in Ed])
+println("  Ranks           : ", [rank(E) for E in Ed])
 println("  full exc. seq.  : ", is_full_exceptional_sequence(Ed, X4))
 println("  strong exc. seq.: ", is_strong_exceptional_sequence(Ed))
 println()
@@ -103,7 +103,7 @@ partitions25 = [[a, b] for a in 0:3 for b in 0:a]
 schur_data = [
   begin
     E = schur_functor(X25, α)
-    [string(α), rank_bundle(E), is_exceptional(E)]
+    [string(α), rank(E), is_exceptional(E)]
   end for α in partitions25
 ]
 schur_matrix = permutedims(hcat(schur_data...), (2, 1))

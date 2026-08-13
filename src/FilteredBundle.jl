@@ -105,7 +105,7 @@ julia> X = Gr(2, 4);
 
 julia> F = filtered_tangent_bundle(X);
 
-julia> rank_bundle(total_bundle(F)) == dimension(X)
+julia> rank(total_bundle(F)) == dimension(X)
 true
 ```
 """
@@ -117,12 +117,12 @@ function total_bundle(F::FilteredBundle)
 end
 
 """
-    rank_bundle(F::FilteredBundle) -> Int
+    rank(F::FilteredBundle) -> Int
 
 Return the total rank of the filtered bundle.
 """
-function rank_bundle(F::FilteredBundle)
-  sum(rank_bundle(p) for p in F.pieces; init=0)
+function rank(F::FilteredBundle)
+  sum(rank(p) for p in F.pieces; init=0)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -219,7 +219,7 @@ julia> F = filtered_tangent_bundle(X);
 julia> n_filtration_steps(F)
 1
 
-julia> rank_bundle(F) == dimension(X)
+julia> rank(F) == dimension(X)
 true
 ```
 
@@ -339,7 +339,7 @@ julia> X = Gr(2, 4);
 
 julia> F = filtered_tangent_bundle(X);
 
-julia> rank_bundle(exterior_power(F, 2)) == binomial(dimension(X), 2)
+julia> rank(exterior_power(F, 2)) == binomial(dimension(X), 2)
 true
 ```
 """
@@ -359,7 +359,7 @@ julia> X = Gr(2, 4);
 
 julia> F = filtered_tangent_bundle(X);
 
-julia> rank_bundle(symmetric_power(F, 2)) == binomial(dimension(X) + 1, 2)
+julia> rank(symmetric_power(F, 2)) == binomial(dimension(X) + 1, 2)
 true
 ```
 """
@@ -381,7 +381,7 @@ end
 
 function Base.show(io::IO, F::FilteredBundle)
   n = n_filtration_steps(F)
-  r = rank_bundle(F)
+  r = rank(F)
   print(io, "FilteredBundle(rank $r, $n layer(s))")
 end
 

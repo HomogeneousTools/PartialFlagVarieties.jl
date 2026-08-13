@@ -410,13 +410,13 @@ julia> X = Gr(2, 4);
 julia> # Σ^{(1,0)} U^∨ = U^∨  (rank 2)
        E = schur_functor(X, [1, 0]);
 
-julia> rank_bundle(E)
+julia> rank(E)
 2
 
 julia> # Σ^{(1,1)} U^∨ = det(U^∨) = O(1)  (rank 1)
        L1 = schur_functor(X, [1, 1]);
 
-julia> rank_bundle(L1)
+julia> rank(L1)
 1
 ```
 """
@@ -488,7 +488,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> rank_bundle(schur_functor(X, (2, 0)))  # Sym²(U^∨)
+julia> rank(schur_functor(X, (2, 0)))  # Sym²(U^∨)
 3
 ```
 """

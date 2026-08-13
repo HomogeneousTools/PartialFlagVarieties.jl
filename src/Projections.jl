@@ -184,7 +184,7 @@ julia> F = pullback(D, universal_subbundle(Gr(3, 6)));
 julia> graded_pieces(F) == tautological_bundles(D)
 true
 
-julia> rank_bundle.(graded_pieces(F))
+julia> rank.(graded_pieces(F))
 2-element Vector{Int64}:
  1
  2
@@ -261,7 +261,7 @@ julia> Q = universal_quotient_bundle(OGr(2, 7));   # already filtered
 
 julia> F = pullback(partial_flag_variety(TypeB{3}, (1, 2)), Q);
 
-julia> rank_bundle(F) == rank_bundle(Q)
+julia> rank(F) == rank(Q)
 true
 ```
 
@@ -274,7 +274,7 @@ julia> U = universal_subbundle(Gr(2, 4));
 
 julia> F = pullback(full_flag_variety(TypeA{3}), pullback(flag_variety(4, [1, 2]), U));
 
-julia> rank_bundle.(graded_pieces(F))
+julia> rank.(graded_pieces(F))
 2-element Vector{Int64}:
  1
  1
@@ -352,7 +352,7 @@ julia> E = dual(universal_subbundle(Gr(2, 4)));
 
 julia> Rq = pushforward(partial_flag_variety(TypeA{3}, ()), E);
 
-julia> [rank_bundle(Rq[i]) for i in 0:4] == [Int(cohomology(E)[i]) for i in 0:4]
+julia> [rank(Rq[i]) for i in 0:4] == [Int(cohomology(E)[i]) for i in 0:4]
 true
 ```
 """
@@ -398,7 +398,7 @@ julia> dimensions(Rq)[0]
 ```
 """
 function dimensions(Rq::Cohomology{CompletelyReducibleBundle})
-  Cohomology{BigInt}(BigInt[rank_bundle(E) for E in Rq.entries], Rq.max_degree)
+  Cohomology{BigInt}(BigInt[rank(E) for E in Rq.entries], Rq.max_degree)
 end
 
 """

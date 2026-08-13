@@ -34,14 +34,14 @@ and [`universal_subbundles`](@ref).
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(universal_subbundle(Gr(2, 5)))
+julia> rank(universal_subbundle(Gr(2, 5)))
 2
 ```
 
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(universal_subbundle(OGr(3, 7)))
+julia> rank(universal_subbundle(OGr(3, 7)))
 3
 ```
 
@@ -93,7 +93,7 @@ julia> using PartialFlagVarieties
 
 julia> Q = universal_quotient_bundle(Gr(2, 5));
 
-julia> rank_bundle(Q)
+julia> rank(Q)
 3
 
 julia> degree(cohomology(Q; characters=true)[0])  # H⁰(Q) is the standard representation of A_4
@@ -115,7 +115,7 @@ function universal_quotient_bundle(X::PartialFlagVariety)
 
   # 0 → U → U^⟂ → R → 0, so Q ≅ dual(U^⟂) (Frassineti–Manivel, arXiv:2605.28712, §1).
   # In Lagrangian / spinor cases R = 0 and U^⟂ = U.
-  rank_bundle(residual_bundle(X)) == 0 && return dual(universal_subbundle(X))
+  rank(residual_bundle(X)) == 0 && return dual(universal_subbundle(X))
   return dual(FilteredBundle(X, [universal_subbundle(X), residual_bundle(X)]))
 end
 
@@ -131,7 +131,7 @@ subbundle.
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(S(Gr(2, 5)))
+julia> rank(S(Gr(2, 5)))
 2
 ```
 """
@@ -148,7 +148,7 @@ Shorthand for [`universal_quotient_bundle`](@ref): the universal quotient bundle
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(Q(Gr(2, 5)))
+julia> rank(Q(Gr(2, 5)))
 3
 ```
 """
@@ -170,7 +170,7 @@ julia> X = OGr(3, 9);
 
 julia> R = residual_bundle(X);
 
-julia> rank_bundle(R)
+julia> rank(R)
 3
 ```
 
@@ -181,7 +181,7 @@ would only move cohomology to higher degree):
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(residual_bundle(SGr(3, 6)))  # Lagrangian: R vanishes
+julia> rank(residual_bundle(SGr(3, 6)))  # Lagrangian: R vanishes
 0
 
 julia> degree(cohomology(residual_bundle(OGr(2, 7)); characters=true)[0])  # acyclic on OGr(2, 7)
@@ -299,7 +299,7 @@ julia> X = quadric(5);  # Q^5 = B_3/P_1
 
 julia> S = spinor_bundle(X);
 
-julia> rank_bundle(S)
+julia> rank(S)
 4
 ```
 
@@ -310,7 +310,7 @@ julia> X = quadric(4);  # Q^4 = D_3/P_1
 
 julia> Sp = spinor_bundle(X, :plus);
 
-julia> rank_bundle(Sp)
+julia> rank(Sp)
 2
 ```
 
@@ -393,17 +393,17 @@ julia> using PartialFlagVarieties
 
 julia> X = flag_variety(4, [1, 2]);  # Fl(1,2; 4)
 
-julia> rank_bundle(universal_subbundle(X, 1))
+julia> rank(universal_subbundle(X, 1))
 1
 
-julia> rank_bundle(universal_subbundle(X, 2))
+julia> rank(universal_subbundle(X, 2))
 2
 ```
 
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(universal_subbundle(OGr(3, 9), 2))  # U^⊥, rank n-k = 6
+julia> rank(universal_subbundle(OGr(3, 9), 2))  # U^⊥, rank n-k = 6
 6
 ```
 """
@@ -457,7 +457,7 @@ julia> using PartialFlagVarieties
 
 julia> X = flag_variety(4, [1, 2]);  # Fl(1, 2; 4)
 
-julia> rank_bundle.(tautological_bundles(X))
+julia> rank.(tautological_bundles(X))
 2-element Vector{Int64}:
  1
  1
@@ -466,7 +466,7 @@ julia> rank_bundle.(tautological_bundles(X))
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle.(tautological_bundles(OGr(3, 9)))  # [U, R] on OGr(3, 9)
+julia> rank.(tautological_bundles(OGr(3, 9)))  # [U, R] on OGr(3, 9)
 2-element Vector{Int64}:
  3
  3
@@ -571,7 +571,7 @@ last marked node ``m_k \\in \\{n-1, n\\}`` appears in a multi-step flag,
 the corresponding ``\\mathcal{U}_{m_k}`` is the rank-``n`` maximal
 isotropic from that spinor family — *not* a rank-``(n-1)`` subspace. This
 follows the convention of the underlying generalized Grassmannian: e.g.
-`OGr(3, 8) = D_4 / P_3` has `rank_bundle(universal_subbundle(X)) == 4`.
+`OGr(3, 8) = D_4 / P_3` has `rank(universal_subbundle(X)) == 4`.
 
 The two-marked spinorial variety ``\\mathrm{D}_n / P_{n-1, n}`` (the
 ``(n-1)``-isotropic Grassmannian, Picard rank 2 — see Frassineti–Manivel,
@@ -584,7 +584,7 @@ julia> using PartialFlagVarieties
 
 julia> X = flag_variety(4, [1, 2]);  # Fl(1, 2; 4)
 
-julia> rank_bundle.(universal_subbundles(X))
+julia> rank.(universal_subbundles(X))
 2-element Vector{Int64}:
  1
  2
@@ -593,7 +593,7 @@ julia> rank_bundle.(universal_subbundles(X))
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle.(universal_subbundles(OGr(3, 9)))  # [U, U^⊥]
+julia> rank.(universal_subbundles(OGr(3, 9)))  # [U, U^⊥]
 2-element Vector{Int64}:
  3
  6
@@ -604,7 +604,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeD{4}, (1, 3));  # last marked at the spinor node
 
-julia> rank_bundle.(universal_subbundles(X))
+julia> rank.(universal_subbundles(X))
 2-element Vector{Int64}:
  1
  4

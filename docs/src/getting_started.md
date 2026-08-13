@@ -63,7 +63,7 @@ U = universal_subbundle(X)
 Q = universal_quotient_bundle(X)
 
 E = direct_sum(line_bundle(X, 1), exterior_power(Q, 2))
-rank_bundle(E)
+rank(E)
 ```
 
 The most common bundles have single-letter **shorthands** that appear throughout

@@ -180,7 +180,7 @@ function compute_family(label, k, n, weights, desc)
   X = Gr(k, n)
   d = dimension(X)
   E = bundle_from_gl_weights(X, k, n, weights)
-  r = Int(rank_bundle(E))
+  r = Int(rank(E))
 
   if d - r != 4
     @warn "  $label: dim(Z) = $(d - r) ≠ 4; skipping"
