@@ -407,23 +407,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test λ_back == ω₁
   end
 
-  @testset "fiber_dimension" begin
+  @testset "degree" begin
     X = Gr(2, 5)
     S_rep = only(components(universal_subbundle(X)))
-    @test fiber_dimension(S_rep) == 2
+    @test degree(S_rep) == 2
 
     Q_rep = only(components(universal_quotient_bundle(X)))
-    @test fiber_dimension(Q_rep) == 3
+    @test degree(Q_rep) == 3
 
     O_rep = only(components(structure_sheaf(X)))
-    @test fiber_dimension(O_rep) == 1
+    @test degree(O_rep) == 1
 
     L_rep = only(components(line_bundle(X, 3)))
-    @test fiber_dimension(L_rep) == 1
+    @test degree(L_rep) == 1
 
     X_flag = full_flag_variety(TypeA{2})
     L_full = only(components(line_bundle(X_flag, [1, 2])))
-    @test fiber_dimension(L_full) == 1
+    @test degree(L_full) == 1
   end
 
   @testset "IrrepLevi round-trip" begin

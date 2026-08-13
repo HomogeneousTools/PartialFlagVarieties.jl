@@ -35,7 +35,7 @@
 
 using PartialFlagVarieties
 using PartialFlagVarieties:
-  fiber_dimension, IrrepLevi, components, n_components,
+  degree, IrrepLevi, components, n_components,
   to_ambient_weight, marked_dynkin_type
 using Semisimple
 using PrettyTables
@@ -101,7 +101,7 @@ function _exterior_power_counts(E::CompletelyReducibleBundle, k::Int)
   k == 1 && return _rep_counts(components(E))
 
   n = n_components(E)
-  ranks = [Int(fiber_dimension(comp)) for comp in components(E)]
+  ranks = [Int(degree(comp)) for comp in components(E)]
   result = Dict{IrrepLevi,Int}()
 
   for α in multiexponents(n, k)
@@ -224,7 +224,7 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
 
   for p in 0:d
     Ep_counts = _exterior_power_counts(T, p)
-    rk = sum(mult * fiber_dimension(rep) for (rep, mult) in Ep_counts; init=BigInt(0))
+    rk = sum(mult * degree(rep) for (rep, mult) in Ep_counts; init=BigInt(0))
     println(io, "∧$(_superscript(p)) T  (rank = $rk, expected = $(binomial(d, p)))")
 
     # Collect table rows, aggregating repeated irreducible summands.
@@ -241,7 +241,7 @@ function _compute_variety(DT, k::Int, label::String; io::IO=stdout)
 
     for (rep, mult) in Ep_counts
       λ = to_ambient_weight(mdt, rep)
-      r = fiber_dimension(rep)
+      r = degree(rep)
 
       push!(weights, _format_weight(λ))
       push!(mults, string(mult))

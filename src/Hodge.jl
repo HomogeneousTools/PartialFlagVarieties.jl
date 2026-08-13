@@ -840,7 +840,7 @@ function _lefschetz_inject!(M::Matrix{AffineExpr}, Z::ZeroLocus)
   X = Z.ambient
   comps = components(Z.defining_bundle)
   i = findfirst(
-    c -> fiber_dimension(c) == 1 &&
+    c -> degree(c) == 1 &&
          is_ample_line_bundle(CompletelyReducibleBundle(X, [c])),
     comps,
   )

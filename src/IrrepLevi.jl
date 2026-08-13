@@ -1,6 +1,6 @@
 export IrrepLevi
 export central_part, semisimple_part
-export to_ambient_weight, fiber_dimension, is_p_dominant, p_dominant_weight
+export to_ambient_weight, is_p_dominant, p_dominant_weight
 
 """
     IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
@@ -22,7 +22,7 @@ true
 julia> semisimple_part(rep)
 ω2
 
-julia> fiber_dimension(rep)
+julia> degree(rep)
 3
 ```
 coordinates.
@@ -160,13 +160,18 @@ function to_ambient_weight(mdt::MarkedDynkinType, rep::IrrepLevi)
 end
 
 """
-    fiber_dimension(rep::IrrepLevi) -> Int
+    degree(rep::IrrepLevi) -> Int
 
-Return the dimension of the fiber of the equivariant bundle defined by `rep`,
-i.e., the dimension of the irreducible representation of the semisimple Levi
-factor given by the Weyl dimension formula.
+Return the dimension of the representation `rep`, by the Weyl dimension formula
+applied to its [`semisimple_part`](@ref). This extends `Semisimple.degree` from
+a weight to the representation it labels, and is the fibre dimension of the
+equivariant bundle that `rep` defines.
+
+Zero for a weight that is not [`is_p_dominant`](@ref), which labels no
+representation at all; `CompletelyReducibleBundle` rejects those, so every
+summand of a bundle has positive degree.
 """
-function fiber_dimension(rep::IrrepLevi)::Int
+function degree(rep::IrrepLevi)::Int
   is_borel(marked_dynkin_type(rep)) && return 1
   ss = semisimple_part(rep)
   iszero(ss) && return 1
@@ -185,7 +190,7 @@ a zero-dimensional something.
 
 This is what [`CompletelyReducibleBundle`](@ref) checks of every summand, so it
 runs once per summand per bundle constructed. It therefore tests dominance
-directly rather than asking [`fiber_dimension`](@ref) for a number, which would
+directly rather than asking [`degree(::IrrepLevi)`](@ref) for a number, which would
 run the Weyl dimension formula only to learn the answer is nonzero.
 
 The full flag variety needs no special case: there the semisimple part is the

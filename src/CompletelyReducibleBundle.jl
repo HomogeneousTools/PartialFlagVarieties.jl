@@ -272,7 +272,7 @@ julia> rank_bundle(structure_sheaf(X))
 ```
 """
 function rank_bundle(E::CompletelyReducibleBundle)
-  sum(fiber_dimension(component) for component in E.components; init=0)
+  sum(degree(component) for component in E.components; init=0)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -897,7 +897,7 @@ function exterior_power(E::CompletelyReducibleBundle, k::Integer)
 
   # A group of m copies of an irreducible of rank r absorbs at most m⋅r.
   _power_of_direct_sum(
-    exterior_power, E, k; capacity=(c, m) -> Int(fiber_dimension(c)) * m
+    exterior_power, E, k; capacity=(c, m) -> Int(degree(c)) * m
   )
 end
 
@@ -1094,7 +1094,7 @@ function det(E::CompletelyReducibleBundle)
   triv_ss = _trivial_semisimple_weight(X)
   λ = WeightLatticeElem(dynkin_type(X))
   for component in components(E)
-    fiber_rank = fiber_dimension(component)
+    fiber_rank = degree(component)
     det_rep = IrrepLevi(mdt, fiber_rank .* component.central, triv_ss)
     λ += p_dominant_weight(det_rep)
   end
