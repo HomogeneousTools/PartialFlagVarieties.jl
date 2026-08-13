@@ -3139,6 +3139,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
   end
 
+  @testset "pushforward: the zero bundle pushes forward to zero" begin
+    # A non-dominant weight is the zero bundle; the relative singularity test
+    # only inspects the nodes unmarked in I, so it cannot catch this by itself.
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+    for coeffs in [[0, 0, -2], [0, 0, -1], [1, 0, -3]]
+      E = CompletelyReducibleBundle(D, coeffs)
+      @test rank_bundle(E) == 0
+      Rq = pushforward(X, E)
+      @test all(isempty(components(Rq[i])) for i in 0:lastindex(Rq))
+    end
+
+    # A zero summand must not contribute alongside a genuine one.
+    E = CompletelyReducibleBundle(D, [[0, 0, -2], [0, 0, 0]])
+    Rq = pushforward(X, E)
+    @test [rank_bundle(Rq[i]) for i in 0:lastindex(Rq)] == [1, 0]
+  end
+
   @testset "pushforward: I = ∅ recovers cohomology" begin
     # For X a point, R^i q_* is H^i as a representation of G, so its rank is h^i.
     for (D, E) in [

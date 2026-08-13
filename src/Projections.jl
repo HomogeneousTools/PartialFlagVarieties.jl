@@ -262,10 +262,13 @@ function pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle)
 
   pieces = [IrrepLevi[] for _ in 0:d]
   for rep in components(E)
+    # A non-dominant weight is the zero bundle, by the `fiber_dimension`
+    # convention; the relative singularity test below only inspects the nodes in
+    # S, so it cannot see a wall at a node marked in I.
+    iszero(fiber_dimension(rep)) && continue
     result = borel_weil_bott(p_dominant_weight(rep), S)
     result === nothing && continue          # λ + ρ singular for L_I
     len, μ = result
-    len <= d || continue
     push!(pieces[len + 1], IrrepLevi(mdt_X, μ))
   end
 
