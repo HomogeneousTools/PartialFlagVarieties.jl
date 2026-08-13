@@ -44,12 +44,11 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    _graded_branching!(pieces::Dict{Int, Vector{IrrepLevi}}, mdt_D::MarkedDynkinType, rep::IrrepLevi)
+    _graded_branching(mdt_D::MarkedDynkinType, rep::IrrepLevi) -> Dict{Int, Vector{IrrepLevi}}
 
 Restrict the fibre ``\\mathrm{V}_{\\mathrm{L}_I}(\\lambda)`` of the irreducible
-`rep` on ``\\mathrm{G}/\\mathrm{P}_I`` to ``\\mathrm{L}_J``, and add the
-resulting irreducibles to `pieces`, keyed by the grading ``g`` of
-[`pullback`](@ref).
+`rep` on ``\\mathrm{G}/\\mathrm{P}_I`` to ``\\mathrm{L}_J``, and return the
+resulting irreducibles keyed by the grading ``g`` of [`pullback`](@ref).
 
 Write a weight of the fibre as ``\\lambda - \\sum_k d_k \\alpha_{o(k)}``, where
 ``o`` sends the ``k``-th node of the ``\\mathrm{L}_I`` diagram to its ambient
@@ -61,9 +60,7 @@ coefficients therefore separates the irreducibles enough for
 bucket the ``\\mathrm{L}_J``-weight determines the ambient weight, so the ambient
 lift survives the peeling.
 """
-function _graded_branching!(
-  pieces::Dict{Int,Vector{IrrepLevi}}, mdt_D::MarkedDynkinType, rep::IrrepLevi
-)
+function _graded_branching(mdt_D::MarkedDynkinType, rep::IrrepLevi)
   mdt_X = marked_dynkin_type(rep)
   C = cartan_matrix(dynkin_type(mdt_X))
   Cinv = cartan_matrix_inverse(levi_type(mdt_X))
@@ -89,6 +86,7 @@ function _graded_branching!(
   end
 
   LT_D = levi_type(mdt_D)
+  pieces = Dict{Int,Vector{IrrepLevi}}()
   for (key, entries) in buckets
     reps = get!(pieces, sum(key), IrrepLevi[])
     if LT_D === nothing
@@ -104,6 +102,7 @@ function _graded_branching!(
     lift = Dict(coords(w) => w for (w, _) in entries)
     append!(reps, (IrrepLevi(mdt_D, lift[coefficients(ω)]) for (ω, m) in χ for _ in 1:m))
   end
+  pieces
 end
 
 """
@@ -123,7 +122,7 @@ restriction of the fibre from ``\\mathrm{L}_I`` to the reductive subgroup
 # Filtration order
 
 Write a weight of the fibre as ``\\lambda - \\sum_k d_k \\alpha_{o(k)}``, as in
-[`_graded_branching!`](@ref).  Then
+[`_graded_branching`](@ref).  Then
 ``g = \\sum_{o(k) \\in J \\setminus I} d_k`` is constant on each graded piece, and
 the pieces are returned by *descending* ``g``.  This is the order
 [`graded_pieces`](@ref) expects: the piece of maximal ``g`` is the subbundle, and
@@ -170,10 +169,16 @@ function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
   _check_projection(variety(E), D)
   mdt_D = marked_dynkin_type(D)
   pieces = Dict{Int,Vector{IrrepLevi}}()
+  # Plethysms and tensor products repeat a summand once per multiplicity, so
+  # branch each distinct component once and reuse it.  Walking `components(E)`
+  # in order keeps the order within each graded piece.
+  branched = Dict{IrrepLevi,Dict{Int,Vector{IrrepLevi}}}()
   for rep in components(E)
     # A non-dominant weight is the zero bundle, by the `fiber_dimension` convention.
     iszero(fiber_dimension(rep)) && continue
-    _graded_branching!(pieces, mdt_D, rep)
+    for (g, reps) in get!(() -> _graded_branching(mdt_D, rep), branched, rep)
+      append!(get!(pieces, g, IrrepLevi[]), reps)
+    end
   end
 
   FilteredBundle(
