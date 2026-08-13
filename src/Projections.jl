@@ -62,20 +62,38 @@ lift survives the peeling.
 """
 function _graded_branching(mdt_D::MarkedDynkinType, rep::IrrepLevi)
   mdt_X = marked_dynkin_type(rep)
-  C = cartan_matrix(dynkin_type(mdt_X))
-  Cinv = cartan_matrix_inverse(levi_type(mdt_X))
+  ord_D = levi_permutation(mdt_D)
+  buckets = _fibre_buckets(dynkin_type(mdt_X), levi_type(mdt_X), rep, ord_D)
+
+  pieces = Dict{Int,Vector{IrrepLevi}}()
+  for (key, entries) in buckets
+    _peel!(get!(pieces, sum(key), IrrepLevi[]), levi_type(mdt_D), mdt_D, ord_D, entries)
+  end
+  pieces
+end
+
+"""
+Bucket the weights of the fibre by the contracted part of `d`, keyed by that
+vector and holding the ambient weight of each with its multiplicity.
+
+The Dynkin types come in as type parameters: they are runtime values on a
+`MarkedDynkinType`, so without this barrier the Cartan matrices infer as `Any`
+and the whole loop runs through dynamic dispatch.
+
+One vector per weight of the fibre, so the cost scales with the number of
+weights of V_{L_I}(λ) and the bookkeeping dominates. A branching rule producing
+highest weights directly would remove the |W_{L_J}| factor altogether.
+"""
+function _fibre_buckets(
+  ::Type{DT}, ::Type{LT_I}, rep::IrrepLevi, ord_D
+) where {DT<:DynkinType,LT_I<:DynkinType}
+  C = cartan_matrix(DT)
+  Cinv = cartan_matrix_inverse(LT_I)
   λ = coefficients(p_dominant_weight(rep))
   ss = semisimple_part(rep)
-  ord = levi_permutation(mdt_X)     # node of the L_I diagram ↦ ambient node
-  ord_D = levi_permutation(mdt_D)   # node of the L_J diagram ↦ ambient node
+  ord = levi_permutation(marked_dynkin_type(rep))
   contracted = Tuple(k for k in eachindex(ord) if !(ord[k] in ord_D))
 
-  # One vector per weight of the fibre, so the cost scales with the number of
-  # weights of V_{L_I}(λ) and the bookkeeping dominates: 28 MiB for a
-  # 3248-weight fibre on the Cayley plane, of which only 1 MiB is the weight
-  # system itself.  Keeping the per-weight data in tuples would cut the constant
-  # factor; a branching rule producing highest weights directly would remove the
-  # |W_{L_J}| factor altogether.
   buckets = Dict{Vector{Int},Vector{Pair{Vector{Int},BigInt}}}()
   for (ν, mult) in freudenthal_formula(ss)
     d = Int.(Cinv * (coefficients(ss) - ν))   # the d_k, since ss - ν = Σ_k d_k α_k
@@ -83,33 +101,31 @@ function _graded_branching(mdt_D::MarkedDynkinType, rep::IrrepLevi)
     key = Int[d[k] for k in contracted]
     push!(get!(() -> Pair{Vector{Int},BigInt}[], buckets, key), w => mult)
   end
+  buckets
+end
 
-  LT_D = levi_type(mdt_D)
-  pieces = Dict{Int,Vector{IrrepLevi}}()
-  for (key, entries) in buckets
-    reps = get!(pieces, sum(key), IrrepLevi[])
-    if LT_D === nothing
-      # D = G/B: the Levi is a torus, so each bucket is a single fibre weight.
-      append!(reps, (IrrepLevi(mdt_D, w) for (w, m) in entries for _ in 1:Int(m)))
-      continue
-    end
-    r = rank(LT_D)
-    mults = Dict{SVector{r,Int},BigInt}()
-    lift = Dict{SVector{r,Int},Vector{Int}}()
-    for (w, m) in entries
-      c = SVector{r,Int}(ntuple(j -> w[ord_D[j]], r))
-      # `c` is injective on a bucket, so this never merges in practice;
-      # accumulating rather than overwriting keeps a violation from silently
-      # shrinking the rank.
-      mults[c] = get(mults, c, zero(BigInt)) + m
-      lift[c] = w
-    end
-    χ = character_from_weights(LT_D, mults)
-    append!(
-      reps, (IrrepLevi(mdt_D, lift[coefficients(ω)]) for (ω, m) in χ for _ in 1:Int(m))
-    )
+# D = G/B: the Levi is a torus, so each bucket is a single fibre weight.
+function _peel!(reps, ::Nothing, mdt_D::MarkedDynkinType, ord_D, entries)
+  append!(reps, (IrrepLevi(mdt_D, w) for (w, m) in entries for _ in 1:Int(m)))
+end
+
+# Otherwise peel the bucket into L_J-irreducibles and look each lift back up.
+function _peel!(
+  reps, ::Type{LT_J}, mdt_D::MarkedDynkinType, ord_D, entries
+) where {LT_J<:DynkinType}
+  r = rank(LT_J)
+  mults = Dict{SVector{r,Int},BigInt}()
+  lift = Dict{SVector{r,Int},Vector{Int}}()
+  for (w, m) in entries
+    c = SVector{r,Int}(ntuple(j -> w[ord_D[j]], r))
+    # `c` is injective on a bucket, so this never merges in practice;
+    # accumulating rather than overwriting keeps a violation from silently
+    # shrinking the rank.
+    mults[c] = get(mults, c, zero(BigInt)) + m
+    lift[c] = w
   end
-  pieces
+  χ = character_from_weights(LT_J, mults)
+  append!(reps, (IrrepLevi(mdt_D, lift[coefficients(ω)]) for (ω, m) in χ for _ in 1:Int(m)))
 end
 
 """
