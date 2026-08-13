@@ -194,23 +194,6 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    _fold_dominant_in(μ::WeightLatticeElem, nodes) -> Tuple{WeightLatticeElem, Int}
-
-Fold the ambient weight `μ` into the dominant chamber of the root subsystem
-spanned by the simple roots in `nodes`, and return it together with the length of
-the element of ``\\mathrm{W}_S`` used.  For `nodes` all of them this is
-`Semisimple.conjugate_dominant_weight_with_length`.
-"""
-function _fold_dominant_in(μ::WeightLatticeElem, nodes)
-  len = 0
-  while (k = findfirst(i -> coefficients(μ)[i] < 0, nodes)) !== nothing
-    μ = reflect(μ, nodes[k])
-    len += 1
-  end
-  (μ, len)
-end
-
-"""
     pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle) -> Cohomology{CompletelyReducibleBundle}
 
 Compute ``\\mathrm{R}q_*\\mathcal{E}`` along the projection
@@ -229,7 +212,8 @@ The fibre of ``q`` is
 so this is Borel–Weil–Bott applied fibrewise for ``\\mathrm{L}_I``.  For an
 irreducible summand of ambient weight ``\\lambda``, let ``S`` be the nodes
 unmarked in ``I`` and find ``w \\in \\mathrm{W}_S`` making ``w(\\lambda+\\rho)``
-dominant for ``\\mathrm{L}_I``.  If ``\\lambda+\\rho`` is singular for a root of
+dominant for ``\\mathrm{L}_I``, which is what
+[`borel_weil_bott(λ, nodes)`](@ref) does.  If ``\\lambda+\\rho`` is singular for a root of
 ``S`` then ``\\mathrm{R}q_*`` of that summand vanishes; otherwise the summand
 contributes the bundle of ambient weight ``w(\\lambda+\\rho) - \\rho`` in degree
 ``\\ell(w)``, and nothing in any other degree.
@@ -274,15 +258,15 @@ function pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle)
   _projection_nodes(X, variety(E))
   mdt_X = marked_dynkin_type(X)
   S = unmarked_nodes(mdt_X)
-  ρ = weyl_vector(dynkin_type(X))
   d = dimension(variety(E)) - dimension(X)
 
   pieces = [IrrepLevi[] for _ in 0:d]
   for rep in components(E)
-    μ, len = _fold_dominant_in(p_dominant_weight(rep) + ρ, S)
-    any(s -> iszero(coefficients(μ)[s]), S) && continue   # singular for L_I
+    result = borel_weil_bott(p_dominant_weight(rep), S)
+    result === nothing && continue          # λ + ρ singular for L_I
+    len, μ = result
     len <= d || continue
-    push!(pieces[len + 1], IrrepLevi(mdt_X, μ - ρ))
+    push!(pieces[len + 1], IrrepLevi(mdt_X, μ))
   end
 
   Cohomology{CompletelyReducibleBundle}(

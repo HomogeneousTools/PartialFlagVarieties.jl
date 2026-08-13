@@ -86,6 +86,32 @@ function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
   _borel_weil_bott_generic(λ)
 end
 
+"""
+    borel_weil_bott(λ::WeightLatticeElem{DT,R}, nodes) -> Union{Nothing, Tuple{Int, WeightLatticeElem{DT,R}}}
+
+Apply the Borel–Weil–Bott theorem relative to the simple roots `nodes`, seeking
+the Weyl group element in ``\\mathrm{W}_S`` rather than in ``\\mathrm{W}_{\\mathrm{G}}``.
+This is the fibrewise statement used by [`pushforward`](@ref); passing every node
+recovers the absolute one.
+
+Unlike the absolute case this is not memoized, since it is called once per
+irreducible summand rather than from an inner loop.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> λ = WeightLatticeElem(TypeA{2}, [-2, 1]);
+
+julia> borel_weil_bott(λ)          # regular for G: one reflection
+(1, 0)
+
+julia> borel_weil_bott(λ, (2,))    # already dominant for the second node alone
+(0, -2ω1 + ω2)
+```
+"""
+borel_weil_bott(λ::WeightLatticeElem, nodes) = Semisimple.borel_weil_bott(λ, nodes)
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition (0-based indexing)
 # ═══════════════════════════════════════════════════════════════════════════════

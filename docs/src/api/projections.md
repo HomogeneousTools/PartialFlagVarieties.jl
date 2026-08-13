@@ -57,6 +57,7 @@ spectral sequence degenerates and
 
 ```@docs
 pushforward
+borel_weil_bott(::WeightLatticeElem, ::Any)
 ```
 
 ## Internals
@@ -64,5 +65,4 @@ pushforward
 ```@docs
 PartialFlagVarieties._projection_nodes
 PartialFlagVarieties._graded_branching!
-PartialFlagVarieties._fold_dominant_in
 ```
