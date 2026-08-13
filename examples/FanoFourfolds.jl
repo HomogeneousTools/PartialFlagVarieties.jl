@@ -440,7 +440,7 @@ const BATCH_SIZE = parse(
     end
 
     E = build_bundle(X, factors, bundle_data)
-    r = Int(rank_bundle(E))
+    r = Int(rank(E))
 
     if d - r != 4
       return (status=:dim_error, idx=idx, msg="dim(Z) = $(d-r) != 4",

@@ -28,6 +28,7 @@ makedocs(;
       "SpectralSequence" => "api/spectral_sequence.md",
       "UniversalBundles" => "api/universal_bundles.md",
       "Cohomology" => "api/cohomology.md",
+      "Projections" => "api/projections.md",
       "Hodge & Hochschild" => "api/hodge.md",
       "ZeroLoci" => "api/zero_loci.md",
       "Koszul Algebra" => "api/koszul.md",

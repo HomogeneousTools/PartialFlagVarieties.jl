@@ -101,7 +101,7 @@ function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
       degrees[node_idx] = d
       bundle = O(X, degrees)
 
-      rk = rank_bundle(bundle)
+      rk = rank(bundle)
       det_c = picard_degrees(det(bundle))
 
       push!(candidates, (bundle, rk, det_c))
@@ -117,7 +117,7 @@ function get_candidate_bundles(X::PartialFlagVariety; max_rank::Int=0)
         omega[i] = 1
         bundle = CompletelyReducibleBundle(X, omega)
 
-        rk = rank_bundle(bundle)
+        rk = rank(bundle)
         det_c = picard_degrees(det(bundle))
 
         push!(candidates, (bundle, rk, det_c))
@@ -196,7 +196,7 @@ function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Resu
     # Build bundle description from summands
     desc = join([string(s) for s in E.components], " ⊕ ")
 
-    push!(results, CY3Result(name, d, desc, Int(rank_bundle(E)), chi_O, h11, h21))
+    push!(results, CY3Result(name, d, desc, Int(rank(E)), chi_O, h11, h21))
   end
 end
 

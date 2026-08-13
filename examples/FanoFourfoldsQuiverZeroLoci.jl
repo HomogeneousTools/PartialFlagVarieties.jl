@@ -918,7 +918,7 @@ function process_entry(entry::QuiverEntry)
   try
     X = build_ambient(entry.ambient)
     E = build_bundle(X, entry.ambient, entry.bundle)
-    dim_Z = Int(dimension(X) - rank_bundle(E))
+    dim_Z = Int(dimension(X) - rank(E))
     dim_Z == 4 || error("Expected 4-fold, got dimension $dim_Z")
 
     Z = zero_locus(E)

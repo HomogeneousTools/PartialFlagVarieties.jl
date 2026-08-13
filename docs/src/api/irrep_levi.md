@@ -75,7 +75,8 @@ IrrepLevi(::MarkedDynkinType, ::AbstractVector{<:Integer})
 central_part
 semisimple_part
 p_dominant_weight
-fiber_dimension
+degree(::IrrepLevi)
+is_p_dominant
 to_ambient_weight
 ```
 

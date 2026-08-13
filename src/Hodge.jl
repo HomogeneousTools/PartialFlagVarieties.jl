@@ -120,7 +120,7 @@ _collapse_determined(H::Matrix{AffineExpr}) =
   all(is_determined, H) ? map(e -> e.constant, H) : H
 
 function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBundle)
-  rank_bundle(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
+  rank(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
   d = dimension(X)
   _collapse_determined(
     _filtered_hodge_matrix(d, p -> tensor_product(_filtered_cotangent_power(X, p), L))
@@ -840,7 +840,7 @@ function _lefschetz_inject!(M::Matrix{AffineExpr}, Z::ZeroLocus)
   X = Z.ambient
   comps = components(Z.defining_bundle)
   i = findfirst(
-    c -> fiber_dimension(c) == 1 &&
+    c -> degree(c) == 1 &&
          is_ample_line_bundle(CompletelyReducibleBundle(X, [c])),
     comps,
   )

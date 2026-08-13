@@ -123,7 +123,7 @@ function dry_run()
   for v in TABLE2
     X = v.build_X();
     E = v.build_E(X)
-    d_amb, r_E = dimension(X), Int(rank_bundle(E))
+    d_amb, r_E = dimension(X), Int(rank(E))
     push!(
       rows,
       [v.label, d_amb, r_E, d_amb - r_E, v.dim,

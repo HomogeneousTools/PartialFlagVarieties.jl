@@ -62,7 +62,7 @@ true
 """
 function is_exceptional(E::CompletelyReducibleBundle)
   H = cohomology(dual(E) ⊗ E)
-  H[0] == 1 && all(H[i] == 0 for i in 1:(H.dim_variety))
+  H[0] == 1 && all(H[i] == 0 for i in 1:(H.max_degree))
 end
 
 """
@@ -127,7 +127,7 @@ end
 
 function _has_no_positive_exts(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   H = cohomology(dual(E) ⊗ F)
-  all(H[i] == 0 for i in 1:(H.dim_variety))
+  all(H[i] == 0 for i in 1:(H.max_degree))
 end
 
 """
@@ -410,13 +410,13 @@ julia> X = Gr(2, 4);
 julia> # Σ^{(1,0)} U^∨ = U^∨  (rank 2)
        E = schur_functor(X, [1, 0]);
 
-julia> rank_bundle(E)
+julia> rank(E)
 2
 
 julia> # Σ^{(1,1)} U^∨ = det(U^∨) = O(1)  (rank 1)
        L1 = schur_functor(X, [1, 1]);
 
-julia> rank_bundle(L1)
+julia> rank(L1)
 1
 ```
 """
@@ -488,7 +488,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> rank_bundle(schur_functor(X, (2, 0)))  # Sym²(U^∨)
+julia> rank(schur_functor(X, (2, 0)))  # Sym²(U^∨)
 3
 ```
 """

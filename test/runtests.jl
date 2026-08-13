@@ -407,23 +407,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test λ_back == ω₁
   end
 
-  @testset "fiber_dimension" begin
+  @testset "degree" begin
     X = Gr(2, 5)
     S_rep = only(components(universal_subbundle(X)))
-    @test fiber_dimension(S_rep) == 2
+    @test degree(S_rep) == 2
 
     Q_rep = only(components(universal_quotient_bundle(X)))
-    @test fiber_dimension(Q_rep) == 3
+    @test degree(Q_rep) == 3
 
     O_rep = only(components(structure_sheaf(X)))
-    @test fiber_dimension(O_rep) == 1
+    @test degree(O_rep) == 1
 
     L_rep = only(components(line_bundle(X, 3)))
-    @test fiber_dimension(L_rep) == 1
+    @test degree(L_rep) == 1
 
     X_flag = full_flag_variety(TypeA{2})
     L_full = only(components(line_bundle(X_flag, [1, 2])))
-    @test fiber_dimension(L_full) == 1
+    @test degree(L_full) == 1
   end
 
   @testset "IrrepLevi round-trip" begin
@@ -467,12 +467,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     @test variety(E_weight) === X
     @test components(E_weight) == components(universal_subbundle(X))
-    @test rank_bundle(E_weight) == 3
+    @test rank(E_weight) == 3
     @test components(E_weights) == components(E_sum)
     @test components(E_components) == components(E_weight)
     @test components(E_coeffs) == components(E_weight)
     @test components(E_sum) == vcat(components(E_weight), components(O))
-    @test rank_bundle(E_sum) == 4
+    @test rank(E_sum) == 4
     @test_throws ArgumentError CompletelyReducibleBundle(X, [bad_component])
   end
 
@@ -494,13 +494,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     O = structure_sheaf(X)
     O2 = PartialFlagVarieties.O(X)
     Z = zero_bundle(X)
-    @test rank_bundle(O) == 1
+    @test rank(O) == 1
     @test variety(O2) === X
     @test components(O) == components(O2)
     @test n_components(O) == 1
     @test variety(O) === X
     @test p_dominant_weight(only(components(O))) == WeightLatticeElem(dynkin_type(X))
-    @test rank_bundle(Z) == 0
+    @test rank(Z) == 0
     @test isempty(components(Z))
     @test n_components(Z) == 0
     @test variety(Z) === X
@@ -511,7 +511,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Line bundles" begin
     X = projective_space(4)
     L = line_bundle(X, 1)
-    @test rank_bundle(L) == 1
+    @test rank(L) == 1
     @test variety(L) === X
     @test p_dominant_weight(only(components(L))) ==
       WeightLatticeElem(dynkin_type(X), [1, 0, 0, 0])
@@ -522,7 +522,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X1 = Gr(2, 5)
     @test picard_rank(X1) == 1
     L = line_bundle(X1, 2)
-    @test rank_bundle(L) == 1
+    @test rank(L) == 1
 
     # Picard rank > 1 → single-int form errors
     X2 = partial_flag_variety(TypeA{3}, (1, 3))
@@ -531,13 +531,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # Multi-node form works for Picard rank > 1
     L2 = line_bundle(X2, [2, 1])
-    @test rank_bundle(L2) == 1
+    @test rank(L2) == 1
     @test p_dominant_weight(only(components(L2))) ==
       WeightLatticeElem(dynkin_type(X2), [2, 0, 1])
 
     # Multi-node form also works for Picard rank 1
     L3 = line_bundle(X1, [3])
-    @test rank_bundle(L3) == 1
+    @test rank(L3) == 1
 
     # Wrong number of degrees errors
     @test_throws ArgumentError line_bundle(X2, [1, 2, 3])
@@ -548,14 +548,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = Gr(2, 4)
     T = tangent_bundle(X)
     Ω = cotangent_bundle(X)
-    @test rank_bundle(T) == 4
-    @test rank_bundle(Ω) == 4
+    @test rank(T) == 4
+    @test rank(Ω) == 4
     @test variety(T) === X
 
     # ℙ⁴: T has rank 4
     X2 = projective_space(4)
     T2 = tangent_bundle(X2)
-    @test rank_bundle(T2) == 4
+    @test rank(T2) == 4
   end
 
   @testset "Shorthand constructors" begin
@@ -582,7 +582,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # multi-step flag Fl(1, 3; 4): indexed subbundle and per-node line-bundle degrees
     Xf = partial_flag_variety(TypeA{3}, (1, 3))
     @test S(Xf, 1) == universal_subbundle(Xf, 1)
-    @test rank_bundle(S(Xf, 2)) == rank_bundle(universal_subbundle(Xf, 2))
+    @test rank(S(Xf, 2)) == rank(universal_subbundle(Xf, 2))
     @test O(Xf, [2, 3]) == line_bundle(Xf, [2, 3])
   end
 
@@ -592,14 +592,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     T = tangent_bundle(X)
 
     # O ⊗ T = T
-    @test rank_bundle(tensor_product(O, T)) == rank_bundle(T)
+    @test rank(tensor_product(O, T)) == rank(T)
 
     # ⊕
-    @test rank_bundle(direct_sum(T, O)) == rank_bundle(T) + 1
+    @test rank(direct_sum(T, O)) == rank(T) + 1
 
     # ⋀⁰T = O, ⋀¹T = T
-    @test rank_bundle(exterior_power(T, 0)) == 1
-    @test rank_bundle(exterior_power(T, 1)) == rank_bundle(T)
+    @test rank(exterior_power(T, 0)) == 1
+    @test rank(exterior_power(T, 1)) == rank(T)
 
     # variety is propagated through operations
     @test variety(tensor_product(O, T)) === X
@@ -611,7 +611,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = projective_space(4)
     O = structure_sheaf(X)
     Ot = twist(O, 1, 3)
-    @test rank_bundle(Ot) == 1
+    @test rank(Ot) == 1
     @test variety(Ot) === X
   end
 
@@ -619,7 +619,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = Gr(2, 4)
     T = tangent_bundle(X)
     det_T = det(T)
-    @test rank_bundle(det_T) == 1
+    @test rank(det_T) == 1
 
     L = line_bundle(X, 3)
     @test det(L) == L                              # det of a line bundle is itself
@@ -712,8 +712,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "Canonical and anticanonical bundles" begin
     # Rank is always 1
-    @test rank_bundle(canonical_bundle(projective_space(3))) == 1
-    @test rank_bundle(anticanonical_bundle(projective_space(3))) == 1
+    @test rank(canonical_bundle(projective_space(3))) == 1
+    @test rank(anticanonical_bundle(projective_space(3))) == 1
 
     # K_{P^1} = O(-2): H^1(P^1, O(-2)) = 1
     X1 = projective_space(1)
@@ -734,7 +734,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # -K_{Gr(2,4)} = O(4): H^0(Gr(2,4), O(4)) = 105
     G24 = Gr(2, 4)
     aK24 = anticanonical_bundle(G24)
-    @test rank_bundle(aK24) == 1
+    @test rank(aK24) == 1
     @test cohomology(aK24)[0] == 105
 
     # canonical ⊗ anticanonical = structure sheaf (trivial bundle)
@@ -848,7 +848,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     S4 = universal_subbundle(X4)
     Q4 = universal_quotient_bundle(X4)
     T = tensor_product(dual(S4), Q4)
-    @test rank_bundle(T) == 4
+    @test rank(T) == 4
     HT = cohomology(T)
     @test HT[0] == 15
     for i in 1:4
@@ -858,7 +858,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X5 = Gr(2, 5)
     S5 = universal_subbundle(X5)
     W = exterior_power(dual(S5), 2)
-    @test rank_bundle(W) == 1
+    @test rank(W) == 1
     HW = cohomology(W)
     @test HW[0] == 10
   end
@@ -1046,7 +1046,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       (TypeB{3}, (1,)),
     ]
       X = partial_flag_variety(DT, marks)
-      @test Int(rank_bundle(tangent_bundle(X))) == dimension(X)
+      @test Int(rank(tangent_bundle(X))) == dimension(X)
     end
   end
 
@@ -1118,11 +1118,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = Gr(2, 4)
     T = tangent_bundle(X)
 
-    @test rank_bundle(2 * T) == 2 * rank_bundle(T)
+    @test rank(2 * T) == 2 * rank(T)
     @test n_components(2 * T) == 2 * n_components(T)
-    @test rank_bundle(T * 3) == 3 * rank_bundle(T)
-    @test rank_bundle(1 * T) == rank_bundle(T)
-    @test rank_bundle(0 * T) == 0
+    @test rank(T * 3) == 3 * rank(T)
+    @test rank(1 * T) == rank(T)
+    @test rank(0 * T) == 0
     @test variety(2 * T) === X
   end
 
@@ -1133,56 +1133,56 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Exterior power ranks: A-types" begin
     # A3/P2 = Gr(2,4), dim=4: ranks = binomial(4, k)
     T = tangent_bundle(Gr(2, 4))
-    @test rank_bundle(exterior_power(T, 0)) == 1
-    @test rank_bundle(exterior_power(T, 1)) == 4
-    @test rank_bundle(exterior_power(T, 2)) == 6
-    @test rank_bundle(exterior_power(T, 3)) == 4
-    @test rank_bundle(exterior_power(T, 4)) == 1
+    @test rank(exterior_power(T, 0)) == 1
+    @test rank(exterior_power(T, 1)) == 4
+    @test rank(exterior_power(T, 2)) == 6
+    @test rank(exterior_power(T, 3)) == 4
+    @test rank(exterior_power(T, 4)) == 1
 
     # A4/P2 = Gr(2,5), dim=6: ranks = binomial(6, k)
     T2 = tangent_bundle(Gr(2, 5))
-    @test rank_bundle(exterior_power(T2, 0)) == 1
-    @test rank_bundle(exterior_power(T2, 1)) == 6
-    @test rank_bundle(exterior_power(T2, 2)) == 15
-    @test rank_bundle(exterior_power(T2, 3)) == 20
-    @test rank_bundle(exterior_power(T2, 4)) == 15
-    @test rank_bundle(exterior_power(T2, 5)) == 6
-    @test rank_bundle(exterior_power(T2, 6)) == 1
+    @test rank(exterior_power(T2, 0)) == 1
+    @test rank(exterior_power(T2, 1)) == 6
+    @test rank(exterior_power(T2, 2)) == 15
+    @test rank(exterior_power(T2, 3)) == 20
+    @test rank(exterior_power(T2, 4)) == 15
+    @test rank(exterior_power(T2, 5)) == 6
+    @test rank(exterior_power(T2, 6)) == 1
 
     # A7/P3 = Gr(3,8), dim=15: spot-check ranks = binomial(15, k)
     T3 = tangent_bundle(Gr(3, 8))
-    @test rank_bundle(exterior_power(T3, 1)) == 15
-    @test rank_bundle(exterior_power(T3, 2)) == 105
-    @test rank_bundle(exterior_power(T3, 3)) == 455
+    @test rank(exterior_power(T3, 1)) == 15
+    @test rank(exterior_power(T3, 2)) == 105
+    @test rank(exterior_power(T3, 3)) == 455
   end
 
   @testset "Exterior power ranks: B/C/D/G types" begin
     # B3/P1, dim=5: ranks = binomial(5, k)
     T_B3 = tangent_bundle(partial_flag_variety(TypeB{3}, (1,)))
-    @test rank_bundle(exterior_power(T_B3, 1)) == 5
-    @test rank_bundle(exterior_power(T_B3, 2)) == 10
-    @test rank_bundle(exterior_power(T_B3, 3)) == 10
-    @test rank_bundle(exterior_power(T_B3, 4)) == 5
-    @test rank_bundle(exterior_power(T_B3, 5)) == 1
+    @test rank(exterior_power(T_B3, 1)) == 5
+    @test rank(exterior_power(T_B3, 2)) == 10
+    @test rank(exterior_power(T_B3, 3)) == 10
+    @test rank(exterior_power(T_B3, 4)) == 5
+    @test rank(exterior_power(T_B3, 5)) == 1
 
     # D4/P1, dim=6: ranks = binomial(6, k)
     T_D4 = tangent_bundle(partial_flag_variety(TypeD{4}, (1,)))
-    @test rank_bundle(exterior_power(T_D4, 1)) == 6
-    @test rank_bundle(exterior_power(T_D4, 2)) == 15
-    @test rank_bundle(exterior_power(T_D4, 3)) == 20
-    @test rank_bundle(exterior_power(T_D4, 6)) == 1
+    @test rank(exterior_power(T_D4, 1)) == 6
+    @test rank(exterior_power(T_D4, 2)) == 15
+    @test rank(exterior_power(T_D4, 3)) == 20
+    @test rank(exterior_power(T_D4, 6)) == 1
 
     # G2/P1, dim=5: ranks = binomial(5, k)
     T_G2 = tangent_bundle(partial_flag_variety(TypeG2, (1,)))
-    @test rank_bundle(exterior_power(T_G2, 1)) == 5
-    @test rank_bundle(exterior_power(T_G2, 2)) == 10
-    @test rank_bundle(exterior_power(T_G2, 5)) == 1
+    @test rank(exterior_power(T_G2, 1)) == 5
+    @test rank(exterior_power(T_G2, 2)) == 10
+    @test rank(exterior_power(T_G2, 5)) == 1
 
     # C3/P1, dim=5: ranks = binomial(5, k)
     T_C3 = tangent_bundle(partial_flag_variety(TypeC{3}, (1,)))
-    @test rank_bundle(exterior_power(T_C3, 1)) == 5
-    @test rank_bundle(exterior_power(T_C3, 2)) == 10
-    @test rank_bundle(exterior_power(T_C3, 5)) == 1
+    @test rank(exterior_power(T_C3, 1)) == 5
+    @test rank(exterior_power(T_C3, 2)) == 10
+    @test rank(exterior_power(T_C3, 5)) == 1
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1274,12 +1274,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Int32 degree for line_bundle
     X = projective_space(3)
     L = line_bundle(X, Int32(2))
-    @test rank_bundle(L) == 1
+    @test rank(L) == 1
 
     # Vector of BigInt for line_bundle
     X2 = partial_flag_variety(TypeA{3}, (1, 3))
     L2 = line_bundle(X2, BigInt[1, 2])
-    @test rank_bundle(L2) == 1
+    @test rank(L2) == 1
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1306,55 +1306,55 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test F isa FilteredBundle
     @test F isa Bundle
     @test n_filtration_steps(F) == 1
-    @test rank_bundle(F) == dimension(X)
-    @test rank_bundle(total_bundle(F)) == dimension(X)
+    @test rank(F) == dimension(X)
+    @test rank(total_bundle(F)) == dimension(X)
 
     # Projective space: tangent is irreducible → 1 step
     X2 = projective_space(3)
     F2 = filtered_tangent_bundle(X2)
     @test n_filtration_steps(F2) == 1
-    @test rank_bundle(F2) == 3
+    @test rank(F2) == 3
 
     # Full flag: more steps
     X3 = full_flag_variety(TypeA{3})
     F3 = filtered_tangent_bundle(X3)
     @test n_filtration_steps(F3) >= 2
-    @test rank_bundle(F3) == dimension(X3)
+    @test rank(F3) == dimension(X3)
 
     # Total bundle of filtered tangent = graded tangent bundle (same components)
     X4 = Gr(2, 5)
     F4 = filtered_tangent_bundle(X4)
     T4 = tangent_bundle(X4)
-    @test rank_bundle(total_bundle(F4)) == rank_bundle(T4)
+    @test rank(total_bundle(F4)) == rank(T4)
 
     # Tensor product with structure sheaf preserves filtration
     S = structure_sheaf(X)
     FS = tensor_product(F, S)
     @test n_filtration_steps(FS) == n_filtration_steps(F)
-    @test rank_bundle(FS) == rank_bundle(F)
+    @test rank(FS) == rank(F)
 
     # Exterior powers of filtered bundles
     d = dimension(X)
-    @test rank_bundle(exterior_power(F, 0)) == 1
-    @test rank_bundle(exterior_power(F, 1)) == d
-    @test rank_bundle(exterior_power(F, 2)) == binomial(d, 2)
-    @test rank_bundle(exterior_power(F, d)) == 1
+    @test rank(exterior_power(F, 0)) == 1
+    @test rank(exterior_power(F, 1)) == d
+    @test rank(exterior_power(F, 2)) == binomial(d, 2)
+    @test rank(exterior_power(F, d)) == 1
 
     # Symmetric powers of filtered bundles
-    @test rank_bundle(symmetric_power(F, 0)) == 1
-    @test rank_bundle(symmetric_power(F, 1)) == d
-    @test rank_bundle(symmetric_power(F, 2)) == binomial(d + 1, 2)
+    @test rank(symmetric_power(F, 0)) == 1
+    @test rank(symmetric_power(F, 1)) == d
+    @test rank(symmetric_power(F, 2)) == binomial(d + 1, 2)
 
     # Multi-step filtration: exterior power increases steps
     F3w2 = exterior_power(F3, 2)
     d3 = dimension(X3)
-    @test rank_bundle(F3w2) == binomial(d3, 2)
+    @test rank(F3w2) == binomial(d3, 2)
     @test n_filtration_steps(F3w2) >= n_filtration_steps(F3)
 
     # Dual reverses filtration
     Fd = dual(F3)
     @test n_filtration_steps(Fd) == n_filtration_steps(F3)
-    @test rank_bundle(Fd) == rank_bundle(F3)
+    @test rank(Fd) == rank(F3)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -1364,35 +1364,35 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Universal bundles" begin
     # Gr(2, 5): U has rank 2, Q has rank 3
     X1 = Gr(2, 5)
-    @test rank_bundle(universal_subbundles(X1)[1]) == 2
-    @test rank_bundle(universal_quotient_bundle(X1)) == 3
+    @test rank(universal_subbundles(X1)[1]) == 2
+    @test rank(universal_quotient_bundle(X1)) == 3
 
     # OGr(3, 7)
     X2 = OGr(3, 9)
-    @test rank_bundle(universal_subbundle(X2)) == 3
-    @test rank_bundle(residual_bundle(X2)) == 3
+    @test rank(universal_subbundle(X2)) == 3
+    @test rank(residual_bundle(X2)) == 3
 
     # ℙ^4 = Gr(1, 5)
     X3 = projective_space(4)
-    @test rank_bundle(universal_subbundle(X3)) == 1
-    @test rank_bundle(universal_quotient_bundle(X3)) == 4
+    @test rank(universal_subbundle(X3)) == 1
+    @test rank(universal_quotient_bundle(X3)) == 4
 
     # SGr(3,10)
     X4 = SGr(3, 10)
     U = universal_subbundle(X4)
     R = residual_bundle(X4)
-    @test rank_bundle(U) == 3
-    @test rank_bundle(R) == 4
-    @test rank_bundle(universal_quotient_bundle(X4)) == 7
+    @test rank(U) == 3
+    @test rank(R) == 4
+    @test rank(universal_quotient_bundle(X4)) == 7
     @test cohomology(dual(R) ⊗ U)[1] == 1
 
     #OGr(4,12)
     X5 = OGr(4, 12)
     U = universal_subbundle(X5, 1)
     R = residual_bundle(X5)
-    @test rank_bundle(U) == 4
-    @test rank_bundle(R) == 4
-    @test rank_bundle(universal_quotient_bundle(X5)) == 8
+    @test rank(U) == 4
+    @test rank(R) == 4
+    @test rank(universal_quotient_bundle(X5)) == 8
     @test cohomology(dual(R) ⊗ U)[1] == 1
 
     # Fl(1,2,4; 5)
@@ -1400,56 +1400,56 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     τ = tautological_bundles(X6)
     Us = universal_subbundles(X6)
     @test length(τ) == 3
-    @test rank_bundle(τ[1]) == 1
-    @test rank_bundle(τ[2]) == 1
-    @test rank_bundle(τ[3]) == 2
+    @test rank(τ[1]) == 1
+    @test rank(τ[2]) == 1
+    @test rank(τ[3]) == 2
     @test cohomology(dual(τ[3]) ⊗ τ[2])[1] == 1
     @test cohomology(dual(τ[2]) ⊗ τ[1])[1] == 1
-    @test rank_bundle(Us[1]) == 1
-    @test rank_bundle(universal_subbundles(X6)[3]) == 4
+    @test rank(Us[1]) == 1
+    @test rank(universal_subbundles(X6)[3]) == 4
     @test cohomology(dual(τ[3]) ⊗ Us[2].pieces[2])[1] == 1
 
     # universal_subbundle with explicit i > 1
-    @test rank_bundle(universal_subbundle(X6, 2)) == 2
-    @test rank_bundle(universal_subbundle(X6, 3)) == 4
+    @test rank(universal_subbundle(X6, 2)) == 2
+    @test rank(universal_subbundle(X6, 3)) == 4
 
     # Isotropic generalized Grassmannian: tautological_bundles = [U, R],
     # universal_subbundles = [U, U^⊥] (option (b)).
-    @test rank_bundle.(tautological_bundles(OGr(2, 5))) == [2, 1]    # B_2/P_2
-    @test rank_bundle.(universal_subbundles(OGr(2, 5))) == [2, 3]
+    @test rank.(tautological_bundles(OGr(2, 5))) == [2, 1]    # B_2/P_2
+    @test rank.(universal_subbundles(OGr(2, 5))) == [2, 3]
     # The two-marked spinorial D_n/P_{n-1, n} also works (gives the natural
     # (n-1)-isotropic / unique containing max-isotropic flag).
-    @test rank_bundle.(
+    @test rank.(
       tautological_bundles(partial_flag_variety(TypeD{4}, (3, 4)))
     ) == [3, 1]
-    @test rank_bundle.(
+    @test rank.(
       universal_subbundles(partial_flag_variety(TypeD{4}, (3, 4)))
     ) == [3, 4]
     # Multi-step isotropic with D spinor-boundary at the last node.
-    @test rank_bundle.(
+    @test rank.(
       tautological_bundles(partial_flag_variety(TypeD{4}, (1, 3)))
     ) == [1, 3]    # m_2 = n-1, fix used: ω_n - ω_{n-1}
     # universal_subbundle(X, 2) on a B/C/D generalized Grassmannian returns U^⊥.
-    @test rank_bundle(universal_subbundle(OGr(3, 9), 2)) == 6    # n-k = 9-3 = 6
+    @test rank(universal_subbundle(OGr(3, 9), 2)) == 6    # n-k = 9-3 = 6
     # Lagrangian / spinor cases: U^⊥ = U.
-    @test rank_bundle(universal_subbundle(SGr(3, 6), 2)) ==
-      rank_bundle(universal_subbundle(SGr(3, 6)))
+    @test rank(universal_subbundle(SGr(3, 6), 2)) ==
+      rank(universal_subbundle(SGr(3, 6)))
 
     # residual_bundle: TypeB marked == R (OGr(3,7) = B_3/P_3, rank 7-2*3=1)
-    @test rank_bundle(residual_bundle(OGr(3, 7))) == 1
+    @test rank(residual_bundle(OGr(3, 7))) == 1
 
     # residual_bundle: TypeB else, k < R-1 (OGr(2,9) = B_4/P_2, rank 9-2*2=5)
-    @test rank_bundle(residual_bundle(OGr(2, 9))) == 5
+    @test rank(residual_bundle(OGr(2, 9))) == 5
 
     # residual_bundle: TypeC marked == R (SGr(4,8) = C_4/P_4, Lagrangian)
-    @test rank_bundle(residual_bundle(SGr(4, 8))) == 0
+    @test rank(residual_bundle(SGr(4, 8))) == 0
 
     # residual_bundle: TypeD marked in (R, R-1) (spinor varieties)
-    @test rank_bundle(residual_bundle(OGr(4, 10))) == 0  # D_5/P_4
-    @test rank_bundle(residual_bundle(OGr(5, 10))) == 0  # D_5/P_5
+    @test rank(residual_bundle(OGr(4, 10))) == 0  # D_5/P_4
+    @test rank(residual_bundle(OGr(5, 10))) == 0  # D_5/P_5
 
     # residual_bundle: TypeD else, k < R-2 (OGr(2,10) = D_5/P_2, rank 10-2*2=6)
-    @test rank_bundle(residual_bundle(OGr(2, 10))) == 6
+    @test rank(residual_bundle(OGr(2, 10))) == 6
   end
 
   @testset "Orthogonal & symplectic partial flag varieties" begin
@@ -1460,96 +1460,96 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # --- Type B (OGr, odd quadric dim) ---
     # Generalized Grassmannians (1 marked node): [U, U^⊥].
-    @test rank_bundle.(tautological_bundles(OGr(2, 7))) == [2, 3]    # B_3/P_2
-    @test rank_bundle.(universal_subbundles(OGr(2, 7))) == [2, 5]
-    @test rank_bundle.(tautological_bundles(OGr(3, 7))) == [3, 1]    # B_3/P_3 (max iso)
-    @test rank_bundle.(universal_subbundles(OGr(3, 7))) == [3, 4]
+    @test rank.(tautological_bundles(OGr(2, 7))) == [2, 3]    # B_3/P_2
+    @test rank.(universal_subbundles(OGr(2, 7))) == [2, 5]
+    @test rank.(tautological_bundles(OGr(3, 7))) == [3, 1]    # B_3/P_3 (max iso)
+    @test rank.(universal_subbundles(OGr(3, 7))) == [3, 4]
     # Multi-step B partial flags.
-    @test rank_bundle.(tautological_bundles(
+    @test rank.(tautological_bundles(
       partial_flag_variety(TypeB{3}, (1, 2))
     )) == [1, 1]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeB{3}, (1, 2))
     )) == [1, 2]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeB{3}, (2, 3))     # last marked at R
     )) == [2, 3]
     # Full isotropic flag in B.
-    @test rank_bundle.(
+    @test rank.(
       universal_subbundles(
         partial_flag_variety(TypeB{4}, (1, 2, 3, 4))
       ),
     ) == [1, 2, 3, 4]
 
     # --- Type C (symplectic Grassmannian) ---
-    @test rank_bundle.(tautological_bundles(SGr(2, 6))) == [2, 2]    # C_3/P_2
-    @test rank_bundle.(universal_subbundles(SGr(2, 6))) == [2, 4]
-    @test rank_bundle.(tautological_bundles(SGr(3, 6))) == [3, 0]    # Lagrangian: R = 0
-    @test rank_bundle.(universal_subbundles(SGr(3, 6))) == [3, 3]    #   ⇒ U^⊥ = U
+    @test rank.(tautological_bundles(SGr(2, 6))) == [2, 2]    # C_3/P_2
+    @test rank.(universal_subbundles(SGr(2, 6))) == [2, 4]
+    @test rank.(tautological_bundles(SGr(3, 6))) == [3, 0]    # Lagrangian: R = 0
+    @test rank.(universal_subbundles(SGr(3, 6))) == [3, 3]    #   ⇒ U^⊥ = U
     # Multi-step C partial flags.
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeC{3}, (1, 2))
     )) == [1, 2]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeC{3}, (2, 3))     # last marked at R (Lagrangian step)
     )) == [2, 3]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeC{4}, (1, 2, 3))
     )) == [1, 2, 3]
 
     # --- Type D (even orthogonal) ---
     # Non-spinor generalized Grassmannian.
-    @test rank_bundle.(tautological_bundles(OGr(2, 8))) == [2, 4]    # D_4/P_2, R rank 4
-    @test rank_bundle.(universal_subbundles(OGr(2, 8))) == [2, 6]
+    @test rank.(tautological_bundles(OGr(2, 8))) == [2, 4]    # D_4/P_2, R rank 4
+    @test rank.(universal_subbundles(OGr(2, 8))) == [2, 6]
     # Spinor varieties: U is max isotropic of dim n, R vanishes.
-    @test rank_bundle.(tautological_bundles(OGr(3, 8))) == [4, 0]    # D_4/P_3 (- family)
-    @test rank_bundle.(universal_subbundles(OGr(3, 8))) == [4, 4]
-    @test rank_bundle.(tautological_bundles(OGr(4, 8))) == [4, 0]    # D_4/P_4 (+ family)
+    @test rank.(tautological_bundles(OGr(3, 8))) == [4, 0]    # D_4/P_3 (- family)
+    @test rank.(universal_subbundles(OGr(3, 8))) == [4, 4]
+    @test rank.(tautological_bundles(OGr(4, 8))) == [4, 0]    # D_4/P_4 (+ family)
     # Multi-step D, no spinor node:
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{4}, (1, 2))
     )) == [1, 2]
     # Multi-step D, last marked = n-1 (the "minus" spinor): U_{n-1} has rank n.
     # The Bourbaki-Plate-IV correction ω_n - ω_{n-1} = L_n is required here;
     # the type-A formula ω_{m-1} - ω_m would give the wrong rank.
-    @test rank_bundle.(tautological_bundles(
+    @test rank.(tautological_bundles(
       partial_flag_variety(TypeD{4}, (1, 3))
     )) == [1, 3]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{4}, (1, 3))
     )) == [1, 4]
     # Multi-step D, last marked = n: U_n is max isotropic ("+" family).
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{4}, (1, 4))
     )) == [1, 4]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{4}, (2, 3))
     )) == [2, 4]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{4}, (2, 4))
     )) == [2, 4]
     # Two-marked spinorial D_n/P_{n-1, n} (= the (n-1)-isotropic Grassmannian,
     # Picard rank 2). U_{n-1} has rank n-1 here (genuine (n-1)-isotropic) and
     # U_n the unique containing max isotropic of rank n.
-    @test rank_bundle.(tautological_bundles(
+    @test rank.(tautological_bundles(
       partial_flag_variety(TypeD{4}, (3, 4))
     )) == [3, 1]
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{4}, (3, 4))
     )) == [3, 4]
     # 3-step D partial flag, last at n-1 (spinor).
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{5}, (1, 3, 4))
     )) == [1, 3, 5]
     # 3-step D partial flag, last at n.
-    @test rank_bundle.(universal_subbundles(
+    @test rank.(universal_subbundles(
       partial_flag_variety(TypeD{5}, (1, 3, 5))
     )) == [1, 3, 5]
 
     # --- universal_subbundle(X, i): index dispatch ---
-    @test rank_bundle(universal_subbundle(OGr(2, 7), 2)) == 5         # B_3/P_2: U^⊥
-    @test rank_bundle(universal_subbundle(OGr(2, 8), 2)) == 6         # D_4/P_2: U^⊥
-    @test rank_bundle(universal_subbundle(
+    @test rank(universal_subbundle(OGr(2, 7), 2)) == 5         # B_3/P_2: U^⊥
+    @test rank(universal_subbundle(OGr(2, 8), 2)) == 6         # D_4/P_2: U^⊥
+    @test rank(universal_subbundle(
       partial_flag_variety(TypeD{4}, (1, 3)), 2
     )) == 4                                                            # spinor step
     @test_throws ArgumentError universal_subbundle(OGr(2, 7), 3)       # only 2 slots
@@ -1568,7 +1568,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     )
       taut = tautological_bundles(X)
       subs = universal_subbundles(X)
-      @test rank_bundle(subs[end]) == sum(rank_bundle.(taut))
+      @test rank(subs[end]) == sum(rank.(taut))
     end
   end
 
@@ -1599,19 +1599,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Odd quadric Q^5 = B_3/P_1: single spinor of rank 2^{3-1} = 4
     X5 = quadric(5)
     S5 = spinor_bundle(X5)
-    @test rank_bundle(S5) == 4
+    @test rank(S5) == 4
 
     # Even quadric Q^4 = D_3/P_1: two half-spinors of rank 2^{3-2} = 2
     X4 = quadric(4)
     Sp = spinor_bundle(X4, :plus)
     Sm = spinor_bundle(X4, :minus)
-    @test rank_bundle(Sp) == 2
-    @test rank_bundle(Sm) == 2
+    @test rank(Sp) == 2
+    @test rank(Sm) == 2
 
     # Q^3 = B_2/P_1: single spinor of rank 2
     X3 = quadric(3)
     S3 = spinor_bundle(X3)
-    @test rank_bundle(S3) == 2
+    @test rank(S3) == 2
 
     # The two methods are mutually exclusive by type.
     # One-arg form is type B only: type D must pick a half-spinor instead.
@@ -1967,9 +1967,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test ambient_variety(Z) == ambient
     @test dimension(Z) == dimension(Z12) + dimension(Z3)
     @test codimension(Z) == codimension(Z12) + codimension(Z3)
-    @test rank_bundle(defining_bundle(Z)) ==
-      rank_bundle(defining_bundle(Z12)) +
-          rank_bundle(defining_bundle(Z3))
+    @test rank(defining_bundle(Z)) ==
+      rank(defining_bundle(Z12)) +
+          rank(defining_bundle(Z3))
     @test zerolocus62_label(defining_bundle(Z)) == zerolocus62_label(expected_bundle)
   end
 
@@ -2408,25 +2408,25 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "schur_functor ranks on Gr(2,4)" begin
     X = Gr(2, 4)
-    @test rank_bundle(schur_functor(X, [0, 0])) == 1     # O
-    @test rank_bundle(schur_functor(X, [1, 0])) == 2     # U^∨
-    @test rank_bundle(schur_functor(X, [1, 1])) == 1     # det(U^∨)
-    @test rank_bundle(schur_functor(X, [2, 0])) == 3     # Sym²(U^∨)
-    @test rank_bundle(schur_functor(X, [2, 1])) == 2     # U^∨ ⊗ det
-    @test rank_bundle(schur_functor(X, [2, 2])) == 1     # det²
+    @test rank(schur_functor(X, [0, 0])) == 1     # O
+    @test rank(schur_functor(X, [1, 0])) == 2     # U^∨
+    @test rank(schur_functor(X, [1, 1])) == 1     # det(U^∨)
+    @test rank(schur_functor(X, [2, 0])) == 3     # Sym²(U^∨)
+    @test rank(schur_functor(X, [2, 1])) == 2     # U^∨ ⊗ det
+    @test rank(schur_functor(X, [2, 2])) == 1     # det²
     # NTuple form
-    @test rank_bundle(schur_functor(X, (2, 0))) == 3
+    @test rank(schur_functor(X, (2, 0))) == 3
   end
 
   @testset "schur_functor ranks on Gr(2,5)" begin
     X = Gr(2, 5)
     # GL(2) Schur functors: Sym^d has rank d+1
-    @test rank_bundle(schur_functor(X, [0, 0])) == 1
-    @test rank_bundle(schur_functor(X, [1, 0])) == 2
-    @test rank_bundle(schur_functor(X, [1, 1])) == 1
-    @test rank_bundle(schur_functor(X, [2, 0])) == 3
-    @test rank_bundle(schur_functor(X, [3, 0])) == 4
-    @test rank_bundle(schur_functor(X, [3, 3])) == 1
+    @test rank(schur_functor(X, [0, 0])) == 1
+    @test rank(schur_functor(X, [1, 0])) == 2
+    @test rank(schur_functor(X, [1, 1])) == 1
+    @test rank(schur_functor(X, [2, 0])) == 3
+    @test rank(schur_functor(X, [3, 0])) == 4
+    @test rank(schur_functor(X, [3, 3])) == 1
   end
 
   @testset "Kapranov collection on Gr(2,4)" begin
@@ -2469,7 +2469,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     U = universal_subbundle(G)
     E = 2 * symmetric_power(dual(U), 2)
     Z = zero_locus(E)
-    @test dimension(Z) == dimension(G) - Int(rank_bundle(E))
+    @test dimension(Z) == dimension(G) - Int(rank(E))
 
     # Build the collection: for g=3, (g-1)(2g-5) = 2
     # k=0: Sym⁰U^∨ = O, Sym¹U^∨ = U^∨  (i=0,1 since g-1=2)
@@ -2953,6 +2953,361 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  Projections q: G/P_J → G/P_I
+  #
+  #  Fibres of `pullback` are materialised weight by weight, so every bundle
+  #  appearing below is deliberately of small rank.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "Projections: argument validation" begin
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+
+    # Not a projection: the marked nodes of the target must be a subset.
+    @test_throws ArgumentError pullback(X, structure_sheaf(D))
+    @test_throws ArgumentError pushforward(D, structure_sheaf(X))
+    @test_throws ArgumentError pullback(
+      partial_flag_variety(TypeA{3}, (1, 2)),
+      structure_sheaf(partial_flag_variety(TypeA{3}, (3,))),
+    )
+
+    # Different ambient groups.
+    @test_throws ArgumentError pullback(
+      full_flag_variety(TypeB{2}), structure_sheaf(Gr(2, 4))
+    )
+    @test_throws ArgumentError pushforward(
+      Gr(2, 4), structure_sheaf(full_flag_variety(TypeB{2}))
+    )
+  end
+
+  @testset "pullback: tautological filtration on Fl(k, l; n)" begin
+    # Pulling U_l back from Gr(l, n) reproduces 0 → U_k → U_l → U_l/U_k → 0,
+    # with U_k the subbundle, i.e. the piece of maximal grading.
+    for (n, k, l) in [(6, 1, 3), (6, 2, 4), (7, 2, 5), (5, 1, 2)]
+      D = flag_variety(n, [k, l])
+      F = pullback(D, universal_subbundle(Gr(l, n)))
+
+      @test F isa FilteredBundle
+      @test variety(F) == D
+      @test n_filtration_steps(F) == 2
+      @test graded_pieces(F) == tautological_bundles(D)
+      @test graded_pieces(F)[1] == universal_subbundle(D, 1)
+      @test rank.(graded_pieces(F)) == [k, l - k]
+      @test rank(F) == l
+    end
+  end
+
+  @testset "pullback: pieces holding several irreducibles" begin
+    # Every other pullback test uses a fibre that branches into one irreducible
+    # per grading, so nothing would catch a wrong grading function.  Contracting
+    # three nodes puts two irreducibles in the middle piece.
+    F = pullback(flag_variety(6, [1, 3, 5]), tangent_bundle(Gr(3, 6)))
+    @test length.(components.(graded_pieces(F))) == [1, 2, 1]
+    @test rank.(graded_pieces(F)) == [4, 4, 1]
+    @test rank(F) == dimension(Gr(3, 6))
+
+    G = pullback(full_flag_variety(TypeA{4}), tangent_bundle(Gr(2, 5)))
+    @test length.(components.(graded_pieces(G))) == [1, 2, 2, 1]
+    @test rank(G) == dimension(Gr(2, 5))
+  end
+
+  @testset "pullback: top quotient carries the highest weight" begin
+    # The piece of grading zero contains the highest weight of the fibre, and it
+    # is the last one, so `graded_pieces` runs from subbundle to quotient.
+    for (X, D) in [
+      (Gr(3, 6), flag_variety(6, [1, 3])),
+      (Gr(2, 5), full_flag_variety(TypeA{4})),
+      (partial_flag_variety(TypeB{3}, (3,)), full_flag_variety(TypeB{3})),
+      (partial_flag_variety(TypeC{3}, (2,)), partial_flag_variety(TypeC{3}, (1, 2))),
+    ]
+      E = universal_subbundle(X)
+      F = pullback(D, E)
+      λ = PartialFlagVarieties.p_dominant_weight(only(components(E)))
+      tops = PartialFlagVarieties.p_dominant_weight.(components(graded_pieces(F)[end]))
+      @test λ in tops
+      @test !any(
+        λ in PartialFlagVarieties.p_dominant_weight.(components(p)) for
+        p in graded_pieces(F)[1:(end - 1)]
+      )
+    end
+  end
+
+  @testset "pullback: line bundles and the identity projection" begin
+    # A line bundle stays a line bundle, of degree zero at the contracted nodes.
+    F = pullback(flag_variety(4, [1, 2]), line_bundle(Gr(2, 4), 3))
+    @test n_filtration_steps(F) == 1
+    @test picard_degrees(total_bundle(F)) == [0, 3]
+
+    F2 = pullback(partial_flag_variety(TypeB{3}, (1, 2, 3)), line_bundle(quadric(5), 2))
+    @test rank(F2) == 1
+    @test picard_degrees(total_bundle(F2)) == [2, 0, 0]
+
+    # Nothing contracted: q is the identity and the filtration is trivial.
+    E = universal_subbundle(Gr(2, 4))
+    Fid = pullback(Gr(2, 4), E)
+    @test n_filtration_steps(Fid) == 1
+    @test only(graded_pieces(Fid)) == E
+
+    # The zero bundle pulls back to rank zero.
+    @test rank(pullback(flag_variety(4, [1, 2]), zero_bundle(Gr(2, 4)))) == 0
+
+    # Source with a torus Levi: every node marked, so there is no Levi diagram
+    # to branch along.  This can only be the identity, since I ⊆ J.
+    for B in [projective_space(1), full_flag_variety(TypeA{2}), full_flag_variety(TypeB{2})]
+      F = pullback(B, structure_sheaf(B))
+      @test n_filtration_steps(F) == 1
+      @test only(graded_pieces(F)) == structure_sheaf(B)
+      @test rank(pullback(B, zero_bundle(B))) == 0
+    end
+  end
+
+  @testset "pullback: to the full flag variety the pieces are line bundles" begin
+    # For D = G/B the Levi is a torus, so the graded pieces are the individual
+    # weights of the fibre.
+    for (X, E) in [
+      (Gr(2, 4), universal_subbundle(Gr(2, 4))),
+      (Gr(2, 5), dual(universal_subbundle(Gr(2, 5)))),
+      (quadric(3), universal_subbundle(quadric(3))),
+    ]
+      B = full_flag_variety(dynkin_type(X))
+      F = pullback(B, E)
+      @test rank(F) == rank(E)
+      @test all(rank(p) == 1 for p in graded_pieces(F))
+      @test n_filtration_steps(F) == rank(E)
+    end
+  end
+
+  @testset "pullback: filtered bundles" begin
+    # Pullback is exact, so a filtered bundle pulls back piece by piece and the
+    # filtrations concatenate.
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+    F = pullback(full_flag_variety(TypeA{3}), pullback(D, universal_subbundle(X)))
+    @test F isa FilteredBundle
+    @test rank.(graded_pieces(F)) == [1, 1]
+    @test rank(F) == rank(universal_subbundle(X))
+
+    # A producer of filtered bundles feeds straight in.
+    Q = universal_quotient_bundle(OGr(2, 7))
+    @test Q isa FilteredBundle
+    FQ = pullback(partial_flag_variety(TypeB{3}, (1, 2)), Q)
+    @test rank(FQ) == rank(Q)
+    @test n_filtration_steps(FQ) >= n_filtration_steps(Q)
+
+    # The tangent bundle of the source is filtered too.
+    FT = pullback(D, filtered_tangent_bundle(X))
+    @test rank(FT) == dimension(X)
+
+    # Empty filtration in, empty filtration out.
+    @test n_filtration_steps(pullback(D, FilteredBundle(X, CompletelyReducibleBundle[]))) ==
+      0
+  end
+
+  @testset "CompletelyReducibleBundle: equality ignores the order of summands" begin
+    # A direct sum is unordered, so E(ω1) ⊕ E(ω2) and E(ω2) ⊕ E(ω1) are equal,
+    # and must hash equally.  The graded pieces of a pullback rely on this:
+    # their component order comes from dictionary iteration.
+    X = Gr(2, 4)
+    a = CompletelyReducibleBundle(X, [[0, 1, 0], [1, 0, 0]])
+    b = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0]])
+    @test a == b
+    @test hash(a) == hash(b)
+
+    # Multiplicities still count, and the variety still counts.
+    @test CompletelyReducibleBundle(X, [[0, 1, 0], [0, 1, 0]]) != a
+    @test rank(a) == rank(b)
+    @test a != CompletelyReducibleBundle(Gr(2, 5), [[0, 1, 0, 0], [1, 0, 0, 0]])
+
+    # Three summands, a cyclic shuffle.
+    c = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    d = CompletelyReducibleBundle(X, [[0, 0, 1], [1, 0, 0], [0, 1, 0]])
+    @test c == d && hash(c) == hash(d)
+  end
+
+  @testset "pullback: direct sums merge by grading" begin
+    D = flag_variety(4, [1, 2])
+    X = Gr(2, 4)
+    E = direct_sum(universal_subbundle(X), line_bundle(X, 1))
+    F = pullback(D, E)
+
+    # U contributes ranks 1 and 1, the line bundle only at grading zero.
+    @test rank.(graded_pieces(F)) == [1, 2]
+    @test rank(F) == rank(E)
+  end
+
+  @testset "pullback: rank and Euler characteristic are preserved" begin
+    # q^*E has the same fibre dimension as E, and Rq_*O_D = O_X gives
+    # χ(D, q^*E) = χ(X, E); χ is additive over the graded pieces.
+    for (DT, I, J) in [
+      (TypeA{3}, (2,), (1, 2)),
+      (TypeA{4}, (1, 3), (1, 2, 3)),
+      (TypeA{4}, (), (2,)),
+      (TypeB{3}, (2,), (1, 2, 3)),
+      (TypeC{3}, (1,), (1, 3)),
+      (TypeD{4}, (2,), (2, 3, 4)),
+      (TypeG2, (1,), (1, 2)),
+      (TypeF4, (4,), (1, 4)),
+    ]
+      X = partial_flag_variety(DT, I)
+      D = partial_flag_variety(DT, J)
+      for coeffs in [zeros(Int, rank(DT)), ones(Int, rank(DT))]
+        E = CompletelyReducibleBundle(X, coeffs)
+        tot = total_bundle(pullback(D, E))
+        @test rank(tot) == rank(E)
+        @test euler_characteristic(tot) == euler_characteristic(E)
+      end
+    end
+  end
+
+  @testset "pushforward: structure sheaf and the identity projection" begin
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+    Rq = pushforward(X, structure_sheaf(D))
+
+    @test Rq isa Cohomology{CompletelyReducibleBundle}
+    @test lastindex(Rq) == dimension(D) - dimension(X)
+    @test dimensions(Rq)[0] == 1
+    @test dimensions(Rq)[1] == 0
+    @test euler_characteristic(Rq) == 1
+    @test !iszero(Rq)
+    @test Rq[0] == structure_sheaf(X)
+    @test iszero(Rq[1])
+    @test sprint(show, Rq) == "R⁰ = E(0)"
+
+    # Nothing contracted: Rq_* is the identity, concentrated in degree zero.
+    E = universal_subbundle(X)
+    Rid = pushforward(X, E)
+    @test lastindex(Rid) == 0
+    @test Rid[0] == E
+  end
+
+  @testset "pushforward: vanishing and degree shift" begin
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+
+    # λ + ρ singular for a root of L_I: everything vanishes.
+    Rq = pushforward(X, CompletelyReducibleBundle(D, [-1, 0, 0]))
+    @test iszero(Rq)
+    @test sprint(show, Rq) == "R* = 0"
+
+    # A genuine shift into degree one, matching the Leray spectral sequence.
+    E = CompletelyReducibleBundle(D, [-2, 1, 0])
+    Rq1 = pushforward(X, E)
+    @test iszero(Rq1[0])
+    @test Rq1[1] == structure_sheaf(X)
+    @test cohomology(E)[1] == cohomology(Rq1[1])[0]
+  end
+
+  @testset "pushforward: q_* q^* is the identity in K-theory" begin
+    # Rq_*q^*E = E ⊗ Rq_*O_D = E.  Only the class survives applying `pushforward`
+    # to the associated graded: `total_bundle` forgets the filtration, and Rq_*
+    # of the graded pieces need not be concentrated in degree zero even when
+    # Rq_*q^*E is.  So the identity to test is the alternating sum, both of
+    # ranks and of Euler characteristics.
+    for (X, D, E) in [
+      (Gr(3, 6), flag_variety(6, [1, 3]), universal_subbundle(Gr(3, 6))),
+      (Gr(2, 4), flag_variety(4, [1, 2]), universal_subbundle(Gr(2, 4))),
+      (Gr(2, 4), full_flag_variety(TypeA{3}), line_bundle(Gr(2, 4), 2)),
+      # Spread over more than one degree: R⁰ and R¹ have ranks 9 and 3 here.
+      (Gr(3, 6), flag_variety(6, [1, 3]),
+        symmetric_power(dual(universal_subbundle(Gr(3, 6))), 2)),
+      (
+        partial_flag_variety(TypeB{3}, (2,)),
+        full_flag_variety(TypeB{3}),
+        line_bundle(partial_flag_variety(TypeB{3}, (2,)), 2),
+      ),
+    ]
+      Rq = pushforward(X, total_bundle(pullback(D, E)))
+      @test euler_characteristic(Rq) == rank(E)
+      @test sum((-1)^i * euler_characteristic(Rq[i]) for i in 0:lastindex(Rq)) ==
+        euler_characteristic(E)
+    end
+
+    # When the pullback stays in one graded piece there is nothing for the
+    # filtration to hide, and the strong form does hold.
+    let X = Gr(2, 4), D = flag_variety(4, [1, 2]), E = line_bundle(X, 2)
+      Rq = pushforward(X, total_bundle(pullback(D, E)))
+      @test Rq[0] == E
+      @test all(iszero(Rq[i]) for i in 1:lastindex(Rq))
+    end
+  end
+
+  @testset "a non-dominant Levi weight defines no bundle" begin
+    # Such a weight is the highest weight of nothing, so it names no bundle and
+    # the constructor rejects it.  Previously it was tolerated and read as zero
+    # by `rank` while `cohomology` pushed it through Borel–Weil–Bott.
+    D = flag_variety(4, [1, 2])   # only node 3 is unmarked
+    for coeffs in [[0, 0, -2], [0, 0, -1], [1, 0, -3]]
+      @test !is_p_dominant(IrrepLevi(marked_dynkin_type(D), coeffs))
+      @test_throws ArgumentError CompletelyReducibleBundle(D, coeffs)
+    end
+
+    # Dominant at the unmarked node is all that is asked; the marked
+    # coordinates are free, since they only twist by a character.
+    for coeffs in [[0, 0, 0], [-5, 3, 0], [7, -9, 2]]
+      @test is_p_dominant(IrrepLevi(marked_dynkin_type(D), coeffs))
+      @test rank(CompletelyReducibleBundle(D, coeffs)) > 0
+    end
+
+    # So the only zero bundle is the empty one, and it pushes forward to zero.
+    X = Gr(2, 4)
+    @test iszero(zero_bundle(D))
+    @test iszero(pushforward(X, zero_bundle(D)))
+    @test rank(pullback(D, zero_bundle(X))) == 0
+  end
+
+  @testset "pushforward: I = ∅ recovers cohomology" begin
+    # For X a point, R^i q_* is H^i as a representation of G, so its rank is h^i.
+    for (D, E) in [
+      (Gr(2, 4), dual(universal_subbundle(Gr(2, 4)))),
+      (Gr(2, 5), line_bundle(Gr(2, 5), 1)),
+      (
+        flag_variety(4, [1, 2]),
+        CompletelyReducibleBundle(flag_variety(4, [1, 2]), [-2, 1, 0]),
+      ),
+      (quadric(5), tangent_bundle(quadric(5))),
+      (full_flag_variety(TypeG2), line_bundle(full_flag_variety(TypeG2), [1, -3])),
+    ]
+      pt = partial_flag_variety(dynkin_type(D), ())
+      Rq = pushforward(pt, E)
+      H = cohomology(E)
+      @test dimension(pt) == 0
+      @test lastindex(Rq) == dimension(D)
+      @test all(rank(Rq[i]) == H[i] for i in 0:lastindex(H))
+    end
+  end
+
+  @testset "pushforward: Leray degeneration across types" begin
+    # Rq_* of an irreducible sits in a single degree d, so the Leray spectral
+    # sequence degenerates and H^i(D, E) = H^{i-d}(X, R^d q_* E) exactly.
+    for (DT, I, J, coeffs) in [
+      (TypeA{3}, (2,), (1, 2), [-2, 1, 0]),
+      (TypeA{3}, (1,), (1, 2, 3), [1, -3, 1]),
+      (TypeA{4}, (1, 3), (1, 2, 3), [0, -2, 1, 0]),
+      (TypeB{3}, (2,), (1, 2), [-3, 1, 0]),
+      (TypeC{3}, (1,), (1, 3), [1, 0, -4]),
+      (TypeD{4}, (2,), (2, 3), [0, 1, -3, 1]),
+      (TypeG2, (1,), (1, 2), [-1, 2]),
+      (TypeF4, (4,), (3, 4), [0, 0, -2, 1]),
+    ]
+      X = partial_flag_variety(DT, I)
+      D = partial_flag_variety(DT, J)
+      E = CompletelyReducibleBundle(D, coeffs)
+      Rq = pushforward(X, E)
+      H = cohomology(E)
+
+      nonzero = [i for i in 0:lastindex(Rq) if !iszero(Rq[i])]
+      @test length(nonzero) <= 1
+
+      if isempty(nonzero)
+        @test all(iszero(H[i]) for i in 0:lastindex(H))
+      else
+        d = only(nonzero)
+        HR = cohomology(Rq[d])
+        for i in 0:lastindex(H)
+          @test H[i] == (0 <= i - d <= lastindex(HR) ? HR[i - d] : big(0))
+        end
+      end
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  Hodge numbers over ambients with filtered tangent bundle
   # ═══════════════════════════════════════════════════════════════════════════
 
@@ -3213,7 +3568,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       # O(1) on P^1
       let Z = zero_locus("1.0")
         @test dimension(ambient_variety(Z)) == 1
-        @test rank_bundle(defining_bundle(Z)) == 1
+        @test rank(defining_bundle(Z)) == 1
       end
 
       # O(1) on P^3
@@ -3225,7 +3580,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       # O(1,1) on P^1 × P^1
       let Z = zero_locus("11.E")
         @test dimension(ambient_variety(Z)) == 2
-        @test rank_bundle(defining_bundle(Z)) == 1
+        @test rank(defining_bundle(Z)) == 1
       end
     end
 

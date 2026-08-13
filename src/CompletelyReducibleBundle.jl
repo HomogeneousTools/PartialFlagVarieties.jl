@@ -10,7 +10,7 @@
 export Bundle
 export CompletelyReducibleBundle
 export components, variety
-export rank_bundle, tangent_bundle, cotangent_bundle
+export tangent_bundle, cotangent_bundle
 export structure_sheaf, O, zero_bundle, line_bundle, canonical_bundle, anticanonical_bundle
 export T, E  # shorthands for tangent_bundle and the CompletelyReducibleBundle constructors
 export det, determinant
@@ -58,7 +58,7 @@ julia> X = Gr(2, 4);
 
 julia> T = tangent_bundle(X);
 
-julia> rank_bundle(T)
+julia> rank(T)
 4
 ```
 """
@@ -77,14 +77,33 @@ struct CompletelyReducibleBundle <: Bundle
           "Bundle component $idx belongs to $(marked_dynkin_type(component)), expected $bundle_mdt."
         ),
       )
+      # A non-dominant Levi weight is the highest weight of nothing, so it
+      # defines no bundle. Rejecting it here keeps every summand a genuine
+      # representation, rather than leaving a formal symbol that some consumers
+      # read as zero and others happily push through Borel–Weil–Bott.
+      is_p_dominant(component) || throw(
+        ArgumentError(
+          "Bundle component $idx has weight $(p_dominant_weight(component)), which is not dominant for the Levi of $bundle_mdt."
+        ),
+      )
     end
     new(variety, components)
   end
 end
 
-Base.:(==)(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) =
-  E.variety == F.variety && E.components == F.components
-Base.hash(E::CompletelyReducibleBundle, h::UInt) = hash(E.components, hash(E.variety, h))
+# A direct sum is unordered, so equality compares the summands as a multiset.
+# The ordered comparison is tried first: bundles built the same way agree
+# summand by summand, and that is the common case.
+function Base.:(==)(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+  E.variety == F.variety || return false
+  E.components == F.components && return true
+  length(E.components) == length(F.components) && _to_counts(E) == _to_counts(F)
+end
+
+# Summing the summand hashes is commutative and keeps multiplicities, so equal
+# bundles hash equally whatever order they were built in.
+Base.hash(E::CompletelyReducibleBundle, h::UInt) =
+  hash(sum(hash, E.components; init=zero(UInt)), hash(E.variety, h))
 
 """
     CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem) -> CompletelyReducibleBundle
@@ -156,7 +175,7 @@ julia> U = CompletelyReducibleBundle(X, [0, 1, -1, 0, 0]);
 julia> components(U) == components(universal_subbundle(X))
 true
 
-julia> rank_bundle(U)
+julia> rank(U)
 3
 ```
 """
@@ -182,7 +201,7 @@ julia> E = CompletelyReducibleBundle(X, [[0, 1, -1, 0, 0], [0, 0, 0, 0, 0]]);
 julia> components(E) == vcat(components(universal_subbundle(X)), components(structure_sheaf(X)))
 true
 
-julia> rank_bundle(E)
+julia> rank(E)
 4
 ```
 """
@@ -238,7 +257,7 @@ Return the number of irreducible summands.
 n_components(E::CompletelyReducibleBundle) = length(E.components)
 
 """
-    rank_bundle(E::CompletelyReducibleBundle) -> Int
+    rank(E::CompletelyReducibleBundle) -> Int
 
 Return the total rank (fiber dimension) of the bundle.
 
@@ -248,12 +267,12 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> rank_bundle(structure_sheaf(X))
+julia> rank(structure_sheaf(X))
 1
 ```
 """
-function rank_bundle(E::CompletelyReducibleBundle)
-  sum(fiber_dimension(component) for component in E.components; init=0)
+function rank(E::CompletelyReducibleBundle)
+  sum(degree(component) for component in E.components; init=0)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -272,7 +291,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> rank_bundle(structure_sheaf(X))
+julia> rank(structure_sheaf(X))
 1
 ```
 """
@@ -290,7 +309,7 @@ The line bundle ``\\mathcal{O}(d)`` on `X`. Shorthand for
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(O(Gr(2, 4), 3))
+julia> rank(O(Gr(2, 4), 3))
 1
 ```
 """
@@ -308,7 +327,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{3}, (1, 3));
 
-julia> rank_bundle(O(X, [2, 1]))
+julia> rank(O(X, [2, 1]))
 1
 ```
 """
@@ -325,7 +344,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> rank_bundle(structure_sheaf(X))
+julia> rank(structure_sheaf(X))
 1
 ```
 """
@@ -344,7 +363,7 @@ julia> X = Gr(2, 4);
 
 julia> E = zero_bundle(X);
 
-julia> rank_bundle(E)
+julia> rank(E)
 0
 
 julia> n_components(E)
@@ -372,7 +391,7 @@ julia> X = Gr(2, 4);
 
 julia> L = line_bundle(X, 1);
 
-julia> rank_bundle(L)
+julia> rank(L)
 1
 ```
 """
@@ -401,7 +420,7 @@ julia> X = partial_flag_variety(TypeA{3}, (1, 3));
 
 julia> L = line_bundle(X, [2, 1]);
 
-julia> rank_bundle(L)
+julia> rank(L)
 1
 ```
 """
@@ -413,7 +432,7 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
     ),
   )
 
-  coeffs = zeros(Int, rank(X))
+  coeffs = zeros(Int, rank(dynkin_type(X)))
   coeffs[collect(marked)] .= degrees
 
   λ = WeightLatticeElem(dynkin_type(X), coeffs)
@@ -448,8 +467,8 @@ julia> picard_degrees(line_bundle(X2, [3, 2]))
 ```
 """
 function picard_degrees(E::CompletelyReducibleBundle)
-  rank_bundle(E) == 1 || throw(
-    ArgumentError("picard_degrees requires a rank-1 bundle, got rank $(rank_bundle(E)).")
+  rank(E) == 1 || throw(
+    ArgumentError("picard_degrees requires a rank-1 bundle, got rank $(rank(E)).")
   )
   X = variety(E)
   v = coefficients(p_dominant_weight(only(components(E))))
@@ -481,7 +500,7 @@ false
 ```
 """
 function is_ample_line_bundle(E::CompletelyReducibleBundle)
-  rank_bundle(E) == 1 && all(>(0), picard_degrees(E))
+  rank(E) == 1 && all(>(0), picard_degrees(E))
 end
 
 """
@@ -543,7 +562,8 @@ block starting at `offset`.
 function _lift_bundle_to_product(
   X::PartialFlagVariety, E::CompletelyReducibleBundle, offset::Int
 )
-  _product_factor_range(rank(X), rank(variety(E)), offset)  # validates the fit
+  # validates the fit
+  _product_factor_range(rank(dynkin_type(X)), rank(dynkin_type(variety(E))), offset)
   lifted_components = map(components(E)) do component
     _lift_irrep_to_product(X, component, offset)
   end
@@ -604,7 +624,7 @@ julia> T = tangent_bundle(X);
 julia> n_components(T)
 1
 
-julia> rank_bundle(T)
+julia> rank(T)
 4
 ```
 """
@@ -620,7 +640,7 @@ Shorthand for [`tangent_bundle`](@ref): the tangent bundle ``\\mathrm{T}_{\\math
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> rank_bundle(T(Gr(2, 4)))
+julia> rank(T(Gr(2, 4)))
 4
 ```
 """
@@ -639,7 +659,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> rank_bundle(cotangent_bundle(X)) == rank_bundle(tangent_bundle(X))
+julia> rank(cotangent_bundle(X)) == rank(tangent_bundle(X))
 true
 ```
 """
@@ -668,7 +688,7 @@ julia> X = projective_space(1);
 
 julia> K = canonical_bundle(X);
 
-julia> rank_bundle(K)
+julia> rank(K)
 1
 
 julia> cohomology(K)[1]  # H¹(ℙ¹, 𝒪(-2)) = 1
@@ -707,7 +727,7 @@ julia> X = projective_space(1);
 
 julia> L = anticanonical_bundle(X);
 
-julia> rank_bundle(L)
+julia> rank(L)
 1
 
 julia> cohomology(L)[0]  # H⁰(ℙ¹, 𝒪(2)) = 3
@@ -778,7 +798,7 @@ julia> X = Gr(2, 4);
 
 julia> E = tangent_bundle(X);
 
-julia> rank_bundle(dual(E)) == rank_bundle(E)
+julia> rank(dual(E)) == rank(E)
 true
 ```
 """
@@ -805,7 +825,7 @@ julia> E = tangent_bundle(X);
 
 julia> S = structure_sheaf(X);
 
-julia> rank_bundle(tensor_product(E, S)) == rank_bundle(E)
+julia> rank(tensor_product(E, S)) == rank(E)
 true
 ```
 """
@@ -858,16 +878,16 @@ julia> X = partial_flag_variety(TypeA{4}, (1,));
 
 julia> E = tangent_bundle(X);
 
-julia> rank_bundle(exterior_power(E, 0))
+julia> rank(exterior_power(E, 0))
 1
 
-julia> rank_bundle(exterior_power(E, 1)) == rank_bundle(E)
+julia> rank(exterior_power(E, 1)) == rank(E)
 true
 ```
 """
 function exterior_power(E::CompletelyReducibleBundle, k::Integer)
   k = Int(k)
-  r = rank_bundle(E)
+  r = rank(E)
   (k < 0 || k > r) && return zero_bundle(E.variety)
   k == 0 && return structure_sheaf(E.variety)
   k == r && return det(E)
@@ -878,7 +898,7 @@ function exterior_power(E::CompletelyReducibleBundle, k::Integer)
 
   # A group of m copies of an irreducible of rank r absorbs at most m⋅r.
   _power_of_direct_sum(
-    exterior_power, E, k; capacity=(c, m) -> Int(fiber_dimension(c)) * m
+    exterior_power, E, k; capacity=(c, m) -> Int(degree(c)) * m
   )
 end
 
@@ -1020,10 +1040,10 @@ julia> X = partial_flag_variety(TypeA{4}, (1,));
 
 julia> E = tangent_bundle(X);
 
-julia> rank_bundle(symmetric_power(E, 0))
+julia> rank(symmetric_power(E, 0))
 1
 
-julia> rank_bundle(symmetric_power(E, 1)) == rank_bundle(E)
+julia> rank(symmetric_power(E, 1)) == rank(E)
 true
 ```
 """
@@ -1065,7 +1085,7 @@ julia> using PartialFlagVarieties
 
 julia> X = Gr(2, 4);
 
-julia> rank_bundle(det(tangent_bundle(X)))
+julia> rank(det(tangent_bundle(X)))
 1
 ```
 """
@@ -1075,7 +1095,7 @@ function det(E::CompletelyReducibleBundle)
   triv_ss = _trivial_semisimple_weight(X)
   λ = WeightLatticeElem(dynkin_type(X))
   for component in components(E)
-    fiber_rank = fiber_dimension(component)
+    fiber_rank = degree(component)
     det_rep = IrrepLevi(mdt, fiber_rank .* component.central, triv_ss)
     λ += p_dominant_weight(det_rep)
   end
@@ -1119,7 +1139,7 @@ julia> X = partial_flag_variety(TypeA{4}, (1,));
 
 julia> E = structure_sheaf(X);
 
-julia> rank_bundle(twist(E, 1, 3))
+julia> rank(twist(E, 1, 3))
 1
 ```
 """
@@ -1171,7 +1191,11 @@ export ⊕, ⊗
 """
     iszero(E::CompletelyReducibleBundle) -> Bool
 
-Return `true` if `E` is the zero bundle (has no summands).
+Return `true` if `E` is the zero bundle, i.e. if it has no summands.
+
+Every summand carries a genuine representation, since the constructor rejects a
+non-dominant Levi weight, so having no summands and having no fibres are the
+same thing.
 """
 Base.iszero(E::CompletelyReducibleBundle) = isempty(E.components)
 

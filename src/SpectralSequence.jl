@@ -90,7 +90,7 @@ Dict{Tuple{Int64, Int64}, WeylCharacter{TypeC{3}, 3}} with 1 entry:
 """
 function spectral_sequence(F::FilteredBundle)
   DT = dynkin_type(variety(F))
-  R = rank(variety(F))
+  R = rank(dynkin_type(variety(F)))
   d = dimension(variety(F))
   E = Dict{Tuple{Int,Int},WeylCharacter{DT,R}}()
   for (k, piece) in enumerate(reverse(graded_pieces(F)))

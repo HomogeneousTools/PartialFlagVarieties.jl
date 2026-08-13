@@ -24,21 +24,16 @@ export borel_weil_bott
 # Memoize the BWB kernel: every cohomology, dimension, and Euler
 # characteristic call funnels through it, and the same weights recur across
 # bundles (Koszul twists, plethysm summands), so the hit rate is high.
+#
+# The absolute statement only, for now: the key is the weight alone, which is
+# sound only while every entry was folded by the same Weyl group.  Caching the
+# relative fold of `borel_weil_bott(λ, nodes)` would need the node set in the
+# key, since one weight has a different answer for each subsystem.
 const _BWB_WEIGHT_CACHE = let b = _default_cache_budget()
   LRU{WeightLatticeElem,Union{Nothing,Tuple{Int,WeightLatticeElem}}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC * 0.2),
     by=Base.summarysize,
   )
-end
-
-function _borel_weil_bott_generic(@nospecialize(λ::WeightLatticeElem))
-  get!(_BWB_WEIGHT_CACHE, λ) do
-    DT = typeof(λ).parameters[1]
-    ρ = weyl_vector(DT)
-    μ = λ + ρ
-    μ_dom, d = conjugate_dominant_weight_with_length(μ)
-    any(==(0), μ_dom.vec) ? nothing : (d, μ_dom - ρ)
-  end
 end
 
 """
@@ -83,7 +78,56 @@ julia> borel_weil_bott(WeightLatticeElem(TypeB{2}, [1, -4]))          # regular:
 ```
 """
 function borel_weil_bott(λ::WeightLatticeElem{DT,R}) where {DT,R}
-  _borel_weil_bott_generic(λ)
+  # The absolute statement is the relative one with every node available, so the
+  # fold lives in the two-argument method and this adds only the cache.
+  get!(_BWB_WEIGHT_CACHE, λ) do
+    borel_weil_bott(λ, 1:R)
+  end
+end
+
+"""
+    borel_weil_bott(λ::WeightLatticeElem{DT,R}, nodes) -> Union{Nothing, Tuple{Int, WeightLatticeElem{DT,R}}}
+
+Apply the Borel–Weil–Bott theorem relative to the simple roots `nodes`, seeking
+the Weyl group element in ``\\mathrm{W}_S`` rather than in ``\\mathrm{W}_{\\mathrm{G}}``.
+This is the fibrewise statement used by [`pushforward`](@ref); passing every node
+recovers the absolute one.
+
+Not memoized, unlike the absolute case. Two reasons: it is called once per
+irreducible summand rather than from an inner loop, and the cache behind
+[`borel_weil_bott(λ)`](@ref) keys on the weight alone, so it cannot hold relative
+answers as it stands. A weight has one answer per subsystem ``S``, so the node
+set would have to enter the key.
+
+Measured, memoizing this would in any case be a pessimization for its current
+caller: hashing a summand costs more than the fold it saves, because
+``\\mathrm{W}_S`` is small.
+
+The shift is still ``\\rho = \\rho_{\\mathrm{G}}``: the difference
+``\\rho_{\\mathrm{G}} - \\rho_S`` pairs to zero with every coroot in ``S``, so it
+is ``\\mathrm{W}_S``-invariant and drops out.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> λ = WeightLatticeElem(TypeA{2}, [-2, 1]);
+
+julia> borel_weil_bott(λ)          # regular for G: one reflection
+(1, 0)
+
+julia> borel_weil_bott(λ, (2,))    # already dominant for the second node alone
+(0, -2ω1 + ω2)
+```
+"""
+function borel_weil_bott(λ::WeightLatticeElem, nodes)
+  # Deliberately not `@nospecialize`, unlike the bundle loops further down: this
+  # is four lines and the compile cost sits in Semisimple's `@inline` fold, which
+  # specialises regardless.  Measured, annotating it saves no latency and costs
+  # throughput on both callers, the cached absolute one included.
+  ρ = weyl_vector(typeof(λ).parameters[1])
+  μ_dom, d = conjugate_dominant_weight_with_length(λ + ρ, nodes)
+  any(s -> iszero(coefficients(μ_dom)[s]), nodes) ? nothing : (d, μ_dom - ρ)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -100,6 +144,10 @@ Entries are 0-indexed: `H[i]` returns ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \
 # Type parameter
 - `T = WeylCharacter{DT,R}`: entries are virtual characters of ``\\mathrm{G}``
 - `T = BigInt`: entries are dimensions
+- `T = CompletelyReducibleBundle`: entries are the higher direct images
+  ``\\mathrm{R}^iq_*`` of [`pushforward`](@ref), which live on the target of a
+  projection rather than being cohomology of anything. For that parametrization
+  `H[i]` is a bundle and the index runs to the relative dimension.
 
 The object behaves like a vector indexed by cohomological degree rather than by
 Julia's usual `1:length(H)` convention.
@@ -122,8 +170,10 @@ julia> H[1]  # H¹(ℙ⁴, 𝒪) = 0
 ```
 """
 struct Cohomology{T}
-  entries::Vector{T}   # entries[i+1] = Hⁱ, i = 0, ..., dim
-  dim_variety::Int      # dimension of the variety
+  entries::Vector{T}   # entries[i+1] = the degree-i part, i = 0, ..., max_degree
+  # Highest degree that can carry something: `dim X` for sheaf cohomology on
+  # `X`, the relative dimension for the higher direct images of `pushforward`.
+  max_degree::Int
 end
 
 # ─── 0-based indexing ────────────────────────────────────────────────────────
@@ -134,16 +184,16 @@ end
 Return ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})``. Uses 0-based indexing.
 """
 function Base.getindex(H::Cohomology{T}, i::Int) where {T}
-  0 <= i <= H.dim_variety || throw(BoundsError(H, i))
+  0 <= i <= H.max_degree || throw(BoundsError(H, i))
   return H.entries[i + 1]
 end
 
-Base.length(H::Cohomology) = H.dim_variety + 1
+Base.length(H::Cohomology) = H.max_degree + 1
 Base.firstindex(::Cohomology) = 0
-Base.lastindex(H::Cohomology) = H.dim_variety
+Base.lastindex(H::Cohomology) = H.max_degree
 
 function Base.iterate(H::Cohomology, state=0)
-  state > H.dim_variety && return nothing
+  state > H.max_degree && return nothing
   return (H[state], state + 1)
 end
 
@@ -299,7 +349,7 @@ function dimensions(H::Cohomology{<:WeylCharacter})
     sum((BigInt(mult) * degree(weight) for (weight, mult) in χ); init=BigInt(0)) for
     χ in H.entries
   ]
-  Cohomology{BigInt}(entries, H.dim_variety)
+  Cohomology{BigInt}(entries, H.max_degree)
 end
 
 """
@@ -381,7 +431,7 @@ julia> euler_characteristic(H)
 ```
 """
 function euler_characteristic(H::Cohomology{BigInt})
-  sum(((-1)^i * H[i] for i in 0:(H.dim_variety)); init=BigInt(0))
+  sum(((-1)^i * H[i] for i in 0:(H.max_degree)); init=BigInt(0))
 end
 
 function _alternating_euler_characteristic(cohos::AbstractVector{<:Cohomology{BigInt}})
@@ -398,6 +448,15 @@ end
     chi(H::Cohomology) -> BigInt
 
 Synonym for [`euler_characteristic(H)`](@ref).
+
+!!! warning "Two different invariants"
+    For `Cohomology{BigInt}` and `Cohomology{<:WeylCharacter}` this is the
+    alternating sum of the dimensions of the cohomology groups. For
+    `Cohomology{CompletelyReducibleBundle}` the entries are bundles, not
+    cohomology, so it is the alternating sum of their *ranks*: the rank of the
+    class of ``\\mathrm{R}q_*\\mathcal{E}`` in the Grothendieck group, which is
+    not ``\\chi`` of any sheaf. Generic code taking an `H::Cohomology` and
+    reporting `chi(H)` gets whichever of the two matches the element type.
 """
 chi(H::Cohomology) = euler_characteristic(H)
 
@@ -506,14 +565,14 @@ function hilbert_polynomial(
   variety(E) == variety(L) || throw(ArgumentError(
     "Polarization L must live on the same variety as E."
   ))
-  rank_bundle(L) == 1 || throw(
+  rank(L) == 1 || throw(
     ArgumentError(
-      "Polarization L must be a line bundle (rank 1), got rank $(rank_bundle(L))."
+      "Polarization L must be a line bundle (rank 1), got rank $(rank(L))."
     ),
   )
 
   d = dimension(variety(E))
-  n_points = min(d + rank_bundle(E) + 5, max_degree + 1)
+  n_points = min(d + rank(E) + 5, max_degree + 1)
   values = Rational{BigInt}[Rational{BigInt}(euler_characteristic(E))]
   Lt = L
   for _ in 1:(n_points - 1)
@@ -620,7 +679,7 @@ end
 
 function Base.show(io::IO, H::Cohomology{BigInt})
   parts = String[]
-  for i in 0:(H.dim_variety)
+  for i in 0:(H.max_degree)
     v = H[i]
     v == 0 && continue
     push!(parts, "H$(_superscript(i)) = $v")
@@ -634,7 +693,7 @@ end
 
 function Base.show(io::IO, H::Cohomology{<:WeylCharacter})
   parts = String[]
-  for i in 0:(H.dim_variety)
+  for i in 0:(H.max_degree)
     v = H[i]
     isempty(v.terms) && continue
     push!(parts, "H$(_superscript(i)) = $(sprint(show, v))")
