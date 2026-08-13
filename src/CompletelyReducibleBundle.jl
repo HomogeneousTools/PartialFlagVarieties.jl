@@ -1190,16 +1190,13 @@ export ⊕, ⊗
 """
     iszero(E::CompletelyReducibleBundle) -> Bool
 
-Return `true` if `E` is the zero bundle, i.e. if it has no summands with a
-nonempty fibre.
+Return `true` if `E` is the zero bundle, i.e. if it has no summands.
 
-A summand whose Levi weight is not dominant carries no representation and so
-contributes nothing; by the convention of [`fiber_dimension`](@ref) it counts as
-zero rather than as an error. Such a summand keeps `E` from being *empty*
-without keeping it from being *zero*, so the test is on the fibres rather than
-on the list of summands.
+Every summand carries a genuine representation, since the constructor rejects a
+non-dominant Levi weight, so having no summands and having no fibres are the
+same thing.
 """
-Base.iszero(E::CompletelyReducibleBundle) = !any(has_fiber, E.components)
+Base.iszero(E::CompletelyReducibleBundle) = isempty(E.components)
 
 # ─── Display ─────────────────────────────────────────────────────────────────
 

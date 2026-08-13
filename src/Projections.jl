@@ -209,14 +209,16 @@ function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
   mdt_D = marked_dynkin_type(D)
 
   # I == J: q is the identity, and the only case where the source Levi can be a
-  # torus, which the branching below has no diagram to work with.  Drop the
-  # fibreless summands as the general path does, so the two agree.
+  # torus, which the branching below has no diagram to work with.
   if marked_dynkin_type(variety(E)) == mdt_D
-    reps = IrrepLevi[rep for rep in components(E) if has_fiber(rep)]
-    return FilteredBundle(
-      D,
-      isempty(reps) ? CompletelyReducibleBundle[] : [CompletelyReducibleBundle(D, reps)],
-    )
+    # Rebuild on D rather than reusing E: the summands are the same, but they
+    # should live on the target, and the component vector must not be shared.
+    pieces = if isempty(components(E))
+      CompletelyReducibleBundle[]
+    else
+      [CompletelyReducibleBundle(D, copy(components(E)))]
+    end
+    return FilteredBundle(D, pieces)
   end
 
   pieces = Dict{Int,Vector{IrrepLevi}}()
@@ -225,8 +227,6 @@ function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
   # in order keeps the order within each graded piece.
   branched = Dict{IrrepLevi,Dict{Int,Vector{IrrepLevi}}}()
   for rep in components(E)
-    # A non-dominant weight is the zero bundle, by the `fiber_dimension` convention.
-    has_fiber(rep) || continue
     for (g, reps) in get!(() -> _graded_branching(mdt_D, rep), branched, rep)
       append!(get!(pieces, g, IrrepLevi[]), reps)
     end
@@ -364,16 +364,12 @@ function pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle)
 
   pieces = [IrrepLevi[] for _ in 0:d]
   for rep in components(E)
-    # A non-dominant weight is the zero bundle, by the `fiber_dimension`
-    # convention; the relative singularity test below only inspects the nodes in
-    # S, so it cannot see a wall at a node marked in I.
-    has_fiber(rep) || continue
     result = borel_weil_bott(p_dominant_weight(rep), S)
     result === nothing && continue          # λ + ρ singular for L_I
     len, μ = result
-    # `len` is in range because λ is P_J-dominant, which the `has_fiber` guard
-    # above is what enforces: for such a λ the fold is a minimal-length coset
-    # representative, so ℓ(w) <= |Φ_S⁺| - |Φ_T⁺| = d.
+    # `len` is in range because every component is P_J-dominant, which the
+    # `CompletelyReducibleBundle` constructor enforces: for such a λ the fold is
+    # a minimal-length coset representative, so ℓ(w) <= |Φ_S⁺| - |Φ_T⁺| = d.
     push!(pieces[len + 1], IrrepLevi(mdt_X, μ))
   end
 

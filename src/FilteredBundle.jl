@@ -307,10 +307,7 @@ function _graded_power(power, F::FilteredBundle, k::Integer)
     factors = CompletelyReducibleBundle[]
     for i in 1:s
       f = power(pieces[i], α[i])
-      # `isempty` rather than `iszero`: the question is whether the power
-      # vanished identically, which it signals by having no summands at all,
-      # and this runs once per multiexponent per piece.
-      isempty(components(f)) && (empty!(factors); break)
+      iszero(f) && (empty!(factors); break)
       push!(factors, f)
     end
     isempty(factors) && continue
