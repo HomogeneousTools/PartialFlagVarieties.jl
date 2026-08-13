@@ -126,12 +126,13 @@ julia> borel_weil_bott(λ, (2,))    # already dominant for the second node alone
 (0, -2ω1 + ω2)
 ```
 """
-# Deliberately not `@nospecialize`, unlike its siblings in this file: those loop
-# over the components of a bundle and are recompiled per ambient rank, while this
-# is four lines and the compile cost sits in Semisimple's `@inline` fold, which
-# specialises regardless.  Measured on all 242 parabolic pairs of A5: annotating
-# cuts specialisations from 7 to 2, saves no latency, and costs 12% throughput.
 function borel_weil_bott(λ::WeightLatticeElem, nodes)
+  # Deliberately not `@nospecialize`, unlike its siblings in this file: those
+  # loop over the components of a bundle and are recompiled per ambient rank,
+  # while this is four lines and the compile cost sits in Semisimple's `@inline`
+  # fold, which specialises regardless.  Measured over all 242 parabolic pairs
+  # of A5: annotating cuts specialisations from 7 to 2, saves no latency, and
+  # costs 12% throughput.
   ρ = weyl_vector(typeof(λ).parameters[1])
   μ_dom, d = conjugate_dominant_weight_with_length(λ + ρ, nodes)
   any(s -> iszero(coefficients(μ_dom)[s]), nodes) ? nothing : (d, μ_dom - ρ)
