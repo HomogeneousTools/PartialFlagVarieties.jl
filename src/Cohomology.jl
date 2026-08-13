@@ -24,6 +24,11 @@ export borel_weil_bott
 # Memoize the BWB kernel: every cohomology, dimension, and Euler
 # characteristic call funnels through it, and the same weights recur across
 # bundles (Koszul twists, plethysm summands), so the hit rate is high.
+#
+# The absolute statement only, for now: the key is the weight alone, which is
+# sound only while every entry was folded by the same Weyl group.  Caching the
+# relative fold of `borel_weil_bott(λ, nodes)` would need the node set in the
+# key, since one weight has a different answer for each subsystem.
 const _BWB_WEIGHT_CACHE = let b = _default_cache_budget()
   LRU{WeightLatticeElem,Union{Nothing,Tuple{Int,WeightLatticeElem}}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_BWB_FRAC * 0.2),
@@ -94,8 +99,15 @@ the Weyl group element in ``\\mathrm{W}_S`` rather than in ``\\mathrm{W}_{\\math
 This is the fibrewise statement used by [`pushforward`](@ref); passing every node
 recovers the absolute one.
 
-Unlike the absolute case this is not memoized, since it is called once per
-irreducible summand rather than from an inner loop.
+Not memoized, unlike the absolute case. Two reasons: it is called once per
+irreducible summand rather than from an inner loop, and the cache behind
+[`borel_weil_bott(λ)`](@ref) keys on the weight alone, so it cannot hold relative
+answers as it stands. A weight has one answer per subsystem ``S``, so the node
+set would have to enter the key.
+
+Measured, memoizing this would in any case be a pessimization for its current
+caller: hashing a summand costs more than the fold it saves, because
+``\\mathrm{W}_S`` is small.
 
 The shift is still ``\\rho = \\rho_{\\mathrm{G}}``: the difference
 ``\\rho_{\\mathrm{G}} - \\rho_S`` pairs to zero with every coroot in ``S``, so it
