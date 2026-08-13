@@ -432,7 +432,7 @@ function line_bundle(X::PartialFlagVariety, degrees::Vector{<:Integer})
     ),
   )
 
-  coeffs = zeros(Int, rank(X))
+  coeffs = zeros(Int, rank(dynkin_type(X)))
   coeffs[collect(marked)] .= degrees
 
   λ = WeightLatticeElem(dynkin_type(X), coeffs)
@@ -562,7 +562,8 @@ block starting at `offset`.
 function _lift_bundle_to_product(
   X::PartialFlagVariety, E::CompletelyReducibleBundle, offset::Int
 )
-  _product_factor_range(rank(X), rank(variety(E)), offset)  # validates the fit
+  # validates the fit
+  _product_factor_range(rank(dynkin_type(X)), rank(dynkin_type(variety(E))), offset)
   lifted_components = map(components(E)) do component
     _lift_irrep_to_product(X, component, offset)
   end

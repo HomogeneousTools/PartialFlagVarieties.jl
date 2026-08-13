@@ -106,7 +106,7 @@ function _product_zero_locus(Z1::ZeroLocus, Z2::ZeroLocus)
   X2 = ambient_variety(Z2)
   X = product(X1, X2)
   E1 = _lift_bundle_to_product(X, defining_bundle(Z1), 0)
-  E2 = _lift_bundle_to_product(X, defining_bundle(Z2), rank(X1))
+  E2 = _lift_bundle_to_product(X, defining_bundle(Z2), rank(dynkin_type(X1)))
   zero_locus(direct_sum(E1, E2))
 end
 

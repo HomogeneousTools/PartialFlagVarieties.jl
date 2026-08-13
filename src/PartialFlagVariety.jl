@@ -155,7 +155,7 @@ function _product_marked_dynkin_type(varieties::Vararg{PartialFlagVariety,N}) wh
   for X in varieties
     append!(factor_types, _flatten_dynkin_factors(dynkin_type(X)))
     append!(marked, (offset + m for m in marked_nodes(X)))
-    offset += rank(X)
+    offset += rank(dynkin_type(X))
   end
   DT = _combine_dynkin_factors(factor_types)
   MarkedDynkinType(DT, Tuple(marked))
@@ -208,7 +208,6 @@ marked_dynkin_type(X::PartialFlagVariety) = X.mdt
 dynkin_type(X::PartialFlagVariety) = dynkin_type(X.mdt)
 marked_nodes(X::PartialFlagVariety) = marked_nodes(X.mdt)
 unmarked_nodes(X::PartialFlagVariety) = unmarked_nodes(X.mdt)
-rank(X::PartialFlagVariety) = rank(dynkin_type(X))
 
 """
     dimension(X::PartialFlagVariety) -> Int
@@ -372,7 +371,7 @@ function is_projective_space(X::PartialFlagVariety)
   marked = marked_nodes(X)
   length(marked) != 1 && return false
   m = marked[1]
-  R = rank(X)
+  R = rank(dynkin_type(X))
   DT <: TypeA && return (m == 1 || m == R)
   DT <: TypeC && return m == 1
   DT <: TypeB && return (R == 2 && m == 2)
@@ -421,7 +420,7 @@ function is_cominuscule(X::PartialFlagVariety)
   DT <: SimpleDynkinType || return false
   length(marked) != 1 && return false
   m = marked[1]
-  R = rank(X)
+  R = rank(dynkin_type(X))
   DT <: TypeA && return true
   DT <: TypeB && return m == 1
   DT <: TypeC && return m == R
@@ -447,7 +446,7 @@ function is_minuscule(X::PartialFlagVariety)
   DT <: SimpleDynkinType || return false
   length(marked) != 1 && return false
   m = marked[1]
-  R = rank(X)
+  R = rank(dynkin_type(X))
   DT <: TypeA && return true
   DT <: TypeB && return m == R
   DT <: TypeC && return m == 1
@@ -467,7 +466,7 @@ representation.
 function is_adjoint(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)
-  R = rank(X)
+  R = rank(dynkin_type(X))
   DT <: SimpleDynkinType || return false
   if DT <: TypeA
     return length(marked) == 2 && marked == (1, R)
@@ -517,7 +516,7 @@ For simply laced types the adjoint and coadjoint coincide.
 function is_coadjoint(X::PartialFlagVariety)
   DT = dynkin_type(X)
   marked = marked_nodes(X)
-  R = rank(X)
+  R = rank(dynkin_type(X))
   DT <: SimpleDynkinType || return false
   if DT <: TypeA
     return length(marked) == 2 && marked == (1, R)
