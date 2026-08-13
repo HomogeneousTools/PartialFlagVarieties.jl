@@ -5,8 +5,11 @@
 #    Bernardara–Fatighenti–Manivel–Tanturri,
 #    "Fano fourfolds of K3 type" (arXiv:2111.13030).
 #
-#  The descriptions are extracted at runtime from the family headings in the
-#  paper. Ambient/bundle data are located inside examples/FanoFourfolds.json by
+#  The descriptions come from examples/FanoFourfoldsK3.tsv, extracted from the
+#  family headings in the paper and committed alongside this script so that a
+#  run needs no network access and does not break when arXiv re-renders the
+#  HTML. Pass --refresh to download the paper and rewrite that file.
+#  Ambient/bundle data are located inside examples/FanoFourfolds.json by
 #  matching the Appendix C invariants together with the ambient factorization.
 #
 #  The script then recomputes the Hodge diamond with PartialFlagVarieties and
@@ -18,6 +21,7 @@
 #  Usage:
 #    julia --project=. examples/FanoFourfoldsK3.jl
 #    julia --project=. examples/FanoFourfoldsK3.jl K3-29 K3-30 R-64
+#    julia --project=. examples/FanoFourfoldsK3.jl --refresh
 #
 #  Last verified comparison status:
 #    • 58 matches
@@ -42,6 +46,7 @@ using Printf
 
 const PAPER_HTML_URL = "https://arxiv.org/html/2111.13030v2"
 const LOCAL_DB_PATH = joinpath(@__DIR__, "FanoFourfolds.json")
+const DESCRIPTIONS_PATH = joinpath(@__DIR__, "FanoFourfoldsK3.tsv")
 
 normalize_label(s::AbstractString) = replace(strip(s), '–' => '-', '—' => '-', '−' => '-')
 
@@ -151,7 +156,9 @@ const FAMILY_SPECS = let
   end
 end
 
-const SELECTED_LABELS = Set{String}(normalize_label(arg) for arg in ARGS)
+const SELECTED_LABELS = Set{String}(
+  normalize_label(arg) for arg in ARGS if !startswith(arg, "--")
+)
 
 function remove_invisibles(s::AbstractString)
   bad = Set(['\u2062', '\u2061', '\u2060', '\ufeff'])
@@ -214,30 +221,57 @@ function extract_formula_line(block::AbstractString)
   formula
 end
 
-function fetch_paper_descriptions()
-  html_path = Downloads.download(PAPER_HTML_URL)
-  html = read(html_path, String)
-  text = replace(html, r"<script[\s\S]*?</script>" => " ")
-  text = replace(text, r"<style[\s\S]*?</style>" => " ")
-  text = replace(text, r"<[^>]+>" => " ")
-  text = replace(text, "&nbsp;" => " ", "&amp;" => "&")
-  text = remove_invisibles(text)
-  text = replace(text, r"\s+" => " ")
+"""
+Parse the family descriptions out of the paper's HTML.
 
+Each family is a `ltx_theorem_fano` block whose `ltx_tag_theorem` span carries
+the label; the formula is the first `𝒵(...)` in the block.  Anchoring on the
+block rather than on the rendered text matters: LaTeXML used to put the
+environment name in the tag, so the headings read "Fano C–1.", and it no longer
+does.
+"""
+function parse_paper_descriptions(html::AbstractString)
   descs = Dict{String,String}()
-  for spec in FAMILY_SPECS
-    label_dash = replace(spec.label, "-" => "–")
-    pat = Regex("Fano\\s+" * escape_string(label_dash) * "\\s*\\.")
-    m = match(pat, text)
+  for block in split(html, "ltx_theorem ltx_theorem_fano")[2:end]
+    m = match(r"ltx_tag_theorem\"><span[^>]*>([^<]*)</span>", block)
     m === nothing && continue
-    stop = m.offset
-    for _ in 1:1200
-      stop == lastindex(text) && break
-      stop = nextind(text, stop)
+
+    text = replace(block, r"<script[\s\S]*?</script>" => " ")
+    text = replace(text, r"<style[\s\S]*?</style>" => " ")
+    text = replace(text, r"<[^>]+>" => " ")
+    text = replace(text, "&nbsp;" => " ", "&amp;" => "&")
+    text = replace(remove_invisibles(text), r"\s+" => " ")
+
+    formula = extract_formula_line(text)
+    isempty(formula) || (descs[normalize_label(m.captures[1])] = formula)
+  end
+  descs
+end
+
+"""
+Download the paper, parse the descriptions, and write them to
+[`DESCRIPTIONS_PATH`](@ref) so that ordinary runs need no network access.
+"""
+function refresh_paper_descriptions()
+  descs = parse_paper_descriptions(read(Downloads.download(PAPER_HTML_URL), String))
+  isempty(descs) && error("Extracted no descriptions from $PAPER_HTML_URL.")
+  open(DESCRIPTIONS_PATH, "w") do io
+    println(io, "# Family descriptions extracted from $PAPER_HTML_URL")
+    println(io, "# Regenerate with: julia --project=. $(relpath(@__FILE__)) --refresh")
+    for label in sort!(collect(keys(descs)))
+      println(io, label, '\t', descs[label])
     end
-    tail = text[(m.offset):stop]
-    formula = extract_formula_line(tail)
-    !isempty(formula) && (descs[spec.label] = formula)
+  end
+  @info "Wrote $(length(descs)) descriptions to $DESCRIPTIONS_PATH"
+  descs
+end
+
+function load_paper_descriptions()
+  descs = Dict{String,String}()
+  for line in eachline(DESCRIPTIONS_PATH)
+    (isempty(strip(line)) || startswith(line, '#')) && continue
+    label, formula = split(line, '\t'; limit=2)
+    descs[label] = formula
   end
   descs
 end
@@ -753,7 +787,8 @@ end
 function main()
   specs = select_specs()
   db = load_database()
-  descriptions = fetch_paper_descriptions()
+  descriptions =
+    "--refresh" in ARGS ? refresh_paper_descriptions() : load_paper_descriptions()
 
   missing = [spec.label for spec in specs if !haskey(descriptions, spec.label)]
   !isempty(missing) && error("Failed to extract descriptions for: $(join(missing, ", "))")
