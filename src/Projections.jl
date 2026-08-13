@@ -168,6 +168,18 @@ julia> picard_degrees(total_bundle(F))
 function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
   _check_projection(variety(E), D)
   mdt_D = marked_dynkin_type(D)
+
+  # I == J: q is the identity, and the only case where the source Levi can be a
+  # torus, which the branching below has no diagram to work with.  Drop the
+  # fibreless summands as the general path does, so the two agree.
+  if marked_dynkin_type(variety(E)) == mdt_D
+    reps = IrrepLevi[rep for rep in components(E) if fiber_dimension(rep) > 0]
+    return FilteredBundle(
+      D,
+      isempty(reps) ? CompletelyReducibleBundle[] : [CompletelyReducibleBundle(D, reps)],
+    )
+  end
+
   pieces = Dict{Int,Vector{IrrepLevi}}()
   # Plethysms and tensor products repeat a summand once per multiplicity, so
   # branch each distinct component once and reuse it.  Walking `components(E)`

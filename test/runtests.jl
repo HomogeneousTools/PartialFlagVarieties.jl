@@ -3035,6 +3035,15 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # The zero bundle pulls back to rank zero.
     @test rank_bundle(pullback(flag_variety(4, [1, 2]), zero_bundle(Gr(2, 4)))) == 0
+
+    # Source with a torus Levi: every node marked, so there is no Levi diagram
+    # to branch along.  This can only be the identity, since I ⊆ J.
+    for B in [projective_space(1), full_flag_variety(TypeA{2}), full_flag_variety(TypeB{2})]
+      F = pullback(B, structure_sheaf(B))
+      @test n_filtration_steps(F) == 1
+      @test only(graded_pieces(F)) == structure_sheaf(B)
+      @test rank_bundle(pullback(B, zero_bundle(B))) == 0
+    end
   end
 
   @testset "pullback: to the full flag variety the pieces are line bundles" begin
