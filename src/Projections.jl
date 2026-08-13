@@ -21,14 +21,13 @@
 export pullback, pushforward
 
 """
-    _projection_nodes(X::PartialFlagVariety, D::PartialFlagVariety) -> Tuple{Vararg{Int}}
+    _check_projection(X::PartialFlagVariety, D::PartialFlagVariety)
 
 Check that the marked nodes ``I`` of `X` are contained in the marked nodes ``J``
 of `D`, so that ``\\mathrm{P}_J \\subseteq \\mathrm{P}_I`` and the identity of
-``\\mathrm{G}`` induces a projection ``q \\colon D \\to X``, and return the
-contracted nodes ``J \\setminus I``.
+``\\mathrm{G}`` induces a projection ``q \\colon D \\to X``.
 """
-function _projection_nodes(X::PartialFlagVariety, D::PartialFlagVariety)
+function _check_projection(X::PartialFlagVariety, D::PartialFlagVariety)
   dynkin_type(X) === dynkin_type(D) ||
     throw(ArgumentError("$D and $X have different ambient Dynkin types."))
   I, J = marked_nodes(X), marked_nodes(D)
@@ -37,7 +36,7 @@ function _projection_nodes(X::PartialFlagVariety, D::PartialFlagVariety)
       "$D → $X is not a projection: the marked nodes $I of the target are not contained in the marked nodes $J of the source."
     ),
   )
-  Tuple(j for j in J if !(j in I))
+  return nothing
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -168,10 +167,7 @@ julia> picard_degrees(total_bundle(F))
 ```
 """
 function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
-  # Nothing is contracted: q is the identity, up to the display name of D.
-  isempty(_projection_nodes(variety(E), D)) &&
-    return FilteredBundle(D, [CompletelyReducibleBundle(D, components(E))])
-
+  _check_projection(variety(E), D)
   mdt_D = marked_dynkin_type(D)
   pieces = Dict{Int,Vector{IrrepLevi}}()
   for rep in components(E)
@@ -255,7 +251,7 @@ true
 ```
 """
 function pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle)
-  _projection_nodes(X, variety(E))
+  _check_projection(X, variety(E))
   mdt_X = marked_dynkin_type(X)
   S = unmarked_nodes(mdt_X)
   d = dimension(variety(E)) - dimension(X)

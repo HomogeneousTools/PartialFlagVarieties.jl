@@ -3154,6 +3154,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     E = CompletelyReducibleBundle(D, [[0, 0, -2], [0, 0, 0]])
     Rq = pushforward(X, E)
     @test [rank_bundle(Rq[i]) for i in 0:lastindex(Rq)] == [1, 0]
+
+    # `pullback` agrees: the identity projection is not a separate code path, so
+    # the zero bundle gives no graded pieces either way.
+    @test rank_bundle(pullback(X, zero_bundle(X))) == 0
+    @test n_filtration_steps(pullback(X, zero_bundle(X))) ==
+      n_filtration_steps(pullback(D, zero_bundle(X)))
   end
 
   @testset "pushforward: I = ∅ recovers cohomology" begin

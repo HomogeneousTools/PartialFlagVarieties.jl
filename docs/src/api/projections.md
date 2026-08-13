@@ -62,6 +62,6 @@ pushforward
 ## Internals
 
 ```@docs
-PartialFlagVarieties._projection_nodes
+PartialFlagVarieties._check_projection
 PartialFlagVarieties._graded_branching!
 ```
