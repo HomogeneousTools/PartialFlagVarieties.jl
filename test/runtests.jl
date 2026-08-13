@@ -3094,6 +3094,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     @test Rq isa Cohomology{CompletelyReducibleBundle}
     @test lastindex(Rq) == dimension(D) - dimension(X)
+    @test dimensions(Rq)[0] == 1
+    @test dimensions(Rq)[1] == 0
+    @test euler_characteristic(Rq) == 1
+    @test !iszero(Rq)
     @test Rq[0] == structure_sheaf(X)
     @test isempty(components(Rq[1]))
     @test sprint(show, Rq) == "R⁰ = E(0)"
@@ -3141,7 +3145,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       ),
     ]
       Rq = pushforward(X, total_bundle(pullback(D, E)))
-      @test sum((-1)^i * rank_bundle(Rq[i]) for i in 0:lastindex(Rq)) == rank_bundle(E)
+      @test euler_characteristic(Rq) == rank_bundle(E)
       @test sum((-1)^i * euler_characteristic(Rq[i]) for i in 0:lastindex(Rq)) ==
         euler_characteristic(E)
     end
@@ -3162,14 +3166,14 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     for coeffs in [[0, 0, -2], [0, 0, -1], [1, 0, -3]]
       E = CompletelyReducibleBundle(D, coeffs)
       @test rank_bundle(E) == 0
-      Rq = pushforward(X, E)
-      @test all(isempty(components(Rq[i])) for i in 0:lastindex(Rq))
+      @test iszero(pushforward(X, E))
     end
 
     # A zero summand must not contribute alongside a genuine one.
     E = CompletelyReducibleBundle(D, [[0, 0, -2], [0, 0, 0]])
     Rq = pushforward(X, E)
-    @test [rank_bundle(Rq[i]) for i in 0:lastindex(Rq)] == [1, 0]
+    @test [dimensions(Rq)[i] for i in 0:lastindex(Rq)] == [1, 0]
+    @test !iszero(Rq)
 
     # And `pullback` keeps agreeing with it: the identity projection is no
     # longer a separate code path, so the zero bundle gives no graded pieces.

@@ -273,6 +273,44 @@ function pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle)
   )
 end
 
+"""
+    dimensions(Rq::Cohomology{CompletelyReducibleBundle}) -> Cohomology{BigInt}
+
+Replace each higher direct image by its rank, as [`dimensions`](@ref) does for
+character-valued cohomology.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Rq = pushforward(Gr(2, 4), structure_sheaf(flag_variety(4, [1, 2])));
+
+julia> dimensions(Rq)[0]
+1
+```
+"""
+function dimensions(Rq::Cohomology{CompletelyReducibleBundle})
+  Cohomology{BigInt}(BigInt[rank_bundle(E) for E in Rq.entries], Rq.dim_variety)
+end
+
+"""
+    euler_characteristic(Rq::Cohomology{CompletelyReducibleBundle}) -> BigInt
+
+The rank of ``\\sum_i (-1)^i [\\mathrm{R}^iq_*\\mathcal{E}]`` in the Grothendieck
+group of `X`. For ``\\mathcal{E} = q^*\\mathcal{F}`` this is the rank of
+``\\mathcal{F}``, since ``\\mathrm{R}q_*q^*\\mathcal{F} = \\mathcal{F}``.
+"""
+euler_characteristic(Rq::Cohomology{CompletelyReducibleBundle}) =
+  euler_characteristic(dimensions(Rq))
+
+"""
+    iszero(Rq::Cohomology{CompletelyReducibleBundle}) -> Bool
+
+Whether every higher direct image vanishes.
+"""
+Base.iszero(Rq::Cohomology{CompletelyReducibleBundle}) =
+  all(E -> rank_bundle(E) == 0, Rq.entries)
+
 function Base.show(io::IO, Rq::Cohomology{CompletelyReducibleBundle})
   parts = [
     "R$(_superscript(i)) = $(Rq[i])" for i in 0:lastindex(Rq) if
