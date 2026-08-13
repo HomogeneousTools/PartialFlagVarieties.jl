@@ -173,7 +173,7 @@ function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
   # torus, which the branching below has no diagram to work with.  Drop the
   # fibreless summands as the general path does, so the two agree.
   if marked_dynkin_type(variety(E)) == mdt_D
-    reps = IrrepLevi[rep for rep in components(E) if fiber_dimension(rep) > 0]
+    reps = IrrepLevi[rep for rep in components(E) if has_fiber(rep)]
     return FilteredBundle(
       D,
       isempty(reps) ? CompletelyReducibleBundle[] : [CompletelyReducibleBundle(D, reps)],
@@ -187,7 +187,7 @@ function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
   branched = Dict{IrrepLevi,Dict{Int,Vector{IrrepLevi}}}()
   for rep in components(E)
     # A non-dominant weight is the zero bundle, by the `fiber_dimension` convention.
-    iszero(fiber_dimension(rep)) && continue
+    has_fiber(rep) || continue
     for (g, reps) in get!(() -> _graded_branching(mdt_D, rep), branched, rep)
       append!(get!(pieces, g, IrrepLevi[]), reps)
     end
@@ -278,7 +278,7 @@ function pushforward(X::PartialFlagVariety, E::CompletelyReducibleBundle)
     # A non-dominant weight is the zero bundle, by the `fiber_dimension`
     # convention; the relative singularity test below only inspects the nodes in
     # S, so it cannot see a wall at a node marked in I.
-    iszero(fiber_dimension(rep)) && continue
+    has_fiber(rep) || continue
     result = borel_weil_bott(p_dominant_weight(rep), S)
     result === nothing && continue          # λ + ρ singular for L_I
     len, μ = result

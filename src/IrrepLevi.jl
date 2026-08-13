@@ -1,6 +1,6 @@
 export IrrepLevi
 export central_part, semisimple_part
-export to_ambient_weight, fiber_dimension, p_dominant_weight
+export to_ambient_weight, fiber_dimension, has_fiber, p_dominant_weight
 
 """
     IrrepLevi(mdt::MarkedDynkinType, λ::WeightLatticeElem)
@@ -172,6 +172,22 @@ function fiber_dimension(rep::IrrepLevi)::Int
   iszero(ss) && return 1
   is_dominant(ss) || return 0
   Int(degree(ss))
+end
+
+"""
+    has_fiber(rep::IrrepLevi) -> Bool
+
+Whether `rep` carries a representation at all, i.e. whether
+[`fiber_dimension`](@ref) is nonzero. A non-dominant Levi weight is no highest
+weight of anything, and counts as the zero representation.
+
+Deliberately not routed through `fiber_dimension`: that would either repeat
+these checks or run the Weyl dimension formula, and both are on hot paths.
+"""
+function has_fiber(rep::IrrepLevi)
+  is_borel(marked_dynkin_type(rep)) && return true
+  ss = semisimple_part(rep)
+  iszero(ss) || is_dominant(ss)
 end
 
 function Base.show(io::IO, rep::IrrepLevi)

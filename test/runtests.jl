@@ -3174,10 +3174,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X, D = Gr(2, 4), flag_variety(4, [1, 2])
     for coeffs in [[0, 0, -2], [0, 0, -1], [1, 0, -3]]
       E = CompletelyReducibleBundle(D, coeffs)
-      # Rank zero but not `iszero`: the component is there, it just has no
-      # fibre.  This is exactly the case the guard in `pushforward` must catch.
+      # The summand is present but carries no representation, so the bundle is
+      # zero without being empty.  This is what the guard in `pushforward` catches.
       @test rank_bundle(E) == 0
-      @test !iszero(E)
+      @test iszero(E)
+      @test !isempty(components(E))
       @test iszero(pushforward(X, E))
     end
 
