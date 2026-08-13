@@ -160,11 +160,10 @@ julia> H[1]  # H¹(ℙ⁴, 𝒪) = 0
 ```
 """
 struct Cohomology{T}
-  entries::Vector{T}   # entries[i+1] = the degree-i part, i = 0, ..., dim_variety
-  # Highest degree that can carry something, not always a dimension of a
-  # variety: `dim X` for sheaf cohomology on `X`, but the *relative* dimension
-  # for the higher direct images returned by `pushforward`.
-  dim_variety::Int
+  entries::Vector{T}   # entries[i+1] = the degree-i part, i = 0, ..., max_degree
+  # Highest degree that can carry something: `dim X` for sheaf cohomology on
+  # `X`, the relative dimension for the higher direct images of `pushforward`.
+  max_degree::Int
 end
 
 # ─── 0-based indexing ────────────────────────────────────────────────────────
@@ -175,16 +174,16 @@ end
 Return ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})``. Uses 0-based indexing.
 """
 function Base.getindex(H::Cohomology{T}, i::Int) where {T}
-  0 <= i <= H.dim_variety || throw(BoundsError(H, i))
+  0 <= i <= H.max_degree || throw(BoundsError(H, i))
   return H.entries[i + 1]
 end
 
-Base.length(H::Cohomology) = H.dim_variety + 1
+Base.length(H::Cohomology) = H.max_degree + 1
 Base.firstindex(::Cohomology) = 0
-Base.lastindex(H::Cohomology) = H.dim_variety
+Base.lastindex(H::Cohomology) = H.max_degree
 
 function Base.iterate(H::Cohomology, state=0)
-  state > H.dim_variety && return nothing
+  state > H.max_degree && return nothing
   return (H[state], state + 1)
 end
 
@@ -340,7 +339,7 @@ function dimensions(H::Cohomology{<:WeylCharacter})
     sum((BigInt(mult) * degree(weight) for (weight, mult) in χ); init=BigInt(0)) for
     χ in H.entries
   ]
-  Cohomology{BigInt}(entries, H.dim_variety)
+  Cohomology{BigInt}(entries, H.max_degree)
 end
 
 """
@@ -422,7 +421,7 @@ julia> euler_characteristic(H)
 ```
 """
 function euler_characteristic(H::Cohomology{BigInt})
-  sum(((-1)^i * H[i] for i in 0:(H.dim_variety)); init=BigInt(0))
+  sum(((-1)^i * H[i] for i in 0:(H.max_degree)); init=BigInt(0))
 end
 
 function _alternating_euler_characteristic(cohos::AbstractVector{<:Cohomology{BigInt}})
@@ -670,7 +669,7 @@ end
 
 function Base.show(io::IO, H::Cohomology{BigInt})
   parts = String[]
-  for i in 0:(H.dim_variety)
+  for i in 0:(H.max_degree)
     v = H[i]
     v == 0 && continue
     push!(parts, "H$(_superscript(i)) = $v")
@@ -684,7 +683,7 @@ end
 
 function Base.show(io::IO, H::Cohomology{<:WeylCharacter})
   parts = String[]
-  for i in 0:(H.dim_variety)
+  for i in 0:(H.max_degree)
     v = H[i]
     isempty(v.terms) && continue
     push!(parts, "H$(_superscript(i)) = $(sprint(show, v))")

@@ -175,7 +175,7 @@ end
 function Base.show(io::IO, H::Cohomology{AffineExpr})
   parts = [
     "H$(_superscript(i)) = $(sprint(show, H[i]))" for
-    i in 0:(H.dim_variety) if !is_zero_expr(H[i])
+    i in 0:(H.max_degree) if !is_zero_expr(H[i])
   ]
   print(io, isempty(parts) ? "H* = 0" : join(parts, "\n"))
 end
@@ -499,10 +499,10 @@ lower bounds and must not be used as values; use the symbolic solvers
 instead.
 """
 function solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
-  d = a.dim_variety
-  b.dim_variety == d || throw(
+  d = a.max_degree
+  b.max_degree == d || throw(
     ArgumentError(
-      "solve_ses_cohomology: a and b must have equal dim_variety, got $d and $(b.dim_variety)"
+      "solve_ses_cohomology: a and b must have equal max_degree, got $d and $(b.max_degree)"
     ),
   )
 
@@ -567,7 +567,7 @@ function solve_koszul_filtration(
   # the vanishing H^k(Z, F|_Z) = 0 for k > dim Z and the exact Euler
   # characteristic χ(F|_Z) = Σ_i (-1)^i χ(K_i).
   var_counter = Ref(0)
-  dim_ambient = koszul_cohos[1].dim_variety
+  dim_ambient = koszul_cohos[1].max_degree
   sym = solve_koszul_filtration_symbolic(koszul_cohos, dim_ambient, var_counter)
   entries = _truncate_cohomology!(AffineExpr[sym[k] for k in 0:dim_ambient], dim_zero_locus)
 
@@ -605,10 +605,10 @@ function solve_ses_cohomology_symbolic(
   a::Cohomology{BigInt}, b::Cohomology{BigInt},
   var_counter::Ref{Int},
 )
-  d = a.dim_variety
-  b.dim_variety == d || throw(
+  d = a.max_degree
+  b.max_degree == d || throw(
     ArgumentError(
-      "solve_ses_cohomology_symbolic: a and b must have equal dim_variety, got $d and $(b.dim_variety)"
+      "solve_ses_cohomology_symbolic: a and b must have equal max_degree, got $d and $(b.max_degree)"
     ),
   )
 
@@ -637,10 +637,10 @@ function solve_ses_cohomology_symbolic(
   a::Cohomology{AffineExpr}, b::Cohomology{AffineExpr},
   var_counter::Ref{Int},
 )
-  d = a.dim_variety
-  b.dim_variety == d || throw(
+  d = a.max_degree
+  b.max_degree == d || throw(
     ArgumentError(
-      "solve_ses_cohomology_symbolic: a and b must have equal dim_variety, got $d and $(b.dim_variety)"
+      "solve_ses_cohomology_symbolic: a and b must have equal max_degree, got $d and $(b.max_degree)"
     ),
   )
 
@@ -674,7 +674,7 @@ function solve_ses_cohomology_symbolic(
   a::Cohomology{AffineExpr}, b::Cohomology{BigInt},
   var_counter::Ref{Int},
 )
-  d = b.dim_variety
+  d = b.max_degree
   b_affine = Cohomology{AffineExpr}(_as_affine(BigInt[b[i] for i in 0:d]), d)
   solve_ses_cohomology_symbolic(a, b_affine, var_counter)
 end

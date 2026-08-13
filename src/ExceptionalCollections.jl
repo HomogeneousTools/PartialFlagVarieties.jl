@@ -62,7 +62,7 @@ true
 """
 function is_exceptional(E::CompletelyReducibleBundle)
   H = cohomology(dual(E) ⊗ E)
-  H[0] == 1 && all(H[i] == 0 for i in 1:(H.dim_variety))
+  H[0] == 1 && all(H[i] == 0 for i in 1:(H.max_degree))
 end
 
 """
@@ -127,7 +127,7 @@ end
 
 function _has_no_positive_exts(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   H = cohomology(dual(E) ⊗ F)
-  all(H[i] == 0 for i in 1:(H.dim_variety))
+  all(H[i] == 0 for i in 1:(H.max_degree))
 end
 
 """

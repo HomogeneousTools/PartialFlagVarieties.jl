@@ -738,7 +738,7 @@ end
 
 """Extract the Koszul cohomologies as plain vectors in reversed order K_r, …, K_0."""
 function _reversed_koszul_vecs(koszul_cohos::Vector{Cohomology{BigInt}})
-  d_X = koszul_cohos[1].dim_variety
+  d_X = koszul_cohos[1].max_degree
   Vector{BigInt}[BigInt[kc[i] for i in 0:d_X] for kc in reverse(koszul_cohos)]
 end
 

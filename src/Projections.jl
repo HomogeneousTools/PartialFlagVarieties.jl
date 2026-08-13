@@ -383,7 +383,7 @@ julia> dimensions(Rq)[0]
 ```
 """
 function dimensions(Rq::Cohomology{CompletelyReducibleBundle})
-  Cohomology{BigInt}(BigInt[rank_bundle(E) for E in Rq.entries], Rq.dim_variety)
+  Cohomology{BigInt}(BigInt[rank_bundle(E) for E in Rq.entries], Rq.max_degree)
 end
 
 """
