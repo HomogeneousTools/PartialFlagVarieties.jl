@@ -3108,27 +3108,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test c == d && hash(c) == hash(d)
   end
 
-  @testset "CompletelyReducibleBundle: equality ignores the order of summands" begin
-    # A direct sum is unordered, so E(ω1) ⊕ E(ω2) and E(ω2) ⊕ E(ω1) are equal,
-    # and must hash equally.  The graded pieces of a pullback rely on this:
-    # their component order comes from dictionary iteration.
-    X = Gr(2, 4)
-    a = CompletelyReducibleBundle(X, [[0, 1, 0], [1, 0, 0]])
-    b = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0]])
-    @test a == b
-    @test hash(a) == hash(b)
-
-    # Multiplicities still count, and the variety still counts.
-    @test CompletelyReducibleBundle(X, [[0, 1, 0], [0, 1, 0]]) != a
-    @test rank_bundle(a) == rank_bundle(b)
-    @test a != CompletelyReducibleBundle(Gr(2, 5), [[0, 1, 0, 0], [1, 0, 0, 0]])
-
-    # Three summands, a cyclic shuffle.
-    c = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    d = CompletelyReducibleBundle(X, [[0, 0, 1], [1, 0, 0], [0, 1, 0]])
-    @test c == d && hash(c) == hash(d)
-  end
-
   @testset "pullback: direct sums merge by grading" begin
     D = flag_variety(4, [1, 2])
     X = Gr(2, 4)

@@ -202,6 +202,56 @@ function pullback(D::PartialFlagVariety, E::CompletelyReducibleBundle)
   )
 end
 
+"""
+    pullback(D::PartialFlagVariety, F::FilteredBundle) -> FilteredBundle
+
+Pull a filtered bundle back by pulling back each graded piece and concatenating
+the results, so that the filtration of ``q^*\\mathcal{F}`` refines the pullback
+of the filtration of ``\\mathcal{F}``.
+
+Pullback is exact, so this is again a filtration of ``q^*\\mathcal{F}``, and the
+sub-to-quotient order of [`graded_pieces`](@ref) is preserved: the pieces of
+each `pullback(D, p)` are already ordered that way, and the pieces of `F` are
+traversed in that order.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Q = universal_quotient_bundle(OGr(2, 7));   # already filtered
+
+julia> F = pullback(partial_flag_variety(TypeB{3}, (1, 2)), Q);
+
+julia> rank_bundle(F) == rank_bundle(Q)
+true
+```
+
+Pulling back in two steps refines the filtration of doing it in one:
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> U = universal_subbundle(Gr(2, 4));
+
+julia> F = pullback(full_flag_variety(TypeA{3}), pullback(flag_variety(4, [1, 2]), U));
+
+julia> rank_bundle.(graded_pieces(F))
+2-element Vector{Int64}:
+ 1
+ 1
+```
+"""
+function pullback(D::PartialFlagVariety, F::FilteredBundle)
+  FilteredBundle(
+    D,
+    reduce(
+      vcat,
+      (graded_pieces(pullback(D, p)) for p in graded_pieces(F));
+      init=CompletelyReducibleBundle[],
+    ),
+  )
+end
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Pushforward
 # ═══════════════════════════════════════════════════════════════════════════════
