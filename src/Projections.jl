@@ -50,53 +50,64 @@ Restrict the fibre ``\\mathrm{V}_{\\mathrm{L}_I}(\\lambda)`` of the irreducible
 `rep` on ``\\mathrm{G}/\\mathrm{P}_I`` to ``\\mathrm{L}_J``, and return the
 resulting irreducibles keyed by the grading ``g`` of [`pullback`](@ref).
 
-Write a weight of the fibre as ``\\lambda - \\sum_k d_k \\alpha_{o(k)}``, where
-``o`` sends the ``k``-th node of the ``\\mathrm{L}_I`` diagram to its ambient
-node and the ``d_k`` are non-negative.  The coefficients at the contracted nodes
-are constant on each ``\\mathrm{L}_J``-irreducible, since two weights lie in the
-same one only if they differ by a root of ``\\mathrm{L}_J``.  Bucketing by those
-coefficients therefore separates the irreducibles enough for
-`Semisimple.character_from_weights` to peel each bucket on its own, and within a
-bucket the ``\\mathrm{L}_J``-weight determines the ambient weight, so the ambient
-lift survives the peeling.
+Bucket the weights of the fibre, then peel each bucket into irreducibles: see
+[`_fibre_buckets`](@ref) for why bucketing first is what makes the peeling work.
 """
 function _graded_branching(mdt_D::MarkedDynkinType, rep::IrrepLevi)
   mdt_X = marked_dynkin_type(rep)
-  ord_D = levi_permutation(mdt_D)
-  buckets = _fibre_buckets(dynkin_type(mdt_X), levi_type(mdt_X), rep, ord_D)
+  buckets = _fibre_buckets(
+    dynkin_type(mdt_X), levi_type(mdt_X), rep, unmarked_nodes(mdt_D)
+  )
 
   pieces = Dict{Int,Vector{IrrepLevi}}()
   for (key, entries) in buckets
-    _peel!(get!(pieces, sum(key), IrrepLevi[]), levi_type(mdt_D), mdt_D, ord_D, entries)
+    reps = get!(pieces, sum(key), IrrepLevi[])
+    _peel!(reps, levi_type(mdt_D), mdt_D, entries)
   end
   pieces
 end
 
 """
-Bucket the weights of the fibre by the contracted part of `d`, keyed by that
-vector and holding the ambient weight of each with its multiplicity.
+    _fibre_buckets(::Type{DT}, ::Type{LT_I}, rep::IrrepLevi, kept) -> Dict
 
-The Dynkin types come in as type parameters: they are runtime values on a
-`MarkedDynkinType`, so without this barrier the Cartan matrices infer as `Any`
-and the whole loop runs through dynamic dispatch.
+Group the weights of the fibre of `rep` into buckets, each holding the ambient
+weights it contains with their multiplicities. `kept` is the set of ambient
+nodes surviving in ``\\mathrm{L}_J``, i.e. the nodes unmarked in ``J``.
 
-One vector per weight of the fibre, so the cost scales with the number of
-weights of V_{L_I}(λ) and the bookkeeping dominates. A branching rule producing
-highest weights directly would remove the |W_{L_J}| factor altogether.
+Every weight of the fibre is
+``\\lambda - \\sum_k d_k \\alpha_{o(k)}`` for non-negative integers ``d_k``,
+where ``o`` sends the ``k``-th node of the ``\\mathrm{L}_I`` diagram to its
+ambient node; the bucket key is the vector of those ``d_k`` at the *contracted*
+nodes, the ones in ``J \\setminus I``.
+
+That key is constant on each ``\\mathrm{L}_J``-irreducible, because two weights
+lie in the same one only if they differ by a root of ``\\mathrm{L}_J``. So the
+buckets separate the irreducibles enough for `Semisimple.character_from_weights`
+to peel each on its own, and within a bucket the ``\\mathrm{L}_J``-weight
+determines the ambient weight, so the ambient lift survives the peeling.
+
+The Dynkin types are taken as type parameters rather than read off the marked
+Dynkin type, where they are runtime values: otherwise the Cartan matrices infer
+as `Any` and this loop runs through dynamic dispatch.
+
+The whole weight system is materialised, one vector per weight, so the cost
+scales with the number of weights of ``\\mathrm{V}_{\\mathrm{L}_I}(\\lambda)``
+and the bookkeeping dominates. A branching rule producing highest weights
+directly would remove the ``|\\mathrm{W}_{\\mathrm{L}_J}|`` factor altogether.
 """
 function _fibre_buckets(
-  ::Type{DT}, ::Type{LT_I}, rep::IrrepLevi, ord_D
+  ::Type{DT}, ::Type{LT_I}, rep::IrrepLevi, kept
 ) where {DT<:DynkinType,LT_I<:DynkinType}
   C = cartan_matrix(DT)
   Cinv = cartan_matrix_inverse(LT_I)
   λ = coefficients(p_dominant_weight(rep))
   ss = semisimple_part(rep)
   ord = levi_permutation(marked_dynkin_type(rep))
-  contracted = Tuple(k for k in eachindex(ord) if !(ord[k] in ord_D))
+  contracted = Tuple(k for k in eachindex(ord) if !(ord[k] in kept))
 
   buckets = Dict{Vector{Int},Vector{Pair{Vector{Int},BigInt}}}()
   for (ν, mult) in freudenthal_formula(ss)
-    d = Int.(Cinv * (coefficients(ss) - ν))   # the d_k, since ss - ν = Σ_k d_k α_k
+    d = Int.(Cinv * (coefficients(ss) - ν))
     w = Int[λ[i] - sum(d[k] * C[i, ord[k]] for k in eachindex(ord)) for i in eachindex(λ)]
     key = Int[d[k] for k in contracted]
     push!(get!(() -> Pair{Vector{Int},BigInt}[], buckets, key), w => mult)
@@ -105,23 +116,22 @@ function _fibre_buckets(
 end
 
 # D = G/B: the Levi is a torus, so each bucket is a single fibre weight.
-function _peel!(reps, ::Nothing, mdt_D::MarkedDynkinType, ord_D, entries)
+function _peel!(reps, ::Nothing, mdt_D::MarkedDynkinType, entries)
   append!(reps, (IrrepLevi(mdt_D, w) for (w, m) in entries for _ in 1:Int(m)))
 end
 
-# Otherwise peel the bucket into L_J-irreducibles and look each lift back up.
+# Otherwise peel the bucket into L_J-irreducibles, looking each ambient lift
+# back up by the L_J-weight that identifies it.
 function _peel!(
-  reps, ::Type{LT_J}, mdt_D::MarkedDynkinType, ord_D, entries
+  reps, ::Type{LT_J}, mdt_D::MarkedDynkinType, entries
 ) where {LT_J<:DynkinType}
+  ord_D = levi_permutation(mdt_D)
   r = rank(LT_J)
   mults = Dict{SVector{r,Int},BigInt}()
   lift = Dict{SVector{r,Int},Vector{Int}}()
   for (w, m) in entries
     c = SVector{r,Int}(ntuple(j -> w[ord_D[j]], r))
-    # `c` is injective on a bucket, so this never merges in practice;
-    # accumulating rather than overwriting keeps a violation from silently
-    # shrinking the rank.
-    mults[c] = get(mults, c, zero(BigInt)) + m
+    mults[c] = get(mults, c, zero(BigInt)) + m   # injective here; accumulate anyway
     lift[c] = w
   end
   χ = character_from_weights(LT_J, mults)
