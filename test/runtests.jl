@@ -3062,6 +3062,73 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
   end
 
+  @testset "pullback: filtered bundles" begin
+    # Pullback is exact, so a filtered bundle pulls back piece by piece and the
+    # filtrations concatenate.
+    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+    F = pullback(full_flag_variety(TypeA{3}), pullback(D, universal_subbundle(X)))
+    @test F isa FilteredBundle
+    @test rank_bundle.(graded_pieces(F)) == [1, 1]
+    @test rank_bundle(F) == rank_bundle(universal_subbundle(X))
+
+    # A producer of filtered bundles feeds straight in.
+    Q = universal_quotient_bundle(OGr(2, 7))
+    @test Q isa FilteredBundle
+    FQ = pullback(partial_flag_variety(TypeB{3}, (1, 2)), Q)
+    @test rank_bundle(FQ) == rank_bundle(Q)
+    @test n_filtration_steps(FQ) >= n_filtration_steps(Q)
+
+    # The tangent bundle of the source is filtered too.
+    FT = pullback(D, filtered_tangent_bundle(X))
+    @test rank_bundle(FT) == dimension(X)
+
+    # Empty filtration in, empty filtration out.
+    @test n_filtration_steps(pullback(D, FilteredBundle(X, CompletelyReducibleBundle[]))) ==
+      0
+  end
+
+  @testset "CompletelyReducibleBundle: equality ignores the order of summands" begin
+    # A direct sum is unordered, so E(ω1) ⊕ E(ω2) and E(ω2) ⊕ E(ω1) are equal,
+    # and must hash equally.  The graded pieces of a pullback rely on this:
+    # their component order comes from dictionary iteration.
+    X = Gr(2, 4)
+    a = CompletelyReducibleBundle(X, [[0, 1, 0], [1, 0, 0]])
+    b = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0]])
+    @test a == b
+    @test hash(a) == hash(b)
+
+    # Multiplicities still count, and the variety still counts.
+    @test CompletelyReducibleBundle(X, [[0, 1, 0], [0, 1, 0]]) != a
+    @test rank_bundle(a) == rank_bundle(b)
+    @test a != CompletelyReducibleBundle(Gr(2, 5), [[0, 1, 0, 0], [1, 0, 0, 0]])
+
+    # Three summands, a cyclic shuffle.
+    c = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    d = CompletelyReducibleBundle(X, [[0, 0, 1], [1, 0, 0], [0, 1, 0]])
+    @test c == d && hash(c) == hash(d)
+  end
+
+  @testset "CompletelyReducibleBundle: equality ignores the order of summands" begin
+    # A direct sum is unordered, so E(ω1) ⊕ E(ω2) and E(ω2) ⊕ E(ω1) are equal,
+    # and must hash equally.  The graded pieces of a pullback rely on this:
+    # their component order comes from dictionary iteration.
+    X = Gr(2, 4)
+    a = CompletelyReducibleBundle(X, [[0, 1, 0], [1, 0, 0]])
+    b = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0]])
+    @test a == b
+    @test hash(a) == hash(b)
+
+    # Multiplicities still count, and the variety still counts.
+    @test CompletelyReducibleBundle(X, [[0, 1, 0], [0, 1, 0]]) != a
+    @test rank_bundle(a) == rank_bundle(b)
+    @test a != CompletelyReducibleBundle(Gr(2, 5), [[0, 1, 0, 0], [1, 0, 0, 0]])
+
+    # Three summands, a cyclic shuffle.
+    c = CompletelyReducibleBundle(X, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    d = CompletelyReducibleBundle(X, [[0, 0, 1], [1, 0, 0], [0, 1, 0]])
+    @test c == d && hash(c) == hash(d)
+  end
+
   @testset "pullback: direct sums merge by grading" begin
     D = flag_variety(4, [1, 2])
     X = Gr(2, 4)

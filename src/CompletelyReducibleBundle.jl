@@ -82,9 +82,19 @@ struct CompletelyReducibleBundle <: Bundle
   end
 end
 
-Base.:(==)(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) =
-  E.variety == F.variety && E.components == F.components
-Base.hash(E::CompletelyReducibleBundle, h::UInt) = hash(E.components, hash(E.variety, h))
+# A direct sum is unordered, so equality compares the summands as a multiset.
+# The ordered comparison is tried first: bundles built the same way agree
+# summand by summand, and that is the common case.
+function Base.:(==)(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+  E.variety == F.variety || return false
+  E.components == F.components && return true
+  length(E.components) == length(F.components) && _to_counts(E) == _to_counts(F)
+end
+
+# Summing the summand hashes is commutative and keeps multiplicities, so equal
+# bundles hash equally whatever order they were built in.
+Base.hash(E::CompletelyReducibleBundle, h::UInt) =
+  hash(sum(hash, E.components; init=zero(UInt)), hash(E.variety, h))
 
 """
     CompletelyReducibleBundle(X::PartialFlagVariety, λ::WeightLatticeElem) -> CompletelyReducibleBundle
