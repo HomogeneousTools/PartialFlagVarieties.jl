@@ -3228,31 +3228,28 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     end
   end
 
-  @testset "pushforward: the zero bundle pushes forward to zero" begin
-    # A non-dominant weight is the zero bundle; the relative singularity test
-    # only inspects the nodes unmarked in I, so it cannot catch this by itself.
-    X, D = Gr(2, 4), flag_variety(4, [1, 2])
+  @testset "a non-dominant Levi weight defines no bundle" begin
+    # Such a weight is the highest weight of nothing, so it names no bundle and
+    # the constructor rejects it.  Previously it was tolerated and read as zero
+    # by `rank_bundle` while `cohomology` pushed it through Borel–Weil–Bott.
+    D = flag_variety(4, [1, 2])   # only node 3 is unmarked
     for coeffs in [[0, 0, -2], [0, 0, -1], [1, 0, -3]]
-      E = CompletelyReducibleBundle(D, coeffs)
-      # The summand is present but carries no representation, so the bundle is
-      # zero without being empty.  This is what the guard in `pushforward` catches.
-      @test rank_bundle(E) == 0
-      @test iszero(E)
-      @test !isempty(components(E))
-      @test iszero(pushforward(X, E))
+      @test !has_fiber(IrrepLevi(marked_dynkin_type(D), coeffs))
+      @test_throws ArgumentError CompletelyReducibleBundle(D, coeffs)
     end
 
-    # A zero summand must not contribute alongside a genuine one.
-    E = CompletelyReducibleBundle(D, [[0, 0, -2], [0, 0, 0]])
-    Rq = pushforward(X, E)
-    @test [dimensions(Rq)[i] for i in 0:lastindex(Rq)] == [1, 0]
-    @test !iszero(Rq)
+    # Dominant at the unmarked node is all that is asked; the marked
+    # coordinates are free, since they only twist by a character.
+    for coeffs in [[0, 0, 0], [-5, 3, 0], [7, -9, 2]]
+      @test has_fiber(IrrepLevi(marked_dynkin_type(D), coeffs))
+      @test rank_bundle(CompletelyReducibleBundle(D, coeffs)) > 0
+    end
 
-    # And `pullback` keeps agreeing with it: the identity projection is no
-    # longer a separate code path, so the zero bundle gives no graded pieces.
-    @test rank_bundle(pullback(X, zero_bundle(X))) == 0
-    @test n_filtration_steps(pullback(X, zero_bundle(X))) ==
-      n_filtration_steps(pullback(D, zero_bundle(X)))
+    # So the only zero bundle is the empty one, and it pushes forward to zero.
+    X = Gr(2, 4)
+    @test iszero(zero_bundle(D))
+    @test iszero(pushforward(X, zero_bundle(D)))
+    @test rank_bundle(pullback(D, zero_bundle(X))) == 0
   end
 
   @testset "pushforward: I = ∅ recovers cohomology" begin

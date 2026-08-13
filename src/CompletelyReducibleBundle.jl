@@ -77,6 +77,15 @@ struct CompletelyReducibleBundle <: Bundle
           "Bundle component $idx belongs to $(marked_dynkin_type(component)), expected $bundle_mdt."
         ),
       )
+      # A non-dominant Levi weight is the highest weight of nothing, so it
+      # defines no bundle. Rejecting it here keeps every summand a genuine
+      # representation, rather than leaving a formal symbol that some consumers
+      # read as zero and others happily push through Borel–Weil–Bott.
+      has_fiber(component) || throw(
+        ArgumentError(
+          "Bundle component $idx has weight $(p_dominant_weight(component)), which is not dominant for the Levi of $bundle_mdt."
+        ),
+      )
     end
     new(variety, components)
   end
