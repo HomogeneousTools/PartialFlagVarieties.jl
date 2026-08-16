@@ -17,16 +17,13 @@ Semisimple = "c99f5fee-6cdb-4bf1-806f-d7690e6ee6f7"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
 
-[sources]
-Semisimple = {rev = "main", url = "https://github.com/HomogeneousTools/Semisimple.jl"}
-ZeroLocus62 = {rev = "main", subdir = "julia", url = "https://github.com/HomogeneousTools/ZeroLocus62"}
-
 [compat]
 Semisimple = "1.3"
 Combinatorics = "1"
 Distributed = "1"
 JSON = "1"
 LRUCache = "1.6"
+LinearAlgebra = "1"
 PrecompileTools = "1"
 Preferences = "1.5.2"
 PrettyTables = "3.2.3"

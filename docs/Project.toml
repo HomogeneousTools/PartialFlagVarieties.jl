@@ -7,8 +7,3 @@ ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
 
 [sources]
 PartialFlagVarieties = {path = ".."}
-Semisimple = {rev = "main", url = "https://github.com/HomogeneousTools/Semisimple.jl"}
-ZeroLocus62 = {rev = "main", subdir = "julia", url = "https://github.com/HomogeneousTools/ZeroLocus62"}
-
-[extras]
-Semisimple = "c99f5fee-6cdb-4bf1-806f-d7690e6ee6f7"
