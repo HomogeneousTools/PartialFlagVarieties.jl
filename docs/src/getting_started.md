@@ -7,15 +7,11 @@ mathematical conventions behind the API, see [Conventions & Notation](convention
 
 ```julia
 using Pkg
-Pkg.add("Semisimple")  # from the General registry
-Pkg.add([
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
-])
+Pkg.add("PartialFlagVarieties")
 ```
 
-`Semisimple.jl` is available from the General registry.  The URL
-specification is still needed for `ZeroLocus62`, which is not registered yet.
+All dependencies, including `Semisimple.jl` and `ZeroLocus62`, come from the
+General registry.
 
 ## The three basic objects
 

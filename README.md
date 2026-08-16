@@ -153,19 +153,12 @@ julia --project=. examples/BottVanishing.jl
 
 ## Installation
 
+PartialFlagVarieties.jl is registered in the Julia General registry:
+
 ```julia
 using Pkg
-Pkg.add([
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/ZeroLocus62", subdir="julia"),
-  Pkg.PackageSpec(url="https://github.com/HomogeneousTools/PartialFlagVarieties.jl"),
-])
+Pkg.add("PartialFlagVarieties")
 ```
-
-`ZeroLocus62` is not currently available from the General registry, so it must
-be added explicitly in a clean environment. Listing it in `Project.toml` records
-the dependency graph, but it does not teach `Pkg.add(url=...)` where to fetch an
-unregistered dependency when `PartialFlagVarieties.jl` is installed into another
-environment.
 
 Requires Julia ≥ 1.11.
 
