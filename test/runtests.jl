@@ -1958,38 +1958,116 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     TZ = tangent_bundle(Z)
     OmegaZ = cotangent_bundle(Z)
 
-    @test locus(TZ) === Z
     @test variety(TZ) === Z
     @test ambient_variety(TZ) === X
     @test rank(L) == 1
+    @test TZ isa Bundle
     @test rank(TZ) == dimension(Z)
     @test rank(OmegaZ) == dimension(Z)
-    @test presentation_degrees(TZ) == [0, 1]
-    @test presentation_degrees(OmegaZ) == [-1, 0]
     @test rank(normal_bundle(Z)) == codimension(Z)
     @test rank(conormal_bundle(Z)) == codimension(Z)
     @test rank(canonical_bundle(Z)) == 1
     @test rank(anticanonical_bundle(Z)) == 1
+    @test rank(structure_sheaf(Z)) == 1
+    @test rank(O(Z)) == 1
+    @test rank(O(Z, 1)) == 1
+    @test iszero(zero_bundle(Z))
 
     @test rank(direct_sum(TZ, L)) == rank(TZ) + 1
+    @test rank(TZ + L) == rank(TZ) + 1
     @test rank(tensor_product(TZ, L)) == rank(TZ)
+    @test rank(TZ * L) == rank(TZ)
     @test rank(dual(TZ)) == rank(TZ)
+    @test rank(T(Z)) == rank(TZ)
     @test rank(2 * TZ) == 2 * rank(TZ)
+    @test rank(TZ * 2) == 2 * rank(TZ)
     @test iszero(0 * TZ)
+    @test_throws ArgumentError -1 * TZ
 
     wedge2_TZ = exterior_power(TZ, 2)
     sym2_TZ = symmetric_power(TZ, 2)
+    @test rank(exterior_power(TZ, 0)) == 1
+    @test exterior_power(TZ, 1) === TZ
+    @test iszero(exterior_power(TZ, -1))
+    @test iszero(exterior_power(TZ, rank(TZ) + 1))
     @test rank(wedge2_TZ) == binomial(rank(TZ), 2)
+    @test rank(det(TZ)) == 1
+    @test rank(determinant(TZ)) == 1
+    @test rank(symmetric_power(TZ, 0)) == 1
+    @test symmetric_power(TZ, 1) === TZ
+    @test iszero(symmetric_power(TZ, -1))
     @test rank(sym2_TZ) == binomial(rank(TZ) + 1, 2)
-    @test presentation_degrees(wedge2_TZ) == [0, 1, 2]
-    @test presentation_degrees(exterior_power(OmegaZ, 2)) == [-2, -1, 0]
+    @test iszero(symmetric_power(zero_bundle(Z), 2))
 
     composite = tensor_product(direct_sum(TZ, L), dual(TZ))
     @test rank(exterior_power(composite, 2)) == binomial(rank(composite), 2)
     @test rank(symmetric_power(composite, 2)) == binomial(rank(composite) + 1, 2)
+    @test rank(twist(TZ, 1)) == rank(TZ)
+    @test occursin("Bundle(rank 3 on", sprint(show, TZ))
 
+    @test_throws ArgumentError restrict(Z, TZ)
     @test_throws ArgumentError restrict(Z, structure_sheaf(Gr(2, 4)))
     @test_throws ArgumentError direct_sum(TZ, tangent_bundle(zero_locus(line_bundle(X, 4))))
+    @test_throws ArgumentError tensor_product(
+      TZ, tangent_bundle(zero_locus(line_bundle(X, 4)))
+    )
+
+    Y = projective_space(1) * projective_space(1)
+    W = zero_locus(line_bundle(Y, [1, 1]))
+    M = line_bundle(W, [1, 0])
+    @test rank(M) == 1
+    @test rank(O(W, [0, 1])) == 1
+    @test rank(twist(M, [0, 1])) == 1
+
+    full_flag = full_flag_variety(TypeA{2})
+    filtered = filtered_tangent_bundle(full_flag)
+    @test rank(tensor_product(filtered, filtered)) == rank(filtered)^2
+    @test_throws ArgumentError tensor_product(
+      filtered, filtered_tangent_bundle(full_flag_variety(TypeB{2}))
+    )
+  end
+
+  @testset "ZeroLocusBundle: cohomology" begin
+    X = projective_space(4)
+    Z = zero_locus(line_bundle(X, 5))
+    ambient_line = line_bundle(X, 1)
+    L = restrict(Z, ambient_line)
+    TZ = tangent_bundle(Z)
+
+    H_L = cohomology(L)
+    expected_L = cohomology_on_restriction_symbolic(Z, ambient_line, Ref(0))
+    @test H_L.entries == expected_L.entries
+    @test is_determined(H_L)
+    @test euler_characteristic(L) == euler_characteristic(Z, ambient_line)
+    @test chi(L) == euler_characteristic(L)
+
+    H_zero = cohomology(zero_bundle(Z))
+    @test is_determined(H_zero)
+    @test all(is_zero_expr, H_zero.entries)
+
+    H_TZ = cohomology(TZ)
+    @test H_TZ.entries == tangent_cohomology(Z).entries
+    @test H_TZ.entries == AffineExpr.([0, 101, 1, 0])
+    @test is_determined(H_TZ)
+    @test euler_characteristic(TZ) == -100
+    @test_throws MethodError cohomology(TZ; characters=true)
+
+    H_OmegaZ = cohomology(cotangent_bundle(Z))
+    @test PartialFlagVarieties._alternating_sum(H_OmegaZ.entries) ==
+      AffineExpr(euler_characteristic(cotangent_bundle(Z)))
+
+    H_wedge2 = cohomology(exterior_power(cotangent_bundle(Z), 2))
+    @test PartialFlagVarieties._alternating_sum(H_wedge2.entries) ==
+      AffineExpr(euler_characteristic(exterior_power(cotangent_bundle(Z), 2)))
+
+    # This tensor product has presentation terms in negative, zero, and
+    # positive degrees, exercising both halves of the generic complex solver.
+    conic = zero_locus(line_bundle(projective_space(2), 2))
+    endomorphism = tangent_bundle(conic) * cotangent_bundle(conic)
+    H_endomorphism = cohomology(endomorphism)
+    @test rank(endomorphism) == 1
+    @test PartialFlagVarieties._alternating_sum(H_endomorphism.entries) ==
+      AffineExpr(euler_characteristic(endomorphism))
   end
 
   @testset "ZeroLocus: products" begin
@@ -2831,36 +2909,38 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  euler_characteristic_tangent_bundle  (issue #15)
+  #  Euler characteristic of tangent bundles on zero loci  (issue #15)
   # ═══════════════════════════════════════════════════════════════════════════
 
-  @testset "ZeroLocus: euler_characteristic_tangent_bundle" begin
+  @testset "ZeroLocus: Euler characteristic of tangent bundle" begin
     # ── Hypersurfaces in ℙ⁴ ─────────────────────────────────────────────────
     let X = projective_space(4)
-      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 3))) == -10
-      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 4))) == -45
-      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 5))) == -100  # CY3
+      @test euler_characteristic(tangent_bundle(zero_locus(line_bundle(X, 3)))) == -10
+      @test euler_characteristic(tangent_bundle(zero_locus(line_bundle(X, 4)))) == -45
+      @test euler_characteristic(tangent_bundle(zero_locus(line_bundle(X, 5)))) == -100  # CY3
     end
 
     # ── Hypersurfaces in ℙ⁵ ─────────────────────────────────────────────────
     let X = projective_space(5)
-      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 2))) == 15   # Q⁴
-      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 3))) == -20
-      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 4))) == -90
-      @test euler_characteristic_tangent_bundle(zero_locus(line_bundle(X, 5))) == -216
+      @test euler_characteristic(tangent_bundle(zero_locus(line_bundle(X, 2)))) == 15  # Q⁴
+      @test euler_characteristic(tangent_bundle(zero_locus(line_bundle(X, 3)))) == -20
+      @test euler_characteristic(tangent_bundle(zero_locus(line_bundle(X, 4)))) == -90
+      @test euler_characteristic(tangent_bundle(zero_locus(line_bundle(X, 5)))) == -216
     end
 
     # ── Küchle Fano 4-folds ──────────────────────────────────────────────────
     let X = Gr(2, 5), E = 2 * line_bundle(X, 2)
-      @test euler_characteristic_tangent_bundle(zero_locus(E)) == -72   # b2
+      @test euler_characteristic(tangent_bundle(zero_locus(E))) == -72  # b2
     end
 
     let X = Gr(2, 7), E = 6 * line_bundle(X, 1)
-      @test euler_characteristic_tangent_bundle(zero_locus(E)) == -42   # b7
+      @test euler_characteristic(tangent_bundle(zero_locus(E))) == -42  # b7
     end
 
     let X = Gr(3, 7), Qd1 = twist(dual(universal_quotient_bundle(X)), 1)
-      @test euler_characteristic_tangent_bundle(zero_locus(direct_sum(Qd1, Qd1))) == -18  # c3
+      @test euler_characteristic(
+        tangent_bundle(zero_locus(direct_sum(Qd1, Qd1)))
+      ) == -18  # c3
     end
   end
 
@@ -2941,7 +3021,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     let Z = zero_locus(line_bundle(projective_space(4), 3))
       H = tangent_cohomology(Z)
       alt = PartialFlagVarieties._alternating_sum(H.entries)
-      @test alt == AffineExpr(euler_characteristic_tangent_bundle(Z))
+      @test alt == AffineExpr(euler_characteristic(tangent_bundle(Z)))
       @test is_zero_expr(H[2]) && is_zero_expr(H[3])
     end
   end

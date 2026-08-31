@@ -22,7 +22,6 @@ export fano_index
 export hilbert_polynomial
 export hodge_numbers_symbolic
 export hodge_numbers_les
-export euler_characteristic_tangent_bundle
 export tangent_cohomology
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -494,34 +493,6 @@ function euler_characteristic(Z::ZeroLocus)
   d = dimension(Z)
   conormal = _conormal_data(Z, structure_sheaf(Z.ambient), d)
   sum((-1)^p * _chi_row(conormal, p) for p in 0:d)
-end
-
-"""
-    euler_characteristic_tangent_bundle(Z::ZeroLocus) -> BigInt
-
-Compute the topological Euler characteristic of the tangent bundle of ``Z``,
-``\\chi(Z, \\mathrm{T}_Z) = \\chi(Z, \\mathrm{T}_X|_Z) - \\chi(Z, N_{Z/X})``,
-via the tangent normal sequence ``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to N_{Z/X} \\to 0``.
-
-Both Euler characteristics are computed exactly via Koszul (no long exact
-sequence ambiguity), so the result is always a precise integer.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(4);
-
-julia> Z = zero_locus(line_bundle(X, 5));  # CY3 quintic
-
-julia> euler_characteristic_tangent_bundle(Z)
--100
-```
-"""
-function euler_characteristic_tangent_bundle(Z::ZeroLocus)
-  X = ambient_variety(Z)
-  euler_characteristic(Z, tangent_bundle(X)) -
-  euler_characteristic(Z, defining_bundle(Z))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1107,43 +1078,7 @@ H² = 1
 ```
 """
 function tangent_cohomology(Z::ZeroLocus)
-  d_Z = dimension(Z)
-
-  # For a product, H^q(T_Z) is the ∧¹T row of the (Künneth) polyvector
-  # parallelogram. Only that row has to be determined — higher rows may stay
-  # symbolic without forcing the monolithic fallback.
-  if n_factors(Z) >= 2
-    tangent_row = [hochschild_cohomology(Z)[1, q] for q in 0:d_Z]
-    all(is_determined, tangent_row) && return Cohomology{AffineExpr}(tangent_row, d_Z)
-  end
-
-  var_counter = Ref(0)
-
-  HT = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(Z.ambient), var_counter)
-  HE = _restrict_to_zero_locus_les(Z, _to_counts(Z.defining_bundle), var_counter)
-  inequalities = AffineExpr[]
-  kernel = les_kernel(HT, HE, var_counter; inequalities)
-  system = vcat(kernel, inequalities)
-
-  # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
-  chi =
-    euler_characteristic(Z, tangent_bundle(Z.ambient)) -
-    euler_characteristic(Z, Z.defining_bundle)
-  kernel_length = length(kernel)
-  _apply_equation!(
-    system, _alternating_sum(@view system[1:kernel_length]) - AffineExpr(chi)
-  )
-  _propagate_intervals!(system)
-  entries = system[1:kernel_length]
-
-  # For a strict Calabi–Yau, T_Z ≅ Ω^{d-1}_Z ⊗ ω_Z^{-1} ≅ Ω^{d-1}_Z, and
-  # h^0(Ω^{d-1}_Z) = h^{d-1,0} = h^{d-1}(O_Z) = 0.
-  if d_Z >= 2 && !is_zero_expr(entries[1]) && is_strict_calabi_yau(Z)
-    _apply_equation!(entries, entries[1])
-  end
-
-  _renumber_variables!(entries)
-  Cohomology{AffineExpr}(entries, d_Z)
+  cohomology(tangent_bundle(Z))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

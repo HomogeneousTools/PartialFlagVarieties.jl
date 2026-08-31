@@ -93,7 +93,7 @@ export tautological_bundles, universal_subbundles
 export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology
 export PolyvectorParallelogram
 export ZeroLocus, zero_locus, ambient_variety, defining_bundle
-export ZeroLocusBundle, restrict, locus, presentation_degrees
+export restrict
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction
 export tangent_cohomology

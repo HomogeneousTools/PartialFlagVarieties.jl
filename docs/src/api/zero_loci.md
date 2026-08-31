@@ -79,7 +79,6 @@ hodge_numbers_symbolic
 hodge_numbers_les
 hilbert_polynomial(::ZeroLocus, ::CompletelyReducibleBundle)
 fano_index(::ZeroLocus)
-euler_characteristic_tangent_bundle
 ```
 
 ## Classification predicates
