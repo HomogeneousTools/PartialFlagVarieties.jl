@@ -56,6 +56,12 @@ normal_bundle
 conormal_bundle
 ```
 
+## Relations
+
+```@docs
+is_sublocus
+```
+
 ## Bundles on a zero locus
 
 Bundles on a zero locus use the same public bundle interface as bundles on the
@@ -85,9 +91,10 @@ euler_characteristic(TZ)
 
 Restriction also composes along formal complete intersections. If `Z1` is cut
 out by `E` and `Z2` is cut out by `E ⊕ E′`, then `restrict(Z2, F)`
-restricts a bundle `F` on `Z1` to `Z2`. Containment is checked using the
-[`is_summand`](@ref) relation between the defining bundles because individual
-sections are not part of the data model.
+restricts a bundle `F` on `Z1` to `Z2`. This is precisely the
+[`is_sublocus(Z2, Z1)`](@ref is_sublocus) relation. It uses [`is_summand`](@ref)
+on the defining bundles because individual sections are not part of the data
+model.
 
 Internally, these bundles retain the terms of bounded ambient presentations;
 the presentation maps are implicit. Tensor products totalize the terms.

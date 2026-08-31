@@ -12,7 +12,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export ZeroLocus
-export zero_locus, ambient_variety, defining_bundle
+export zero_locus, ambient_variety, defining_bundle, is_sublocus
 export factors, n_factors
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms
@@ -65,6 +65,40 @@ Base.:(==)(Z::ZeroLocus, W::ZeroLocus) =
 Base.isequal(Z::ZeroLocus, W::ZeroLocus) = Z == W
 Base.hash(Z::ZeroLocus, h::UInt) =
   hash(defining_bundle(Z), hash(ambient_variety(Z), h))
+
+"""
+    is_sublocus(Z::ZeroLocus, W::ZeroLocus) -> Bool
+
+Return whether `Z` is a formal sublocus of `W`.
+
+If `Z` is cut out by ``\\mathcal{E} \\oplus \\mathcal{E}'`` and `W` by
+``\\mathcal{E}`` on the same ambient partial flag variety type, then
+`is_sublocus(Z, W)` is `true`. Equivalently, the defining bundle of `W` must
+be a direct summand of the defining bundle of `Z`, including multiplicities.
+
+Since a [`ZeroLocus`](@ref) does not store a chosen section, this predicate
+compares formal complete-intersection presentations; it does not test
+containment of independently specified geometric subvarieties.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(4);
+
+julia> W = zero_locus(line_bundle(X, 2));
+
+julia> Z = zero_locus(direct_sum(line_bundle(X, 2), line_bundle(X, 1)));
+
+julia> is_sublocus(Z, W)
+true
+
+julia> is_sublocus(W, Z)
+false
+```
+"""
+is_sublocus(Z::ZeroLocus, W::ZeroLocus) =
+  is_summand(defining_bundle(W), defining_bundle(Z))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Constructors

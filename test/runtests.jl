@@ -1977,6 +1977,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     )
   end
 
+  @testset "Formal subloci" begin
+    X = projective_space(4)
+    W = zero_locus(line_bundle(X, 2))
+    Z = zero_locus(direct_sum(line_bundle(X, 2), line_bundle(X, 1)))
+
+    @test is_sublocus(Z, W)
+    @test is_sublocus(Z, Z)
+    @test !is_sublocus(W, Z)
+    @test !is_sublocus(zero_locus(line_bundle(X, 3)), W)
+    @test !is_sublocus(W, zero_locus(line_bundle(projective_space(3), 2)))
+  end
+
   @testset "Bundles on zero loci: presentations and operations" begin
     X = projective_space(4)
     Z = zero_locus(line_bundle(X, 5))
@@ -2044,7 +2056,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     @test restrict(Z, TZ) === TZ
     deeper_locus = zero_locus(direct_sum(line_bundle(X, 5), line_bundle(X, 1)))
-    @test is_summand(defining_bundle(Z), defining_bundle(deeper_locus))
+    @test is_sublocus(deeper_locus, Z)
     restricted_TZ = restrict(deeper_locus, TZ)
     @test variety(restricted_TZ) === deeper_locus
     @test rank(restricted_TZ) == rank(TZ)

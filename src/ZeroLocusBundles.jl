@@ -111,7 +111,7 @@ If `F` already lives on a formal zero locus cut out by `E`, it can be restricted
 again to a zero locus in the same ambient variety whose defining bundle
 contains `E` as a direct summand. Thus a bundle on `Z(E)` restricts naturally to
 `Z(E ⊕ E′)`. Since [`ZeroLocus`](@ref) does not store individual sections,
-containment is understood at the level of defining bundles.
+containment is understood through [`is_sublocus`](@ref).
 """
 function restrict(Z::ZeroLocus, F::_AmbientBundle)
   marked_dynkin_type(variety(F)) == marked_dynkin_type(ambient_variety(Z)) || throw(
@@ -123,13 +123,9 @@ end
 function restrict(Z::ZeroLocus, F::ZeroLocusBundle)
   source = variety(F)
   source === Z && return F
-  marked_dynkin_type(ambient_variety(source)) ==
-  marked_dynkin_type(ambient_variety(Z)) || throw(
-    ArgumentError("restrict requires zero loci in the same ambient variety type.")
-  )
-  is_summand(defining_bundle(source), defining_bundle(Z)) || throw(
+  is_sublocus(Z, source) || throw(
     ArgumentError(
-      "The target zero locus must contain the source defining bundle as a direct summand."
+      "restrict requires the target zero locus to be a formal sublocus of the source."
     ),
   )
   ZeroLocusBundle(Z, _AmbientBundlePresentation(F.presentation.terms))
