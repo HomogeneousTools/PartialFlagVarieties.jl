@@ -1951,7 +1951,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test ambient_variety(Z) === X
   end
 
-  @testset "ZeroLocusBundle: presentations and operations" begin
+  @testset "Bundles on zero loci: presentations and operations" begin
     X = projective_space(4)
     Z = zero_locus(line_bundle(X, 5))
     L = restrict(Z, line_bundle(X, 1))
@@ -2027,7 +2027,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     )
   end
 
-  @testset "ZeroLocusBundle: cohomology" begin
+  @testset "Bundles on zero loci: cohomology" begin
     X = projective_space(4)
     Z = zero_locus(line_bundle(X, 5))
     ambient_line = line_bundle(X, 1)
@@ -2059,6 +2059,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     H_wedge2 = cohomology(exterior_power(cotangent_bundle(Z), 2))
     @test PartialFlagVarieties._alternating_sum(H_wedge2.entries) ==
       AffineExpr(euler_characteristic(exterior_power(cotangent_bundle(Z), 2)))
+
+    hodge = hodge_numbers(Z)
+    for p in 0:dimension(Z)
+      chi_hodge = sum((-1)^q * hodge[p + 1, q + 1] for q in 0:dimension(Z))
+      @test euler_characteristic(exterior_power(cotangent_bundle(Z), p)) == chi_hodge
+    end
 
     # This tensor product has presentation terms in negative, zero, and
     # positive degrees, exercising both halves of the generic complex solver.
