@@ -62,6 +62,16 @@ conormal_bundle
 is_sublocus
 ```
 
+## Products
+
+The product of formal zero loci is formed in the product ambient variety. Its
+defining bundle is the [`external_direct_sum`](@ref) of the two defining
+bundles.
+
+```@docs
+product(::ZeroLocus, ::ZeroLocus, ::ZeroLocus...)
+```
+
 ## Bundles on a zero locus
 
 Bundles on a zero locus use the same public bundle interface as bundles on the
@@ -88,6 +98,11 @@ cohomology(tensor_product(TZ, L))
 cohomology(exterior_power(TZ, 2))
 euler_characteristic(TZ)
 ```
+
+Bundles on different zero loci can be combined on the product using
+[`external_tensor_product`](@ref) and [`external_direct_sum`](@ref). Both
+operations lift the ambient presentations, so they also support intrinsic and
+composite bundles such as tangent bundles and their tensor powers.
 
 Restriction also composes along formal complete intersections. If `Z1` is cut
 out by `E` and `Z2` is cut out by `E ⊕ E′`, then `restrict(Z2, F)`
@@ -122,6 +137,8 @@ cotangent_bundle(::ZeroLocus)
 canonical_bundle(::ZeroLocus)
 anticanonical_bundle(::ZeroLocus)
 rank(::PartialFlagVarieties.ZeroLocusBundle)
+dual(::PartialFlagVarieties.ZeroLocusBundle)
+tensor_product(::PartialFlagVarieties.ZeroLocusBundle, ::PartialFlagVarieties.ZeroLocusBundle)
 exterior_power(::PartialFlagVarieties.ZeroLocusBundle, ::Integer)
 symmetric_power(::PartialFlagVarieties.ZeroLocusBundle, ::Integer)
 det(::PartialFlagVarieties.ZeroLocusBundle)

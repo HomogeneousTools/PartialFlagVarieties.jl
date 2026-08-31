@@ -47,6 +47,12 @@ partial_flag_variety
 full_flag_variety
 ```
 
+## Products
+
+```@docs
+product(::PartialFlagVariety, ::PartialFlagVariety, ::PartialFlagVariety...)
+```
+
 ## Accessing the marked data
 
 ```@docs

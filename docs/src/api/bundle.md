@@ -97,6 +97,16 @@ symmetric_power(::CompletelyReducibleBundle, ::Integer)
 twist
 ```
 
+## External operations
+
+For bundles on different partial flag varieties, external operations pull both
+bundles back to the product before applying the ordinary operation.
+
+```@docs
+external_tensor_product
+external_direct_sum
+```
+
 ## Arithmetic
 
 ```@docs
