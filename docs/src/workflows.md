@@ -73,10 +73,27 @@ Z = zero_locus(E)
 codimension(Z)
 normal_bundle(Z)
 koszul_terms(Z)
-cohomology_on_restriction(Z, T(X))
+cohomology(restrict(Z, T(X)))
 ```
 
-This is the right workflow when you want cohomology of restrictions, Euler
+Restrictions and intrinsic bundles on `Z` support the ordinary bundle
+interface, so they remain composable:
+
+```julia
+L = restrict(Z, O(X, 1))
+TZ = tangent_bundle(Z)
+
+cohomology(TZ)
+cohomology(TZ * L)
+euler_characteristic(exterior_power(TZ, 2))
+```
+
+These cohomology computations are dimension-valued. Character-valued
+cohomology is not available on a general zero locus because its defining
+section need not preserve the ambient group action. Undetermined induced-map
+ranks are retained symbolically as [`AffineExpr`](@ref) entries.
+
+This is the right workflow when you want bundle cohomology, Euler
 characteristics, Hodge numbers, or Fano / Calabi–Yau tests for ``Z``.
 
 ## Interpret symbolic Hodge output

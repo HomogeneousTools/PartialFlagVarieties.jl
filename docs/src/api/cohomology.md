@@ -30,9 +30,15 @@ borel_weil_bott
 
 ## Computation
 
-By default [`cohomology(E)`](@ref) returns dimensions, which is what you want
-for numerical work; pass `characters=true` to keep the full ambient
+For an equivariant bundle on a partial flag variety, [`cohomology(E)`](@ref)
+returns dimensions by default; pass `characters=true` to keep the full ambient
 representation in each cohomology group.
+
+Cohomology of a bundle on a zero locus is always dimension-valued. A section
+cutting out a zero locus is generally not invariant under the ambient group,
+so its cohomology groups do not carry the corresponding group representation.
+When the induced maps do not determine every dimension, the result has
+[`AffineExpr`](@ref) entries.
 
 ```@docs
 cohomology

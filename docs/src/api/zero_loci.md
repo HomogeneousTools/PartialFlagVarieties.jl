@@ -57,19 +57,53 @@ normal_bundle
 conormal_bundle
 ```
 
+## Bundles on a zero locus
+
+Bundles on a zero locus use the same public bundle interface as bundles on the
+ambient partial flag variety. In particular, `variety`, `rank`, `dual`,
+`tensor_product`, `exterior_power`, `symmetric_power`, `cohomology`, and
+`euler_characteristic` work without a separate zero-locus API.
+
+Use `restrict(Z, F)` to restrict an ambient bundle. Intrinsic tangent and
+cotangent bundles are constructed directly from `Z`:
+
+```julia
+X = projective_space(4)
+Z = zero_locus(line_bundle(X, 5))
+
+L = restrict(Z, line_bundle(X, 1))
+TZ = tangent_bundle(Z)
+
+cohomology(TZ)
+cohomology(tensor_product(TZ, L))
+cohomology(exterior_power(TZ, 2))
+euler_characteristic(TZ)
+```
+
+Internally, these bundles are represented by bounded complexes of restrictions
+of ambient bundles. Tensor products totalize those complexes. Exterior and
+symmetric powers use the derived graded power, so they also work for arbitrary
+composite presentations rather than only for the tangent and cotangent
+sequences.
+
+!!! note "Generic bundle cohomology versus the Hodge engine"
+    `cohomology(exterior_power(cotangent_bundle(Z), p))` evaluates that one
+    bundle from its presentation. `hodge_numbers(Z)` uses the same conormal
+    complexes in a specialized batch computation: it caches terms shared by
+    different values of `p`, replaces the top exterior power by adjunction,
+    and combines rows using Serre duality, Lefschetz constraints, exact Euler
+    characteristics, and Kodaira–Akizuki–Nakano vanishing. It can therefore
+    be faster and can determine entries that an isolated bundle computation
+    correctly leaves symbolic.
+
+```@docs
+restrict
+```
+
 ## Koszul complex
 
 ```@docs
 koszul_terms
-```
-
-## Cohomology on restrictions
-
-```@docs
-cohomology_on_restriction
-tangent_cohomology
-cohomology_on_restriction_symbolic
-euler_characteristic(::ZeroLocus, ::CompletelyReducibleBundle)
 ```
 
 ## Cohomological invariants
