@@ -126,7 +126,7 @@ function rank(F::FilteredBundle)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Tensor product of FilteredBundle with CompletelyReducibleBundle
+#  Tensor products involving FilteredBundle
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -141,6 +141,37 @@ end
 
 function tensor_product(E::CompletelyReducibleBundle, F::FilteredBundle)
   tensor_product(F, E)
+end
+
+"""
+    tensor_product(F::FilteredBundle, G::FilteredBundle) -> FilteredBundle
+
+The tensor product with the convolution filtration. If the graded pieces of
+`F` and `G` have filtration indices `i` and `j`, respectively, their tensor
+product occurs in filtration degree `i + j`.
+"""
+function tensor_product(F::FilteredBundle, G::FilteredBundle)
+  marked_dynkin_type(variety(G)) == marked_dynkin_type(variety(F)) || throw(
+    ArgumentError(
+      "tensor_product requires bundles on the same partial flag variety type."
+    ),
+  )
+
+  terms = Dict{Int,Vector{IrrepLevi}}()
+  for (i, piece_F) in enumerate(graded_pieces(F))
+    for (j, piece_G) in enumerate(graded_pieces(G))
+      piece = tensor_product(piece_F, piece_G)
+      append!(get!(terms, i + j, IrrepLevi[]), components(piece))
+    end
+  end
+
+  FilteredBundle(
+    variety(F),
+    CompletelyReducibleBundle[
+      CompletelyReducibleBundle(variety(F), terms[degree]) for
+      degree in sort!(collect(keys(terms)))
+    ],
+  )
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

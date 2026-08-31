@@ -279,20 +279,6 @@ Return the dimension ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})`` of the
 """
 dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 
-"""
-    normal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
-
-The normal bundle ``N_{Z/X} \\cong \\mathcal{E}|_Z``.
-"""
-normal_bundle(Z::ZeroLocus) = Z.defining_bundle
-
-"""
-    conormal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
-
-The conormal bundle ``N^\\vee_{Z/X} \\cong \\mathcal{E}^\\vee|_Z``.
-"""
-conormal_bundle(Z::ZeroLocus) = dual(Z.defining_bundle)
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Koszul complex construction
 # ═══════════════════════════════════════════════════════════════════════════════

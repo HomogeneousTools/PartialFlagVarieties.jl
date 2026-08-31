@@ -1951,6 +1951,47 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test ambient_variety(Z) === X
   end
 
+  @testset "ZeroLocusBundle: presentations and operations" begin
+    X = projective_space(4)
+    Z = zero_locus(line_bundle(X, 5))
+    L = restrict(Z, line_bundle(X, 1))
+    TZ = tangent_bundle(Z)
+    OmegaZ = cotangent_bundle(Z)
+
+    @test locus(TZ) === Z
+    @test variety(TZ) === Z
+    @test ambient_variety(TZ) === X
+    @test rank(L) == 1
+    @test rank(TZ) == dimension(Z)
+    @test rank(OmegaZ) == dimension(Z)
+    @test presentation_degrees(TZ) == [0, 1]
+    @test presentation_degrees(OmegaZ) == [-1, 0]
+    @test rank(normal_bundle(Z)) == codimension(Z)
+    @test rank(conormal_bundle(Z)) == codimension(Z)
+    @test rank(canonical_bundle(Z)) == 1
+    @test rank(anticanonical_bundle(Z)) == 1
+
+    @test rank(direct_sum(TZ, L)) == rank(TZ) + 1
+    @test rank(tensor_product(TZ, L)) == rank(TZ)
+    @test rank(dual(TZ)) == rank(TZ)
+    @test rank(2 * TZ) == 2 * rank(TZ)
+    @test iszero(0 * TZ)
+
+    wedge2_TZ = exterior_power(TZ, 2)
+    sym2_TZ = symmetric_power(TZ, 2)
+    @test rank(wedge2_TZ) == binomial(rank(TZ), 2)
+    @test rank(sym2_TZ) == binomial(rank(TZ) + 1, 2)
+    @test presentation_degrees(wedge2_TZ) == [0, 1, 2]
+    @test presentation_degrees(exterior_power(OmegaZ, 2)) == [-2, -1, 0]
+
+    composite = tensor_product(direct_sum(TZ, L), dual(TZ))
+    @test rank(exterior_power(composite, 2)) == binomial(rank(composite), 2)
+    @test rank(symmetric_power(composite, 2)) == binomial(rank(composite) + 1, 2)
+
+    @test_throws ArgumentError restrict(Z, structure_sheaf(Gr(2, 4)))
+    @test_throws ArgumentError direct_sum(TZ, tangent_bundle(zero_locus(line_bundle(X, 4))))
+  end
+
   @testset "ZeroLocus: products" begin
     X12 = product(projective_space(1), projective_space(1))
     Z12 = zero_locus(line_bundle(X12, [1, 0]))

@@ -56,6 +56,7 @@ include("Projections.jl")
 include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
+include("ZeroLocusBundles.jl")
 include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
@@ -92,6 +93,7 @@ export tautological_bundles, universal_subbundles
 export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology
 export PolyvectorParallelogram
 export ZeroLocus, zero_locus, ambient_variety, defining_bundle
+export ZeroLocusBundle, restrict, locus, presentation_degrees
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms, cohomology_on_restriction
 export tangent_cohomology
