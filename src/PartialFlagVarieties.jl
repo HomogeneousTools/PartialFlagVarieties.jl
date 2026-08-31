@@ -95,13 +95,12 @@ export PolyvectorParallelogram
 export ZeroLocus, zero_locus, ambient_variety, defining_bundle
 export restrict
 export codimension, normal_bundle, conormal_bundle
-export koszul_terms, cohomology_on_restriction
-export tangent_cohomology
+export koszul_terms
 export is_calabi_yau, is_strict_calabi_yau, is_strongly_fano
 export solve_ses_cohomology, solve_koszul_filtration
 export AffineExpr, is_determined, is_zero_expr, symbolic_variable
 export solve_ses_cohomology_symbolic, solve_koszul_filtration_symbolic
-export hodge_numbers_symbolic, cohomology_on_restriction_symbolic
+export hodge_numbers_symbolic
 export configure_caches!, clear_caches!, cache_info
 export zerolocus62_label
 

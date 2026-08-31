@@ -521,7 +521,7 @@ Compute h⁰(-K_Z) = χ(-K_Z) (by Kodaira vanishing on Fano varieties).
 """
 function compute_h0_antiK(Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle)
   antiK_Z = tensor_product(anticanonical_bundle(X), dual(det(E)))
-  Int(euler_characteristic(Z, antiK_Z))
+  Int(euler_characteristic(restrict(Z, antiK_Z)))
 end
 
 """
@@ -535,136 +535,14 @@ function compute_antiK_fourth(
   vals = BigInt[]
   for t in 0:4
     if t == 0
-      push!(vals, euler_characteristic(Z))
+      push!(vals, euler_characteristic(structure_sheaf(Z)))
     else
       L_t = reduce(tensor_product, fill(L, t))
-      push!(vals, euler_characteristic(Z, L_t))
+      push!(vals, euler_characteristic(restrict(Z, L_t)))
     end
   end
 
   Int(vals[5] - 4vals[4] + 6vals[3] - 4vals[2] + vals[1])
-end
-
-"""
-Compute χ(T_Z) using additivity: χ(T_Z) = χ(T_X|_Z) - χ(E|_Z).
-"""
-function compute_chi_tangent(
-  Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
-)
-  chi_TX = euler_characteristic(Z, tangent_bundle(X))
-  chi_E = euler_characteristic(Z, E)
-  Int(chi_TX - chi_E)
-end
-
-"""
-Attempt to compute h⁰(T_Z) and h¹(T_Z) from the short exact sequence
-  0 → T_Z → T_X|_Z → E|_Z → 0
-via the associated long exact sequence in cohomology.
-
-Returns `(h0, h1, h0_determined, h1_determined)`.
-"""
-function compute_tangent_cohomology(
-  Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle
-)
-  coh_TX, det_TX = cohomology_on_restriction(Z, tangent_bundle(X))
-  coh_E, det_E = cohomology_on_restriction(Z, E)
-
-  if !(det_TX && det_E)
-    return nothing, nothing, false, false
-  end
-
-  d = Int(dimension(Z))
-
-  # b[i] = H^i(T_X|_Z), c[i] = H^i(E|_Z)   (i = 0, …, d)
-  b = [coh_TX[i] for i in 0:d]
-  c = [coh_E[i] for i in 0:d]
-
-  # LES: 0 → a₀ → b₀ → c₀ →^{δ₀} a₁ → b₁ → c₁ → ⋯ → aₙ → bₙ → cₙ → 0
-  # where a = H*(T_Z).  The connecting morphisms δᵢ satisfy
-  #   aᵢ = bᵢ - cᵢ + δ_{i-1} + δᵢ
-  # with δ_{-1} = δ_d = 0.  We have 0 ≤ δᵢ ≤ cᵢ.
-  δ_lb = zeros(BigInt, d)
-  δ_ub = [min(c[i + 1], BigInt(10_000)) for i in 0:(d - 1)]
-
-  # Tighten bounds by propagation
-  for _ in 1:20
-    old_lb = copy(δ_lb)
-    old_ub = copy(δ_ub)
-    for i in 0:(d - 1)
-      δ_prev_lb = i == 0 ? BigInt(0) : δ_lb[i]
-      δ_prev_ub = i == 0 ? BigInt(0) : δ_ub[i]
-      # aᵢ = bᵢ - cᵢ + δ_{i-1} + δᵢ ≥ 0
-      # → δᵢ ≥ cᵢ - bᵢ - δ_{i-1}  (using upper bound of δ_{i-1})
-      new_lb = max(BigInt(0), c[i + 1] - b[i + 1] - δ_prev_ub)
-      δ_lb[i + 1] = max(δ_lb[i + 1], new_lb)
-      # Similarly: aᵢ = bᵢ - cᵢ + δ_{i-1} + δᵢ ≥ 0
-      #  → δ_{i-1} ≥ cᵢ - bᵢ - δᵢ  (using upper bound of δᵢ)
-    end
-    for i in (d - 1):-1:0
-      δ_next_lb = i == d - 1 ? BigInt(0) : δ_lb[i + 2]
-      δ_next_ub = i == d - 1 ? BigInt(0) : δ_ub[i + 2]
-      # a_{i+1} = b_{i+1} - c_{i+1} + δᵢ + δ_{i+1} ≥ 0
-      new_lb = max(BigInt(0), c[i + 2] - b[i + 2] - δ_next_ub)
-      δ_lb[i + 1] = max(δ_lb[i + 1], new_lb)
-      new_ub = min(δ_ub[i + 1], b[i + 2] - c[i + 2] + δ_next_ub)
-      new_ub = max(new_ub, δ_lb[i + 1])
-      δ_ub[i + 1] = min(δ_ub[i + 1], new_ub)
-    end
-    δ_lb == old_lb && δ_ub == old_ub && break
-  end
-
-  # If uniquely determined
-  if all(δ_lb[i] == δ_ub[i] for i in 1:d)
-    a = BigInt[]
-    for i in 0:d
-      δ_prev = i == 0 ? BigInt(0) : δ_lb[i]
-      δ_curr = i == d ? BigInt(0) : δ_lb[i + 1]
-      push!(a, b[i + 1] - c[i + 1] + δ_prev + δ_curr)
-    end
-    return Int(a[1]), Int(a[2]), true, true
-  end
-
-  # Enumerate if ranges are small enough
-  ranges_small = all(δ_ub[i] - δ_lb[i] <= 30 for i in 1:d)
-  if !ranges_small
-    return nothing, nothing, false, false
-  end
-
-  solutions = Vector{BigInt}[]
-  function enumerate_deltas(idx, deltas)
-    if idx > d
-      a = BigInt[]
-      for i in 0:d
-        δ_prev = i == 0 ? BigInt(0) : deltas[i]
-        δ_curr = i == d ? BigInt(0) : deltas[i + 1]
-        val = b[i + 1] - c[i + 1] + δ_prev + δ_curr
-        val < 0 && return nothing
-        push!(a, val)
-      end
-      push!(solutions, a)
-      return nothing
-    end
-    for δ in δ_lb[idx]:δ_ub[idx]
-      deltas[idx] = δ
-      enumerate_deltas(idx + 1, deltas)
-    end
-  end
-
-  enumerate_deltas(1, zeros(BigInt, d))
-
-  if length(solutions) == 1
-    return Int(solutions[1][1]), Int(solutions[1][2]), true, true
-  elseif length(solutions) > 1
-    h0_vals = Set(s[1] for s in solutions)
-    h1_vals = Set(s[2] for s in solutions)
-    h0 = length(h0_vals) == 1 ? Int(first(h0_vals)) : nothing
-    h1 = length(h1_vals) == 1 ? Int(first(h1_vals)) : nothing
-    h0_det = h0 !== nothing
-    h1_det = h1 !== nothing
-    return h0, h1, h0_det, h1_det
-  end
-
-  nothing, nothing, false, false
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -927,9 +805,11 @@ function process_entry(entry::QuiverEntry)
 
     h0_aK = compute_h0_antiK(Z, X, E)
     aK4 = compute_antiK_fourth(Z, X, E)
-    chi_T = compute_chi_tangent(Z, X, E)
+    chi_T = Int(euler_characteristic(tangent_bundle(Z)))
 
-    h0_T, h1_T, _, _ = compute_tangent_cohomology(Z, X, E)
+    H_T = cohomology(tangent_bundle(Z))
+    h0_T = is_determined(H_T[0]) ? Int(H_T[0].constant) : nothing
+    h1_T = is_determined(H_T[1]) ? Int(H_T[1].constant) : nothing
 
     match_hodge, _ = _match_hodge(hodge, entry.hodge)
 

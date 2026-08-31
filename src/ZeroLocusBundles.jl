@@ -83,40 +83,32 @@ function rank(F::ZeroLocusBundle)
   result
 end
 
-function _direct_sum_complex(C::_AmbientBundleComplex, D::_AmbientBundleComplex)
-  terms = Dict{Int,Vector{Bundle}}(
-    degree => copy(summands) for (degree, summands) in C.terms
-  )
-  for (degree, summands) in D.terms
-    append!(get!(terms, degree, Bundle[]), summands)
-  end
-  _AmbientBundleComplex(terms)
-end
-
 function direct_sum(F::ZeroLocusBundle, G::ZeroLocusBundle)
   _check_same_locus(F, G, "direct_sum")
-  ZeroLocusBundle(variety(F), _direct_sum_complex(F.complex, G.complex))
+  terms = Dict{Int,Vector{Bundle}}(
+    degree => copy(summands) for (degree, summands) in F.complex.terms
+  )
+  for (degree, summands) in G.complex.terms
+    append!(get!(terms, degree, Bundle[]), summands)
+  end
+  ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
 end
 
 Base.:+(F::ZeroLocusBundle, G::ZeroLocusBundle) = direct_sum(F, G)
 
-function _tensor_complex(C::_AmbientBundleComplex, D::_AmbientBundleComplex)
+function tensor_product(F::ZeroLocusBundle, G::ZeroLocusBundle)
+  _check_same_locus(F, G, "tensor_product")
   terms = Dict{Int,Vector{Bundle}}()
-  for (degree_C, summands_C) in C.terms
-    for (degree_D, summands_D) in D.terms
+  for (degree_C, summands_C) in F.complex.terms
+    for (degree_D, summands_D) in G.complex.terms
       degree = degree_C + degree_D
       target = get!(terms, degree, Bundle[])
-      for F in summands_C, G in summands_D
-        push!(target, tensor_product(F, G))
+      for summand_F in summands_C, summand_G in summands_D
+        push!(target, tensor_product(summand_F, summand_G))
       end
     end
   end
-  _AmbientBundleComplex(terms)
-end
-
-function tensor_product(F::ZeroLocusBundle, G::ZeroLocusBundle)
-  _check_same_locus(F, G, "tensor_product")
-  ZeroLocusBundle(variety(F), _tensor_complex(F.complex, G.complex))
+  ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
 end
 
 Base.:*(F::ZeroLocusBundle, G::ZeroLocusBundle) = tensor_product(F, G)
@@ -129,19 +121,15 @@ function dual(F::ZeroLocusBundle)
   ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
 end
 
-function _zero_locus_structure_sheaf(Z::ZeroLocus)
-  restrict(Z, structure_sheaf(ambient_variety(Z)))
-end
+function _derived_power(F::ZeroLocusBundle, k::Int, even_power, odd_power)
+  k == 0 && return structure_sheaf(variety(F))
 
-function _power_complex(C::_AmbientBundleComplex, k::Int, exterior::Bool, X)
-  k < 0 && return _AmbientBundleComplex(Dict{Int,Vector{Bundle}}())
-  k == 0 && return _AmbientBundleComplex(0, structure_sheaf(X))
-
+  C = F.complex
   graded_summands = Tuple{Int,Bundle}[
     (degree, summand) for degree in sort!(collect(keys(C.terms))) for
     summand in C.terms[degree]
   ]
-  isempty(graded_summands) && return _AmbientBundleComplex(Dict{Int,Vector{Bundle}}())
+  isempty(graded_summands) && return zero_bundle(variety(F))
 
   terms = Dict{Int,Vector{Bundle}}()
   for alpha in multiexponents(length(graded_summands), k)
@@ -150,12 +138,8 @@ function _power_complex(C::_AmbientBundleComplex, k::Int, exterior::Bool, X)
     for (multiplicity, (degree, summand)) in zip(alpha, graded_summands)
       multiplicity == 0 && continue
       target_degree += multiplicity * degree
-      use_exterior = xor(exterior, isodd(degree))
-      factor = if use_exterior
-        exterior_power(summand, multiplicity)
-      else
-        symmetric_power(summand, multiplicity)
-      end
+      power = iseven(degree) ? even_power : odd_power
+      factor = power(summand, multiplicity)
       rank(factor) == 0 && (empty!(factors); break)
       push!(factors, factor)
     end
@@ -163,7 +147,7 @@ function _power_complex(C::_AmbientBundleComplex, k::Int, exterior::Bool, X)
     term = reduce(tensor_product, factors)
     push!(get!(terms, target_degree, Bundle[]), term)
   end
-  _AmbientBundleComplex(terms)
+  ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
 end
 
 """
@@ -177,7 +161,7 @@ function exterior_power(F::ZeroLocusBundle, k::Integer)
   k = Int(k)
   (k < 0 || k > rank(F)) && return zero_bundle(variety(F))
   k == 1 && return F
-  ZeroLocusBundle(variety(F), _power_complex(F.complex, k, true, ambient_variety(F)))
+  _derived_power(F, k, exterior_power, symmetric_power)
 end
 
 """
@@ -191,7 +175,7 @@ function symmetric_power(F::ZeroLocusBundle, k::Integer)
   k = Int(k)
   k < 0 && return zero_bundle(variety(F))
   k == 1 && return F
-  ZeroLocusBundle(variety(F), _power_complex(F.complex, k, false, ambient_variety(F)))
+  _derived_power(F, k, symmetric_power, exterior_power)
 end
 
 det(F::ZeroLocusBundle) = exterior_power(F, rank(F))
@@ -207,7 +191,7 @@ Base.:*(F::ZeroLocusBundle, n::Integer) = n * F
 Base.iszero(F::ZeroLocusBundle) = rank(F) == 0 && isempty(F.complex.terms)
 
 """The structure sheaf of a zero locus."""
-structure_sheaf(Z::ZeroLocus) = _zero_locus_structure_sheaf(Z)
+structure_sheaf(Z::ZeroLocus) = restrict(Z, structure_sheaf(ambient_variety(Z)))
 O(Z::ZeroLocus) = structure_sheaf(Z)
 
 """The zero bundle on a zero locus."""
@@ -267,10 +251,14 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _euler_characteristic_on_restriction(Z::ZeroLocus, F::CompletelyReducibleBundle) =
-  euler_characteristic(Z, F)
+  _euler_characteristic_from_counts(Z, _to_counts(F))
 
 function _euler_characteristic_on_restriction(Z::ZeroLocus, F::FilteredBundle)
-  sum(piece -> euler_characteristic(Z, piece), graded_pieces(F); init=BigInt(0))
+  sum(
+    piece -> _euler_characteristic_on_restriction(Z, piece),
+    graded_pieces(F);
+    init=BigInt(0),
+  )
 end
 
 """
@@ -413,7 +401,8 @@ function cohomology(F::ZeroLocusBundle)
 end
 
 """Return whether every entry of a cohomology object is determined."""
-is_determined(H::Cohomology) = all(is_determined, H.entries)
+is_determined(::Cohomology) = true
+is_determined(H::Cohomology{AffineExpr}) = all(is_determined, H.entries)
 
 function Base.show(io::IO, F::ZeroLocusBundle)
   print(io, "Bundle(rank $(rank(F)) on ")

@@ -1949,6 +1949,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test dimension(Z) == 3
     @test codimension(Z) == 1
     @test ambient_variety(Z) === X
+    @test !isdefined(PartialFlagVarieties, :cohomology_on_restriction)
+    @test !isdefined(PartialFlagVarieties, :cohomology_on_restriction_symbolic)
+    @test !isdefined(PartialFlagVarieties, :tangent_cohomology)
+    @test !isdefined(PartialFlagVarieties, :euler_characteristic_tangent_bundle)
+    @test !hasmethod(
+      euler_characteristic, Tuple{ZeroLocus,CompletelyReducibleBundle}
+    )
   end
 
   @testset "Bundles on zero loci: presentations and operations" begin
@@ -2035,10 +2042,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     TZ = tangent_bundle(Z)
 
     H_L = cohomology(L)
-    expected_L = cohomology_on_restriction_symbolic(Z, ambient_line, Ref(0))
-    @test H_L.entries == expected_L.entries
+    @test H_L.entries == AffineExpr.([5, 0, 0, 0])
     @test is_determined(H_L)
-    @test euler_characteristic(L) == euler_characteristic(Z, ambient_line)
+    @test is_determined(cohomology(ambient_line))
+    @test is_determined(cohomology(ambient_line; characters=true))
+    @test euler_characteristic(L) == 5
     @test chi(L) == euler_characteristic(L)
 
     H_zero = cohomology(zero_bundle(Z))
@@ -2046,7 +2054,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test all(is_zero_expr, H_zero.entries)
 
     H_TZ = cohomology(TZ)
-    @test H_TZ.entries == tangent_cohomology(Z).entries
     @test H_TZ.entries == AffineExpr.([0, 101, 1, 0])
     @test is_determined(H_TZ)
     @test euler_characteristic(TZ) == -100
@@ -2117,30 +2124,34 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # t=2: both give 324
     # t=3: both give 2652
     for t in 0:3
-      (H_Z, _) = cohomology_on_restriction(Z, line_bundle(X_E6, t))
+      H_Z = cohomology(restrict(Z, line_bundle(X_E6, t)))
       H_F4 = cohomology(line_bundle(Y_F4, t))
       @test H_Z[0] == H_F4[0]
     end
 
-    # Test that cohomology_on_restriction validates that F lives on the ambient variety of Z
+    # Test that restrict validates that F lives on the ambient variety of Z.
     F_wrong = line_bundle(Y_F4, 1)
-    @test_throws ArgumentError cohomology_on_restriction(Z, F_wrong)
+    @test_throws ArgumentError restrict(Z, F_wrong)
   end
 
   @testset "ZeroLocus: Euler characteristic" begin
-    # euler_characteristic(Z) is the topological χ; the 2-argument form gives χ(𝒪_Z).
+    # euler_characteristic(Z) is topological; a bundle argument gives sheaf χ.
     X = projective_space(4)
     Z = zero_locus(line_bundle(X, 5))                          # quintic Calabi–Yau 3-fold
-    @test euler_characteristic(Z, structure_sheaf(X)) == 0     # χ(O_Z)
+    @test euler_characteristic(structure_sheaf(Z)) == 0        # χ(O_Z)
     @test euler_characteristic(Z) == -200                      # χ_top
+    @test euler_characteristic(Z) == sum(
+      (-1)^p * euler_characteristic(exterior_power(cotangent_bundle(Z), p)) for
+      p in 0:dimension(Z)
+    )
 
     X3 = projective_space(3)
     Z3 = zero_locus(line_bundle(X3, 4))                        # quartic K3
-    @test euler_characteristic(Z3, structure_sheaf(X3)) == 2   # χ(O_Z)
+    @test euler_characteristic(structure_sheaf(Z3)) == 2       # χ(O_Z)
     @test euler_characteristic(Z3) == 24                       # χ_top
 
     Z_q = zero_locus(line_bundle(X3, 2))                       # quadric surface ≅ P¹×P¹
-    @test euler_characteristic(Z_q, structure_sheaf(X3)) == 1  # χ(O_Z)
+    @test euler_characteristic(structure_sheaf(Z_q)) == 1      # χ(O_Z)
     @test euler_characteristic(Z_q) == 4                       # χ_top
   end
 
@@ -2247,12 +2258,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test_throws ArgumentError koszul_terms(Z, structure_sheaf(Gr(2, 4)))
   end
 
-  @testset "ZeroLocus: cohomology_on_restriction_symbolic" begin
-    # Numeric-determined case (quintic CY3): same values as the numeric
-    # restriction, wrapped in AffineExpr.
+  @testset "ZeroLocus: cohomology of restrictions" begin
+    # Numeric-determined case (quintic CY3), wrapped in AffineExpr.
     P4 = projective_space(4)
     Z = zero_locus(line_bundle(P4, 5))
-    H_sym = cohomology_on_restriction_symbolic(Z, Ref(0))
+    H_sym = cohomology(structure_sheaf(Z))
     @test H_sym isa Cohomology{AffineExpr}
     @test H_sym[0] == AffineExpr(1)
     @test H_sym[1] == AffineExpr(0)
@@ -2261,7 +2271,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test all(is_determined(H_sym[i]) for i in 0:3)
 
     # Twisted variant with explicit bundle argument.
-    H_tw = cohomology_on_restriction_symbolic(Z, structure_sheaf(P4), Ref(0))
+    H_tw = cohomology(restrict(Z, structure_sheaf(P4)))
     @test H_tw[0] == AffineExpr(1)
   end
 
@@ -2339,11 +2349,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test H[2, 2] == 2 && H[3, 3] == 2      # h^{1,1}, h^{2,2}
     @test H[3, 2] == 5 && H[2, 3] == 5      # h^{2,1}, h^{1,2}
 
-    # polyvector parallelogram and tangent cohomology also come out via Künneth
+    # Polyvectors and tangent-bundle cohomology also come out via Künneth.
     @test all(is_determined, hochschild_cohomology(Z).data)
-    @test length(tangent_cohomology(Z)) == dimension(Z) + 1
+    @test length(cohomology(tangent_bundle(Z))) == dimension(Z) + 1
 
-    # χ(𝒪) is multiplicative over the product
+    # Topological χ is multiplicative over the product.
     @test euler_characteristic(Z) == euler_characteristic(W) * euler_characteristic(P1)
 
     # a single reduced point is a Künneth identity and is dropped from the factors;
@@ -2799,7 +2809,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       Z = zero_locus(E)
 
       @test dimension(Z) == 6
-      @test euler_characteristic(Z, structure_sheaf(X)) == 1   # χ(O_Z)
+      @test euler_characteristic(structure_sheaf(Z)) == 1      # χ(O_Z)
 
       h = hodge_numbers(Z)
 
@@ -2951,7 +2961,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  tangent_cohomology  (issue #15)
+  #  Tangent-bundle cohomology (issue #15)
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "_apply_equation! is consistent across arrays" begin
@@ -3010,22 +3020,22 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_zero_expr(a[3])
   end
 
-  @testset "ZeroLocus: tangent_cohomology" begin
+  @testset "ZeroLocus: tangent-bundle cohomology" begin
     # Quintic threefold: h¹(T) = 101 deformations, h²(T) = h¹(Ω¹) = 1.
     let Z = zero_locus(line_bundle(projective_space(4), 5))
-      H = tangent_cohomology(Z)
+      H = cohomology(tangent_bundle(Z))
       @test [H[i] for i in 0:3] == AffineExpr.([0, 101, 1, 0])
     end
 
     # K3 of degree 14 in Gr(2,6): h¹(T) = 20.
     let X = Gr(2, 6), Z = zero_locus(6 * line_bundle(X, 1))
-      H = tangent_cohomology(Z)
+      H = cohomology(tangent_bundle(Z))
       @test [H[i] for i in 0:2] == AffineExpr.([0, 20, 0])
     end
 
     # Cubic threefold: h⁰ - h¹ is pinned by χ even though the pair is open.
     let Z = zero_locus(line_bundle(projective_space(4), 3))
-      H = tangent_cohomology(Z)
+      H = cohomology(tangent_bundle(Z))
       alt = PartialFlagVarieties._alternating_sum(H.entries)
       @test alt == AffineExpr(euler_characteristic(tangent_bundle(Z)))
       @test is_zero_expr(H[2]) && is_zero_expr(H[3])

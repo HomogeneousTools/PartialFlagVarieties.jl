@@ -611,8 +611,8 @@ and all higher Ext groups vanish.
 """
 function is_exceptional(E::CompletelyReducibleBundle, Z::ZeroLocus)
   endomorphism_bundle = dual(E) ⊗ E
-  (H, determined) = cohomology_on_restriction(Z, endomorphism_bundle)
-  determined || @warn "cohomology_on_restriction underdetermined for self-Ext"
+  H = cohomology(restrict(Z, endomorphism_bundle))
+  is_determined(H) || @warn "Cohomology underdetermined for self-Ext"
   H[0] == 1 && all(H[i] == 0 for i in 1:dimension(Z))
 end
 
@@ -630,8 +630,8 @@ function is_exceptional_pair(
 )
   # Ext^i(F|_Z, E|_Z) = H^i(Z, (F^∨ ⊗ E)|_Z)
   hom_bundle = dual(F) ⊗ E
-  (H, determined) = cohomology_on_restriction(Z, hom_bundle)
-  determined || @warn "cohomology_on_restriction underdetermined for exceptional pair"
+  H = cohomology(restrict(Z, hom_bundle))
+  is_determined(H) || @warn "Cohomology underdetermined for exceptional pair"
   all(H[i] == 0 for i in 0:dimension(Z))
 end
 
@@ -658,8 +658,8 @@ function _has_no_positive_exts(
   Z::ZeroLocus,
 )
   hom_bundle = dual(E) ⊗ F
-  (H, determined) = cohomology_on_restriction(Z, hom_bundle)
-  determined || @warn "cohomology_on_restriction underdetermined for strong pair"
+  H = cohomology(restrict(Z, hom_bundle))
+  is_determined(H) || @warn "Cohomology underdetermined for strong pair"
   all(H[i] == 0 for i in 1:dimension(Z))
 end
 

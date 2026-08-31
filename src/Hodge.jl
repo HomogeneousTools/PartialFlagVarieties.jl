@@ -886,17 +886,17 @@ function _twisted_hodge_symbolic(
 
   # Exact boundary rows, when plain Koszul restriction determines them:
   # p = 0 is L|_Z and p = d is (ω_Z ⊗ L)|_Z.
-  (H_L, det_L) = cohomology_on_restriction(Z, L)
-  if det_L
+  H_L = cohomology(restrict(Z, L))
+  if is_determined(H_L)
     for q in 0:d
-      _inject_exact!(M, 1, q + 1, BigInt(H_L[q]))
+      _inject_exact!(M, 1, q + 1, H_L[q].constant)
     end
   end
   omega_Z_L = tensor_product(tensor_product(canonical_bundle(X), det(E)), L)
-  (H_top, det_top) = cohomology_on_restriction(Z, omega_Z_L)
-  if det_top
+  H_top = cohomology(restrict(Z, omega_Z_L))
+  if is_determined(H_top)
     for q in 0:d
-      _inject_exact!(M, d + 1, q + 1, BigInt(H_top[q]))
+      _inject_exact!(M, d + 1, q + 1, H_top[q].constant)
     end
   end
 

@@ -180,7 +180,7 @@ function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Resu
 
   for E in bundles
     Z = zero_locus(E)
-    chi_O = euler_characteristic(Z)
+    chi_O = euler_characteristic(structure_sheaf(Z))
 
     # Attempt Hodge numbers
     h11 = nothing
