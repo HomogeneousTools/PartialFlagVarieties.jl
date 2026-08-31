@@ -254,11 +254,11 @@ _euler_characteristic_on_restriction(Z::ZeroLocus, F::CompletelyReducibleBundle)
   _euler_characteristic_from_counts(Z, _to_counts(F))
 
 function _euler_characteristic_on_restriction(Z::ZeroLocus, F::FilteredBundle)
-  sum(
-    piece -> _euler_characteristic_on_restriction(Z, piece),
-    graded_pieces(F);
-    init=BigInt(0),
-  )
+  result = BigInt(0)
+  for piece in graded_pieces(F)
+    result += _euler_characteristic_on_restriction(Z, piece)
+  end
+  result
 end
 
 """
@@ -270,14 +270,14 @@ individual cohomology groups are not determined by the induced maps.
 """
 function euler_characteristic(F::ZeroLocusBundle)
   Z = variety(F)
-  sum(F.complex.terms; init=BigInt(0)) do (degree, summands)
+  result = BigInt(0)
+  for (degree, summands) in F.complex.terms
     sign = isodd(degree) ? -1 : 1
-    sign * sum(
-      summand -> _euler_characteristic_on_restriction(Z, summand),
-      summands;
-      init=BigInt(0),
-    )
+    for summand in summands
+      result += sign * _euler_characteristic_on_restriction(Z, summand)
+    end
   end
+  result
 end
 
 chi(F::ZeroLocusBundle) = euler_characteristic(F)
@@ -297,9 +297,13 @@ end
 function _presentation_term_cohomology(
   Z::ZeroLocus, summands::Vector{Bundle}, var_counter::Ref{Int}
 )
-  entries = AffineExpr[AffineExpr(0) for _ in 0:dimension(Z)]
-  for summand in summands
-    entries .+= _restriction_cohomology(Z, summand, var_counter)
+  isempty(summands) && return AffineExpr[AffineExpr(0) for _ in 0:dimension(Z)]
+  entries = _restriction_cohomology(Z, first(summands), var_counter)
+  for summand in Iterators.drop(summands, 1)
+    summand_entries = _restriction_cohomology(Z, summand, var_counter)
+    for i in eachindex(entries)
+      entries[i] += summand_entries[i]
+    end
   end
   entries
 end
@@ -379,6 +383,15 @@ function cohomology(F::ZeroLocusBundle)
   end
 
   var_counter = Ref(0)
+
+  # A degree-zero presentation is just a direct sum of restricted ambient
+  # bundles, so no presentation LES or extra constraints are needed.
+  if length(F.complex.terms) == 1 && haskey(F.complex.terms, 0)
+    entries = _presentation_term_cohomology(Z, F.complex.terms[0], var_counter)
+    _renumber_variables!(entries)
+    return Cohomology{AffineExpr}(entries, d)
+  end
+
   entries, inequalities = _cohomology_from_presentation(F, var_counter)
   entry_count = length(entries)
   system = vcat(entries, inequalities)
