@@ -17,10 +17,9 @@ sequence in cohomology, one recovers ``\mathrm{H}^\bullet(Z, \mathcal{F}|_Z)`` f
 cohomology of restrictions, Hodge numbers, Hilbert polynomials, and the
 Calabi–Yau / Fano classification.
 
-The package takes the geometric point of view that a **regular section has been
-chosen**. The constructor `zero_locus(E)` therefore studies the geometry that
-would result from a regular section of `E`; it does not prove existence of such
-a section.
+The constructor `zero_locus(E)` records the ambient variety and defining bundle,
+but it does not choose or store a section. It represents the formal geometry of
+a regular zero locus of `E`, assuming that a regular section exists.
 
 See the [mathematical background](../math.md#Koszul-resolution-and-zero-loci)
 for details on the Koszul resolution and the
@@ -64,6 +63,10 @@ ambient partial flag variety. In particular, `variety`, `rank`, `dual`,
 `tensor_product`, `exterior_power`, `symmetric_power`, `cohomology`, and
 `euler_characteristic` work without a separate zero-locus API.
 
+```@docs
+PartialFlagVarieties.ZeroLocusBundle
+```
+
 Use `restrict(Z, F)` to restrict an ambient bundle. Intrinsic tangent and
 cotangent bundles are constructed directly from `Z`:
 
@@ -80,11 +83,17 @@ cohomology(exterior_power(TZ, 2))
 euler_characteristic(TZ)
 ```
 
-Internally, these bundles are represented by bounded complexes of restrictions
-of ambient bundles. Tensor products totalize those complexes. Exterior and
-symmetric powers use the derived graded power, so they also work for arbitrary
-composite presentations rather than only for the tangent and cotangent
-sequences.
+Restriction also composes along formal complete intersections. If `Z1` is cut
+out by `E` and `Z2` is cut out by `E ⊕ E′`, then `restrict(Z2, F)`
+restricts a bundle `F` on `Z1` to `Z2`. Containment is checked using the
+summands of the defining bundles because individual sections are not part of
+the data model.
+
+Internally, these bundles retain the terms of bounded ambient presentations;
+the presentation maps are implicit. Tensor products totalize the terms.
+Exterior and symmetric powers use the derived graded-power formula, so they
+also work for arbitrary composite presentations rather than only for the
+tangent and cotangent sequences.
 
 !!! note "Generic bundle cohomology versus the Hodge engine"
     `cohomology(exterior_power(cotangent_bundle(Z), p))` evaluates that one
@@ -98,6 +107,19 @@ sequences.
 
 ```@docs
 restrict
+structure_sheaf(::ZeroLocus)
+zero_bundle(::ZeroLocus)
+line_bundle(::ZeroLocus, ::Integer)
+tangent_bundle(::ZeroLocus)
+cotangent_bundle(::ZeroLocus)
+canonical_bundle(::ZeroLocus)
+anticanonical_bundle(::ZeroLocus)
+rank(::PartialFlagVarieties.ZeroLocusBundle)
+exterior_power(::PartialFlagVarieties.ZeroLocusBundle, ::Integer)
+symmetric_power(::PartialFlagVarieties.ZeroLocusBundle, ::Integer)
+det(::PartialFlagVarieties.ZeroLocusBundle)
+euler_characteristic(::PartialFlagVarieties.ZeroLocusBundle)
+cohomology(::PartialFlagVarieties.ZeroLocusBundle)
 ```
 
 ## Koszul complex
@@ -121,4 +143,11 @@ fano_index(::ZeroLocus)
 is_calabi_yau
 is_strict_calabi_yau
 is_strongly_fano
+```
+
+## Internals
+
+```@docs
+PartialFlagVarieties._AmbientBundlePresentation
+PartialFlagVarieties._derived_power
 ```

@@ -11,26 +11,27 @@ of irreducibles. Passing from ``\mathrm{P}``-representations to ``\mathrm{L}``-r
 amounts to taking the **semisimplification** of the bundle: one forgets the
 extensions between the composition factors.
 
-This package implements only semisimplified bundles:
-a [`CompletelyReducibleBundle`](@ref) stores a formal sum of
-[`IrrepLevi`](@ref) components. This is adequate for computing sheaf
-cohomology (which depends only on the composition factors, not on extensions)
-and tensor algebra, but does not capture filtration data. For the latter, see
-[`FilteredBundle`](@ref).
+A [`CompletelyReducibleBundle`](@ref) stores a formal sum of
+[`IrrepLevi`](@ref) components. This is enough for Borel–Weil–Bott calculations
+on each graded piece and for tensor algebra, but individual cohomology groups
+of a nonsplit extension can depend on its connecting maps. For ordered
+filtration data, see [`FilteredBundle`](@ref); bundles on formal zero loci use
+ambient presentations as described under [Zero Loci](zero_loci.md).
 
 !!! note "Design note"
-    The abstract type [`Bundle`](@ref) has two concrete subtypes:
+    The abstract type [`Bundle`](@ref) has three concrete subtypes:
     `CompletelyReducibleBundle` (the semisimplification — a formal direct sum)
-    and [`FilteredBundle`](@ref) (a bundle with a filtration by subbundles,
-    retaining the ordering). Most user-facing operations produce
+    [`FilteredBundle`](@ref) (a bundle with a filtration by subbundles,
+    retaining the ordering), and the internal `ZeroLocusBundle` returned by
+    zero-locus bundle constructors. Most ambient operations produce
     `CompletelyReducibleBundle`; filtered bundles arise from
     [`filtered_tangent_bundle`](@ref) and its derived operations.
 
     Tensor products and exterior powers of `CompletelyReducibleBundle` are
     computed by decomposing into Semisimple.jl character arithmetic, then
-    extracting dominant weights. Identical summands are **deduplicated**:
-    components that appear with multiplicity are stored once with a
-    multiplicity count, keeping the representation compact.
+    extracting dominant weights. Repeated summands remain represented with
+    their multiplicities; expensive power calculations group equal summands
+    internally before expanding them.
 
 ## Types
 
