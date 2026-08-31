@@ -86,8 +86,8 @@ euler_characteristic(TZ)
 Restriction also composes along formal complete intersections. If `Z1` is cut
 out by `E` and `Z2` is cut out by `E ⊕ E′`, then `restrict(Z2, F)`
 restricts a bundle `F` on `Z1` to `Z2`. Containment is checked using the
-summands of the defining bundles because individual sections are not part of
-the data model.
+[`is_summand`](@ref) relation between the defining bundles because individual
+sections are not part of the data model.
 
 Internally, these bundles retain the terms of bounded ambient presentations;
 the presentation maps are implicit. Tensor products totalize the terms.

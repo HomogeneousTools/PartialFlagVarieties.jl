@@ -91,6 +91,7 @@ determinant
 dual(::CompletelyReducibleBundle)
 tensor_product(::CompletelyReducibleBundle, ::CompletelyReducibleBundle)
 direct_sum
+is_summand
 exterior_power(::CompletelyReducibleBundle, ::Integer)
 symmetric_power(::CompletelyReducibleBundle, ::Integer)
 twist

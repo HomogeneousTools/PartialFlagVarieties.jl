@@ -1125,6 +1125,43 @@ end
 
 Base.:+(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) = direct_sum(E, F)
 
+"""
+    is_summand(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
+
+Return whether ``\\mathcal{E}`` is isomorphic to a direct summand of
+``\\mathcal{F}``.
+
+The comparison respects the multiplicities of irreducible summands. Bundles
+on different partial flag variety types are not comparable and return `false`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(3);
+
+julia> L = line_bundle(X, 1);
+
+julia> F = direct_sum(L, line_bundle(X, 2));
+
+julia> is_summand(L, F)
+true
+
+julia> is_summand(direct_sum(L, L), F)
+false
+```
+"""
+function is_summand(
+  E::CompletelyReducibleBundle, F::CompletelyReducibleBundle
+)
+  marked_dynkin_type(variety(E)) == marked_dynkin_type(variety(F)) || return false
+  multiplicities = _to_counts(F)
+  all(
+    multiplicity <= get(multiplicities, component, 0) for
+    (component, multiplicity) in _to_counts(E)
+  )
+end
+
 # ─── Twist ───────────────────────────────────────────────────────────────────
 
 """

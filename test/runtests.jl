@@ -508,6 +508,21 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test components(direct_sum(Z, O)) == components(O)
   end
 
+  @testset "Direct summands" begin
+    X = projective_space(3)
+    L = line_bundle(X, 1)
+    M = line_bundle(X, 2)
+    E = direct_sum(direct_sum(L, M), L)
+
+    @test is_summand(L, E)
+    @test is_summand(direct_sum(M, L), E)
+    @test is_summand(E, E)
+    @test is_summand(zero_bundle(X), E)
+    @test !is_summand(direct_sum(M, M), E)
+    @test !is_summand(direct_sum(E, L), E)
+    @test !is_summand(L, structure_sheaf(projective_space(2)))
+  end
+
   @testset "Line bundles" begin
     X = projective_space(4)
     L = line_bundle(X, 1)
@@ -2029,6 +2044,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     @test restrict(Z, TZ) === TZ
     deeper_locus = zero_locus(direct_sum(line_bundle(X, 5), line_bundle(X, 1)))
+    @test is_summand(defining_bundle(Z), defining_bundle(deeper_locus))
     restricted_TZ = restrict(deeper_locus, TZ)
     @test variety(restricted_TZ) === deeper_locus
     @test rank(restricted_TZ) == rank(TZ)

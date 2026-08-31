@@ -120,17 +120,6 @@ function restrict(Z::ZeroLocus, F::_AmbientBundle)
   ZeroLocusBundle(Z, _AmbientBundlePresentation(0, F))
 end
 
-function _is_direct_summand(
-  summand::CompletelyReducibleBundle, bundle::CompletelyReducibleBundle
-)
-  summand_counts = _to_counts(summand)
-  bundle_counts = _to_counts(bundle)
-  all(
-    multiplicity <= get(bundle_counts, component, 0) for
-    (component, multiplicity) in summand_counts
-  )
-end
-
 function restrict(Z::ZeroLocus, F::ZeroLocusBundle)
   source = variety(F)
   source === Z && return F
@@ -138,7 +127,7 @@ function restrict(Z::ZeroLocus, F::ZeroLocusBundle)
   marked_dynkin_type(ambient_variety(Z)) || throw(
     ArgumentError("restrict requires zero loci in the same ambient variety type.")
   )
-  _is_direct_summand(defining_bundle(source), defining_bundle(Z)) || throw(
+  is_summand(defining_bundle(source), defining_bundle(Z)) || throw(
     ArgumentError(
       "The target zero locus must contain the source defining bundle as a direct summand."
     ),

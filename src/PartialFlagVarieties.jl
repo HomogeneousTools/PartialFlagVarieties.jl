@@ -82,7 +82,7 @@ export degree
 export dimension, dual, tensor_product, exterior_power, symmetric_power
 export n_components
 export tangent_weights, positive_nonparabolic_roots, positive_parabolic_roots
-export direct_sum, twist, product
+export direct_sum, is_summand, twist, product
 export parse_dynkin_type, sub_dynkin_type, sub_dynkin_ordering
 export graded_pieces, total_bundle, filtered_tangent_bundle, filtered_cotangent_bundle
 export n_filtration_steps
