@@ -343,15 +343,15 @@ function _graded_power(power, F::FilteredBundle, k::Integer)
     end
     isempty(factors) && continue
     term = reduce(tensor_product, factors)
-    fw = sum(i * α[i] for i in 1:s)
-    append!(get!(weight_terms, fw, IrrepLevi[]), components(term))
+    filtration_degree = sum(i * α[i] for i in 1:s)
+    append!(get!(weight_terms, filtration_degree, IrrepLevi[]), components(term))
   end
 
   FilteredBundle(
     F.variety,
     CompletelyReducibleBundle[
-      CompletelyReducibleBundle(F.variety, weight_terms[fw]) for
-      fw in sort!(collect(keys(weight_terms)))
+      CompletelyReducibleBundle(F.variety, weight_terms[filtration_degree]) for
+      filtration_degree in sort!(collect(keys(weight_terms)))
     ],
   )
 end
@@ -397,6 +397,20 @@ true
 symmetric_power(F::FilteredBundle, k::Integer) = _graded_power(symmetric_power, F, k)
 
 """
+    det(F::FilteredBundle) -> CompletelyReducibleBundle
+
+Return the determinant line bundle. For a filtered bundle, the determinant is
+the tensor product of the determinants of its graded pieces.
+"""
+function det(F::FilteredBundle)
+  factors = det.(graded_pieces(F))
+  isempty(factors) && return structure_sheaf(variety(F))
+  reduce(tensor_product, factors)
+end
+
+determinant(F::FilteredBundle) = det(F)
+
+"""
     dual(F::FilteredBundle) -> FilteredBundle
 
 The dual of a filtered bundle. The filtration is reversed: if ``\\mathcal{F}`` has
@@ -406,6 +420,19 @@ pieces ``\\mathrm{gr}_1, \\ldots, \\mathrm{gr}_s`` (bottom to top), then
 """
 function dual(F::FilteredBundle)
   FilteredBundle(F.variety, [dual(p) for p in reverse(F.pieces)])
+end
+
+"""
+    twist(F::FilteredBundle, i::Integer, k::Integer=1) -> FilteredBundle
+
+Twist `F` by `O(k)` at the `i`-th marked node.
+"""
+function twist(F::FilteredBundle, i::Integer, k::Integer=1)
+  tensor_product(F, twist(structure_sheaf(variety(F)), i, k))
+end
+
+function twist(F::FilteredBundle, degrees::Vector{<:Integer})
+  tensor_product(F, line_bundle(variety(F), degrees))
 end
 
 # ─── Display ─────────────────────────────────────────────────────────────────

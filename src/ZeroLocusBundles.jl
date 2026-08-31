@@ -1,39 +1,78 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Bundles on zero loci
 #
-#  A ZeroLocusBundle is represented by a bounded complex of restrictions of
-#  ambient bundles. The complex has a single cohomology sheaf, in degree zero,
-#  equal to the bundle being represented. This presentation is closed under
-#  direct sums, tensor products and duals. In characteristic zero, its derived
-#  exterior and symmetric powers are computed in the graded symmetric monoidal
-#  category of complexes.
+#  A ZeroLocusBundle is represented by the terms of a bounded ambient
+#  presentation. Its implicit differential makes the presentation exact away
+#  from degree zero, where its cohomology is the represented bundle. These
+#  presentations are closed under direct sums, tensor products and duals. In
+#  characteristic zero, derived exterior and symmetric powers are computed in
+#  the graded symmetric monoidal category of complexes.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export restrict
 
-"""A bounded complex of ambient bundles, exact away from degree zero."""
-struct _AmbientBundleComplex
-  terms::Dict{Int,Vector{Bundle}}
+const _AmbientBundle = Union{CompletelyReducibleBundle,FilteredBundle}
 
-  function _AmbientBundleComplex(terms::Dict{Int,Vector{Bundle}})
-    cleaned = Dict{Int,Vector{Bundle}}()
+"""Terms of a bounded ambient presentation which is exact away from degree zero."""
+struct _AmbientBundlePresentation
+  terms::Dict{Int,Vector{_AmbientBundle}}
+
+  function _AmbientBundlePresentation(terms::Dict{Int,Vector{_AmbientBundle}})
+    cleaned = Dict{Int,Vector{_AmbientBundle}}()
     for (degree, summands) in terms
-      kept = Bundle[summand for summand in summands if rank(summand) != 0]
+      kept = _AmbientBundle[summand for summand in summands if rank(summand) != 0]
       isempty(kept) || (cleaned[degree] = kept)
     end
     new(cleaned)
   end
 end
 
-_AmbientBundleComplex(degree::Int, bundle::Bundle) =
-  _AmbientBundleComplex(Dict{Int,Vector{Bundle}}(degree => Bundle[bundle]))
+_AmbientBundlePresentation(degree::Int, bundle::_AmbientBundle) =
+  _AmbientBundlePresentation(
+    Dict{Int,Vector{_AmbientBundle}}(degree => _AmbientBundle[bundle])
+  )
+
+function _same_summands(left::Vector{_AmbientBundle}, right::Vector{_AmbientBundle})
+  length(left) == length(right) || return false
+  unmatched = trues(length(right))
+  for summand in left
+    index = findfirst(i -> unmatched[i] && summand == right[i], eachindex(right))
+    index === nothing && return false
+    unmatched[index] = false
+  end
+  true
+end
+
+function Base.:(==)(
+  left::_AmbientBundlePresentation, right::_AmbientBundlePresentation
+)
+  keys(left.terms) == keys(right.terms) || return false
+  all(
+    degree -> _same_summands(left.terms[degree], right.terms[degree]),
+    keys(left.terms),
+  )
+end
+
+Base.isequal(
+  left::_AmbientBundlePresentation, right::_AmbientBundlePresentation
+) = left == right
+
+function Base.hash(presentation::_AmbientBundlePresentation, h::UInt)
+  term_hash = sum(
+    hash((degree, sum(hash, summands; init=zero(UInt)))) for
+    (degree, summands) in presentation.terms;
+    init=zero(UInt),
+  )
+  hash(term_hash, h)
+end
 
 """
     ZeroLocusBundle
 
-A vector bundle on a [`ZeroLocus`](@ref), represented by a bounded complex of
-restrictions of ambient bundles whose only cohomology sheaf is the represented
-bundle in degree zero.
+A vector bundle on a [`ZeroLocus`](@ref), represented by the terms of a bounded
+ambient presentation which is exact away from degree zero. The presentation
+maps are implicit: the package records the data needed for bundle operations,
+additive invariants, and symbolic long-exact-sequence calculations.
 
 Use [`restrict`](@ref) for restrictions of ambient bundles and constructors
 such as [`tangent_bundle`](@ref), [`cotangent_bundle`](@ref),
@@ -41,8 +80,13 @@ such as [`tangent_bundle`](@ref), [`cotangent_bundle`](@ref),
 """
 struct ZeroLocusBundle <: Bundle
   locus::ZeroLocus
-  complex::_AmbientBundleComplex
+  presentation::_AmbientBundlePresentation
 end
+
+Base.:(==)(F::ZeroLocusBundle, G::ZeroLocusBundle) =
+  variety(F) == variety(G) && F.presentation == G.presentation
+Base.isequal(F::ZeroLocusBundle, G::ZeroLocusBundle) = F == G
+Base.hash(F::ZeroLocusBundle, h::UInt) = hash(F.presentation, hash(F.locus, h))
 
 """Return the zero locus on which `F` lives."""
 variety(F::ZeroLocusBundle) = F.locus
@@ -51,116 +95,167 @@ variety(F::ZeroLocusBundle) = F.locus
 ambient_variety(F::ZeroLocusBundle) = ambient_variety(variety(F))
 
 function _check_same_locus(F::ZeroLocusBundle, G::ZeroLocusBundle, operation::String)
-  variety(F) === variety(G) || throw(
+  variety(F) == variety(G) || throw(
     ArgumentError("$operation requires bundles on the same zero locus.")
   )
   nothing
 end
 
 """
-    restrict(Z::ZeroLocus, F::Bundle) -> ZeroLocusBundle
+    restrict(Z::ZeroLocus, F) -> ZeroLocusBundle
 
-Restrict an ambient bundle `F` to `Z`.
+Restrict an ambient [`CompletelyReducibleBundle`](@ref) or
+[`FilteredBundle`](@ref) `F` to `Z`.
+
+If `F` already lives on a formal zero locus cut out by `E`, it can be restricted
+again to a zero locus in the same ambient variety whose defining bundle
+contains `E` as a direct summand. Thus a bundle on `Z(E)` restricts naturally to
+`Z(E ⊕ E′)`. Since [`ZeroLocus`](@ref) does not store individual sections,
+containment is understood at the level of defining bundles.
 """
-function restrict(Z::ZeroLocus, F::Bundle)
-  F isa ZeroLocusBundle && throw(
-    ArgumentError("The bundle is already on a zero locus.")
-  )
+function restrict(Z::ZeroLocus, F::_AmbientBundle)
   marked_dynkin_type(variety(F)) == marked_dynkin_type(ambient_variety(Z)) || throw(
     ArgumentError("restrict requires a bundle on the ambient variety of the zero locus.")
   )
-  ZeroLocusBundle(Z, _AmbientBundleComplex(0, F))
+  ZeroLocusBundle(Z, _AmbientBundlePresentation(0, F))
 end
 
-"""Return the rank of a bundle represented by an ambient complex."""
+function _is_direct_summand(
+  summand::CompletelyReducibleBundle, bundle::CompletelyReducibleBundle
+)
+  summand_counts = _to_counts(summand)
+  bundle_counts = _to_counts(bundle)
+  all(
+    multiplicity <= get(bundle_counts, component, 0) for
+    (component, multiplicity) in summand_counts
+  )
+end
+
+function restrict(Z::ZeroLocus, F::ZeroLocusBundle)
+  source = variety(F)
+  source === Z && return F
+  marked_dynkin_type(ambient_variety(source)) ==
+  marked_dynkin_type(ambient_variety(Z)) || throw(
+    ArgumentError("restrict requires zero loci in the same ambient variety type.")
+  )
+  _is_direct_summand(defining_bundle(source), defining_bundle(Z)) || throw(
+    ArgumentError(
+      "The target zero locus must contain the source defining bundle as a direct summand."
+    ),
+  )
+  ZeroLocusBundle(Z, _AmbientBundlePresentation(F.presentation.terms))
+end
+
+"""Return the rank of a bundle represented by an ambient presentation."""
 function rank(F::ZeroLocusBundle)
-  result = 0
-  for (degree, summands) in F.complex.terms
-    sign = isodd(degree) ? -1 : 1
-    result += sign * sum(rank, summands; init=0)
-  end
+  result = sum(
+    (
+      (isodd(degree) ? -1 : 1) * sum(rank, summands; init=0) for
+      (degree, summands) in F.presentation.terms
+    );
+    init=0,
+  )
   result >= 0 || error("The ambient presentation has negative virtual rank $result.")
   result
 end
 
 function direct_sum(F::ZeroLocusBundle, G::ZeroLocusBundle)
   _check_same_locus(F, G, "direct_sum")
-  terms = Dict{Int,Vector{Bundle}}(
-    degree => copy(summands) for (degree, summands) in F.complex.terms
+  terms = Dict{Int,Vector{_AmbientBundle}}(
+    degree => copy(summands) for (degree, summands) in F.presentation.terms
   )
-  for (degree, summands) in G.complex.terms
-    append!(get!(terms, degree, Bundle[]), summands)
+  for (degree, summands) in G.presentation.terms
+    append!(get!(terms, degree, _AmbientBundle[]), summands)
   end
-  ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
+  ZeroLocusBundle(variety(F), _AmbientBundlePresentation(terms))
 end
 
 Base.:+(F::ZeroLocusBundle, G::ZeroLocusBundle) = direct_sum(F, G)
 
 function tensor_product(F::ZeroLocusBundle, G::ZeroLocusBundle)
   _check_same_locus(F, G, "tensor_product")
-  terms = Dict{Int,Vector{Bundle}}()
-  for (degree_C, summands_C) in F.complex.terms
-    for (degree_D, summands_D) in G.complex.terms
-      degree = degree_C + degree_D
-      target = get!(terms, degree, Bundle[])
-      for summand_F in summands_C, summand_G in summands_D
-        push!(target, tensor_product(summand_F, summand_G))
+  terms = Dict{Int,Vector{_AmbientBundle}}()
+  for (degree_F, summands_F) in F.presentation.terms
+    for (degree_G, summands_G) in G.presentation.terms
+      degree = degree_F + degree_G
+      degree_summands = get!(terms, degree, _AmbientBundle[])
+      for summand_F in summands_F, summand_G in summands_G
+        push!(degree_summands, tensor_product(summand_F, summand_G))
       end
     end
   end
-  ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
+  ZeroLocusBundle(variety(F), _AmbientBundlePresentation(terms))
 end
 
 Base.:*(F::ZeroLocusBundle, G::ZeroLocusBundle) = tensor_product(F, G)
 
 function dual(F::ZeroLocusBundle)
-  terms = Dict{Int,Vector{Bundle}}(
-    -degree => Bundle[dual(summand) for summand in summands] for
-    (degree, summands) in F.complex.terms
+  terms = Dict{Int,Vector{_AmbientBundle}}(
+    -degree => _AmbientBundle[dual(summand) for summand in summands] for
+    (degree, summands) in F.presentation.terms
   )
-  ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
+  ZeroLocusBundle(variety(F), _AmbientBundlePresentation(terms))
 end
 
+"""
+    _derived_power(F, k, even_power, odd_power) -> ZeroLocusBundle
+
+Construct a derived power of the ambient presentation of `F`. Each ambient
+summand is paired with its cohomological degree. A multiexponent distributes
+the total exponent `k` among those graded summands, and the resulting factors
+are tensored in the sum of their weighted degrees.
+
+Koszul signs exchange exterior and symmetric powers in odd degree. For a
+derived exterior power, `even_power` is therefore `exterior_power` and
+`odd_power` is `symmetric_power`; the derived symmetric power uses the reverse
+assignment. The induced differentials are implicit, just as in the original
+ambient presentation.
+"""
 function _derived_power(F::ZeroLocusBundle, k::Int, even_power, odd_power)
   k == 0 && return structure_sheaf(variety(F))
 
-  C = F.complex
-  graded_summands = Tuple{Int,Bundle}[
-    (degree, summand) for degree in sort!(collect(keys(C.terms))) for
-    summand in C.terms[degree]
+  presentation = F.presentation
+  graded_summands = Tuple{Int,_AmbientBundle}[
+    (degree, summand) for degree in sort!(collect(keys(presentation.terms))) for
+    summand in presentation.terms[degree]
   ]
   isempty(graded_summands) && return zero_bundle(variety(F))
 
-  terms = Dict{Int,Vector{Bundle}}()
-  for alpha in multiexponents(length(graded_summands), k)
-    factors = Bundle[]
+  terms = Dict{Int,Vector{_AmbientBundle}}()
+  for multiplicities in multiexponents(length(graded_summands), k)
+    factors = _AmbientBundle[]
     target_degree = 0
-    for (multiplicity, (degree, summand)) in zip(alpha, graded_summands)
+    for (multiplicity, (degree, summand)) in zip(multiplicities, graded_summands)
       multiplicity == 0 && continue
       target_degree += multiplicity * degree
-      power = iseven(degree) ? even_power : odd_power
-      factor = power(summand, multiplicity)
+      power_operation = iseven(degree) ? even_power : odd_power
+      factor = power_operation(summand, multiplicity)
       rank(factor) == 0 && (empty!(factors); break)
       push!(factors, factor)
     end
     isempty(factors) && continue
     term = reduce(tensor_product, factors)
-    push!(get!(terms, target_degree, Bundle[]), term)
+    push!(get!(terms, target_degree, _AmbientBundle[]), term)
   end
-  ZeroLocusBundle(variety(F), _AmbientBundleComplex(terms))
+  ZeroLocusBundle(variety(F), _AmbientBundlePresentation(terms))
 end
 
 """
     exterior_power(F::ZeroLocusBundle, k::Integer) -> ZeroLocusBundle
 
 The `k`-th exterior power. For an arbitrary ambient presentation this uses
-the derived exterior-power complex, with symmetric powers on odd-degree terms
-and exterior powers on even-degree terms.
+the derived exterior-power presentation, with symmetric powers on odd-degree
+terms and exterior powers on even-degree terms. When `k` is greater than half
+the rank, the perfect-pairing identity computes the complementary exterior
+power of the dual and tensors it with [`det`](@ref).
 """
 function exterior_power(F::ZeroLocusBundle, k::Integer)
   k = Int(k)
-  (k < 0 || k > rank(F)) && return zero_bundle(variety(F))
+  r = rank(F)
+  (k < 0 || k > r) && return zero_bundle(variety(F))
   k == 1 && return F
+  k == r && return det(F)
+  2k > r && return tensor_product(det(F), exterior_power(dual(F), r - k))
   _derived_power(F, k, exterior_power, symmetric_power)
 end
 
@@ -178,7 +273,29 @@ function symmetric_power(F::ZeroLocusBundle, k::Integer)
   _derived_power(F, k, symmetric_power, exterior_power)
 end
 
-det(F::ZeroLocusBundle) = exterior_power(F, rank(F))
+"""
+    det(F::ZeroLocusBundle) -> ZeroLocusBundle
+
+Compute the determinant line directly from the ambient presentation. A
+summand in even cohomological degree contributes its determinant, while a
+summand in odd degree contributes the dual of its determinant.
+"""
+function det(F::ZeroLocusBundle)
+  factors = CompletelyReducibleBundle[]
+  for degree in sort!(collect(keys(F.presentation.terms)))
+    summands = F.presentation.terms[degree]
+    for summand in summands
+      factor = det(summand)
+      push!(factors, isodd(degree) ? dual(factor) : factor)
+    end
+  end
+  ambient_determinant =
+    isempty(factors) ?
+    structure_sheaf(ambient_variety(F)) :
+    reduce(tensor_product, factors)
+  restrict(variety(F), ambient_determinant)
+end
+
 determinant(F::ZeroLocusBundle) = det(F)
 
 function Base.:*(n::Integer, F::ZeroLocusBundle)
@@ -188,16 +305,33 @@ function Base.:*(n::Integer, F::ZeroLocusBundle)
 end
 
 Base.:*(F::ZeroLocusBundle, n::Integer) = n * F
-Base.iszero(F::ZeroLocusBundle) = rank(F) == 0 && isempty(F.complex.terms)
+Base.iszero(F::ZeroLocusBundle) = iszero(rank(F))
 
-"""The structure sheaf of a zero locus."""
+"""
+    structure_sheaf(Z::ZeroLocus) -> ZeroLocusBundle
+
+Return the structure sheaf ``\\mathcal{O}_Z``.
+"""
 structure_sheaf(Z::ZeroLocus) = restrict(Z, structure_sheaf(ambient_variety(Z)))
 O(Z::ZeroLocus) = structure_sheaf(Z)
 
-"""The zero bundle on a zero locus."""
-zero_bundle(Z::ZeroLocus) =
-  ZeroLocusBundle(Z, _AmbientBundleComplex(Dict{Int,Vector{Bundle}}()))
+"""
+    zero_bundle(Z::ZeroLocus) -> ZeroLocusBundle
 
+Return the rank-zero vector bundle on `Z`.
+"""
+zero_bundle(Z::ZeroLocus) =
+  ZeroLocusBundle(
+    Z, _AmbientBundlePresentation(Dict{Int,Vector{_AmbientBundle}}())
+  )
+
+"""
+    line_bundle(Z::ZeroLocus, degree::Integer) -> ZeroLocusBundle
+    line_bundle(Z::ZeroLocus, degrees::Vector{<:Integer}) -> ZeroLocusBundle
+
+Restrict the ambient line bundle with the specified Picard degree or degrees
+to `Z`.
+"""
 line_bundle(Z::ZeroLocus, degree::Integer) =
   restrict(Z, line_bundle(ambient_variety(Z), degree))
 line_bundle(Z::ZeroLocus, degrees::Vector{<:Integer}) =
@@ -205,41 +339,78 @@ line_bundle(Z::ZeroLocus, degrees::Vector{<:Integer}) =
 O(Z::ZeroLocus, degree::Integer) = line_bundle(Z, degree)
 O(Z::ZeroLocus, degrees::Vector{<:Integer}) = line_bundle(Z, degrees)
 
-"""The normal bundle of `Z` in its ambient partial flag variety."""
-normal_bundle(Z::ZeroLocus) =
-  ZeroLocusBundle(Z, _AmbientBundleComplex(0, defining_bundle(Z)))
+"""
+    normal_bundle(Z::ZeroLocus) -> ZeroLocusBundle
 
-"""The conormal bundle of `Z` in its ambient partial flag variety."""
-conormal_bundle(Z::ZeroLocus) =
-  ZeroLocusBundle(Z, _AmbientBundleComplex(0, dual(defining_bundle(Z))))
+Return the normal bundle ``\\mathcal{N}_{Z/X} = \\mathcal{E}|_Z`` of `Z` in its
+ambient partial flag variety, where ``\\mathcal{E}`` is the defining bundle.
+"""
+normal_bundle(Z::ZeroLocus) = restrict(Z, defining_bundle(Z))
 
-"""The tangent bundle of a smooth zero locus, represented by its normal sequence."""
+"""
+    conormal_bundle(Z::ZeroLocus) -> ZeroLocusBundle
+
+Return the conormal bundle ``\\mathcal{N}_{Z/X}^\\vee``.
+"""
+conormal_bundle(Z::ZeroLocus) = dual(normal_bundle(Z))
+
+"""
+    tangent_bundle(Z::ZeroLocus) -> ZeroLocusBundle
+
+Return the tangent bundle of a smooth formal zero locus. Its ambient
+presentation is the normal sequence
+``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to \\mathcal{E}|_Z \\to 0``.
+"""
 function tangent_bundle(Z::ZeroLocus)
-  terms = Dict{Int,Vector{Bundle}}(
-    0 => Bundle[filtered_tangent_bundle(ambient_variety(Z))],
-    1 => Bundle[defining_bundle(Z)],
+  terms = Dict{Int,Vector{_AmbientBundle}}(
+    0 => _AmbientBundle[filtered_tangent_bundle(ambient_variety(Z))],
+    1 => _AmbientBundle[defining_bundle(Z)],
   )
-  ZeroLocusBundle(Z, _AmbientBundleComplex(terms))
+  ZeroLocusBundle(Z, _AmbientBundlePresentation(terms))
 end
 
 T(Z::ZeroLocus) = tangent_bundle(Z)
 
-"""The cotangent bundle of a smooth zero locus, represented by its conormal sequence."""
+"""
+    cotangent_bundle(Z::ZeroLocus) -> ZeroLocusBundle
+
+Return the cotangent bundle of a smooth formal zero locus, represented by the
+conormal sequence dual to the tangent presentation.
+"""
 function cotangent_bundle(Z::ZeroLocus)
   dual(tangent_bundle(Z))
 end
 
-"""The canonical bundle of a smooth zero locus, computed by adjunction."""
+"""
+    canonical_bundle(Z::ZeroLocus) -> ZeroLocusBundle
+
+Return the canonical bundle computed by adjunction,
+``\\omega_Z = (\\omega_X \\otimes \\det \\mathcal{E})|_Z``.
+"""
 function canonical_bundle(Z::ZeroLocus)
   X = ambient_variety(Z)
   restrict(Z, tensor_product(canonical_bundle(X), det(defining_bundle(Z))))
 end
 
-"""The anticanonical bundle of a smooth zero locus."""
+"""Return the dual of [`canonical_bundle(Z)`](@ref)."""
 anticanonical_bundle(Z::ZeroLocus) = dual(canonical_bundle(Z))
 
-function twist(F::ZeroLocusBundle, degree::Integer)
-  tensor_product(F, line_bundle(variety(F), degree))
+"""
+    twist(F::ZeroLocusBundle, i::Integer, k::Integer=1) -> ZeroLocusBundle
+
+Twist `F` by `O(k)` at the `i`-th marked node of its ambient partial flag
+variety, matching the ambient-bundle interface.
+"""
+function twist(F::ZeroLocusBundle, i::Integer, k::Integer=1)
+  X = ambient_variety(F)
+  1 <= i <= picard_rank(X) || throw(
+    ArgumentError(
+      "Index $i out of range. The ambient has $(picard_rank(X)) marked node(s)."
+    ),
+  )
+  degrees = zeros(Int, picard_rank(X))
+  degrees[Int(i)] = Int(k)
+  tensor_product(F, line_bundle(variety(F), degrees))
 end
 
 function twist(F::ZeroLocusBundle, degrees::Vector{<:Integer})
@@ -271,7 +442,7 @@ individual cohomology groups are not determined by the induced maps.
 function euler_characteristic(F::ZeroLocusBundle)
   Z = variety(F)
   result = BigInt(0)
-  for (degree, summands) in F.complex.terms
+  for (degree, summands) in F.presentation.terms
     sign = isodd(degree) ? -1 : 1
     for summand in summands
       result += sign * _euler_characteristic_on_restriction(Z, summand)
@@ -295,7 +466,7 @@ function _restriction_cohomology(
 end
 
 function _presentation_term_cohomology(
-  Z::ZeroLocus, summands::Vector{Bundle}, var_counter::Ref{Int}
+  Z::ZeroLocus, summands::Vector{_AmbientBundle}, var_counter::Ref{Int}
 )
   isempty(summands) && return AffineExpr[AffineExpr(0) for _ in 0:dimension(Z)]
   entries = _restriction_cohomology(Z, first(summands), var_counter)
@@ -309,9 +480,12 @@ function _presentation_term_cohomology(
 end
 
 function _presentation_term_cohomology(
-  Z::ZeroLocus, C::_AmbientBundleComplex, degree::Int, var_counter::Ref{Int}
+  Z::ZeroLocus, presentation::_AmbientBundlePresentation, degree::Int,
+  var_counter::Ref{Int},
 )
-  _presentation_term_cohomology(Z, get(C.terms, degree, Bundle[]), var_counter)
+  _presentation_term_cohomology(
+    Z, get(presentation.terms, degree, _AmbientBundle[]), var_counter
+  )
 end
 
 """
@@ -323,20 +497,22 @@ left to right, and the requested bundle is the resulting cokernel.
 """
 function _cohomology_from_presentation(F::ZeroLocusBundle, var_counter::Ref{Int})
   Z = variety(F)
-  C = F.complex
-  isempty(C.terms) && return (
+  presentation = F.presentation
+  isempty(presentation.terms) && return (
     AffineExpr[AffineExpr(0) for _ in 0:dimension(Z)],
     AffineExpr[],
   )
 
-  minimum_degree = min(0, minimum(keys(C.terms)))
-  maximum_degree = max(0, maximum(keys(C.terms)))
+  minimum_degree = min(0, minimum(keys(presentation.terms)))
+  maximum_degree = max(0, maximum(keys(presentation.terms)))
   inequalities = AffineExpr[]
 
   # K_0 = ker(C^0 -> C^1), computed through all positive degrees.
-  kernel = _presentation_term_cohomology(Z, C, maximum_degree, var_counter)
+  kernel = _presentation_term_cohomology(
+    Z, presentation, maximum_degree, var_counter
+  )
   for degree in (maximum_degree - 1):-1:0
-    term = _presentation_term_cohomology(Z, C, degree, var_counter)
+    term = _presentation_term_cohomology(Z, presentation, degree, var_counter)
     kernel = les_kernel(term, kernel, var_counter; inequalities)
   end
 
@@ -344,9 +520,9 @@ function _cohomology_from_presentation(F::ZeroLocusBundle, var_counter::Ref{Int}
 
   # I_0 = im(C^-1 -> C^0), computed as the final cokernel of the negative
   # half. Then 0 -> I_0 -> K_0 -> F -> 0.
-  image = _presentation_term_cohomology(Z, C, minimum_degree, var_counter)
+  image = _presentation_term_cohomology(Z, presentation, minimum_degree, var_counter)
   for degree in (minimum_degree + 1):-1
-    term = _presentation_term_cohomology(Z, C, degree, var_counter)
+    term = _presentation_term_cohomology(Z, presentation, degree, var_counter)
     image = les_cokernel(image, term, var_counter; inequalities)
   end
   (les_cokernel(image, kernel, var_counter; inequalities), inequalities)
@@ -354,7 +530,7 @@ end
 
 """Return whether `F` is represented by the tangent normal sequence."""
 function _is_tangent_bundle(F::ZeroLocusBundle)
-  terms = F.complex.terms
+  terms = F.presentation.terms
   length(terms) == 2 && haskey(terms, 0) && haskey(terms, 1) || return false
   length(terms[0]) == 1 || return false
   length(terms[1]) == 1 || return false
@@ -386,8 +562,8 @@ function cohomology(F::ZeroLocusBundle)
 
   # A degree-zero presentation is just a direct sum of restricted ambient
   # bundles, so no presentation LES or extra constraints are needed.
-  if length(F.complex.terms) == 1 && haskey(F.complex.terms, 0)
-    entries = _presentation_term_cohomology(Z, F.complex.terms[0], var_counter)
+  if length(F.presentation.terms) == 1 && haskey(F.presentation.terms, 0)
+    entries = _presentation_term_cohomology(Z, F.presentation.terms[0], var_counter)
     _renumber_variables!(entries)
     return Cohomology{AffineExpr}(entries, d)
   end
@@ -412,10 +588,6 @@ function cohomology(F::ZeroLocusBundle)
   _renumber_variables!(entries)
   Cohomology{AffineExpr}(entries, d)
 end
-
-"""Return whether every entry of a cohomology object is determined."""
-is_determined(::Cohomology) = true
-is_determined(H::Cohomology{AffineExpr}) = all(is_determined, H.entries)
 
 function Base.show(io::IO, F::ZeroLocusBundle)
   print(io, "Bundle(rank $(rank(F)) on ")

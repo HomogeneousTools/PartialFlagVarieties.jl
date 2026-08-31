@@ -74,6 +74,10 @@ end
 """Check whether the expression is fully determined (no symbolic variables)."""
 is_determined(e::AffineExpr) = isempty(e.coeffs)
 
+"""Return whether every entry of a cohomology object is determined."""
+is_determined(::Cohomology) = true
+is_determined(H::Cohomology{AffineExpr}) = all(is_determined, H.entries)
+
 """Check whether the expression is identically zero."""
 is_zero_expr(e::AffineExpr) = e.constant == 0 && isempty(e.coeffs)
 

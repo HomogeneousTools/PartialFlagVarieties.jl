@@ -26,11 +26,13 @@ export fano_index
 """
   Bundle
 
-Abstract supertype for equivariant vector bundles on a partial flag variety.
+Abstract supertype for vector bundles supported by the package.
 
 Concrete subtypes:
 - [`CompletelyReducibleBundle`](@ref): semisimple equivariant bundles
 - [`FilteredBundle`](@ref): bundles with a filtration by equivariant subbundles
+- `ZeroLocusBundle`: bundles on a [`ZeroLocus`](@ref), represented by ambient
+  presentations
 """
 abstract type Bundle end
 
@@ -1162,6 +1164,15 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
       t for component in E.components for t in tensor_product(component, twist_rep)
     ],
   )
+end
+
+"""
+    twist(E::CompletelyReducibleBundle, degrees::Vector{<:Integer})
+
+Twist `E` by the line bundle with the given Picard degrees.
+"""
+function twist(E::CompletelyReducibleBundle, degrees::Vector{<:Integer})
+  tensor_product(E, line_bundle(variety(E), degrees))
 end
 
 # ─── Arithmetic operators ───────────────────────────────────────────────────

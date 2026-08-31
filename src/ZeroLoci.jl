@@ -34,6 +34,8 @@ The zero locus ``Z(s)`` of a regular section ``s \\in \\mathrm{H}^0(X, \\mathcal
 equivariant bundle ``\\mathcal{E}`` on the partial flag variety ``X = \\mathrm{G}/\\mathrm{P}``.
 
 Assumes the section is regular, so ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})``.
+The section itself is not stored: a `ZeroLocus` records only `X` and
+``\\mathcal{E}``, and represents the corresponding formal regular zero locus.
 
 # Examples
 ```jldoctest
@@ -58,6 +60,12 @@ mutable struct ZeroLocus
   koszul_wedges::Union{Nothing,Vector{CompletelyReducibleBundle}}
 end
 
+Base.:(==)(Z::ZeroLocus, W::ZeroLocus) =
+  ambient_variety(Z) == ambient_variety(W) && defining_bundle(Z) == defining_bundle(W)
+Base.isequal(Z::ZeroLocus, W::ZeroLocus) = Z == W
+Base.hash(Z::ZeroLocus, h::UInt) =
+  hash(defining_bundle(Z), hash(ambient_variety(Z), h))
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Constructors
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -69,7 +77,7 @@ Construct the zero locus of a regular section of the equivariant
 bundle ``\\mathcal{E}``.  Requires ``\\mathrm{rank}(\\mathcal{E}) \\le \\dim(X)``.
 
 This constructor assumes such a regular section exists; it does not try to
-prove existence or regularity.
+prove existence or regularity, and it does not choose or store a section.
 
 # Examples
 ```jldoctest
