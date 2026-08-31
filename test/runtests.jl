@@ -1949,6 +1949,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test dimension(Z) == 3
     @test codimension(Z) == 1
     @test ambient_variety(Z) === X
+    equivalent_Z = zero_locus(line_bundle(projective_space(4), 5))
+    @test equivalent_Z == Z
+    @test isequal(equivalent_Z, Z)
+    @test hash(equivalent_Z) == hash(Z)
     @test !isdefined(PartialFlagVarieties, :cohomology_on_restriction)
     @test !isdefined(PartialFlagVarieties, :cohomology_on_restriction_symbolic)
     @test !isdefined(PartialFlagVarieties, :tangent_cohomology)
@@ -1985,6 +1989,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank(tensor_product(TZ, L)) == rank(TZ)
     @test rank(TZ * L) == rank(TZ)
     @test rank(dual(TZ)) == rank(TZ)
+    @test dual(dual(TZ)) == TZ
+    @test isequal(dual(dual(TZ)), TZ)
+    @test hash(dual(dual(TZ))) == hash(TZ)
+    @test TZ * structure_sheaf(Z) == TZ
     @test rank(T(Z)) == rank(TZ)
     @test rank(2 * TZ) == 2 * rank(TZ)
     @test rank(TZ * 2) == 2 * rank(TZ)
@@ -2000,6 +2008,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank(wedge2_TZ) == binomial(rank(TZ), 2)
     @test rank(det(TZ)) == 1
     @test rank(determinant(TZ)) == 1
+    @test det(TZ) == anticanonical_bundle(Z)
+    @test exterior_power(TZ, rank(TZ)) == det(TZ)
+    @test det(zero_bundle(Z)) == structure_sheaf(Z)
     @test rank(symmetric_power(TZ, 0)) == 1
     @test symmetric_power(TZ, 1) === TZ
     @test iszero(symmetric_power(TZ, -1))
@@ -2010,9 +2021,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank(exterior_power(composite, 2)) == binomial(rank(composite), 2)
     @test rank(symmetric_power(composite, 2)) == binomial(rank(composite) + 1, 2)
     @test rank(twist(TZ, 1)) == rank(TZ)
+    @test direct_sum(TZ, L) == direct_sum(L, TZ)
+    equivalent_TZ = tangent_bundle(zero_locus(line_bundle(projective_space(4), 5)))
+    @test equivalent_TZ == TZ
+    @test direct_sum(TZ, equivalent_TZ) == 2 * TZ
     @test occursin("Bundle(rank 3 on", sprint(show, TZ))
 
-    @test_throws ArgumentError restrict(Z, TZ)
+    @test restrict(Z, TZ) === TZ
+    deeper_locus = zero_locus(direct_sum(line_bundle(X, 5), line_bundle(X, 1)))
+    restricted_TZ = restrict(deeper_locus, TZ)
+    @test variety(restricted_TZ) === deeper_locus
+    @test rank(restricted_TZ) == rank(TZ)
+    @test_throws ArgumentError restrict(zero_locus(line_bundle(X, 4)), TZ)
     @test_throws ArgumentError restrict(Z, structure_sheaf(Gr(2, 4)))
     @test_throws ArgumentError direct_sum(TZ, tangent_bundle(zero_locus(line_bundle(X, 4))))
     @test_throws ArgumentError tensor_product(
@@ -2025,13 +2045,36 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank(M) == 1
     @test rank(O(W, [0, 1])) == 1
     @test rank(twist(M, [0, 1])) == 1
+    @test twist(M, 2) == M * O(W, [0, 1])
+    @test twist(line_bundle(Y, [1, 0]), [0, 1]) == line_bundle(Y, [1, 1])
+    @test_throws ArgumentError twist(M, 3)
 
     full_flag = full_flag_variety(TypeA{2})
     filtered = filtered_tangent_bundle(full_flag)
     @test rank(tensor_product(filtered, filtered)) == rank(filtered)^2
+    @test det(filtered) == reduce(tensor_product, det.(graded_pieces(filtered)))
+    @test determinant(filtered) == det(filtered)
+    @test det(FilteredBundle(full_flag, CompletelyReducibleBundle[])) ==
+      structure_sheaf(full_flag)
+    @test twist(filtered, 1, 2) ==
+      tensor_product(filtered, line_bundle(full_flag, [2, 0]))
+    @test twist(filtered, [1, 0]) ==
+      tensor_product(filtered, line_bundle(full_flag, [1, 0]))
     @test_throws ArgumentError tensor_product(
       filtered, filtered_tangent_bundle(full_flag_variety(TypeB{2}))
     )
+
+    A = line_bundle(full_flag, [1, 0])
+    B = line_bundle(full_flag, [0, 1])
+    C = line_bundle(full_flag, [-1, 0])
+    D = line_bundle(full_flag, [0, -1])
+    filtered_F = FilteredBundle(full_flag, [A, B])
+    filtered_G = FilteredBundle(full_flag, [C, D])
+    @test graded_pieces(tensor_product(filtered_F, filtered_G)) == [
+      tensor_product(A, C),
+      direct_sum(tensor_product(A, D), tensor_product(B, C)),
+      tensor_product(B, D),
+    ]
   end
 
   @testset "Bundles on zero loci: cohomology" begin
@@ -2059,13 +2102,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test euler_characteristic(TZ) == -100
     @test_throws MethodError cohomology(TZ; characters=true)
 
+    H_det_TZ = cohomology(det(TZ))
+    @test det(TZ) == anticanonical_bundle(Z)
+    @test H_det_TZ.entries == AffineExpr.([1, 0, 0, 1])
+    @test is_determined(H_det_TZ)
+
     H_OmegaZ = cohomology(cotangent_bundle(Z))
     @test PartialFlagVarieties._alternating_sum(H_OmegaZ.entries) ==
       AffineExpr(euler_characteristic(cotangent_bundle(Z)))
 
     H_wedge2 = cohomology(exterior_power(cotangent_bundle(Z), 2))
-    @test PartialFlagVarieties._alternating_sum(H_wedge2.entries) ==
-      AffineExpr(euler_characteristic(exterior_power(cotangent_bundle(Z), 2)))
+    @test exterior_power(cotangent_bundle(Z), 2) == TZ
+    @test H_wedge2.entries == H_TZ.entries
 
     hodge = hodge_numbers(Z)
     for p in 0:dimension(Z)
@@ -2079,8 +2127,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     endomorphism = tangent_bundle(conic) * cotangent_bundle(conic)
     H_endomorphism = cohomology(endomorphism)
     @test rank(endomorphism) == 1
+    @test !is_determined(H_endomorphism)
+    @test H_endomorphism[0] - H_endomorphism[1] == AffineExpr(1)
     @test PartialFlagVarieties._alternating_sum(H_endomorphism.entries) ==
       AffineExpr(euler_characteristic(endomorphism))
+    @test euler_characteristic(symmetric_power(cotangent_bundle(conic), 2)) == -3
+
+    # A (2,2) complete intersection in P^3 is an elliptic curve, so its
+    # cotangent line is trivial. The composite presentation of Sym^2(Omega)
+    # has terms in degrees -2, -1, and 0 and exercises the full negative half.
+    elliptic = zero_locus(2 * line_bundle(projective_space(3), 2))
+    symmetric_cotangent = symmetric_power(cotangent_bundle(elliptic), 2)
+    H_symmetric_cotangent = cohomology(symmetric_cotangent)
+    @test euler_characteristic(symmetric_cotangent) == 0
+    @test H_symmetric_cotangent[0] == H_symmetric_cotangent[1]
   end
 
   @testset "ZeroLocus: products" begin
