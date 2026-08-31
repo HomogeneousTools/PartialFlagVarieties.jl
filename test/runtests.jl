@@ -622,6 +622,42 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test variety(exterior_power(T, 2)) === X
   end
 
+  @testset "External bundle operations" begin
+    X = projective_space(1)
+    Y = projective_space(2)
+    XY = product(X, Y)
+    L = line_bundle(X, 2)
+    M = line_bundle(Y, 3)
+
+    box_product = external_tensor_product(L, M)
+    box_sum = external_direct_sum(L, M)
+    @test variety(box_product) == XY
+    @test box_product == line_bundle(XY, [2, 3])
+    @test box_sum == direct_sum(line_bundle(XY, [2, 0]), line_bundle(XY, [0, 3]))
+    @test rank(box_product) == rank(L) * rank(M)
+    @test rank(box_sum) == rank(L) + rank(M)
+    @test iszero(external_tensor_product(zero_bundle(X), M))
+    @test dual(box_product) == external_tensor_product(dual(L), dual(M))
+    @test external_tensor_product(direct_sum(L, L), M) ==
+      direct_sum(box_product, box_product)
+
+    F = filtered_tangent_bundle(full_flag_variety(TypeA{2}))
+    G = filtered_tangent_bundle(Gr(2, 4))
+    filtered_product = external_tensor_product(F, G)
+    @test filtered_product isa FilteredBundle
+    @test rank(filtered_product) == rank(F) * rank(G)
+    @test total_bundle(filtered_product) ==
+      external_tensor_product(total_bundle(F), total_bundle(G))
+
+    mixed_left = external_tensor_product(F, M)
+    mixed_right = external_tensor_product(L, G)
+    @test mixed_left isa FilteredBundle
+    @test mixed_right isa FilteredBundle
+    @test total_bundle(mixed_left) == external_tensor_product(total_bundle(F), M)
+    @test total_bundle(mixed_right) == external_tensor_product(L, total_bundle(G))
+    @test iszero(external_tensor_product(F, zero_bundle(Y)))
+  end
+
   @testset "Twist" begin
     X = projective_space(4)
     O = structure_sheaf(X)
@@ -2191,6 +2227,61 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       rank(defining_bundle(Z12)) +
           rank(defining_bundle(Z3))
     @test zerolocus62_label(defining_bundle(Z)) == zerolocus62_label(expected_bundle)
+    @test defining_bundle(Z) ==
+      external_direct_sum(defining_bundle(Z12), defining_bundle(Z3))
+
+    curve = zero_locus(line_bundle(projective_space(2), 1))
+    triple_product = product(curve, curve, curve)
+    triple_ambient = product(
+      projective_space(2), projective_space(2), projective_space(2)
+    )
+    expected_triple_bundle = direct_sum(
+      direct_sum(
+        line_bundle(triple_ambient, [1, 0, 0]),
+        line_bundle(triple_ambient, [0, 1, 0]),
+      ),
+      line_bundle(triple_ambient, [0, 0, 1]),
+    )
+    @test triple_product == curve * (curve * curve)
+    @test ambient_variety(triple_product) == triple_ambient
+    @test defining_bundle(triple_product) == expected_triple_bundle
+    @test dimension(triple_product) == 3
+  end
+
+  @testset "Bundles on zero loci: external operations" begin
+    Z = zero_locus(line_bundle(projective_space(2), 1))
+    W = zero_locus(line_bundle(projective_space(2), 2))
+    ZW = product(Z, W)
+    L = line_bundle(Z, 1)
+    M = line_bundle(W, 2)
+
+    box_product = external_tensor_product(L, M)
+    box_sum = external_direct_sum(L, M)
+    @test variety(box_product) == ZW
+    @test box_product == line_bundle(ZW, [1, 2])
+    @test box_sum == direct_sum(line_bundle(ZW, [1, 0]), line_bundle(ZW, [0, 2]))
+    @test rank(box_product) == rank(L) * rank(M)
+    @test rank(box_sum) == rank(L) + rank(M)
+    @test euler_characteristic(box_product) ==
+      euler_characteristic(L) * euler_characteristic(M)
+    @test iszero(external_tensor_product(zero_bundle(Z), M))
+    @test dual(box_product) == external_tensor_product(dual(L), dual(M))
+    @test external_tensor_product(direct_sum(L, L), M) ==
+      direct_sum(box_product, box_product)
+
+    TZ = tangent_bundle(Z)
+    TW = tangent_bundle(W)
+    tangent_product = external_tensor_product(TZ, TW)
+    tangent_sum = external_direct_sum(TZ, TW)
+    @test rank(tangent_product) == dimension(Z) * dimension(W)
+    @test rank(tangent_sum) == dimension(Z) + dimension(W)
+    @test variety(tangent_product) == ZW
+    @test variety(tangent_sum) == ZW
+    @test euler_characteristic(tangent_product) ==
+      euler_characteristic(TZ) * euler_characteristic(TW)
+    @test euler_characteristic(tangent_sum) ==
+      euler_characteristic(TZ) * euler_characteristic(structure_sheaf(W)) +
+          euler_characteristic(structure_sheaf(Z)) * euler_characteristic(TW)
   end
 
   # The zero locus of a section of O(1) on the Cayley plane OP² = E6/P1

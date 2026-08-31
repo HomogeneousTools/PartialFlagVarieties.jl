@@ -24,9 +24,10 @@ export n_filtration_steps
 """
   FilteredBundle
 
-An equivariant vector bundle on ``\\mathrm{G}/\\mathrm{P}`` equipped with a filtration by
-equivariant subbundles. Stored as an ordered list of associated graded
-pieces (each a [`CompletelyReducibleBundle`](@ref)).
+A formal equivariant vector bundle on ``\\mathrm{G}/\\mathrm{P}`` equipped with a filtration by
+equivariant subbundles. It is represented by an ordered list of associated
+graded pieces (each a [`CompletelyReducibleBundle`](@ref)); extension maps are
+implicit, so computations retain any ambiguity that depends on those maps.
 
 The filtration is encoded by the ordering: `graded_pieces(F)[1]` is the
 bottom piece (smallest filtration step), and `graded_pieces(F)[end]` is
@@ -125,6 +126,9 @@ function rank(F::FilteredBundle)
   sum(rank(p) for p in F.pieces; init=0)
 end
 
+"""Return whether every graded piece of `F` is zero."""
+Base.iszero(F::FilteredBundle) = all(iszero, graded_pieces(F))
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Tensor products involving FilteredBundle
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -147,8 +151,8 @@ end
     tensor_product(F::FilteredBundle, G::FilteredBundle) -> FilteredBundle
 
 The tensor product with the convolution filtration. If the graded pieces of
-`F` and `G` have filtration indices `i` and `j`, respectively, their tensor
-product occurs in filtration degree `i + j`.
+`F` and `G` occupy positions `i` and `j`, respectively, their tensor product
+occurs in filtration degree `i + j`.
 """
 function tensor_product(F::FilteredBundle, G::FilteredBundle)
   marked_dynkin_type(variety(G)) == marked_dynkin_type(variety(F)) || throw(
@@ -424,8 +428,10 @@ end
 
 """
     twist(F::FilteredBundle, i::Integer, k::Integer=1) -> FilteredBundle
+    twist(F::FilteredBundle, degrees::Vector{<:Integer}) -> FilteredBundle
 
-Twist `F` by `O(k)` at the `i`-th marked node.
+Twist `F` by `O(k)` at the `i`-th marked node, or by the line bundle with the
+given Picard degrees. The filtration order is preserved.
 """
 function twist(F::FilteredBundle, i::Integer, k::Integer=1)
   tensor_product(F, twist(structure_sheaf(variety(F)), i, k))

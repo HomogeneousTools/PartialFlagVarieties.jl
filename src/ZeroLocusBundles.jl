@@ -11,8 +11,6 @@
 
 export restrict
 
-const _AmbientBundle = Union{CompletelyReducibleBundle,FilteredBundle}
-
 """Terms of a bounded ambient presentation which is exact away from degree zero."""
 struct _AmbientBundlePresentation
   terms::Dict{Int,Vector{_AmbientBundle}}
@@ -131,7 +129,12 @@ function restrict(Z::ZeroLocus, F::ZeroLocusBundle)
   ZeroLocusBundle(Z, _AmbientBundlePresentation(F.presentation.terms))
 end
 
-"""Return the rank of a bundle represented by an ambient presentation."""
+"""
+    rank(F::ZeroLocusBundle) -> Int
+
+Return the rank of `F`, computed as the alternating sum of the ranks in its
+ambient presentation.
+"""
 function rank(F::ZeroLocusBundle)
   result = sum(
     (
@@ -144,6 +147,12 @@ function rank(F::ZeroLocusBundle)
   result
 end
 
+"""
+    direct_sum(F::ZeroLocusBundle, G::ZeroLocusBundle) -> ZeroLocusBundle
+
+Return the direct sum of two bundles on the same zero locus by taking the
+degreewise direct sum of their ambient presentations.
+"""
 function direct_sum(F::ZeroLocusBundle, G::ZeroLocusBundle)
   _check_same_locus(F, G, "direct_sum")
   terms = Dict{Int,Vector{_AmbientBundle}}(
@@ -157,6 +166,64 @@ end
 
 Base.:+(F::ZeroLocusBundle, G::ZeroLocusBundle) = direct_sum(F, G)
 
+# Lift the ambient presentation of `F` to one factor of `product_locus`.
+function _lift_bundle_to_product(
+  product_locus::ZeroLocus, F::ZeroLocusBundle, offset::Int
+)
+  product_ambient = ambient_variety(product_locus)
+  terms = Dict{Int,Vector{_AmbientBundle}}(
+    degree => _AmbientBundle[
+      _lift_bundle_to_product(product_ambient, summand, offset) for
+      summand in summands
+    ] for (degree, summands) in F.presentation.terms
+  )
+  ZeroLocusBundle(product_locus, _AmbientBundlePresentation(terms))
+end
+
+function _lift_external_factors(F::ZeroLocusBundle, G::ZeroLocusBundle)
+  product_locus = product(variety(F), variety(G))
+  right_offset = rank(dynkin_type(ambient_variety(F)))
+  (
+    _lift_bundle_to_product(product_locus, F, 0),
+    _lift_bundle_to_product(product_locus, G, right_offset),
+  )
+end
+
+"""
+    external_direct_sum(F::ZeroLocusBundle, G::ZeroLocusBundle) -> ZeroLocusBundle
+
+Return ``p_Z^*\\mathcal{F} \\oplus p_W^*\\mathcal{G}`` on
+``Z \\times W``. The two ambient presentations are lifted to the product
+ambient, then combined by [`direct_sum`](@ref).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(2), 1));
+
+julia> W = zero_locus(line_bundle(projective_space(2), 2));
+
+julia> F = external_direct_sum(line_bundle(Z, 1), line_bundle(W, 2));
+
+julia> rank(F)
+2
+
+julia> variety(F) == product(Z, W)
+true
+```
+"""
+function external_direct_sum(F::ZeroLocusBundle, G::ZeroLocusBundle)
+  lifted_F, lifted_G = _lift_external_factors(F, G)
+  direct_sum(lifted_F, lifted_G)
+end
+
+"""
+    tensor_product(F::ZeroLocusBundle, G::ZeroLocusBundle) -> ZeroLocusBundle
+
+Return the tensor product of two bundles on the same zero locus. The resulting
+ambient presentation is the total complex of the two input presentations.
+"""
 function tensor_product(F::ZeroLocusBundle, G::ZeroLocusBundle)
   _check_same_locus(F, G, "tensor_product")
   terms = Dict{Int,Vector{_AmbientBundle}}()
@@ -174,6 +241,39 @@ end
 
 Base.:*(F::ZeroLocusBundle, G::ZeroLocusBundle) = tensor_product(F, G)
 
+"""
+    external_tensor_product(F::ZeroLocusBundle, G::ZeroLocusBundle) -> ZeroLocusBundle
+
+Return the external tensor product
+``p_Z^*\\mathcal{F} \\otimes p_W^*\\mathcal{G}`` on ``Z \\times W``.
+The two ambient presentations are lifted to the product ambient, then
+[`tensor_product`](@ref) totalizes them.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(2), 1));
+
+julia> W = zero_locus(line_bundle(projective_space(2), 2));
+
+julia> L = external_tensor_product(line_bundle(Z, 1), line_bundle(W, 2));
+
+julia> L == line_bundle(product(Z, W), [1, 2])
+true
+```
+"""
+function external_tensor_product(F::ZeroLocusBundle, G::ZeroLocusBundle)
+  lifted_F, lifted_G = _lift_external_factors(F, G)
+  tensor_product(lifted_F, lifted_G)
+end
+
+"""
+    dual(F::ZeroLocusBundle) -> ZeroLocusBundle
+
+Return the dual bundle. Dualizing negates presentation degrees and dualizes
+each ambient summand.
+"""
 function dual(F::ZeroLocusBundle)
   terms = Dict{Int,Vector{_AmbientBundle}}(
     -degree => _AmbientBundle[dual(summand) for summand in summands] for
@@ -382,9 +482,11 @@ anticanonical_bundle(Z::ZeroLocus) = dual(canonical_bundle(Z))
 
 """
     twist(F::ZeroLocusBundle, i::Integer, k::Integer=1) -> ZeroLocusBundle
+    twist(F::ZeroLocusBundle, degrees::Vector{<:Integer}) -> ZeroLocusBundle
 
 Twist `F` by `O(k)` at the `i`-th marked node of its ambient partial flag
-variety, matching the ambient-bundle interface.
+variety, or by the line bundle with the given Picard degrees, matching the
+ambient-bundle interface.
 """
 function twist(F::ZeroLocusBundle, i::Integer, k::Integer=1)
   X = ambient_variety(F)

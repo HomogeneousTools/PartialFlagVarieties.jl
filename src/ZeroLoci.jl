@@ -136,29 +136,15 @@ function zero_locus(E::CompletelyReducibleBundle)
 end
 
 """
-    _product_zero_locus(Z1, Z2) -> ZeroLocus
-
-Construct the product of two zero loci by taking the product ambient and the
-direct sum of the defining bundles lifted from the two factors.
-"""
-function _product_zero_locus(Z1::ZeroLocus, Z2::ZeroLocus)
-  X1 = ambient_variety(Z1)
-  X2 = ambient_variety(Z2)
-  X = product(X1, X2)
-  E1 = _lift_bundle_to_product(X, defining_bundle(Z1), 0)
-  E2 = _lift_bundle_to_product(X, defining_bundle(Z2), rank(dynkin_type(X1)))
-  zero_locus(direct_sum(E1, E2))
-end
-
-"""
     product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...) -> ZeroLocus
 
 Construct the product of zero loci.
 
 If `Z_i ⊂ X_i` is cut out by a regular section of `E_i`, then the product is
 realized as the zero locus in `X_1 × X_2 × ...` of the direct sum of the
-lifted bundles pulled back from each factor. This is also available through the
-`*` operator.
+lifted bundles pulled back from each factor. The defining bundle is constructed
+with [`external_direct_sum`](@ref). This is also available through the `*`
+operator.
 
 # Examples
 ```jldoctest
@@ -172,9 +158,9 @@ julia> dimension(Z)
 ```
 """
 function product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...)
-  Z = _product_zero_locus(Z1, Z2)
+  Z = zero_locus(external_direct_sum(defining_bundle(Z1), defining_bundle(Z2)))
   for W in Zs
-    Z = _product_zero_locus(Z, W)
+    Z = zero_locus(external_direct_sum(defining_bundle(Z), defining_bundle(W)))
   end
   Z
 end
@@ -199,11 +185,12 @@ A factor is kept when it is positive-dimensional or a set of `m ≥ 2` points (t
 latter disconnects `Z` into `m` copies); a single reduced point is a Künneth
 identity and is dropped. `n_factors` counts the kept factors.
 
-`hodge_numbers`, `hochschild_cohomology` and cohomology of the tangent bundle recombine the
-factors by the Künneth formula, which determines diamonds/parallelograms the
-monolithic long-exact-sequence solver leaves symbolic. (The remaining
-invariants — `euler_characteristic`, `hilbert_polynomial`, the anticanonical
-degree — are already exact for a product via Koszul, so need no special path.)
+`hodge_numbers`, `hochschild_cohomology`, and cohomology of the tangent bundle
+recombine the factors by the Künneth formula, which determines
+diamonds/parallelograms the monolithic long-exact-sequence solver leaves
+symbolic. (The remaining invariants — `euler_characteristic`,
+`hilbert_polynomial`, the anticanonical degree — are already exact for a
+product via Koszul, so need no special path.)
 """
 function factors(Z::ZeroLocus)
   ambient_factors = _mdt_to_factors(marked_dynkin_type(Z.ambient))
@@ -242,7 +229,7 @@ function factors(Z::ZeroLocus)
   end
   # Keep positive-dimensional factors and multi-point (m ≥ 2) sets; drop single
   # reduced points, which are Künneth identities. `dimension >= 1` short-circuits,
-  # so χ(𝒪) is evaluated only on 0-dimensional parts, where it equals h⁰·⁰, the
+  # so χ(𝒪) is evaluated only on 0-dimensional parts, where it equals h⁰(𝒪), the
   # number of points (a cheap BWB alternating sum).
   filter(part -> dimension(part) >= 1 || euler_characteristic(part) >= 2, parts)
 end
@@ -543,18 +530,20 @@ function _restrict_to_zero_locus_les(
   koszul_cohos = _koszul_dimensions(Z, f_counts, wedge_counts)
 
   # Try numeric solve first
-  (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
-  if det_numeric
-    return AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
+  numeric_cohomology, numeric_determined = solve_koszul_filtration(koszul_cohos, d_Z)
+  if numeric_determined
+    return AffineExpr[AffineExpr(numeric_cohomology[k]) for k in 0:d_Z]
   end
 
   koszul_cohos_dual = nothing
   if is_calabi_yau(Z)
     # Serre duality fallback before the symbolic path (valid: ω_Z ≅ O_Z).
     koszul_cohos_dual = _koszul_dimensions(Z, _dual_counts(f_counts), wedge_counts)
-    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-    if det_dual
-      return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
+    dual_cohomology, dual_determined = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+    if dual_determined
+      return AffineExpr[
+        AffineExpr(dual_cohomology[d_Z - k]) for k in 0:d_Z
+      ]
     end
   end
 
@@ -652,8 +641,10 @@ function _restrict_to_zero_locus_les(
     koszul_cohos = [
       Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in koszul_entries
     ]
-    (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
-    determined && return AffineExpr[AffineExpr(H[k]) for k in 0:d_Z]
+    numeric_cohomology, numeric_determined = solve_koszul_filtration(koszul_cohos, d_Z)
+    numeric_determined && return AffineExpr[
+      AffineExpr(numeric_cohomology[k]) for k in 0:d_Z
+    ]
 
     # Serre duality fallback: sound when ω_Z ≅ O_Z, provided the spectral
     # sequences of the dual Koszul terms degenerate as well.
@@ -667,8 +658,10 @@ function _restrict_to_zero_locus_les(
         koszul_cohos_dual = [
           Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in dual_entries
         ]
-        (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-        det_dual && return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
+        dual_cohomology, dual_determined = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+        dual_determined && return AffineExpr[
+          AffineExpr(dual_cohomology[d_Z - k]) for k in 0:d_Z
+        ]
       end
     end
   end
