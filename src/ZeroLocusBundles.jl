@@ -635,16 +635,6 @@ function _cohomology_from_presentation(F::ZeroLocusBundle, var_counter::Ref{Int}
   (les_cokernel(image, kernel, var_counter; inequalities), inequalities)
 end
 
-"""Return whether `F` is represented by the tangent normal sequence."""
-function _is_tangent_bundle(F::ZeroLocusBundle)
-  terms = F.presentation.terms
-  length(terms) == 2 && haskey(terms, 0) && haskey(terms, 1) || return false
-  length(terms[0]) == 1 || return false
-  length(terms[1]) == 1 || return false
-  terms[0][1] == filtered_tangent_bundle(ambient_variety(F)) &&
-    terms[1][1] == defining_bundle(variety(F))
-end
-
 """
     cohomology(F::ZeroLocusBundle) -> Cohomology{AffineExpr}
 
@@ -658,7 +648,7 @@ is generally not invariant under the ambient group.
 function cohomology(F::ZeroLocusBundle)
   Z = variety(F)
   d = dimension(Z)
-  is_tangent = _is_tangent_bundle(F)
+  is_tangent = F == tangent_bundle(Z)
 
   if is_tangent && n_factors(Z) >= 2
     tangent_row = AffineExpr[hochschild_cohomology(Z)[1, q] for q in 0:d]
