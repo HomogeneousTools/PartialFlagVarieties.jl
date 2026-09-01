@@ -47,6 +47,9 @@ A completely reducible equivariant vector bundle on a partial flag variety.
 
 Stored as a list of irreducible Levi representations (with multiplicity
 encoded by repetition), together with the underlying [`PartialFlagVariety`](@ref).
+Equality compares the base variety and the multiset of irreducible summands,
+so the order of summands is ignored but multiplicities are retained.
+[`iszero`](@ref) holds exactly when that multiset is empty.
 
 # Fields
 - `variety::PartialFlagVariety`: the partial flag variety

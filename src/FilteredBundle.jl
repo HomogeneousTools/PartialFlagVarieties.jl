@@ -33,6 +33,12 @@ The filtration is encoded by the ordering: `graded_pieces(F)[1]` is the
 bottom piece (smallest filtration step), and `graded_pieces(F)[end]` is
 the top piece.
 
+Equality is structural: it compares the base variety and the ordered list of
+graded pieces. In particular, it does not identify different filtrations of
+isomorphic bundles. [`iszero`](@ref) instead tests whether every graded piece
+is zero; a filtered bundle with redundant zero layers can therefore satisfy
+`iszero(F)` without comparing equal to the empty filtered bundle.
+
 # Fields
 - `variety::PartialFlagVariety`: the partial flag variety
 - `pieces::Vector{CompletelyReducibleBundle}`: the associated graded pieces
@@ -126,7 +132,15 @@ function rank(F::FilteredBundle)
   sum(rank(p) for p in F.pieces; init=0)
 end
 
-"""Return whether every graded piece of `F` is zero."""
+"""
+    iszero(F::FilteredBundle) -> Bool
+
+Return whether every graded piece of `F` is zero.
+
+This forgets redundant zero filtration layers, whereas `==` compares the
+ordered graded pieces structurally. Thus `iszero(F)` need not imply that `F`
+equals the empty filtered bundle on the same variety.
+"""
 Base.iszero(F::FilteredBundle) = all(iszero, graded_pieces(F))
 
 # ═══════════════════════════════════════════════════════════════════════════════

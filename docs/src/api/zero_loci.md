@@ -20,6 +20,9 @@ Calabi–Yau / Fano classification.
 The constructor `zero_locus(E)` records the ambient variety and defining bundle,
 but it does not choose or store a section. It represents the formal geometry of
 a regular zero locus of `E`, assuming that a regular section exists.
+Accordingly, equality compares the ambient variety and defining bundle. It does
+not compare sections, test containment, or recognize abstractly isomorphic
+subvarieties.
 
 See the [mathematical background](../math.md#Koszul-resolution-and-zero-loci)
 for details on the Koszul resolution and the
@@ -144,6 +147,7 @@ symmetric_power(::PartialFlagVarieties.ZeroLocusBundle, ::Integer)
 det(::PartialFlagVarieties.ZeroLocusBundle)
 euler_characteristic(::PartialFlagVarieties.ZeroLocusBundle)
 cohomology(::PartialFlagVarieties.ZeroLocusBundle)
+Base.iszero(::PartialFlagVarieties.ZeroLocusBundle)
 ```
 
 ## Koszul complex

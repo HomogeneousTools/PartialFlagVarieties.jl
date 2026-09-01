@@ -1406,6 +1406,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     Fd = dual(F3)
     @test n_filtration_steps(Fd) == n_filtration_steps(F3)
     @test rank(Fd) == rank(F3)
+
+    empty_filtered = FilteredBundle(X, CompletelyReducibleBundle[])
+    redundant_zero_layer = FilteredBundle(X, [zero_bundle(X)])
+    @test iszero(empty_filtered)
+    @test iszero(redundant_zero_layer)
+    @test redundant_zero_layer != empty_filtered
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -2047,6 +2053,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test rank(O(Z, 1)) == 1
     @test iszero(zero_bundle(Z))
 
+    point = zero_locus(line_bundle(projective_space(1), 1))
+    tangent_point = tangent_bundle(point)
+    @test iszero(tangent_point)
+    @test tangent_point != zero_bundle(point)
+
     @test rank(direct_sum(TZ, L)) == rank(TZ) + 1
     @test rank(TZ + L) == rank(TZ) + 1
     @test rank(tensor_product(TZ, L)) == rank(TZ)
@@ -2203,6 +2214,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     elliptic = zero_locus(2 * line_bundle(projective_space(3), 2))
     symmetric_cotangent = symmetric_power(cotangent_bundle(elliptic), 2)
     H_symmetric_cotangent = cohomology(symmetric_cotangent)
+    @test tangent_bundle(elliptic) != structure_sheaf(elliptic)
     @test euler_characteristic(symmetric_cotangent) == 0
     @test H_symmetric_cotangent[0] == H_symmetric_cotangent[1]
   end

@@ -37,6 +37,9 @@ Assumes the section is regular, so ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathca
 The section itself is not stored: a `ZeroLocus` records only `X` and
 ``\\mathcal{E}``, and represents the corresponding formal regular zero locus.
 
+Equality therefore compares the ambient variety and defining bundle, not
+chosen sections or geometric isomorphism classes.
+
 # Examples
 ```jldoctest
 julia> using PartialFlagVarieties

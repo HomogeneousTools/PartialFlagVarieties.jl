@@ -33,6 +33,27 @@ ambient presentations as described under [Zero Loci](zero_loci.md).
     their multiplicities; expensive power calculations group equal summands
     internally before expanding them.
 
+## Equality and zero bundles
+
+Bundle equality is structural at the abstraction level being represented; it
+is not an isomorphism test.
+
+- `CompletelyReducibleBundle` compares the base and the multiset of irreducible
+  summands. Summand order is ignored, while multiplicities are retained.
+- [`FilteredBundle`](@ref) compares the base and the ordered graded pieces. It
+  does not try to identify different filtrations with isomorphic total bundles.
+- A bundle on a [`ZeroLocus`](@ref) compares the formal locus and all terms of
+  its ambient presentation. It does not simplify quasi-isomorphic
+  presentations.
+
+`iszero(F)` asks whether `F` represents a rank-zero bundle at the corresponding
+abstraction level. Consequently, `iszero(F)` can be `true` while
+`F != zero_bundle(variety(F))`: examples include a filtered bundle with a
+redundant zero layer and a nonempty exact ambient presentation of the zero
+bundle. Use `==` when presentation identity matters and `iszero` when an
+operation only needs semantic zeroness. `isequal` and `hash` follow the same
+structural equality as `==`.
+
 ## Types
 
 ```@docs

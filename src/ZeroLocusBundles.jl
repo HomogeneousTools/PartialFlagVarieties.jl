@@ -72,6 +72,13 @@ ambient presentation which is exact away from degree zero. The presentation
 maps are implicit: the package records the data needed for bundle operations,
 additive invariants, and symbolic long-exact-sequence calculations.
 
+Equality is structural: two `ZeroLocusBundle`s compare equal when they have the
+same formal zero locus and the same ambient presentation terms, including
+multiplicities. It does not try to prove that different presentations represent
+isomorphic bundles. In contrast, [`iszero`](@ref) tests the represented vector
+bundle through its rank, so a nonempty rank-zero presentation can be zero
+without comparing equal to [`zero_bundle`](@ref).
+
 Use [`restrict`](@ref) for restrictions of ambient bundles and constructors
 such as [`tangent_bundle`](@ref), [`cotangent_bundle`](@ref),
 [`normal_bundle`](@ref), and [`conormal_bundle`](@ref) for intrinsic bundles.
@@ -390,6 +397,16 @@ function Base.:*(n::Integer, F::ZeroLocusBundle)
 end
 
 Base.:*(F::ZeroLocusBundle, n::Integer) = n * F
+
+"""
+    iszero(F::ZeroLocusBundle) -> Bool
+
+Return whether `F` has rank zero and hence represents the zero vector bundle.
+
+This is a semantic test, whereas `==` compares ambient presentations. Thus a
+nonempty exact presentation of the zero bundle satisfies `iszero(F)` even
+though it need not compare equal to `zero_bundle(variety(F))`.
+"""
 Base.iszero(F::ZeroLocusBundle) = iszero(rank(F))
 
 """
