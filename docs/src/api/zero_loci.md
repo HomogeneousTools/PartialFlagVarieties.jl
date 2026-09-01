@@ -120,6 +120,22 @@ Exterior and symmetric powers use the derived graded-power formula, so they
 also work for arbitrary composite presentations rather than only for the
 tangent and cotangent sequences.
 
+Before invoking the generic long-exact-sequence solver, `cohomology` checks
+whether the formal locus splits and whether the current presentation is a
+direct sum of external tensor products. If so, and the factor cohomology is
+determined, it applies the Künneth formula. This is structural recognition:
+the optimization also applies when the locus and bundle merely have the
+factorable form, regardless of whether `product` or an `external_*` constructor
+created them. Ambiguous or nonfactorable presentations safely use the generic
+solver.
+
+Equality of zero-locus bundles is structural: it compares the formal locus and
+the multiset of ambient summands in every presentation degree. It does not try
+to prove that two presentations describe isomorphic bundles. `iszero(F)` is
+instead semantic at the vector-bundle level and tests the resulting rank.
+Thus a nonempty rank-zero presentation can satisfy `iszero(F)` without being
+equal to `zero_bundle(variety(F))`.
+
 !!! note "Generic bundle cohomology versus the Hodge engine"
     `cohomology(exterior_power(cotangent_bundle(Z), p))` evaluates that one
     bundle from its presentation. `hodge_numbers(Z)` uses the same conormal

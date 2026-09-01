@@ -189,7 +189,9 @@ latter disconnects `Z` into `m` copies); a single reduced point is a Künneth
 identity and is dropped. `n_factors` counts the kept factors.
 
 `hodge_numbers`, `hochschild_cohomology`, and cohomology of the tangent bundle
-recombine the factors by the Künneth formula, which determines
+recombine the factors by the Künneth formula. Cohomology of any bundle whose
+ambient presentation is structurally recognized as a direct sum of external
+tensor products does the same. This determines
 diamonds/parallelograms the monolithic long-exact-sequence solver leaves
 symbolic. (The remaining invariants — `euler_characteristic`,
 `hilbert_polynomial`, the anticanonical degree — are already exact for a

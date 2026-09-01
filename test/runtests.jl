@@ -2298,6 +2298,33 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test euler_characteristic(tangent_sum) ==
       euler_characteristic(TZ) * euler_characteristic(structure_sheaf(W)) +
           euler_characteristic(structure_sheaf(Z)) * euler_characteristic(TW)
+
+    quartic_ambient = projective_space(3)
+    quartic = zero_locus(line_bundle(quartic_ambient, 4))
+    tangent_quartic = tangent_bundle(quartic)
+    tangent_box_square = external_tensor_product(tangent_quartic, tangent_quartic)
+    tangent_box_sum = external_direct_sum(tangent_quartic, tangent_quartic)
+    @test cohomology(tangent_box_square).entries == AffineExpr.([0, 0, 400, 0, 0])
+    @test cohomology(tangent_box_sum).entries == AffineExpr.([0, 40, 0, 40, 0])
+
+    product_ambient = product(quartic_ambient, quartic_ambient)
+    manual_locus = zero_locus(
+      direct_sum(
+        line_bundle(product_ambient, [4, 0]),
+        line_bundle(product_ambient, [0, 4]),
+      ),
+    )
+    manual_ambient_bundle = direct_sum(
+      direct_sum(
+        structure_sheaf(product_ambient),
+        line_bundle(product_ambient, [1, 0]),
+      ),
+      line_bundle(product_ambient, [0, 1]),
+    )
+    manual_bundle = restrict(manual_locus, manual_ambient_bundle)
+    @test manual_locus == product(quartic, quartic)
+    @test length(PartialFlagVarieties._kunneth_decomposition(manual_bundle)) == 3
+    @test cohomology(manual_bundle).entries == AffineExpr.([9, 0, 10, 0, 1])
   end
 
   # The zero locus of a section of O(1) on the Cayley plane OP² = E6/P1

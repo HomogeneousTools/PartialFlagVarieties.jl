@@ -595,6 +595,375 @@ function _presentation_term_cohomology(
   )
 end
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  Structural Künneth recognition
+# ═══════════════════════════════════════════════════════════════════════════
+
+function _split_product_irrep(
+  representation::IrrepLevi,
+  left_ambient::PartialFlagVariety,
+  right_ambient::PartialFlagVariety,
+)
+  coefficients_product = collect(Int, coefficients(p_dominant_weight(representation)))
+  left_rank = rank(dynkin_type(left_ambient))
+  right_rank = rank(dynkin_type(right_ambient))
+  length(coefficients_product) == left_rank + right_rank || return nothing
+
+  left_weight = WeightLatticeElem(
+    dynkin_type(left_ambient), coefficients_product[1:left_rank]
+  )
+  right_weight = WeightLatticeElem(
+    dynkin_type(right_ambient), coefficients_product[(left_rank + 1):end]
+  )
+  (
+    IrrepLevi(marked_dynkin_type(left_ambient), left_weight),
+    IrrepLevi(marked_dynkin_type(right_ambient), right_weight),
+  )
+end
+
+function _add_bipartite_edge!(edges, left, right, degree::Int, multiplicity::Int=1)
+  degrees = get!(edges, (left, right), Dict{Int,Int}())
+  degrees[degree] = get(degrees, degree, 0) + multiplicity
+  edges
+end
+
+function _bipartite_components(edges)
+  remaining = Set(keys(edges))
+  components = Vector{typeof(edges)}()
+  while !isempty(remaining)
+    seed = first(remaining)
+    edge_type = keytype(edges)
+    left_vertices = Set{fieldtype(edge_type, 1)}([seed[1]])
+    right_vertices = Set{fieldtype(edge_type, 2)}([seed[2]])
+    component_keys = Set{edge_type}()
+
+    changed = true
+    while changed
+      changed = false
+      for edge in remaining
+        if edge[1] in left_vertices || edge[2] in right_vertices
+          push!(component_keys, edge)
+          push!(left_vertices, edge[1])
+          push!(right_vertices, edge[2])
+          changed = true
+        end
+      end
+      setdiff!(remaining, component_keys)
+    end
+
+    push!(components, typeof(edges)(edge => edges[edge] for edge in component_keys))
+  end
+  components
+end
+
+"""
+Factor one connected bipartite multiset whose edge labels are additive degrees.
+
+For an external tensor product, an edge `(left, right)` has degree
+`left_degree + right_degree` and multiplicity
+`left_multiplicity * right_multiplicity`. The complete bipartite and rank-one
+checks make this a recognition routine: failure returns `nothing` rather than
+guessing a decomposition.
+"""
+function _rank_one_bipartite_factor(edges)
+  isempty(edges) && return nothing
+  all(length(degrees) == 1 for degrees in values(edges)) || return nothing
+
+  left_vertices = unique(first(edge) for edge in keys(edges))
+  right_vertices = unique(last(edge) for edge in keys(edges))
+  length(edges) == length(left_vertices) * length(right_vertices) || return nothing
+
+  edge_degree(left, right) = only(keys(edges[(left, right)]))
+  edge_multiplicity(left, right) = only(values(edges[(left, right)]))
+
+  left_anchor = first(left_vertices)
+  right_anchor = first(right_vertices)
+  left_degrees = Dict(left_anchor => 0)
+  right_degrees = Dict(
+    right => edge_degree(left_anchor, right) for right in right_vertices
+  )
+  for left in left_vertices
+    left_degrees[left] =
+      edge_degree(left, right_anchor) - right_degrees[right_anchor]
+  end
+
+  left_anchor_multiplicity = gcd(
+    (edge_multiplicity(left_anchor, right) for right in right_vertices)...
+  )
+  right_multiplicities = Dict(
+    right => edge_multiplicity(left_anchor, right) ÷ left_anchor_multiplicity for
+    right in right_vertices
+  )
+  left_multiplicities = Dict{eltype(left_vertices),Int}()
+  for left in left_vertices
+    right_multiplicity = right_multiplicities[right_anchor]
+    edge_multiplicity(left, right_anchor) % right_multiplicity == 0 || return nothing
+    left_multiplicities[left] =
+      edge_multiplicity(left, right_anchor) ÷ right_multiplicity
+  end
+
+  for left in left_vertices, right in right_vertices
+    haskey(edges, (left, right)) || return nothing
+    edge_degree(left, right) == left_degrees[left] + right_degrees[right] ||
+      return nothing
+    expected_multiplicity = left_multiplicities[left] * right_multiplicities[right]
+    edge_multiplicity(left, right) == expected_multiplicity || return nothing
+  end
+
+  (
+    Dict(
+      left => (left_degrees[left], left_multiplicities[left]) for
+      left in left_vertices
+    ),
+    Dict(
+      right => (right_degrees[right], right_multiplicities[right]) for
+      right in right_vertices
+    ),
+  )
+end
+
+function _filtered_bundle_from_factor_data(ambient::PartialFlagVariety, data)
+  pieces = Dict{Int,Vector{IrrepLevi}}()
+  for (representation, (degree, multiplicity)) in data
+    append!(get!(pieces, degree, IrrepLevi[]), fill(representation, multiplicity))
+  end
+  ordered_pieces = CompletelyReducibleBundle[
+    CompletelyReducibleBundle(ambient, pieces[degree]) for
+    degree in sort!(collect(keys(pieces)))
+  ]
+  FilteredBundle(ambient, ordered_pieces)
+end
+
+function _factor_filtered_bundle_on_product(
+  bundle::FilteredBundle,
+  left_ambient::PartialFlagVariety,
+  right_ambient::PartialFlagVariety,
+)
+  edges = Dict{Tuple{IrrepLevi,IrrepLevi},Dict{Int,Int}}()
+  for (degree, piece) in enumerate(graded_pieces(bundle))
+    for representation in components(piece)
+      split = _split_product_irrep(representation, left_ambient, right_ambient)
+      split === nothing && return nothing
+      _add_bipartite_edge!(edges, split[1], split[2], degree)
+    end
+  end
+  factorization = _rank_one_bipartite_factor(edges)
+  factorization === nothing && return nothing
+  left_data, right_data = factorization
+
+  left_filtered = _filtered_bundle_from_factor_data(left_ambient, left_data)
+  right_filtered = _filtered_bundle_from_factor_data(right_ambient, right_data)
+  left_options = if n_filtration_steps(left_filtered) == 1
+    _AmbientBundle[total_bundle(left_filtered), left_filtered]
+  else
+    _AmbientBundle[left_filtered]
+  end
+  right_options = if n_filtration_steps(right_filtered) == 1
+    _AmbientBundle[total_bundle(right_filtered), right_filtered]
+  else
+    _AmbientBundle[right_filtered]
+  end
+
+  for left in left_options, right in right_options
+    external_tensor_product(left, right) == bundle && return (left, right)
+  end
+  nothing
+end
+
+function _factor_ambient_bundle_on_product(
+  bundle::CompletelyReducibleBundle,
+  left_ambient::PartialFlagVariety,
+  right_ambient::PartialFlagVariety,
+)
+  result = Tuple{_AmbientBundle,_AmbientBundle}[]
+  for representation in components(bundle)
+    split = _split_product_irrep(representation, left_ambient, right_ambient)
+    split === nothing && return nothing
+    push!(
+      result,
+      (
+        CompletelyReducibleBundle(left_ambient, IrrepLevi[split[1]]),
+        CompletelyReducibleBundle(right_ambient, IrrepLevi[split[2]]),
+      ),
+    )
+  end
+  result
+end
+
+function _factor_ambient_bundle_on_product(
+  bundle::FilteredBundle,
+  left_ambient::PartialFlagVariety,
+  right_ambient::PartialFlagVariety,
+)
+  n_filtration_steps(bundle) == 1 && return _factor_ambient_bundle_on_product(
+    total_bundle(bundle), left_ambient, right_ambient
+  )
+  factorization = _factor_filtered_bundle_on_product(bundle, left_ambient, right_ambient)
+  factorization === nothing ? nothing : [factorization]
+end
+
+function _product_of_zero_loci(product_factors)
+  length(product_factors) == 1 && return only(product_factors)
+  product(product_factors[1], product_factors[2], product_factors[3:end]...)
+end
+
+function _product_bipartitions(Z::ZeroLocus)
+  product_factors = factors(Z)
+  result = Tuple{ZeroLocus,ZeroLocus}[]
+  for split_index in 1:(length(product_factors) - 1)
+    left = _product_of_zero_loci(product_factors[1:split_index])
+    right = _product_of_zero_loci(product_factors[(split_index + 1):end])
+    product(left, right) == Z && push!(result, (left, right))
+  end
+  result
+end
+
+function _presentation_from_factor_data(
+  locus::ZeroLocus, data, degree_shift::Int
+)
+  terms = Dict{Int,Vector{_AmbientBundle}}()
+  for (bundle, (degree, multiplicity)) in data
+    append!(
+      get!(terms, degree + degree_shift, _AmbientBundle[]),
+      fill(bundle, multiplicity),
+    )
+  end
+  ZeroLocusBundle(locus, _AmbientBundlePresentation(terms))
+end
+
+function _factor_data_rank(data, degree_shift::Int)
+  sum(
+    (isodd(degree + degree_shift) ? -1 : 1) * multiplicity * rank(bundle) for
+    (bundle, (degree, multiplicity)) in data;
+    init=0,
+  )
+end
+
+function _factor_presentation_component(
+  edges, left_locus::ZeroLocus, right_locus::ZeroLocus
+)
+  factorization = _rank_one_bipartite_factor(edges)
+  factorization === nothing && return nothing
+  left_data, right_data = factorization
+
+  shifts = intersect(
+    Set(-degree for (_, (degree, _)) in left_data),
+    Set(degree for (_, (degree, _)) in right_data),
+  )
+  candidates = Tuple{ZeroLocusBundle,ZeroLocusBundle}[]
+  component_rank = sum(
+    (isodd(degree) ? -1 : 1) * multiplicity * rank(left) * rank(right) for
+    ((left, right), degrees) in edges for
+    (degree, multiplicity) in degrees;
+    init=0,
+  )
+
+  for shift in shifts
+    left_rank = _factor_data_rank(left_data, shift)
+    right_rank = _factor_data_rank(right_data, -shift)
+    left_rank > 0 && right_rank > 0 || continue
+    left_rank * right_rank == component_rank || continue
+
+    left = _presentation_from_factor_data(left_locus, left_data, shift)
+    right = _presentation_from_factor_data(right_locus, right_data, -shift)
+    push!(candidates, (left, right))
+  end
+  length(candidates) == 1 ? only(candidates) : nothing
+end
+
+function _degree_zero_kunneth_decomposition(
+  F::ZeroLocusBundle, left_locus::ZeroLocus, right_locus::ZeroLocus
+)
+  terms = F.presentation.terms
+  length(terms) == 1 && haskey(terms, 0) || return nothing
+
+  left_ambient = ambient_variety(left_locus)
+  right_ambient = ambient_variety(right_locus)
+  decomposition = Tuple{ZeroLocusBundle,ZeroLocusBundle}[]
+  for summand in terms[0]
+    factorizations = _factor_ambient_bundle_on_product(
+      summand, left_ambient, right_ambient
+    )
+    factorizations === nothing && return nothing
+    for (left, right) in factorizations
+      push!(decomposition, (restrict(left_locus, left), restrict(right_locus, right)))
+    end
+  end
+  decomposition
+end
+
+"""
+Recognize a presentation as a direct sum of external tensor products.
+
+The recognition depends only on the current locus and presentation. It first
+finds a product decomposition of the formal zero locus, then checks complete
+bipartite rank-one conditions on the ambient presentation. Ambiguous or
+nonfactorable presentations return `nothing` and use the generic LES backend.
+"""
+function _kunneth_decomposition(
+  F::ZeroLocusBundle, left_locus::ZeroLocus, right_locus::ZeroLocus
+)
+  degree_zero_decomposition = _degree_zero_kunneth_decomposition(F, left_locus, right_locus)
+  degree_zero_decomposition === nothing || return degree_zero_decomposition
+
+  left_ambient = ambient_variety(left_locus)
+  right_ambient = ambient_variety(right_locus)
+
+  edges = Dict{Tuple{_AmbientBundle,_AmbientBundle},Dict{Int,Int}}()
+  for (degree, summands) in F.presentation.terms
+    for summand in summands
+      factorizations = _factor_ambient_bundle_on_product(
+        summand, left_ambient, right_ambient
+      )
+      factorizations === nothing && return nothing
+      for (left, right) in factorizations
+        _add_bipartite_edge!(edges, left, right, degree)
+      end
+    end
+  end
+  isempty(edges) && return nothing
+
+  decomposition = Tuple{ZeroLocusBundle,ZeroLocusBundle}[]
+  for component in _bipartite_components(edges)
+    factorization = _factor_presentation_component(
+      component, left_locus, right_locus
+    )
+    factorization === nothing && return nothing
+    push!(decomposition, factorization)
+  end
+  sum(pair -> rank(pair[1]) * rank(pair[2]), decomposition; init=0) == rank(F) ||
+    return nothing
+  decomposition
+end
+
+function _kunneth_decomposition(F::ZeroLocusBundle)
+  for (left_locus, right_locus) in _product_bipartitions(variety(F))
+    decomposition = _kunneth_decomposition(F, left_locus, right_locus)
+    decomposition === nothing || return decomposition
+  end
+  nothing
+end
+
+function _kunneth_cohomology(F::ZeroLocusBundle)
+  decomposition = _kunneth_decomposition(F)
+  decomposition === nothing && return nothing
+
+  d = dimension(variety(F))
+  entries = zeros(BigInt, d + 1)
+  for (left, right) in decomposition
+    left_cohomology = cohomology(left)
+    right_cohomology = cohomology(right)
+    is_determined(left_cohomology) && is_determined(right_cohomology) || return nothing
+    for left_degree in 0:left_cohomology.max_degree
+      for right_degree in 0:right_cohomology.max_degree
+        entries[left_degree + right_degree + 1] +=
+          left_cohomology[left_degree].constant * right_cohomology[right_degree].constant
+      end
+    end
+  end
+  Cohomology{AffineExpr}(AffineExpr.(entries), d)
+end
+
 """
 Compute cohomology from a complex which is exact away from degree zero.
 
@@ -642,6 +1011,13 @@ Compute dimension-valued sheaf cohomology from the ambient presentation.
 Entries are exact integers where exactness and the available geometric
 constraints determine them, and symbolic affine expressions otherwise.
 
+When the formal zero locus splits as a product and the presentation is
+structurally a direct sum of external tensor products, this method first tries
+the Künneth formula. Recognition uses the current locus and presentation, not
+the constructors that produced them. If no unambiguous factorization is found,
+or factor cohomology remains symbolic, computation falls back to the generic
+long-exact-sequence backend.
+
 Character-valued cohomology is not defined: a section cutting out a zero locus
 is generally not invariant under the ambient group.
 """
@@ -649,6 +1025,9 @@ function cohomology(F::ZeroLocusBundle)
   Z = variety(F)
   d = dimension(Z)
   is_tangent = F == tangent_bundle(Z)
+
+  kunneth_cohomology = _kunneth_cohomology(F)
+  kunneth_cohomology === nothing || return kunneth_cohomology
 
   if is_tangent && n_factors(Z) >= 2
     tangent_row = AffineExpr[hochschild_cohomology(Z)[1, q] for q in 0:d]
