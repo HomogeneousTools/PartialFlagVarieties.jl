@@ -657,6 +657,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test total_bundle(mixed_right) == external_tensor_product(L, total_bundle(G))
     @test iszero(external_tensor_product(F, zero_bundle(Y)))
 
+    mixed_factors = only(
+      PartialFlagVarieties._factor_ambient_bundle_on_product(
+        mixed_left, variety(F), variety(M)
+      ),
+    )
+    @test external_tensor_product(mixed_factors...) == mixed_left
+
     H = filtered_tangent_bundle(full_flag_variety(TypeB{2}))
     FH = external_tensor_product(F, H)
     filtered_factors = only(
@@ -2368,6 +2375,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
         line_bundle(product_ambient, [0, 4]),
       ),
     )
+    nonfactorable_filtration = FilteredBundle(
+      product_ambient,
+      CompletelyReducibleBundle[
+        line_bundle(product_ambient, [1, 0]),
+        line_bundle(product_ambient, [0, 1]),
+      ],
+    )
+    @test isnothing(
+      PartialFlagVarieties._kunneth_decomposition(
+        restrict(manual_locus, nonfactorable_filtration)
+      ),
+    )
+
     manual_ambient_bundle = direct_sum(
       direct_sum(
         structure_sheaf(product_ambient),
