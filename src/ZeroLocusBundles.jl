@@ -15,7 +15,9 @@ export ZeroLocusBundle, restrict
 struct _AmbientBundlePresentation
   terms::Dict{Int,Vector{_AmbientBundle}}
 
-  function _AmbientBundlePresentation(terms::Dict{Int,Vector{_AmbientBundle}})
+  function _AmbientBundlePresentation(
+    terms::AbstractDict{Int,<:AbstractVector{<:_AmbientBundle}}
+  )
     cleaned = Dict{Int,Vector{_AmbientBundle}}()
     for (degree, summands) in terms
       kept = _AmbientBundle[summand for summand in summands if rank(summand) != 0]

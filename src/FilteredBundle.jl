@@ -143,6 +143,20 @@ equals the empty filtered bundle on the same variety.
 """
 Base.iszero(F::FilteredBundle) = all(iszero, graded_pieces(F))
 
+# Assemble a filtered bundle from irreducible components indexed by filtration
+# degree, omitting absent degrees while preserving their order.
+function _filtered_bundle_from_graded_components(
+  X::PartialFlagVariety, terms::AbstractDict{Int,<:AbstractVector{IrrepLevi}}
+)
+  FilteredBundle(
+    X,
+    [
+      CompletelyReducibleBundle(X, terms[degree]) for
+      degree in sort!(collect(keys(terms)))
+    ],
+  )
+end
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Tensor products involving FilteredBundle
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -183,13 +197,7 @@ function tensor_product(F::FilteredBundle, G::FilteredBundle)
     end
   end
 
-  FilteredBundle(
-    variety(F),
-    CompletelyReducibleBundle[
-      CompletelyReducibleBundle(variety(F), terms[degree]) for
-      degree in sort!(collect(keys(terms)))
-    ],
-  )
+  _filtered_bundle_from_graded_components(variety(F), terms)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -365,13 +373,7 @@ function _graded_power(power, F::FilteredBundle, k::Integer)
     append!(get!(weight_terms, filtration_degree, IrrepLevi[]), components(term))
   end
 
-  FilteredBundle(
-    F.variety,
-    CompletelyReducibleBundle[
-      CompletelyReducibleBundle(F.variety, weight_terms[filtration_degree]) for
-      filtration_degree in sort!(collect(keys(weight_terms)))
-    ],
-  )
+  _filtered_bundle_from_graded_components(F.variety, weight_terms)
 end
 
 """

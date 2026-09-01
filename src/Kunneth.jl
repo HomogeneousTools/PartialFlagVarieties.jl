@@ -6,72 +6,51 @@
 #  unambiguous external tensor-product decompositions.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Partition `1:n_vertices` into connected components, joining all vertices in
-# one support. Unused vertices remain singleton components.
-function _connected_support_components(supports, n_vertices)
-  parent = collect(1:n_vertices)
-  root(i) = parent[i] == i ? i : (parent[i] = root(parent[i]))
-  for support in supports, vertex in support
-    parent[root(vertex)] = root(first(support))
-  end
-  components = [Int[] for _ in 1:n_vertices]
-  for vertex in 1:n_vertices
-    push!(components[root(vertex)], vertex)
-  end
-  filter(!isempty, components)
-end
-
 # Split a product-group highest weight at the boundary between the two ambient
-# Dynkin types.
+# Dynkin types. Callers have already validated the product ambient.
 function _split_product_irrep(
   irrep::IrrepLevi,
   left_ambient::PartialFlagVariety,
   right_ambient::PartialFlagVariety,
 )
   coefficients = collect(Int, Semisimple.coefficients(p_dominant_weight(irrep)))
-  left_type = dynkin_type(left_ambient)
-  right_type = dynkin_type(right_ambient)
-  left_rank = rank(left_type)
-  length(coefficients) == left_rank + rank(right_type) || return nothing
-
-  left_weight = WeightLatticeElem(left_type, coefficients[1:left_rank])
-  right_weight = WeightLatticeElem(right_type, coefficients[(left_rank + 1):end])
+  left_rank = rank(dynkin_type(left_ambient))
   (
-    IrrepLevi(marked_dynkin_type(left_ambient), left_weight),
-    IrrepLevi(marked_dynkin_type(right_ambient), right_weight),
+    IrrepLevi(marked_dynkin_type(left_ambient), coefficients[1:left_rank]),
+    IrrepLevi(marked_dynkin_type(right_ambient), coefficients[(left_rank + 1):end]),
   )
 end
 
 # Add `(left, right) => (degree, multiplicity)` to a product grid. Repeated
 # factor pairs must have the same degree.
 function _add_product_term!(terms, pair, degree::Int, multiplicity::Int=1)
-  if haskey(terms, pair)
-    old_degree, old_multiplicity = terms[pair]
-    old_degree == degree || return false
-    terms[pair] = (degree, old_multiplicity + multiplicity)
-  else
-    terms[pair] = (degree, multiplicity)
-  end
+  old_degree, old_multiplicity = get(terms, pair, (degree, 0))
+  old_degree == degree || return false
+  terms[pair] = (degree, old_multiplicity + multiplicity)
   true
 end
 
-# Group product-grid keys by shared left or right factor. Returning keys instead
-# of sub-dictionaries avoids copying all term values.
+# Group product-grid keys by shared left or right factor. Presentations are
+# small, so a direct component walk is clearer than a separate graph structure.
 function _product_term_components(terms)
-  pairs = collect(keys(terms))
-  lefts = unique(first(pair) for pair in pairs)
-  rights = unique(last(pair) for pair in pairs)
-  left_index = Dict(left => index for (index, left) in enumerate(lefts))
-  right_index = Dict(right => index for (index, right) in enumerate(rights))
-  supports = [
-    (left_index[left], length(lefts) + right_index[right]) for
-    (left, right) in pairs
-  ]
-  blocks = _connected_support_components(supports, length(lefts) + length(rights))
-  [
-    [pair for (pair, support) in zip(pairs, supports) if first(support) in block]
-    for block in blocks
-  ]
+  remaining = Set(keys(terms))
+  components = Vector{Vector{keytype(terms)}}()
+  while !isempty(remaining)
+    component = keytype(terms)[pop!(remaining)]
+    cursor = 1
+    while cursor <= length(component)
+      pair = component[cursor]
+      neighbors = [
+        candidate for candidate in remaining if
+        first(candidate) == first(pair) || last(candidate) == last(pair)
+      ]
+      append!(component, neighbors)
+      setdiff!(remaining, neighbors)
+      cursor += 1
+    end
+    push!(components, component)
+  end
+  components
 end
 
 # Recover factors of one product grid. External products have rectangular
@@ -82,60 +61,33 @@ function _factor_product_terms(terms, component=keys(terms))
   rights = unique(last(pair) for pair in component)
   length(component) == length(lefts) * length(rights) || return nothing
 
-  term_degree(left, right) = first(terms[(left, right)])
-  term_multiplicity(left, right) = last(terms[(left, right)])
+  degrees = [first(terms[(left, right)]) for left in lefts, right in rights]
+  multiplicities = [last(terms[(left, right)]) for left in lefts, right in rights]
+  degrees == degrees[:, 1] .+ degrees[1, :]' .- degrees[1, 1] || return nothing
+  multiplicities .* multiplicities[1, 1] ==
+  multiplicities[:, 1] * multiplicities[1, :]' || return nothing
 
   # Normalize the opposite degree shift at the first left factor and the common
-  # multiplicity scale by the gcd of its row.
-  left_anchor, right_anchor = first(lefts), first(rights)
-  left_scale = gcd((term_multiplicity(left_anchor, right) for right in rights)...)
-  right_data = Dict(
-    right => (
-      term_degree(left_anchor, right),
-      term_multiplicity(left_anchor, right) ÷ left_scale,
-    ) for right in rights
-  )
-  right_scale = last(right_data[right_anchor])
-  all(term_multiplicity(left, right_anchor) % right_scale == 0 for left in lefts) ||
-    return nothing
+  # multiplicity scale by the gcd of its row. The rank-one identity makes the
+  # division of the first column below exact.
+  row_gcd = reduce(gcd, @view multiplicities[1, :])
+  right_multiplicities = multiplicities[1, :] .÷ row_gcd
+  left_multiplicities = multiplicities[:, 1] .÷ first(right_multiplicities)
   left_data = Dict(
-    left => (
-      term_degree(left, right_anchor) - term_degree(left_anchor, right_anchor),
-      term_multiplicity(left, right_anchor) ÷ right_scale,
-    ) for left in lefts
+    zip(lefts, zip(degrees[:, 1] .- degrees[1, 1], left_multiplicities))
   )
-
-  for left in lefts, right in rights
-    left_degree, left_multiplicity = left_data[left]
-    right_degree, right_multiplicity = right_data[right]
-    terms[(left, right)] == (
-      left_degree + right_degree,
-      left_multiplicity * right_multiplicity,
-    ) || return nothing
-  end
+  right_data = Dict(zip(rights, zip(degrees[1, :], right_multiplicities)))
   left_data, right_data
 end
 
 # Expand factor data into terms grouped by degree. This is shared by filtered
 # bundles and zero-locus-bundle presentations.
-function _graded_factor_terms(data, ::Type{T}, shift::Int=0) where {T}
+function _graded_factor_terms(data::AbstractDict{T}, shift::Int=0) where {T}
   terms = Dict{Int,Vector{T}}()
   for (term, (degree, multiplicity)) in data
     append!(get!(terms, degree + shift, T[]), fill(term, multiplicity))
   end
   terms
-end
-
-# Rebuild a filtered factor from its irreducible factor data.
-function _filtered_bundle_from_factor_data(ambient::PartialFlagVariety, data)
-  terms = _graded_factor_terms(data, IrrepLevi)
-  FilteredBundle(
-    ambient,
-    CompletelyReducibleBundle[
-      CompletelyReducibleBundle(ambient, terms[degree]) for
-      degree in sort!(collect(keys(terms)))
-    ],
-  )
 end
 
 # Split every irreducible summand of a completely reducible ambient bundle.
@@ -144,17 +96,13 @@ function _factor_ambient_bundle_on_product(
   left_ambient::PartialFlagVariety,
   right_ambient::PartialFlagVariety,
 )
-  splits = [
-    _split_product_irrep(irrep, left_ambient, right_ambient) for
-    irrep in components(bundle)
-  ]
-  any(isnothing, splits) && return nothing
-  [
+  map(components(bundle)) do irrep
+    left, right = _split_product_irrep(irrep, left_ambient, right_ambient)
     (
-      CompletelyReducibleBundle(left_ambient, IrrepLevi[split[1]]),
-      CompletelyReducibleBundle(right_ambient, IrrepLevi[split[2]]),
-    ) for split in splits
-  ]
+      CompletelyReducibleBundle(left_ambient, [left]),
+      CompletelyReducibleBundle(right_ambient, [right]),
+    )
+  end
 end
 
 # Normalize a one-step filtration to its total bundle. For a genuine filtration,
@@ -171,26 +119,18 @@ function _factor_ambient_bundle_on_product(
   terms = Dict{Tuple{IrrepLevi,IrrepLevi},Tuple{Int,Int}}()
   for (degree, piece) in enumerate(graded_pieces(bundle)), irrep in components(piece)
     split = _split_product_irrep(irrep, left_ambient, right_ambient)
-    split === nothing && return nothing
     _add_product_term!(terms, split, degree) || return nothing
   end
   factor_data = _factor_product_terms(terms)
   factor_data === nothing && return nothing
 
-  left_data, right_data = factor_data
-  left = _filtered_bundle_from_factor_data(left_ambient, left_data)
-  right = _filtered_bundle_from_factor_data(right_ambient, right_data)
-  normalize_factor(F) = n_filtration_steps(F) == 1 ? total_bundle(F) : F
-  factor_pair = normalize_factor(left), normalize_factor(right)
+  factor_pair = map((left_ambient, right_ambient), factor_data) do ambient, data
+    factor = _filtered_bundle_from_graded_components(
+      ambient, _graded_factor_terms(data)
+    )
+    n_filtration_steps(factor) == 1 ? total_bundle(factor) : factor
+  end
   external_tensor_product(factor_pair...) == bundle ? [factor_pair] : nothing
-end
-
-# Rebuild a zero-locus-bundle factor with the chosen cohomological shift.
-function _presentation_from_factor_data(
-  locus::ZeroLocus, data, degree_shift::Int
-)
-  terms = _graded_factor_terms(data, _AmbientBundle, degree_shift)
-  ZeroLocusBundle(locus, _AmbientBundlePresentation(terms))
 end
 
 # Factor one connected presentation component and choose the unique shift for
@@ -218,10 +158,11 @@ function _factor_presentation_component(
   length(shifts) == 1 || return nothing
 
   shift = only(shifts)
-  (
-    _presentation_from_factor_data(left_locus, left_data, shift),
-    _presentation_from_factor_data(right_locus, right_data, -shift),
-  )
+  map((left_locus, right_locus), factor_data, (shift, -shift)) do locus, data, offset
+    ZeroLocusBundle(
+      locus, _AmbientBundlePresentation(_graded_factor_terms(data, offset))
+    )
+  end
 end
 
 # Recognize a presentation as a direct sum of external products for one fixed
