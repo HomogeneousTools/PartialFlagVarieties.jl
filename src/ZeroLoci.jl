@@ -210,7 +210,7 @@ function factors(Z::ZeroLocus)
   ]
   supports = [findall(block -> any(!iszero, block), row) for row in summand_rows]
 
-  blocks = _connected_ambient_factors(supports, length(ambient_factors))
+  blocks = _connected_support_components(supports, length(ambient_factors))
   length(blocks) == 1 && return [Z]
 
   parts = ZeroLocus[]
@@ -237,22 +237,6 @@ function factors(Z::ZeroLocus)
   # so χ(𝒪) is evaluated only on 0-dimensional parts, where it equals h⁰(𝒪), the
   # number of points (a cheap BWB alternating sum).
   filter(part -> dimension(part) >= 1 || euler_characteristic(part) >= 2, parts)
-end
-
-# Partition the ambient factors `1:n` into connected blocks, joining two factors
-# whenever some bundle summand is supported on both (union–find with path
-# compression). Untouched factors form singleton blocks.
-function _connected_ambient_factors(supports, n)
-  parent = collect(1:n)
-  root(i) = parent[i] == i ? i : (parent[i] = root(parent[i]))
-  for support in supports, factor in support
-    parent[root(factor)] = root(first(support))
-  end
-  blocks = [Int[] for _ in 1:n]
-  for factor in 1:n
-    push!(blocks[root(factor)], factor)
-  end
-  return filter(!isempty, blocks)
 end
 
 """

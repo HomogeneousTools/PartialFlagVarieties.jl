@@ -25,11 +25,14 @@ struct _AmbientBundlePresentation
   end
 end
 
+# Wrap one ambient bundle as a one-term presentation in the requested degree.
 _AmbientBundlePresentation(degree::Int, bundle::_AmbientBundle) =
   _AmbientBundlePresentation(
     Dict{Int,Vector{_AmbientBundle}}(degree => _AmbientBundle[bundle])
   )
 
+# Compare summand multisets; their order within one presentation degree carries
+# no mathematical information.
 function _same_summands(left::Vector{_AmbientBundle}, right::Vector{_AmbientBundle})
   length(left) == length(right) || return false
   unmatched = trues(length(right))
@@ -99,6 +102,7 @@ variety(F::ZeroLocusBundle) = F.locus
 """Return the ambient partial flag variety of the base of `F`."""
 ambient_variety(F::ZeroLocusBundle) = ambient_variety(variety(F))
 
+# Guard binary bundle operations against mixing different zero loci.
 function _check_same_locus(F::ZeroLocusBundle, G::ZeroLocusBundle, operation::String)
   variety(F) == variety(G) || throw(
     ArgumentError("$operation requires bundles on the same zero locus.")
@@ -187,6 +191,8 @@ function _lift_bundle_to_product(
   ZeroLocusBundle(product_locus, _AmbientBundlePresentation(terms))
 end
 
+# Lift two presentations to their common product zero locus, placing the right
+# presentation after the left ambient Dynkin block.
 function _lift_external_factors(F::ZeroLocusBundle, G::ZeroLocusBundle)
   product_locus = product(variety(F), variety(G))
   right_offset = rank(dynkin_type(ambient_variety(F)))
@@ -535,6 +541,8 @@ end
 #  Additive invariants and cohomology
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Evaluate the Euler characteristic of an ambient bundle after restriction;
+# a filtration contributes the sum of its graded pieces.
 _euler_characteristic_on_restriction(Z::ZeroLocus, F::CompletelyReducibleBundle) =
   _euler_characteristic_from_counts(Z, _to_counts(F))
 
@@ -563,6 +571,7 @@ end
 
 chi(F::ZeroLocusBundle) = euler_characteristic(F)
 
+# Dispatch an ambient summand to the appropriate restriction LES backend.
 function _restriction_cohomology(
   Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int}
 )
@@ -575,6 +584,8 @@ function _restriction_cohomology(
   _restrict_to_zero_locus_les(Z, F, var_counter)
 end
 
+# Add the restriction cohomologies of all ambient summands in one presentation
+# degree; the presentation overload supplies an empty degree when necessary.
 function _presentation_term_cohomology(
   Z::ZeroLocus, summands::Vector{_AmbientBundle}, var_counter::Ref{Int}
 )
@@ -602,192 +613,8 @@ end
 #  Structural Künneth recognition
 # ═══════════════════════════════════════════════════════════════════════════
 
-function _split_product_irrep(
-  irrep::IrrepLevi,
-  left_ambient::PartialFlagVariety,
-  right_ambient::PartialFlagVariety,
-)
-  coefficients = collect(Int, Semisimple.coefficients(p_dominant_weight(irrep)))
-  left_type = dynkin_type(left_ambient)
-  right_type = dynkin_type(right_ambient)
-  left_rank = rank(left_type)
-  right_rank = rank(right_type)
-  length(coefficients) == left_rank + right_rank || return nothing
-
-  left_weight = WeightLatticeElem(left_type, coefficients[1:left_rank])
-  right_weight = WeightLatticeElem(right_type, coefficients[(left_rank + 1):end])
-  (
-    IrrepLevi(marked_dynkin_type(left_ambient), left_weight),
-    IrrepLevi(marked_dynkin_type(right_ambient), right_weight),
-  )
-end
-
-# Product terms are stored as `(left, right) => (degree, multiplicity)`.
-function _add_product_term!(terms, left, right, degree::Int, multiplicity::Int=1)
-  key = (left, right)
-  if haskey(terms, key)
-    old_degree, old_multiplicity = terms[key]
-    old_degree == degree || return false
-    terms[key] = (degree, old_multiplicity + multiplicity)
-  else
-    terms[key] = (degree, multiplicity)
-  end
-  true
-end
-
-# Partition pairs into candidate summands. Pairs are linked when they share a
-# left or right factor; the transitive closure gives the maximal groups.
-function _product_term_components(terms)
-  pending = Set(keys(terms))
-  components = Vector{typeof(terms)}()
-
-  while !isempty(pending)
-    seed = pop!(pending)
-    component = typeof(terms)(seed => terms[seed])
-    frontier = [seed]
-
-    while !isempty(frontier)
-      pair = pop!(frontier)
-      for candidate in collect(pending)
-        if first(candidate) == first(pair) || last(candidate) == last(pair)
-          delete!(pending, candidate)
-          component[candidate] = terms[candidate]
-          push!(frontier, candidate)
-        end
-      end
-    end
-    push!(components, component)
-  end
-  components
-end
-
-"""
-Recover two factors from a connected group of terms `(left, right) => (degree,
-multiplicity)`. An external tensor product has rectangular support, additive
-degrees, and multiplicative multiplicities. Degrees are normalized by setting
-the first left degree to zero; multiplicities by the gcd of the first row.
-"""
-function _factor_product_terms(terms)
-  isempty(terms) && return nothing
-  lefts = unique(first(pair) for pair in keys(terms))
-  rights = unique(last(pair) for pair in keys(terms))
-  length(terms) == length(lefts) * length(rights) || return nothing
-
-  degree(left, right) = first(terms[(left, right)])
-  multiplicity(left, right) = last(terms[(left, right)])
-
-  left0, right0 = first(lefts), first(rights)
-  left0_multiplicity = gcd((multiplicity(left0, right) for right in rights)...)
-  right_data = Dict(
-    right => (
-      degree(left0, right),
-      multiplicity(left0, right) ÷ left0_multiplicity,
-    ) for right in rights
-  )
-  right0_multiplicity = last(right_data[right0])
-  all(multiplicity(left, right0) % right0_multiplicity == 0 for left in lefts) ||
-    return nothing
-  left_data = Dict(
-    left => (
-      degree(left, right0) - degree(left0, right0),
-      multiplicity(left, right0) ÷ right0_multiplicity,
-    ) for left in lefts
-  )
-
-  for left in lefts, right in rights
-    left_degree, left_multiplicity = left_data[left]
-    right_degree, right_multiplicity = right_data[right]
-    terms[(left, right)] == (
-      left_degree + right_degree,
-      left_multiplicity * right_multiplicity,
-    ) || return nothing
-  end
-  left_data, right_data
-end
-
-function _filtered_bundle_from_factor_data(ambient::PartialFlagVariety, data)
-  pieces = Dict{Int,Vector{IrrepLevi}}()
-  for (irrep, (degree, multiplicity)) in data
-    append!(get!(pieces, degree, IrrepLevi[]), fill(irrep, multiplicity))
-  end
-  ordered_pieces = CompletelyReducibleBundle[
-    CompletelyReducibleBundle(ambient, pieces[degree]) for
-    degree in sort!(collect(keys(pieces)))
-  ]
-  FilteredBundle(ambient, ordered_pieces)
-end
-
-function _factor_filtered_bundle_on_product(
-  bundle::FilteredBundle,
-  left_ambient::PartialFlagVariety,
-  right_ambient::PartialFlagVariety,
-)
-  terms = Dict{Tuple{IrrepLevi,IrrepLevi},Tuple{Int,Int}}()
-  for (degree, piece) in enumerate(graded_pieces(bundle))
-    for irrep in components(piece)
-      split = _split_product_irrep(irrep, left_ambient, right_ambient)
-      split === nothing && return nothing
-      _add_product_term!(terms, split[1], split[2], degree) || return nothing
-    end
-  end
-  factor_data = _factor_product_terms(terms)
-  factor_data === nothing && return nothing
-  left_data, right_data = factor_data
-
-  left = _filtered_bundle_from_factor_data(left_ambient, left_data)
-  right = _filtered_bundle_from_factor_data(right_ambient, right_data)
-  options(F) = n_filtration_steps(F) == 1 ? (total_bundle(F), F) : (F,)
-  matches = [
-    pair for pair in Iterators.product(options(left), options(right)) if
-    external_tensor_product(pair...) == bundle
-  ]
-  length(matches) == 1 ? only(matches) : nothing
-end
-
-function _factor_ambient_bundle_on_product(
-  bundle::CompletelyReducibleBundle,
-  left_ambient::PartialFlagVariety,
-  right_ambient::PartialFlagVariety,
-)
-  result = Tuple{_AmbientBundle,_AmbientBundle}[]
-  for irrep in components(bundle)
-    split = _split_product_irrep(irrep, left_ambient, right_ambient)
-    split === nothing && return nothing
-    left, right = split
-    push!(
-      result,
-      (
-        CompletelyReducibleBundle(left_ambient, IrrepLevi[left]),
-        CompletelyReducibleBundle(right_ambient, IrrepLevi[right]),
-      ),
-    )
-  end
-  result
-end
-
-function _factor_ambient_bundle_on_product(
-  bundle::FilteredBundle,
-  left_ambient::PartialFlagVariety,
-  right_ambient::PartialFlagVariety,
-)
-  n_filtration_steps(bundle) == 1 && return _factor_ambient_bundle_on_product(
-    total_bundle(bundle), left_ambient, right_ambient
-  )
-  factorization = _factor_filtered_bundle_on_product(bundle, left_ambient, right_ambient)
-  factorization === nothing ? nothing : [factorization]
-end
-
-function _product_bipartitions(Z::ZeroLocus)
-  parts = factors(Z)
-  partitions = [
-    (
-      reduce(product, parts[1:split]),
-      reduce(product, parts[(split + 1):end]),
-    ) for split in 1:(length(parts) - 1)
-  ]
-  filter(pair -> product(pair...) == Z, partitions)
-end
-
+# Turn factor data back into a zero-locus-bundle presentation, applying the
+# chosen opposite cohomological shift.
 function _presentation_from_factor_data(
   locus::ZeroLocus, data, degree_shift::Int
 )
@@ -801,6 +628,8 @@ function _presentation_from_factor_data(
   ZeroLocusBundle(locus, _AmbientBundlePresentation(terms))
 end
 
+# Factor one connected presentation component and choose the unique shift for
+# which both factor presentations have positive rank in degree zero.
 function _factor_presentation_component(
   terms, left_locus::ZeroLocus, right_locus::ZeroLocus
 )
@@ -830,16 +659,8 @@ function _factor_presentation_component(
   )
 end
 
-"""
-Recognize a presentation as a direct sum of external tensor products.
-
-The recognition depends only on the current locus and presentation. It first
-finds a product decomposition of the zero locus. It then groups presentation
-terms that share a left or right factor and checks that every group is the
-rectangular grid produced by one external tensor product. Presentation degrees
-must split as sums and multiplicities as products. Ambiguous or nonfactorable
-presentations return `nothing` and use the generic LES backend.
-"""
+# Recognize the presentation as a direct sum of external tensor products for
+# one fixed bipartition of its zero locus. Failure is deliberately conservative.
 function _kunneth_decomposition(
   F::ZeroLocusBundle, left_locus::ZeroLocus, right_locus::ZeroLocus
 )
@@ -869,14 +690,23 @@ function _kunneth_decomposition(
   decomposition
 end
 
+# Try every contiguous bipartition of the recognized zero-locus factors and
+# return the first valid presentation decomposition.
 function _kunneth_decomposition(F::ZeroLocusBundle)
-  for loci in _product_bipartitions(variety(F))
-    decomposition = _kunneth_decomposition(F, loci...)
+  Z = variety(F)
+  parts = factors(Z)
+  for split in 1:(length(parts) - 1)
+    left = reduce(product, parts[1:split])
+    right = reduce(product, parts[(split + 1):end])
+    product(left, right) == Z || continue
+    decomposition = _kunneth_decomposition(F, left, right)
     decomposition === nothing || return decomposition
   end
   nothing
 end
 
+# Convolve determined factor cohomologies. Symbolic factor cohomology rejects
+# the shortcut so the caller can fall back to the generic presentation solver.
 function _kunneth_cohomology(F::ZeroLocusBundle)
   decomposition = _kunneth_decomposition(F)
   decomposition === nothing && return nothing
