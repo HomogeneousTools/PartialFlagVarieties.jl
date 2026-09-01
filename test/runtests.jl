@@ -2186,6 +2186,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test PartialFlagVarieties._alternating_sum(H_OmegaZ.entries) ==
       AffineExpr(euler_characteristic(cotangent_bundle(Z)))
 
+    projective_plane = zero_locus(line_bundle(projective_space(3), 1))
+    @test cohomology(cotangent_bundle(projective_plane)).entries ==
+      AffineExpr.([0, 1, 0])
+
     H_wedge2 = cohomology(exterior_power(cotangent_bundle(Z), 2))
     @test exterior_power(cotangent_bundle(Z), 2) == TZ
     @test H_wedge2.entries == H_TZ.entries

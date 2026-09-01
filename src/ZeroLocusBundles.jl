@@ -278,8 +278,15 @@ end
 """
     dual(F::ZeroLocusBundle) -> ZeroLocusBundle
 
-Return the dual bundle. Dualizing negates presentation degrees and dualizes
-each ambient summand.
+Return the dual bundle. Dualizing reverses the bounded ambient complex, so it
+negates presentation degrees and dualizes each ambient summand. For example,
+a kernel presentation in degrees `0, 1` becomes a cokernel presentation in
+degrees `-1, 0`.
+
+The presentation is required to be exact away from degree zero, but it need
+not be concentrated on either side of degree zero. Since all its terms are
+vector bundles, dualization is exact, and [`cohomology`](@ref) handles the
+positive and negative halves through kernels and cokernels respectively.
 """
 function dual(F::ZeroLocusBundle)
   terms = Dict{Int,Vector{_AmbientBundle}}(
