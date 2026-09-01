@@ -903,7 +903,7 @@ end
 Recognize a presentation as a direct sum of external tensor products.
 
 The recognition depends only on the current locus and presentation. It first
-finds a product decomposition of the formal zero locus, then checks complete
+finds a product decomposition of the zero locus, then checks complete
 bipartite rank-one conditions on the ambient presentation. Ambiguous or
 nonfactorable presentations return `nothing` and use the generic LES backend.
 """
@@ -1018,7 +1018,7 @@ Compute dimension-valued sheaf cohomology from the ambient presentation.
 Entries are exact integers where exactness and the available geometric
 constraints determine them, and symbolic affine expressions otherwise.
 
-When the formal zero locus splits as a product and the presentation is
+When the zero locus splits as a product and the presentation is
 structurally a direct sum of external tensor products, this method first tries
 the Künneth formula. Recognition uses the current locus and presentation, not
 the constructors that produced them. If no unambiguous factorization is found,
