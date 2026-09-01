@@ -9,7 +9,7 @@
 #  the graded symmetric monoidal category of complexes.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-export restrict
+export ZeroLocusBundle, restrict
 
 """Terms of a bounded ambient presentation which is exact away from degree zero."""
 struct _AmbientBundlePresentation

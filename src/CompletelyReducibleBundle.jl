@@ -3,7 +3,7 @@
 #
 #  A completely reducible equivariant bundle on G/P is an equivariant bundle
 #  whose underlying P-representation is completely reducible (semisimple).
-#  It is encoded as a formal (virtual) sum of irreducible Levi representations,
+#  It is encoded as a direct sum of irreducible Levi representations,
 #  together with a reference to the underlying partial flag variety.
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -31,8 +31,8 @@ Abstract supertype for vector bundles supported by the package.
 Concrete subtypes:
 - [`CompletelyReducibleBundle`](@ref): semisimple equivariant bundles
 - [`FilteredBundle`](@ref): bundles with a filtration by equivariant subbundles
-- `ZeroLocusBundle`: bundles on a [`ZeroLocus`](@ref), represented by ambient
-  presentations
+- [`ZeroLocusBundle`](@ref): bundles on a [`ZeroLocus`](@ref), represented by
+  ambient presentations
 """
 abstract type Bundle end
 
@@ -84,7 +84,7 @@ struct CompletelyReducibleBundle <: Bundle
       )
       # A non-dominant Levi weight is the highest weight of nothing, so it
       # defines no bundle. Rejecting it here keeps every summand a genuine
-      # representation, rather than leaving a formal symbol that some consumers
+      # representation, rather than leaving an invalid symbol that some consumers
       # read as zero and others happily push through Borel–Weil–Bott.
       is_p_dominant(component) || throw(
         ArgumentError(

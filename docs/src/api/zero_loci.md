@@ -18,7 +18,7 @@ cohomology of restrictions, Hodge numbers, Hilbert polynomials, and the
 Calabi–Yau / Fano classification.
 
 The constructor `zero_locus(E)` records the ambient variety and defining bundle,
-but it does not choose or store a section. It represents the formal geometry of
+but it does not choose or store a section. It represents the data of
 a regular zero locus of `E`, assuming that a regular section exists.
 Accordingly, equality compares the ambient variety and defining bundle. It does
 not compare sections, test containment, or recognize abstractly isomorphic
@@ -67,8 +67,8 @@ is_sublocus
 
 ## Products
 
-The product of formal zero loci is formed in the product ambient variety. Its
-defining bundle is the [`external_direct_sum`](@ref) of the two defining
+The product of two recorded zero loci is formed in the product ambient variety.
+Its defining bundle is the [`external_direct_sum`](@ref) of the two defining
 bundles.
 
 ```@docs
@@ -83,7 +83,7 @@ ambient partial flag variety. In particular, `variety`, `rank`, `dual`,
 `euler_characteristic` work without a separate zero-locus API.
 
 ```@docs
-PartialFlagVarieties.ZeroLocusBundle
+ZeroLocusBundle
 ```
 
 Use `restrict(Z, F)` to restrict an ambient bundle. Intrinsic tangent and
@@ -107,9 +107,9 @@ Bundles on different zero loci can be combined on the product using
 operations lift the ambient presentations, so they also support intrinsic and
 composite bundles such as tangent bundles and their tensor powers.
 
-Restriction also composes along formal complete intersections. If `Z1` is cut
-out by `E` and `Z2` is cut out by `E ⊕ E′`, then `restrict(Z2, F)`
-restricts a bundle `F` on `Z1` to `Z2`. This is precisely the
+Restriction also composes when defining equations are added. If `Z1` is cut
+out by `E` and `Z2` is cut out by `E ⊕ E′` in the same ambient variety, then
+`restrict(Z2, F)` restricts a bundle `F` on `Z1` to `Z2`. This is precisely the
 [`is_sublocus(Z2, Z1)`](@ref is_sublocus) relation. It uses [`is_summand`](@ref)
 on the defining bundles because individual sections are not part of the data
 model.
@@ -139,15 +139,15 @@ tangent_bundle(::ZeroLocus)
 cotangent_bundle(::ZeroLocus)
 canonical_bundle(::ZeroLocus)
 anticanonical_bundle(::ZeroLocus)
-rank(::PartialFlagVarieties.ZeroLocusBundle)
-dual(::PartialFlagVarieties.ZeroLocusBundle)
-tensor_product(::PartialFlagVarieties.ZeroLocusBundle, ::PartialFlagVarieties.ZeroLocusBundle)
-exterior_power(::PartialFlagVarieties.ZeroLocusBundle, ::Integer)
-symmetric_power(::PartialFlagVarieties.ZeroLocusBundle, ::Integer)
-det(::PartialFlagVarieties.ZeroLocusBundle)
-euler_characteristic(::PartialFlagVarieties.ZeroLocusBundle)
-cohomology(::PartialFlagVarieties.ZeroLocusBundle)
-Base.iszero(::PartialFlagVarieties.ZeroLocusBundle)
+rank(::ZeroLocusBundle)
+dual(::ZeroLocusBundle)
+tensor_product(::ZeroLocusBundle, ::ZeroLocusBundle)
+exterior_power(::ZeroLocusBundle, ::Integer)
+symmetric_power(::ZeroLocusBundle, ::Integer)
+det(::ZeroLocusBundle)
+euler_characteristic(::ZeroLocusBundle)
+cohomology(::ZeroLocusBundle)
+Base.iszero(::ZeroLocusBundle)
 ```
 
 ## Koszul complex

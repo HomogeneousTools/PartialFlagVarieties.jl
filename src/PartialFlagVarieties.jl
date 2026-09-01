@@ -94,7 +94,7 @@ export is_orthogonal_grassmannian, is_projective_space, is_quadric
 export tautological_bundles, universal_subbundles
 export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology
 export PolyvectorParallelogram
-export ZeroLocus, zero_locus, ambient_variety, defining_bundle, is_sublocus
+export ZeroLocus, ZeroLocusBundle, zero_locus, ambient_variety, defining_bundle, is_sublocus
 export restrict
 export codimension, normal_bundle, conormal_bundle
 export koszul_terms

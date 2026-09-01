@@ -11,19 +11,19 @@ of irreducibles. Passing from ``\mathrm{P}``-representations to ``\mathrm{L}``-r
 amounts to taking the **semisimplification** of the bundle: one forgets the
 extensions between the composition factors.
 
-A [`CompletelyReducibleBundle`](@ref) stores a formal sum of
+A [`CompletelyReducibleBundle`](@ref) stores a direct sum of
 [`IrrepLevi`](@ref) components. This is enough for Borel–Weil–Bott calculations
 on each graded piece and for tensor algebra, but individual cohomology groups
 of a nonsplit extension can depend on its connecting maps. For ordered
-filtration data, see [`FilteredBundle`](@ref); bundles on formal zero loci use
+filtration data, see [`FilteredBundle`](@ref); bundles on zero loci use
 ambient presentations as described under [Zero Loci](zero_loci.md).
 
 !!! note "Design note"
     The abstract type [`Bundle`](@ref) has three concrete subtypes:
-    `CompletelyReducibleBundle` (the semisimplification — a formal direct sum)
+    `CompletelyReducibleBundle` (the semisimplification — a direct sum),
     [`FilteredBundle`](@ref) (a bundle with a filtration by subbundles,
-    retaining the ordering), and the internal `ZeroLocusBundle` returned by
-    zero-locus bundle constructors. Most ambient operations produce
+    retaining the ordering), and [`ZeroLocusBundle`](@ref) (a bundle represented
+    by an ambient presentation on a zero locus). Most ambient operations produce
     `CompletelyReducibleBundle`; filtered bundles arise from
     [`filtered_tangent_bundle`](@ref) and its derived operations.
 
@@ -42,7 +42,7 @@ is not an isomorphism test.
   summands. Summand order is ignored, while multiplicities are retained.
 - [`FilteredBundle`](@ref) compares the base and the ordered graded pieces. It
   does not try to identify different filtrations with isomorphic total bundles.
-- A bundle on a [`ZeroLocus`](@ref) compares the formal locus and all terms of
+- A bundle on a [`ZeroLocus`](@ref) compares the recorded locus and all terms of
   its ambient presentation. It does not simplify quasi-isomorphic
   presentations.
 
