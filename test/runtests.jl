@@ -2321,10 +2321,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     )
 
     repeated_term = Dict{Tuple{Symbol,Symbol},Tuple{Int,Int}}()
-    @test add_term!(repeated_term, :a, :x, 2, 3)
-    @test add_term!(repeated_term, :a, :x, 2, 4)
+    @test add_term!(repeated_term, (:a, :x), 2, 3)
+    @test add_term!(repeated_term, (:a, :x), 2, 4)
     @test repeated_term[(:a, :x)] == (2, 7)
-    @test !add_term!(repeated_term, :a, :x, 3)
+    @test !add_term!(repeated_term, (:a, :x), 3)
 
     Z = zero_locus(line_bundle(projective_space(2), 1))
     W = zero_locus(line_bundle(projective_space(2), 2))
