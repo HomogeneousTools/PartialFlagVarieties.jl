@@ -535,13 +535,11 @@ end
 _euler_characteristic_on_restriction(Z::ZeroLocus, F::CompletelyReducibleBundle) =
   _euler_characteristic_from_counts(Z, _to_counts(F))
 
-function _euler_characteristic_on_restriction(Z::ZeroLocus, F::FilteredBundle)
-  result = BigInt(0)
-  for piece in graded_pieces(F)
-    result += _euler_characteristic_on_restriction(Z, piece)
-  end
-  result
-end
+_euler_characteristic_on_restriction(Z::ZeroLocus, F::FilteredBundle) = sum(
+  piece -> _euler_characteristic_on_restriction(Z, piece),
+  graded_pieces(F);
+  init=BigInt(0),
+)
 
 """
     euler_characteristic(F::ZeroLocusBundle) -> BigInt
@@ -552,14 +550,12 @@ individual cohomology groups are not determined by the induced maps.
 """
 function euler_characteristic(F::ZeroLocusBundle)
   Z = variety(F)
-  result = BigInt(0)
-  for (degree, summands) in F.presentation.terms
-    sign = isodd(degree) ? -1 : 1
-    for summand in summands
-      result += sign * _euler_characteristic_on_restriction(Z, summand)
-    end
-  end
-  result
+  sum(
+    (isodd(degree) ? -1 : 1) *
+    _euler_characteristic_on_restriction(Z, summand) for
+    (degree, summands) in F.presentation.terms for summand in summands;
+    init=BigInt(0),
+  )
 end
 
 chi(F::ZeroLocusBundle) = euler_characteristic(F)

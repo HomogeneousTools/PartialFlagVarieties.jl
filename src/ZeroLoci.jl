@@ -495,10 +495,15 @@ over products. For ``\\chi(Z, \\mathcal{O}_Z)`` use
 `euler_characteristic(structure_sheaf(Z))`.
 """
 function euler_characteristic(Z::ZeroLocus)
-  n_factors(Z) >= 2 && return prod(euler_characteristic, factors(Z))
+  product_factors = factors(Z)
+  length(product_factors) >= 2 && return prod(euler_characteristic, product_factors)
+
   d = dimension(Z)
-  conormal = _conormal_data(Z, structure_sheaf(Z.ambient), d)
-  sum((-1)^p * _chi_row(conormal, p) for p in 0:d)
+  cotangent = cotangent_bundle(Z)
+  sum(
+    (-1)^p * euler_characteristic(exterior_power(cotangent, p)) for p in 0:d;
+    init=BigInt(0),
+  )
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
