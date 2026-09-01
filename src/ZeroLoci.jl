@@ -12,18 +12,16 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export ZeroLocus
-export zero_locus, ambient_variety, defining_bundle
+export zero_locus, ambient_variety, defining_bundle, is_sublocus
 export factors, n_factors
 export codimension, normal_bundle, conormal_bundle
-export koszul_terms, cohomology_on_restriction, cohomology_on_restriction_symbolic
+export koszul_terms
 export is_calabi_yau, is_strict_calabi_yau
 export is_strongly_fano
 export fano_index
 export hilbert_polynomial
 export hodge_numbers_symbolic
 export hodge_numbers_les
-export euler_characteristic_tangent_bundle
-export tangent_cohomology
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -36,6 +34,11 @@ The zero locus ``Z(s)`` of a regular section ``s \\in \\mathrm{H}^0(X, \\mathcal
 equivariant bundle ``\\mathcal{E}`` on the partial flag variety ``X = \\mathrm{G}/\\mathrm{P}``.
 
 Assumes the section is regular, so ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})``.
+The section itself is not stored: a `ZeroLocus` records only `X` and
+``\\mathcal{E}``, and represents a regular zero locus with those data.
+
+Equality therefore compares the ambient variety and defining bundle, not
+chosen sections or geometric isomorphism classes.
 
 # Examples
 ```jldoctest
@@ -60,6 +63,46 @@ mutable struct ZeroLocus
   koszul_wedges::Union{Nothing,Vector{CompletelyReducibleBundle}}
 end
 
+Base.:(==)(Z::ZeroLocus, W::ZeroLocus) =
+  ambient_variety(Z) == ambient_variety(W) && defining_bundle(Z) == defining_bundle(W)
+Base.isequal(Z::ZeroLocus, W::ZeroLocus) = Z == W
+Base.hash(Z::ZeroLocus, h::UInt) =
+  hash(defining_bundle(Z), hash(ambient_variety(Z), h))
+
+"""
+    is_sublocus(Z::ZeroLocus, W::ZeroLocus) -> Bool
+
+Return whether the defining-bundle data make `Z` a sublocus of `W`.
+
+If `Z` is cut out by ``\\mathcal{E} \\oplus \\mathcal{E}'`` and `W` by
+``\\mathcal{E}`` on the same ambient partial flag variety type, then
+`is_sublocus(Z, W)` is `true`. Equivalently, the defining bundle of `W` must
+be a direct summand of the defining bundle of `Z`, including multiplicities.
+
+Since a [`ZeroLocus`](@ref) does not store a chosen section, this predicate
+compares the recorded complete-intersection presentations; it does not test
+containment of independently specified geometric subvarieties.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(4);
+
+julia> W = zero_locus(line_bundle(X, 2));
+
+julia> Z = zero_locus(direct_sum(line_bundle(X, 2), line_bundle(X, 1)));
+
+julia> is_sublocus(Z, W)
+true
+
+julia> is_sublocus(W, Z)
+false
+```
+"""
+is_sublocus(Z::ZeroLocus, W::ZeroLocus) =
+  is_summand(defining_bundle(W), defining_bundle(Z))
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Constructors
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -71,7 +114,7 @@ Construct the zero locus of a regular section of the equivariant
 bundle ``\\mathcal{E}``.  Requires ``\\mathrm{rank}(\\mathcal{E}) \\le \\dim(X)``.
 
 This constructor assumes such a regular section exists; it does not try to
-prove existence or regularity.
+prove existence or regularity, and it does not choose or store a section.
 
 # Examples
 ```jldoctest
@@ -96,29 +139,15 @@ function zero_locus(E::CompletelyReducibleBundle)
 end
 
 """
-    _product_zero_locus(Z1, Z2) -> ZeroLocus
-
-Construct the product of two zero loci by taking the product ambient and the
-direct sum of the defining bundles lifted from the two factors.
-"""
-function _product_zero_locus(Z1::ZeroLocus, Z2::ZeroLocus)
-  X1 = ambient_variety(Z1)
-  X2 = ambient_variety(Z2)
-  X = product(X1, X2)
-  E1 = _lift_bundle_to_product(X, defining_bundle(Z1), 0)
-  E2 = _lift_bundle_to_product(X, defining_bundle(Z2), rank(dynkin_type(X1)))
-  zero_locus(direct_sum(E1, E2))
-end
-
-"""
     product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...) -> ZeroLocus
 
 Construct the product of zero loci.
 
 If `Z_i ⊂ X_i` is cut out by a regular section of `E_i`, then the product is
 realized as the zero locus in `X_1 × X_2 × ...` of the direct sum of the
-lifted bundles pulled back from each factor. This is also available through the
-`*` operator.
+lifted bundles pulled back from each factor. The defining bundle is constructed
+with [`external_direct_sum`](@ref). This is also available through the `*`
+operator.
 
 # Examples
 ```jldoctest
@@ -132,9 +161,9 @@ julia> dimension(Z)
 ```
 """
 function product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...)
-  Z = _product_zero_locus(Z1, Z2)
+  Z = zero_locus(external_direct_sum(defining_bundle(Z1), defining_bundle(Z2)))
   for W in Zs
-    Z = _product_zero_locus(Z, W)
+    Z = zero_locus(external_direct_sum(defining_bundle(Z), defining_bundle(W)))
   end
   Z
 end
@@ -159,11 +188,12 @@ A factor is kept when it is positive-dimensional or a set of `m ≥ 2` points (t
 latter disconnects `Z` into `m` copies); a single reduced point is a Künneth
 identity and is dropped. `n_factors` counts the kept factors.
 
-`hodge_numbers`, `hochschild_cohomology` and `tangent_cohomology` recombine the
-factors by the Künneth formula, which determines diamonds/parallelograms the
-monolithic long-exact-sequence solver leaves symbolic. (The remaining
-invariants — `euler_characteristic`, `hilbert_polynomial`, the anticanonical
-degree — are already exact for a product via Koszul, so need no special path.)
+`hodge_numbers`, `hochschild_cohomology`, and cohomology of the tangent bundle
+recombine the factors by the Künneth formula, which determines
+diamonds/parallelograms the monolithic long-exact-sequence solver leaves
+symbolic. (The remaining invariants — `euler_characteristic`,
+`hilbert_polynomial`, the anticanonical degree — are already exact for a
+product via Koszul, so need no special path.)
 """
 function factors(Z::ZeroLocus)
   ambient_factors = _mdt_to_factors(marked_dynkin_type(Z.ambient))
@@ -202,7 +232,7 @@ function factors(Z::ZeroLocus)
   end
   # Keep positive-dimensional factors and multi-point (m ≥ 2) sets; drop single
   # reduced points, which are Künneth identities. `dimension >= 1` short-circuits,
-  # so χ(𝒪) is evaluated only on 0-dimensional parts, where it equals h⁰·⁰, the
+  # so χ(𝒪) is evaluated only on 0-dimensional parts, where it equals h⁰(𝒪), the
   # number of points (a cheap BWB alternating sum).
   filter(part -> dimension(part) >= 1 || euler_characteristic(part) >= 2, parts)
 end
@@ -279,20 +309,6 @@ Return the dimension ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})`` of the
 """
 dimension(Z::ZeroLocus)::Int = dimension(Z.ambient) - codimension(Z)
 
-"""
-    normal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
-
-The normal bundle ``N_{Z/X} \\cong \\mathcal{E}|_Z``.
-"""
-normal_bundle(Z::ZeroLocus) = Z.defining_bundle
-
-"""
-    conormal_bundle(Z::ZeroLocus) -> CompletelyReducibleBundle
-
-The conormal bundle ``N^\\vee_{Z/X} \\cong \\mathcal{E}^\\vee|_Z``.
-"""
-conormal_bundle(Z::ZeroLocus) = dual(Z.defining_bundle)
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Koszul complex construction
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -307,7 +323,7 @@ Return the terms of the twisted Koszul complex:
 where ``\\mathcal{E}`` is the defining bundle and ``r = \\mathrm{rank}(\\mathcal{E})``.
 """
 function koszul_terms(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(F) == Z.ambient || throw(
     ArgumentError(
       "koszul_terms requires a bundle on the ambient variety of the zero locus."
     ),
@@ -401,7 +417,7 @@ This avoids allocating ``O(N^2)`` `IrrepLevi` vectors that are
 immediately re-deduplicated by `dimensions()`.
 """
 function _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(F) == Z.ambient || throw(
     ArgumentError(
       "_koszul_dimensions requires a bundle on the ambient variety of the zero locus."
     ),
@@ -465,33 +481,8 @@ function _dual_counts(f_counts::Dict{IrrepLevi,Int})
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Euler characteristic (always exact)
+#  Topological Euler characteristic
 # ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle) -> BigInt
-
-Compute ``\\chi(Z, \\mathcal{F}|_Z) = \\sum_{i=0}^{r} (-1)^i \\chi(X, \\mathcal{F} \\otimes \\wedge^i \\mathcal{E}^\\vee)``.
-This is always exact — no long exact sequence ambiguity.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(4);
-
-julia> Z = zero_locus(line_bundle(X, 5));
-
-julia> euler_characteristic(Z, structure_sheaf(X))
-0
-```
-"""
-function euler_characteristic(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
-    ArgumentError("euler_characteristic requires a bundle on the ambient variety.")
-  )
-  _euler_characteristic_from_counts(Z, _to_counts(F))
-end
 
 """
     euler_characteristic(Z::ZeroLocus) -> BigInt
@@ -501,152 +492,35 @@ the alternating sum of the Euler characteristics of the exterior powers of the
 cotangent bundle. Each term is exact (no long-exact-sequence ambiguity), so the
 result is determined even when the Hodge diamond is not, and it is multiplicative
 over products. For ``\\chi(Z, \\mathcal{O}_Z)`` use
-`euler_characteristic(Z, structure_sheaf(ambient_variety(Z)))`.
+`euler_characteristic(structure_sheaf(Z))`.
 """
 function euler_characteristic(Z::ZeroLocus)
-  n_factors(Z) >= 2 && return prod(euler_characteristic, factors(Z))
+  product_factors = factors(Z)
+  length(product_factors) >= 2 && return prod(euler_characteristic, product_factors)
+
   d = dimension(Z)
-  conormal = _conormal_data(Z, structure_sheaf(Z.ambient), d)
-  sum((-1)^p * _chi_row(conormal, p) for p in 0:d)
-end
-
-"""
-    euler_characteristic_tangent_bundle(Z::ZeroLocus) -> BigInt
-
-Compute the topological Euler characteristic of the tangent bundle of ``Z``,
-``\\chi(Z, \\mathrm{T}_Z) = \\chi(Z, \\mathrm{T}_X|_Z) - \\chi(Z, N_{Z/X})``,
-via the tangent normal sequence ``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to N_{Z/X} \\to 0``.
-
-Both Euler characteristics are computed exactly via Koszul (no long exact
-sequence ambiguity), so the result is always a precise integer.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(4);
-
-julia> Z = zero_locus(line_bundle(X, 5));  # CY3 quintic
-
-julia> euler_characteristic_tangent_bundle(Z)
--100
-```
-"""
-function euler_characteristic_tangent_bundle(Z::ZeroLocus)
-  X = ambient_variety(Z)
-  euler_characteristic(Z, tangent_bundle(X)) -
-  euler_characteristic(Z, defining_bundle(Z))
-end
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Cohomology of restrictions (via Koszul + LES)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    cohomology_on_restriction(Z::ZeroLocus, F::CompletelyReducibleBundle)
-      -> (Cohomology{BigInt}, Bool)
-
-Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` by:
-1. Computing ``\\mathrm{H}^\\bullet(X, \\mathcal{F} \\otimes \\wedge^i \\mathcal{E}^\\vee)`` for each Koszul term via BWB.
-2. Solving the Koszul filtration via the long exact sequence.
-
-Returns `(H*(\\mathcal{F}|_Z), determined)` where `determined` indicates whether
-all cohomology groups are uniquely determined by the LES.
-
-When the Koszul filtration leaves some groups undetermined, a Serre duality
-fallback is attempted: if ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}^\\vee|_Z)`` is fully determined, then
-``\\mathrm{H}^k(Z, \\mathcal{F}|_Z) = \\mathrm{H}^{d-k}(Z, \\mathcal{F}^\\vee|_Z)`` by Serre duality (valid when
-``\\mathrm{K}_Z \\cong \\mathcal{O}_Z``, e.g. for Calabi–Yau and hyperkähler zero loci).
-"""
-function cohomology_on_restriction(
-  Z::ZeroLocus,
-  F::CompletelyReducibleBundle,
-)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
-    ArgumentError(
-      "The bundle F must live on the ambient variety of the zero locus Z"
-    ),
+  cotangent = cotangent_bundle(Z)
+  sum(
+    (-1)^p * euler_characteristic(exterior_power(cotangent, p)) for p in 0:d;
+    init=BigInt(0),
   )
-  d_Z = dimension(Z)
-
-  koszul_cohos = _koszul_dimensions(Z, F)
-
-  (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
-  determined && return (H, true)
-
-  # Serre duality fallback: H^k(Z, \\mathcal{F}|_Z) = H^{d-k}(Z, F^*|_Z), valid because
-  # is_calabi_yau guarantees ω_Z ≅ O_Z via adjunction.
-  if is_calabi_yau(Z)
-    koszul_cohos_dual = _koszul_dimensions(Z, dual(F))
-    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-    if det_dual
-      entries = BigInt[H_dual[d_Z - k] for k in 0:d_Z]
-      return (Cohomology{BigInt}(entries, d_Z), true)
-    end
-  end
-
-  (H, false)
-end
-
-"""
-    cohomology_on_restriction(Z::ZeroLocus) -> (Cohomology{BigInt}, Bool)
-
-Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
-"""
-function cohomology_on_restriction(Z::ZeroLocus)
-  cohomology_on_restriction(Z, structure_sheaf(Z.ambient))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Symbolic cohomology on restrictions
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    cohomology_on_restriction_symbolic(
-      Z::ZeroLocus, F::CompletelyReducibleBundle,
-      var_counter::Ref{Int}
-    ) -> Cohomology{AffineExpr}
-
-Symbolic version of [`cohomology_on_restriction`](@ref): entries the long
-exact sequences do not determine contain fresh symbolic variables instead.
-"""
-function cohomology_on_restriction_symbolic(
-  Z::ZeroLocus,
-  F::CompletelyReducibleBundle,
-  var_counter::Ref{Int},
-)
-  entries = _restrict_to_zero_locus_les(Z, _to_counts(F), var_counter)
-  Cohomology{AffineExpr}(entries, dimension(Z))
-end
-
-"""
-    cohomology_on_restriction_symbolic(
-      Z::ZeroLocus, var_counter::Ref{Int}
-    ) -> Cohomology{AffineExpr}
-
-Symbolic ``\\mathrm{H}^\\bullet(Z, \\mathcal{O}_Z)`` via the Koszul resolution.
-"""
-function cohomology_on_restriction_symbolic(
-  Z::ZeroLocus,
-  var_counter::Ref{Int},
-)
-  cohomology_on_restriction_symbolic(Z, structure_sheaf(Z.ambient), var_counter)
-end
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  Alternative Koszul restriction
+#  Koszul restriction backend
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
     _restrict_to_zero_locus_les(Z, F, var_counter) -> Vector{AffineExpr}
 
-Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` using the alternative LES solver.
+Compute ``\\mathrm{H}^\\bullet(Z, \\mathcal{F}|_Z)`` using the symbolic LES solver.
 
 Instead of parametrising connecting-map ranks (``\\delta``-variables),
 creates a fresh symbolic variable for each output entry and applies
 the alternating-sum LES equations.
 
-Falls back to the numeric path when fully determined.
+Uses the `BigInt` solver first and returns its result when the bounds determine
+every entry.
 """
 function _restrict_to_zero_locus_les(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int}
@@ -664,19 +538,21 @@ function _restrict_to_zero_locus_les(
   # Compute Koszul cohomologies once (memory-efficient path)
   koszul_cohos = _koszul_dimensions(Z, f_counts, wedge_counts)
 
-  # Try numeric solve first
-  (H_numeric, det_numeric) = solve_koszul_filtration(koszul_cohos, d_Z)
-  if det_numeric
-    return AffineExpr[AffineExpr(H_numeric[k]) for k in 0:d_Z]
+  # Try the determined-dimension solver first.
+  cohomology_candidate, determined = solve_koszul_filtration(koszul_cohos, d_Z)
+  if determined
+    return AffineExpr[AffineExpr(cohomology_candidate[k]) for k in 0:d_Z]
   end
 
   koszul_cohos_dual = nothing
   if is_calabi_yau(Z)
     # Serre duality fallback before the symbolic path (valid: ω_Z ≅ O_Z).
     koszul_cohos_dual = _koszul_dimensions(Z, _dual_counts(f_counts), wedge_counts)
-    (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-    if det_dual
-      return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
+    dual_cohomology, dual_determined = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+    if dual_determined
+      return AffineExpr[
+        AffineExpr(dual_cohomology[d_Z - k]) for k in 0:d_Z
+      ]
     end
   end
 
@@ -685,7 +561,7 @@ function _restrict_to_zero_locus_les(
   # For ω_Z ≅ O_Z the dual bundle is chained as well, and Serre duality
   # H^k(Z, \\mathcal{F}|_Z) = H^{d-k}(Z, F^∨|_Z) is imposed entry by entry: both chains
   # are sound parametrizations, so equating them is a sound constraint
-  # (unlike cross-validating two undetermined numeric guesses).
+  # (unlike cross-validating two undetermined candidates).
   inequalities = AffineExpr[]
   primal = long_exact_sequence_cokernel(
     _reversed_koszul_vecs(koszul_cohos), var_counter; inequalities
@@ -752,13 +628,13 @@ Each Koszul term ``\\mathcal{F} ⊗ ∧^k \\mathcal{E}^\\vee`` is again a filter
 on ``X`` is the abutment of the spectral sequence of the filtration
 (see `_cohomology_filtered`), and the Koszul chain is then solved
 with the symbolic LES solver.  When every spectral sequence visibly
-degenerates, the terms are exact and the numeric solver (with its Serre
+degenerates, the terms are determined and the `BigInt` solver (with its Serre
 duality fallback for ``ω_Z ≅ \\mathcal{O}_Z``) is used instead.
 """
 function _restrict_to_zero_locus_les(
   Z::ZeroLocus, F::FilteredBundle, var_counter::Ref{Int}
 )
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(F) == Z.ambient || throw(
     ArgumentError(
       "_restrict_to_zero_locus_les requires a bundle on the ambient variety."
     ),
@@ -774,8 +650,10 @@ function _restrict_to_zero_locus_les(
     koszul_cohos = [
       Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in koszul_entries
     ]
-    (H, determined) = solve_koszul_filtration(koszul_cohos, d_Z)
-    determined && return AffineExpr[AffineExpr(H[k]) for k in 0:d_Z]
+    cohomology_candidate, determined = solve_koszul_filtration(koszul_cohos, d_Z)
+    determined && return AffineExpr[
+      AffineExpr(cohomology_candidate[k]) for k in 0:d_Z
+    ]
 
     # Serre duality fallback: sound when ω_Z ≅ O_Z, provided the spectral
     # sequences of the dual Koszul terms degenerate as well.
@@ -789,8 +667,10 @@ function _restrict_to_zero_locus_les(
         koszul_cohos_dual = [
           Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in dual_entries
         ]
-        (H_dual, det_dual) = solve_koszul_filtration(koszul_cohos_dual, d_Z)
-        det_dual && return AffineExpr[AffineExpr(H_dual[d_Z - k]) for k in 0:d_Z]
+        dual_cohomology, dual_determined = solve_koszul_filtration(koszul_cohos_dual, d_Z)
+        dual_determined && return AffineExpr[
+          AffineExpr(dual_cohomology[d_Z - k]) for k in 0:d_Z
+        ]
       end
     end
   end
@@ -865,7 +745,7 @@ function is_strict_calabi_yau(Z::ZeroLocus)
   is_calabi_yau(Z) || return false
 
   d = dimension(Z)
-  (H, _) = cohomology_on_restriction(Z)
+  H = cohomology(structure_sheaf(Z))
   H[0] == 1 && all(H[i] == 0 for i in 1:(d - 1))
 end
 
@@ -1089,78 +969,6 @@ function _chi_omega_tensor_counts(
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Tangent bundle cohomology
-# ═══════════════════════════════════════════════════════════════════════════════
-
-"""
-    tangent_cohomology(Z::ZeroLocus) -> Cohomology{AffineExpr}
-
-Compute ``\\mathrm{H}^\\bullet(Z, \\mathrm{T}_Z)`` via the normal bundle sequence
-``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to \\mathcal{E}|_Z \\to 0``.
-
-The restrictions ``\\mathrm{T}_X|_Z`` (through the spectral sequence of the height
-filtration when ``\\mathrm{T}_X`` is not completely reducible) and ``\\mathcal{E}|_Z`` are
-computed by the Koszul resolution, and the long exact sequence is solved
-for the kernel term with [`les_kernel`](@ref).  The exact Euler
-characteristic ``\\chi(\\mathrm{T}_Z) = \\chi(\\mathrm{T}_X|_Z) - \\chi(\\mathcal{E}|_Z)`` and, for a strict
-Calabi–Yau, the vanishing ``\\mathrm{h}^0(\\mathrm{T}_Z) = \\mathrm{h}^{d-1,0} = 0`` are imposed.
-
-Entries are `AffineExpr`s: exact integers where the constraints determine
-them, symbolic otherwise.  ``\\mathrm{H}^1(Z, \\mathrm{T}_Z)`` is the space of first-order
-deformations of ``Z``.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> Z = zero_locus(line_bundle(projective_space(4), 5));  # quintic threefold
-
-julia> tangent_cohomology(Z)
-H¹ = 101
-H² = 1
-```
-"""
-function tangent_cohomology(Z::ZeroLocus)
-  d_Z = dimension(Z)
-
-  # For a product, H^q(T_Z) is the ∧¹T row of the (Künneth) polyvector
-  # parallelogram. Only that row has to be determined — higher rows may stay
-  # symbolic without forcing the monolithic fallback.
-  if n_factors(Z) >= 2
-    tangent_row = [hochschild_cohomology(Z)[1, q] for q in 0:d_Z]
-    all(is_determined, tangent_row) && return Cohomology{AffineExpr}(tangent_row, d_Z)
-  end
-
-  var_counter = Ref(0)
-
-  HT = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(Z.ambient), var_counter)
-  HE = _restrict_to_zero_locus_les(Z, _to_counts(Z.defining_bundle), var_counter)
-  inequalities = AffineExpr[]
-  kernel = les_kernel(HT, HE, var_counter; inequalities)
-  system = vcat(kernel, inequalities)
-
-  # χ(T_Z) = χ(T_X|_Z) - χ(E|_Z) is exact from K-theory.
-  chi =
-    euler_characteristic(Z, tangent_bundle(Z.ambient)) -
-    euler_characteristic(Z, Z.defining_bundle)
-  kernel_length = length(kernel)
-  _apply_equation!(
-    system, _alternating_sum(@view system[1:kernel_length]) - AffineExpr(chi)
-  )
-  _propagate_intervals!(system)
-  entries = system[1:kernel_length]
-
-  # For a strict Calabi–Yau, T_Z ≅ Ω^{d-1}_Z ⊗ ω_Z^{-1} ≅ Ω^{d-1}_Z, and
-  # h^0(Ω^{d-1}_Z) = h^{d-1,0} = h^{d-1}(O_Z) = 0.
-  if d_Z >= 2 && !is_zero_expr(entries[1]) && is_strict_calabi_yau(Z)
-    _apply_equation!(entries, entries[1])
-  end
-
-  _renumber_variables!(entries)
-  Cohomology{AffineExpr}(entries, d_Z)
-end
-
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Hilbert polynomial
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1193,7 +1001,7 @@ true
 ```
 """
 function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(L)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(L) == Z.ambient || throw(
     ArgumentError("the polarization must live on the ambient variety.")
   )
   rank(L) == 1 || throw(
@@ -1206,7 +1014,7 @@ function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
   values = Vector{Rational{BigInt}}(undef, d + 1)
   power = structure_sheaf(Z.ambient)
   for t in 0:d
-    values[t + 1] = Rational{BigInt}(euler_characteristic(Z, power))
+    values[t + 1] = Rational{BigInt}(euler_characteristic(restrict(Z, power)))
     t < d && (power = tensor_product(power, L))
   end
   _newton_interpolation(values)

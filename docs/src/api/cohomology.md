@@ -30,9 +30,17 @@ borel_weil_bott
 
 ## Computation
 
-By default [`cohomology(E)`](@ref) returns dimensions, which is what you want
-for numerical work; pass `characters=true` to keep the full ambient
-representation in each cohomology group.
+For a [`CompletelyReducibleBundle`](@ref) on a partial flag variety,
+[`cohomology(E)`](@ref) returns dimensions by default; pass `characters=true`
+to keep the full ambient representation in each cohomology group.
+
+Cohomology of a [`FilteredBundle`](@ref) or [`ZeroLocusBundle`](@ref) is always
+dimension-valued. Both types retain implicit maps: the differentials in the
+filtration spectral sequence or ambient presentation may not determine every
+dimension. In that case the result has [`AffineExpr`](@ref) entries. For a
+zero-locus bundle, character-valued cohomology is moreover not geometrically
+defined in general because the section cutting out the locus need not be
+invariant under the ambient group.
 
 ```@docs
 cohomology

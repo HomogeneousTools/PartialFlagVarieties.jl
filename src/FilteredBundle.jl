@@ -25,12 +25,19 @@ export n_filtration_steps
   FilteredBundle
 
 An equivariant vector bundle on ``\\mathrm{G}/\\mathrm{P}`` equipped with a filtration by
-equivariant subbundles. Stored as an ordered list of associated graded
-pieces (each a [`CompletelyReducibleBundle`](@ref)).
+equivariant subbundles. It is represented by an ordered list of associated
+graded pieces (each a [`CompletelyReducibleBundle`](@ref)); extension maps are
+implicit, so computations retain any ambiguity that depends on those maps.
 
 The filtration is encoded by the ordering: `graded_pieces(F)[1]` is the
 bottom piece (smallest filtration step), and `graded_pieces(F)[end]` is
 the top piece.
+
+Equality is structural: it compares the base variety and the ordered list of
+graded pieces. In particular, it does not identify different filtrations of
+isomorphic bundles. [`iszero`](@ref) instead tests whether every graded piece
+is zero; a filtered bundle with redundant zero layers can therefore satisfy
+`iszero(F)` without comparing equal to the empty filtered bundle.
 
 # Fields
 - `variety::PartialFlagVariety`: the partial flag variety
@@ -57,7 +64,7 @@ struct FilteredBundle <: Bundle
     pieces::Vector{CompletelyReducibleBundle},
   )
     for (idx, piece) in enumerate(pieces)
-      marked_dynkin_type(variety(piece)) == marked_dynkin_type(X) || throw(
+      variety(piece) == X || throw(
         ArgumentError(
           "Filtered bundle piece $idx lives on $(variety(piece)), expected $X."
         ),
@@ -125,8 +132,19 @@ function rank(F::FilteredBundle)
   sum(rank(p) for p in F.pieces; init=0)
 end
 
+"""
+    iszero(F::FilteredBundle) -> Bool
+
+Return whether every graded piece of `F` is zero.
+
+This forgets redundant zero filtration layers, whereas `==` compares the
+ordered graded pieces structurally. Thus `iszero(F)` need not imply that `F`
+equals the empty filtered bundle on the same variety.
+"""
+Base.iszero(F::FilteredBundle) = all(iszero, graded_pieces(F))
+
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Tensor product of FilteredBundle with CompletelyReducibleBundle
+#  Tensor products involving FilteredBundle
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -141,6 +159,37 @@ end
 
 function tensor_product(E::CompletelyReducibleBundle, F::FilteredBundle)
   tensor_product(F, E)
+end
+
+"""
+    tensor_product(F::FilteredBundle, G::FilteredBundle) -> FilteredBundle
+
+The tensor product with the convolution filtration. If the graded pieces of
+`F` and `G` occupy positions `i` and `j`, respectively, their tensor product
+occurs in filtration degree `i + j`.
+"""
+function tensor_product(F::FilteredBundle, G::FilteredBundle)
+  variety(G) == variety(F) || throw(
+    ArgumentError(
+      "tensor_product requires bundles on the same partial flag variety type."
+    ),
+  )
+
+  terms = Dict{Int,Vector{IrrepLevi}}()
+  for (i, piece_F) in enumerate(graded_pieces(F))
+    for (j, piece_G) in enumerate(graded_pieces(G))
+      piece = tensor_product(piece_F, piece_G)
+      append!(get!(terms, i + j, IrrepLevi[]), components(piece))
+    end
+  end
+
+  FilteredBundle(
+    variety(F),
+    CompletelyReducibleBundle[
+      CompletelyReducibleBundle(variety(F), terms[degree]) for
+      degree in sort!(collect(keys(terms)))
+    ],
+  )
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -312,15 +361,15 @@ function _graded_power(power, F::FilteredBundle, k::Integer)
     end
     isempty(factors) && continue
     term = reduce(tensor_product, factors)
-    fw = sum(i * α[i] for i in 1:s)
-    append!(get!(weight_terms, fw, IrrepLevi[]), components(term))
+    filtration_degree = sum(i * α[i] for i in 1:s)
+    append!(get!(weight_terms, filtration_degree, IrrepLevi[]), components(term))
   end
 
   FilteredBundle(
     F.variety,
     CompletelyReducibleBundle[
-      CompletelyReducibleBundle(F.variety, weight_terms[fw]) for
-      fw in sort!(collect(keys(weight_terms)))
+      CompletelyReducibleBundle(F.variety, weight_terms[filtration_degree]) for
+      filtration_degree in sort!(collect(keys(weight_terms)))
     ],
   )
 end
@@ -366,6 +415,20 @@ true
 symmetric_power(F::FilteredBundle, k::Integer) = _graded_power(symmetric_power, F, k)
 
 """
+    det(F::FilteredBundle) -> CompletelyReducibleBundle
+
+Return the determinant line bundle. For a filtered bundle, the determinant is
+the tensor product of the determinants of its graded pieces.
+"""
+function det(F::FilteredBundle)
+  factors = det.(graded_pieces(F))
+  isempty(factors) && return structure_sheaf(variety(F))
+  reduce(tensor_product, factors)
+end
+
+determinant(F::FilteredBundle) = det(F)
+
+"""
     dual(F::FilteredBundle) -> FilteredBundle
 
 The dual of a filtered bundle. The filtration is reversed: if ``\\mathcal{F}`` has
@@ -375,6 +438,21 @@ pieces ``\\mathrm{gr}_1, \\ldots, \\mathrm{gr}_s`` (bottom to top), then
 """
 function dual(F::FilteredBundle)
   FilteredBundle(F.variety, [dual(p) for p in reverse(F.pieces)])
+end
+
+"""
+    twist(F::FilteredBundle, i::Integer, k::Integer=1) -> FilteredBundle
+    twist(F::FilteredBundle, degrees::Vector{<:Integer}) -> FilteredBundle
+
+Twist `F` by `O(k)` at the `i`-th marked node, or by the line bundle with the
+given Picard degrees. The filtration order is preserved.
+"""
+function twist(F::FilteredBundle, i::Integer, k::Integer=1)
+  tensor_product(F, twist(structure_sheaf(variety(F)), i, k))
+end
+
+function twist(F::FilteredBundle, degrees::Vector{<:Integer})
+  tensor_product(F, line_bundle(variety(F), degrees))
 end
 
 # ─── Display ─────────────────────────────────────────────────────────────────

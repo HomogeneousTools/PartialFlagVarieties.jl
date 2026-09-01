@@ -31,9 +31,11 @@ filtered_cotangent_bundle
 
 ## Operations
 
-Filtered bundles support exterior powers, symmetric powers, duals, and
-tensor products with completely reducible bundles. These operations
-preserve and refine the filtration structure.
+Filtered bundles support exterior powers, symmetric powers, determinants,
+duals, twists, and tensor products with either completely reducible or filtered
+bundles. These operations preserve and refine the filtration structure.
+[`external_tensor_product`](@ref) also accepts filtered bundles on different
+partial flag varieties and returns the induced filtration on their product.
 
 For a filtered bundle ``\mathcal{F}`` with graded pieces ``\mathrm{gr}_1, \ldots, \mathrm{gr}_s``,
 the ``k``-th exterior power ``\bigwedge\nolimits^k \mathcal{F}`` has an induced filtration whose
@@ -50,6 +52,10 @@ exterior_power(::FilteredBundle, ::Integer)
 symmetric_power(::FilteredBundle, ::Integer)
 dual(::FilteredBundle)
 tensor_product(::FilteredBundle, ::CompletelyReducibleBundle)
+tensor_product(::FilteredBundle, ::FilteredBundle)
+det(::FilteredBundle)
+twist(::FilteredBundle, ::Integer, ::Integer)
+Base.iszero(::FilteredBundle)
 ```
 
 ## Internals

@@ -11,26 +11,48 @@ of irreducibles. Passing from ``\mathrm{P}``-representations to ``\mathrm{L}``-r
 amounts to taking the **semisimplification** of the bundle: one forgets the
 extensions between the composition factors.
 
-This package implements only semisimplified bundles:
-a [`CompletelyReducibleBundle`](@ref) stores a formal sum of
-[`IrrepLevi`](@ref) components. This is adequate for computing sheaf
-cohomology (which depends only on the composition factors, not on extensions)
-and tensor algebra, but does not capture filtration data. For the latter, see
-[`FilteredBundle`](@ref).
+A [`CompletelyReducibleBundle`](@ref) stores a direct sum of
+[`IrrepLevi`](@ref) components. This is enough for Borel–Weil–Bott calculations
+on each graded piece and for tensor algebra, but individual cohomology groups
+of a nonsplit extension can depend on its connecting maps. For ordered
+filtration data, see [`FilteredBundle`](@ref); bundles on zero loci use
+ambient presentations as described under [Zero Loci](zero_loci.md).
 
 !!! note "Design note"
-    The abstract type [`Bundle`](@ref) has two concrete subtypes:
-    `CompletelyReducibleBundle` (the semisimplification — a formal direct sum)
-    and [`FilteredBundle`](@ref) (a bundle with a filtration by subbundles,
-    retaining the ordering). Most user-facing operations produce
+    The abstract type [`Bundle`](@ref) has three concrete subtypes:
+    `CompletelyReducibleBundle` (the semisimplification — a direct sum),
+    [`FilteredBundle`](@ref) (a bundle with a filtration by subbundles,
+    retaining the ordering), and [`ZeroLocusBundle`](@ref) (a bundle represented
+    by an ambient presentation on a zero locus). Most ambient operations produce
     `CompletelyReducibleBundle`; filtered bundles arise from
     [`filtered_tangent_bundle`](@ref) and its derived operations.
 
     Tensor products and exterior powers of `CompletelyReducibleBundle` are
     computed by decomposing into Semisimple.jl character arithmetic, then
-    extracting dominant weights. Identical summands are **deduplicated**:
-    components that appear with multiplicity are stored once with a
-    multiplicity count, keeping the representation compact.
+    extracting dominant weights. Repeated summands remain represented with
+    their multiplicities; expensive power calculations group equal summands
+    internally before expanding them.
+
+## Equality and zero bundles
+
+Bundle equality is structural at the abstraction level being represented; it
+is not an isomorphism test.
+
+- `CompletelyReducibleBundle` compares the base and the multiset of irreducible
+  summands. Summand order is ignored, while multiplicities are retained.
+- [`FilteredBundle`](@ref) compares the base and the ordered graded pieces. It
+  does not try to identify different filtrations with isomorphic total bundles.
+- A bundle on a [`ZeroLocus`](@ref) compares the recorded locus and all terms of
+  its ambient presentation. It does not simplify quasi-isomorphic
+  presentations.
+
+`iszero(F)` asks whether `F` represents a rank-zero bundle at the corresponding
+abstraction level. Consequently, `iszero(F)` can be `true` while
+`F != zero_bundle(variety(F))`: examples include a filtered bundle with a
+redundant zero layer and a nonempty exact ambient presentation of the zero
+bundle. Use `==` when presentation identity matters and `iszero` when an
+operation only needs semantic zeroness. `isequal` and `hash` follow the same
+structural equality as `==`.
 
 ## Types
 
@@ -90,9 +112,20 @@ determinant
 dual(::CompletelyReducibleBundle)
 tensor_product(::CompletelyReducibleBundle, ::CompletelyReducibleBundle)
 direct_sum
+is_summand
 exterior_power(::CompletelyReducibleBundle, ::Integer)
 symmetric_power(::CompletelyReducibleBundle, ::Integer)
 twist
+```
+
+## External operations
+
+For bundles on different partial flag varieties, external operations pull both
+bundles back to the product before applying the ordinary operation.
+
+```@docs
+external_tensor_product
+external_direct_sum
 ```
 
 ## Arithmetic

@@ -195,8 +195,9 @@ function compute_family(label, k, n, weights, desc)
   h0aK = nothing
   try
     F_antiK = anticanonical_bundle(X) ⊗ dual(det(E))
-    (H_antiK, _) = cohomology_on_restriction(Z, F_antiK)
-    h0aK = H_antiK[0]
+    H_antiK = cohomology(restrict(Z, F_antiK))
+    is_determined(H_antiK[0]) || error("h⁰(-K) is underdetermined")
+    h0aK = H_antiK[0].constant
   catch e
     @warn "  $label h⁰(-K) failed: $(sprint(showerror, e))"
   end

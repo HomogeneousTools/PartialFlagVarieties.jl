@@ -73,10 +73,38 @@ Z = zero_locus(E)
 codimension(Z)
 normal_bundle(Z)
 koszul_terms(Z)
-cohomology_on_restriction(Z, T(X))
+cohomology(restrict(Z, T(X)))
 ```
 
-This is the right workflow when you want cohomology of restrictions, Euler
+Restrictions and intrinsic bundles on `Z` support the ordinary bundle
+interface, so they remain composable:
+
+```julia
+L = restrict(Z, O(X, 1))
+TZ = tangent_bundle(Z)
+
+cohomology(TZ)
+cohomology(TZ * L)
+euler_characteristic(exterior_power(TZ, 2))
+```
+
+Products retain the same composable interface. For bundles on different zero
+loci, use an external operation to obtain a bundle on their product:
+
+```julia
+W = zero_locus(O(projective_space(2), 2))
+ZW = product(Z, W)
+
+LboxM = external_tensor_product(L, O(W, 1))
+variety(LboxM) == ZW
+```
+
+These cohomology computations are dimension-valued. Character-valued
+cohomology is not available on a general zero locus because its defining
+section need not preserve the ambient group action. Undetermined induced-map
+ranks are retained symbolically as [`AffineExpr`](@ref) entries.
+
+This is the right workflow when you want bundle cohomology, Euler
 characteristics, Hodge numbers, or Fano / Calabi–Yau tests for ``Z``.
 
 ## Interpret symbolic Hodge output
@@ -93,7 +121,7 @@ Z = zero_locus(E)
 H = hodge_numbers_symbolic(Z)
 ```
 
-Use [`is_determined`](@ref) to test whether an entry is numerical or still
+Use [`is_determined`](@ref) to test whether an entry is determined or still
 contains a symbolic variable.
 
 ## Round-trip external labels

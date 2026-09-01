@@ -17,10 +17,12 @@ sequence in cohomology, one recovers ``\mathrm{H}^\bullet(Z, \mathcal{F}|_Z)`` f
 cohomology of restrictions, Hodge numbers, Hilbert polynomials, and the
 Calabi–Yau / Fano classification.
 
-The package takes the geometric point of view that a **regular section has been
-chosen**. The constructor `zero_locus(E)` therefore studies the geometry that
-would result from a regular section of `E`; it does not prove existence of such
-a section.
+The constructor `zero_locus(E)` records the ambient variety and defining bundle,
+but it does not choose or store a section. It represents the data of
+a regular zero locus of `E`, assuming that a regular section exists.
+Accordingly, equality compares the ambient variety and defining bundle. It does
+not compare sections, test containment, or recognize abstractly isomorphic
+subvarieties.
 
 See the [mathematical background](../math.md#Koszul-resolution-and-zero-loci)
 for details on the Koszul resolution and the
@@ -57,19 +59,101 @@ normal_bundle
 conormal_bundle
 ```
 
+## Relations
+
+```@docs
+is_sublocus
+```
+
+## Products
+
+The product of two recorded zero loci is formed in the product ambient variety.
+Its defining bundle is the [`external_direct_sum`](@ref) of the two defining
+bundles.
+
+```@docs
+product(::ZeroLocus, ::ZeroLocus, ::ZeroLocus...)
+```
+
+## Bundles on a zero locus
+
+Bundles on a zero locus use the same public bundle interface as bundles on the
+ambient partial flag variety. In particular, `variety`, `rank`, `dual`,
+`tensor_product`, `exterior_power`, `symmetric_power`, `cohomology`, and
+`euler_characteristic` work without a separate zero-locus API.
+
+```@docs
+ZeroLocusBundle
+```
+
+Use `restrict(Z, F)` to restrict an ambient bundle. Intrinsic tangent and
+cotangent bundles are constructed directly from `Z`:
+
+```julia
+X = projective_space(4)
+Z = zero_locus(line_bundle(X, 5))
+
+L = restrict(Z, line_bundle(X, 1))
+TZ = tangent_bundle(Z)
+
+cohomology(TZ)
+cohomology(tensor_product(TZ, L))
+cohomology(exterior_power(TZ, 2))
+euler_characteristic(TZ)
+```
+
+Bundles on different zero loci can be combined on the product using
+[`external_tensor_product`](@ref) and [`external_direct_sum`](@ref). Both
+operations lift the ambient presentations, so they also support intrinsic and
+composite bundles such as tangent bundles and their tensor powers.
+
+Restriction also composes when defining equations are added. If `Z1` is cut
+out by `E` and `Z2` is cut out by `E ⊕ E′` in the same ambient variety, then
+`restrict(Z2, F)` restricts a bundle `F` on `Z1` to `Z2`. This is precisely the
+[`is_sublocus(Z2, Z1)`](@ref is_sublocus) relation. It uses [`is_summand`](@ref)
+on the defining bundles because individual sections are not part of the data
+model.
+
+Internally, these bundles retain the terms of bounded ambient presentations;
+the presentation maps are implicit. Tensor products totalize the terms.
+Exterior and symmetric powers use the derived graded-power formula, so they
+also work for arbitrary composite presentations rather than only for the
+tangent and cotangent sequences.
+
+!!! note "Generic bundle cohomology versus the Hodge engine"
+    `cohomology(exterior_power(cotangent_bundle(Z), p))` evaluates that one
+    bundle from its presentation. `hodge_numbers(Z)` uses the same conormal
+    complexes in a specialized batch computation: it caches terms shared by
+    different values of `p`, replaces the top exterior power by adjunction,
+    and combines rows using Serre duality, Lefschetz constraints, exact Euler
+    characteristics, and Kodaira–Akizuki–Nakano vanishing. It can therefore
+    be faster and can determine entries that an isolated bundle computation
+    correctly leaves symbolic.
+
+```@docs
+restrict
+structure_sheaf(::ZeroLocus)
+zero_bundle(::ZeroLocus)
+line_bundle(::ZeroLocus, ::Integer)
+tangent_bundle(::ZeroLocus)
+cotangent_bundle(::ZeroLocus)
+canonical_bundle(::ZeroLocus)
+anticanonical_bundle(::ZeroLocus)
+rank(::ZeroLocusBundle)
+dual(::ZeroLocusBundle)
+tensor_product(::ZeroLocusBundle, ::ZeroLocusBundle)
+exterior_power(::ZeroLocusBundle, ::Integer)
+symmetric_power(::ZeroLocusBundle, ::Integer)
+det(::ZeroLocusBundle)
+euler_characteristic(::ZeroLocusBundle)
+cohomology(::ZeroLocusBundle)
+Base.iszero(::ZeroLocusBundle)
+```
+
 ## Koszul complex
 
 ```@docs
 koszul_terms
-```
-
-## Cohomology on restrictions
-
-```@docs
-cohomology_on_restriction
-tangent_cohomology
-cohomology_on_restriction_symbolic
-euler_characteristic(::ZeroLocus, ::CompletelyReducibleBundle)
 ```
 
 ## Cohomological invariants
@@ -79,7 +163,6 @@ hodge_numbers_symbolic
 hodge_numbers_les
 hilbert_polynomial(::ZeroLocus, ::CompletelyReducibleBundle)
 fano_index(::ZeroLocus)
-euler_characteristic_tangent_bundle
 ```
 
 ## Classification predicates
@@ -88,4 +171,11 @@ euler_characteristic_tangent_bundle
 is_calabi_yau
 is_strict_calabi_yau
 is_strongly_fano
+```
+
+## Internals
+
+```@docs
+PartialFlagVarieties._AmbientBundlePresentation
+PartialFlagVarieties._derived_power
 ```

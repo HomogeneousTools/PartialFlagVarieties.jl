@@ -16,12 +16,12 @@ Part of the [HomogeneousTools](https://homogeneous.tools) project, building on [
 
 - **Partial flag varieties** for all simple Lie types (A–G, including $\mathrm{E}_6$, $\mathrm{E}_7$, $\mathrm{E}_8$, $\mathrm{F}_4$, $\mathrm{G}_2$)
 - Named constructors: `Gr`, `OGr`, `SGr`, `LGr`, `IGr`, `projective_space`, `quadric`, `flag_variety`, `cayley_plane`, `freudenthal_variety`, `adjoint_variety`, `coadjoint_variety`
-- **Equivariant vector bundles**: structure sheaf, tangent/cotangent, canonical, line bundles, exterior/symmetric powers, tensor products, duals, twists, determinants
+- **Equivariant vector bundles**: structure sheaf, tangent/cotangent, canonical, line bundles, exterior/symmetric powers, tensor products, external tensor products and direct sums, duals, twists, determinants
 - **Universal bundles**: tautological subbundles, quotient bundles, spinor bundles on quadrics
 - **Filtered bundles**: tangent bundle filtration by root height, with induced filtrations on exterior/symmetric powers, duals, and tensor products
 - **Sheaf cohomology** via the Borel–Weil–Bott theorem (both dimension-valued and character-valued)
 - **Hilbert polynomials** of equivariant bundles and zero loci
-- **Zero loci** of sections of equivariant bundles, with Koszul resolutions, restriction cohomology, and Calabi–Yau detection
+- **Zero loci** of sections of equivariant bundles, with products, composable bundle operations, Koszul resolutions, restriction cohomology, and Calabi–Yau detection
 - **Hodge numbers**, **twisted Hodge numbers**, **Hochschild cohomology** with polyvector parallelogram display
 - **Symbolic Hodge computation** for zero loci using long exact sequences, Serre duality cross-constraints, and Akizuki–Nakano vanishing
 - **Exceptional collections**: Beilinson on $\mathbb{P}^n$, Kapranov on quadrics, Kapranov–Orlov on Grassmannians, Schur functors

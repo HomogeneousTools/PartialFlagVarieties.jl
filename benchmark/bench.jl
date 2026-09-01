@@ -103,7 +103,7 @@ let
   Z = zero_locus(2 * line_bundle(X, 1))
   hodge_numbers(Z)
   euler_characteristic(Z)
-  cohomology_on_restriction(Z, structure_sheaf(X))
+  cohomology(structure_sheaf(Z))
   hochschild_cohomology(X)
   beilinson_collection(X)
   is_strong_exceptional_sequence(beilinson_collection(X))
@@ -418,11 +418,11 @@ end
 
 header("6. Zero loci — cohomology on restriction")
 
-# Küchle-style: fano index computation via cohomology_on_restriction
+# Küchle-style: Fano index computation via restriction cohomology.
 function _bench_cohom_on_restriction(E, F)
   clear_all_pfv_caches!()
   Z = zero_locus(E)
-  cohomology_on_restriction(Z, F)
+  cohomology(restrict(Z, F))
 end
 
 # O(1)³ on Gr(2,5), restrict O(k) for k=1..3

@@ -50,12 +50,14 @@ include("PartialFlagVariety.jl")
 include("IrrepLevi.jl")
 include("CompletelyReducibleBundle.jl")
 include("FilteredBundle.jl")
+include("ExternalProducts.jl")
 include("UniversalBundles.jl")
 include("Cohomology.jl")
 include("Projections.jl")
 include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
+include("ZeroLocusBundles.jl")
 include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
@@ -81,7 +83,8 @@ export degree
 export dimension, dual, tensor_product, exterior_power, symmetric_power
 export n_components
 export tangent_weights, positive_nonparabolic_roots, positive_parabolic_roots
-export direct_sum, twist, product
+export direct_sum, is_summand, external_direct_sum, external_tensor_product
+export twist, product
 export parse_dynkin_type, sub_dynkin_type, sub_dynkin_ordering
 export graded_pieces, total_bundle, filtered_tangent_bundle, filtered_cotangent_bundle
 export n_filtration_steps
@@ -91,15 +94,15 @@ export is_orthogonal_grassmannian, is_projective_space, is_quadric
 export tautological_bundles, universal_subbundles
 export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology
 export PolyvectorParallelogram
-export ZeroLocus, zero_locus, ambient_variety, defining_bundle
+export ZeroLocus, ZeroLocusBundle, zero_locus, ambient_variety, defining_bundle, is_sublocus
+export restrict
 export codimension, normal_bundle, conormal_bundle
-export koszul_terms, cohomology_on_restriction
-export tangent_cohomology
+export koszul_terms
 export is_calabi_yau, is_strict_calabi_yau, is_strongly_fano
 export solve_ses_cohomology, solve_koszul_filtration
 export AffineExpr, is_determined, is_zero_expr, symbolic_variable
 export solve_ses_cohomology_symbolic, solve_koszul_filtration_symbolic
-export hodge_numbers_symbolic, cohomology_on_restriction_symbolic
+export hodge_numbers_symbolic
 export configure_caches!, clear_caches!, cache_info
 export zerolocus62_label
 

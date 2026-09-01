@@ -4,7 +4,8 @@
 #  Uses the Borel–Weil–Bott theorem to compute sheaf cohomology.
 #  The result is a parametric Cohomology{T} where:
 #    T = WeylCharacter  →  character-valued (full representation info)
-#    T = BigInt          →  dimension-valued (numerical)
+#    T = BigInt          →  dimension-valued (determined)
+#    T = AffineExpr       →  dimension-valued (possibly symbolic)
 #
 #  Cohomology is stored with 0-based indexing: entry i corresponds to Hⁱ.
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -137,13 +138,16 @@ end
 """
     Cohomology{T}
 
-Sheaf cohomology of an equivariant bundle on a partial flag variety.
+A degree-indexed container for sheaf cohomology or higher direct images.
 
 Entries are 0-indexed: `H[i]` returns ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P}, \\mathcal{E})``.
 
 # Type parameter
 - `T = WeylCharacter{DT,R}`: entries are virtual characters of ``\\mathrm{G}``
 - `T = BigInt`: entries are dimensions
+- `T = AffineExpr`: entries are dimensions that may depend on undetermined
+  induced-map ranks, as for [`FilteredBundle`](@ref) and
+  [`ZeroLocusBundle`](@ref) cohomology
 - `T = CompletelyReducibleBundle`: entries are the higher direct images
   ``\\mathrm{R}^iq_*`` of [`pushforward`](@ref), which live on the target of a
   projection rather than being cohomology of anything. For that parametrization

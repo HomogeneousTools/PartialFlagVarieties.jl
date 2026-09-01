@@ -505,7 +505,7 @@ function format_hodge_matrix(H::Matrix{AffineExpr})
 end
 
 function print_discrepancy(r; io=stdout)
-  println(io, "  Entry $(r.idx): $(r.is_symbolic ? "symbolic" : "numeric")")
+  println(io, "  Entry $(r.idx): $(r.is_symbolic ? "symbolic" : "determined")")
   if r.hodge !== nothing
     println(io, "  Computed:")
     println(io, "    ", replace(format_hodge_matrix(r.hodge), "\n" => "\n    "))
@@ -578,18 +578,18 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   println(" " ^ 40)
 
   # Categorize results
-  ok_numeric = []
+  ok_determined = []
   ok_symbolic = []
-  mismatch_numeric = []
+  mismatch_determined = []
   mismatch_symbolic = []
   failed = []
 
   for r in results
     if r.status == :ok
       if r.matches
-        r.is_symbolic ? push!(ok_symbolic, r) : push!(ok_numeric, r)
+        r.is_symbolic ? push!(ok_symbolic, r) : push!(ok_determined, r)
       else
-        r.is_symbolic ? push!(mismatch_symbolic, r) : push!(mismatch_numeric, r)
+        r.is_symbolic ? push!(mismatch_symbolic, r) : push!(mismatch_determined, r)
       end
     else
       push!(failed, r)
@@ -601,17 +601,17 @@ function main(; datafile=nothing, max_entries=typemax(Int))
   println("  RESULTS")
   println("=" ^ 60)
   @printf("  Total entries processed: %d\n", n_run)
-  @printf("  Numeric matches:    %4d\n", length(ok_numeric))
+  @printf("  Determined matches:    %4d\n", length(ok_determined))
   @printf("  Symbolic matches:   %4d  (with variable renaming)\n", length(ok_symbolic))
-  @printf("  Numeric mismatches: %4d\n", length(mismatch_numeric))
+  @printf("  Determined mismatches: %4d\n", length(mismatch_determined))
   @printf("  Symbolic mismatches:%4d\n", length(mismatch_symbolic))
   @printf("  Errors/skipped:     %4d\n", length(failed))
   println("=" ^ 60)
 
-  if !isempty(mismatch_numeric)
-    println("\n-- Numeric mismatches --")
-    if any(r -> r.hodge !== nothing && r.ref !== nothing, mismatch_numeric)
-      for r in mismatch_numeric
+  if !isempty(mismatch_determined)
+    println("\n-- Determined mismatches --")
+    if any(r -> r.hodge !== nothing && r.ref !== nothing, mismatch_determined)
+      for r in mismatch_determined
         if r.hodge !== nothing && r.ref !== nothing
           print_discrepancy(r)
         end

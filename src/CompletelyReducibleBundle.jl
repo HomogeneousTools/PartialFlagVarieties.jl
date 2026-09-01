@@ -3,7 +3,7 @@
 #
 #  A completely reducible equivariant bundle on G/P is an equivariant bundle
 #  whose underlying P-representation is completely reducible (semisimple).
-#  It is encoded as a formal (virtual) sum of irreducible Levi representations,
+#  It is encoded as a direct sum of irreducible Levi representations,
 #  together with a reference to the underlying partial flag variety.
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -26,11 +26,13 @@ export fano_index
 """
   Bundle
 
-Abstract supertype for equivariant vector bundles on a partial flag variety.
+Abstract supertype for vector bundles supported by the package.
 
 Concrete subtypes:
 - [`CompletelyReducibleBundle`](@ref): semisimple equivariant bundles
 - [`FilteredBundle`](@ref): bundles with a filtration by equivariant subbundles
+- [`ZeroLocusBundle`](@ref): bundles on a [`ZeroLocus`](@ref), represented by
+  ambient presentations
 """
 abstract type Bundle end
 
@@ -45,6 +47,9 @@ A completely reducible equivariant vector bundle on a partial flag variety.
 
 Stored as a list of irreducible Levi representations (with multiplicity
 encoded by repetition), together with the underlying [`PartialFlagVariety`](@ref).
+Equality compares the base variety and the multiset of irreducible summands,
+so the order of summands is ignored but multiplicities are retained.
+[`iszero`](@ref) holds exactly when that multiset is empty.
 
 # Fields
 - `variety::PartialFlagVariety`: the partial flag variety
@@ -79,7 +84,7 @@ struct CompletelyReducibleBundle <: Bundle
       )
       # A non-dominant Levi weight is the highest weight of nothing, so it
       # defines no bundle. Rejecting it here keeps every summand a genuine
-      # representation, rather than leaving a formal symbol that some consumers
+      # representation, rather than leaving an invalid symbol that some consumers
       # read as zero and others happily push through Borel–Weil–Bott.
       is_p_dominant(component) || throw(
         ArgumentError(
@@ -832,7 +837,7 @@ true
 function tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   X = variety(E)
   Y = variety(F)
-  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(
+  Y == X || throw(
     ArgumentError(
       "tensor_product requires bundles on the same partial flag variety type."
     ),
@@ -1113,7 +1118,7 @@ The direct sum ``\\mathcal{E} \\oplus \\mathcal{F}``.
 function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   X = variety(E)
   Y = variety(F)
-  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(
+  Y == X || throw(
     ArgumentError(
       "direct_sum requires bundles on the same partial flag variety type."
     ),
@@ -1122,6 +1127,43 @@ function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
 end
 
 Base.:+(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) = direct_sum(E, F)
+
+"""
+    is_summand(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
+
+Return whether ``\\mathcal{E}`` is isomorphic to a direct summand of
+``\\mathcal{F}``.
+
+The comparison respects the multiplicities of irreducible summands. Bundles
+on different partial flag variety types are not comparable and return `false`.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(3);
+
+julia> L = line_bundle(X, 1);
+
+julia> F = direct_sum(L, line_bundle(X, 2));
+
+julia> is_summand(L, F)
+true
+
+julia> is_summand(direct_sum(L, L), F)
+false
+```
+"""
+function is_summand(
+  E::CompletelyReducibleBundle, F::CompletelyReducibleBundle
+)
+  variety(E) == variety(F) || return false
+  multiplicities = _to_counts(F)
+  all(
+    multiplicity <= get(multiplicities, component, 0) for
+    (component, multiplicity) in _to_counts(E)
+  )
+end
 
 # ─── Twist ───────────────────────────────────────────────────────────────────
 
@@ -1162,6 +1204,15 @@ function twist(E::CompletelyReducibleBundle, i::Integer, k::Integer=1)
       t for component in E.components for t in tensor_product(component, twist_rep)
     ],
   )
+end
+
+"""
+    twist(E::CompletelyReducibleBundle, degrees::Vector{<:Integer})
+
+Twist `E` by the line bundle with the given Picard degrees.
+"""
+function twist(E::CompletelyReducibleBundle, degrees::Vector{<:Integer})
+  tensor_product(E, line_bundle(variety(E), degrees))
 end
 
 # ─── Arithmetic operators ───────────────────────────────────────────────────

@@ -158,10 +158,12 @@ function compute(v::Variety)
   Z = zero_locus(E)
   t_h = @elapsed H = hodge_numbers(Z)
   t_l = @elapsed begin
-    (H_T, _) = cohomology_on_restriction(Z, tangent_bundle(X))
-    (H_E, _) = cohomology_on_restriction(Z, E)
+    H_T = cohomology(restrict(Z, tangent_bundle(X)))
+    H_E = cohomology(restrict(Z, E))
   end
-  Result(v, Z, H, H_T[1], H_E[1], t_h, t_l)
+  is_determined(H_T) || error("Tangent restriction cohomology is underdetermined")
+  is_determined(H_E) || error("Defining-bundle restriction cohomology is underdetermined")
+  Result(v, Z, H, H_T[1].constant, H_E[1].constant, t_h, t_l)
 end
 
 is_rigid(r::Result) = r.h1_TX == 0 && r.h1_E == 0
