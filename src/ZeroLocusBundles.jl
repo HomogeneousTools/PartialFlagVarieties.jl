@@ -472,14 +472,10 @@ presentation is the normal sequence
 """
 function tangent_bundle(Z::ZeroLocus)
   ambient_tangent = filtered_tangent_bundle(ambient_variety(Z))
-  tangent_term =
-    if n_filtration_steps(ambient_tangent) == 1
-      total_bundle(ambient_tangent)
-    else
-      ambient_tangent
-    end
+  n_filtration_steps(ambient_tangent) == 1 &&
+    (ambient_tangent = total_bundle(ambient_tangent))
   terms = Dict{Int,Vector{_AmbientBundle}}(
-    0 => _AmbientBundle[tangent_term],
+    0 => _AmbientBundle[ambient_tangent],
     1 => _AmbientBundle[defining_bundle(Z)],
   )
   ZeroLocusBundle(Z, _AmbientBundlePresentation(terms))
@@ -607,132 +603,112 @@ end
 # ═══════════════════════════════════════════════════════════════════════════
 
 function _split_product_irrep(
-  representation::IrrepLevi,
+  irrep::IrrepLevi,
   left_ambient::PartialFlagVariety,
   right_ambient::PartialFlagVariety,
 )
-  coefficients_product = collect(Int, coefficients(p_dominant_weight(representation)))
-  left_rank = rank(dynkin_type(left_ambient))
-  right_rank = rank(dynkin_type(right_ambient))
-  length(coefficients_product) == left_rank + right_rank || return nothing
+  coefficients = collect(Int, Semisimple.coefficients(p_dominant_weight(irrep)))
+  left_type = dynkin_type(left_ambient)
+  right_type = dynkin_type(right_ambient)
+  left_rank = rank(left_type)
+  right_rank = rank(right_type)
+  length(coefficients) == left_rank + right_rank || return nothing
 
-  left_weight = WeightLatticeElem(
-    dynkin_type(left_ambient), coefficients_product[1:left_rank]
-  )
-  right_weight = WeightLatticeElem(
-    dynkin_type(right_ambient), coefficients_product[(left_rank + 1):end]
-  )
+  left_weight = WeightLatticeElem(left_type, coefficients[1:left_rank])
+  right_weight = WeightLatticeElem(right_type, coefficients[(left_rank + 1):end])
   (
     IrrepLevi(marked_dynkin_type(left_ambient), left_weight),
     IrrepLevi(marked_dynkin_type(right_ambient), right_weight),
   )
 end
 
-function _add_bipartite_edge!(edges, left, right, degree::Int, multiplicity::Int=1)
-  degrees = get!(edges, (left, right), Dict{Int,Int}())
-  degrees[degree] = get(degrees, degree, 0) + multiplicity
-  edges
+# Product terms are stored as `(left, right) => (degree, multiplicity)`.
+function _add_product_term!(terms, left, right, degree::Int, multiplicity::Int=1)
+  key = (left, right)
+  if haskey(terms, key)
+    old_degree, old_multiplicity = terms[key]
+    old_degree == degree || return false
+    terms[key] = (degree, old_multiplicity + multiplicity)
+  else
+    terms[key] = (degree, multiplicity)
+  end
+  true
 end
 
-function _bipartite_components(edges)
-  remaining = Set(keys(edges))
-  components = Vector{typeof(edges)}()
-  while !isempty(remaining)
-    seed = first(remaining)
-    edge_type = keytype(edges)
-    left_vertices = Set{fieldtype(edge_type, 1)}([seed[1]])
-    right_vertices = Set{fieldtype(edge_type, 2)}([seed[2]])
-    component_keys = Set{edge_type}()
+# Partition pairs into candidate summands. Pairs are linked when they share a
+# left or right factor; the transitive closure gives the maximal groups.
+function _product_term_components(terms)
+  pending = Set(keys(terms))
+  components = Vector{typeof(terms)}()
 
-    changed = true
-    while changed
-      changed = false
-      for edge in remaining
-        if edge[1] in left_vertices || edge[2] in right_vertices
-          push!(component_keys, edge)
-          push!(left_vertices, edge[1])
-          push!(right_vertices, edge[2])
-          changed = true
+  while !isempty(pending)
+    seed = pop!(pending)
+    component = typeof(terms)(seed => terms[seed])
+    frontier = [seed]
+
+    while !isempty(frontier)
+      pair = pop!(frontier)
+      for candidate in collect(pending)
+        if first(candidate) == first(pair) || last(candidate) == last(pair)
+          delete!(pending, candidate)
+          component[candidate] = terms[candidate]
+          push!(frontier, candidate)
         end
       end
-      setdiff!(remaining, component_keys)
     end
-
-    push!(components, typeof(edges)(edge => edges[edge] for edge in component_keys))
+    push!(components, component)
   end
   components
 end
 
 """
-Factor one connected bipartite multiset whose edge labels are additive degrees.
-
-For an external tensor product, an edge `(left, right)` has degree
-`left_degree + right_degree` and multiplicity
-`left_multiplicity * right_multiplicity`. The complete bipartite and rank-one
-checks make this a recognition routine: failure returns `nothing` rather than
-guessing a decomposition.
+Recover two factors from a connected group of terms `(left, right) => (degree,
+multiplicity)`. An external tensor product has rectangular support, additive
+degrees, and multiplicative multiplicities. Degrees are normalized by setting
+the first left degree to zero; multiplicities by the gcd of the first row.
 """
-function _rank_one_bipartite_factor(edges)
-  isempty(edges) && return nothing
-  all(length(degrees) == 1 for degrees in values(edges)) || return nothing
+function _factor_product_terms(terms)
+  isempty(terms) && return nothing
+  lefts = unique(first(pair) for pair in keys(terms))
+  rights = unique(last(pair) for pair in keys(terms))
+  length(terms) == length(lefts) * length(rights) || return nothing
 
-  left_vertices = unique(first(edge) for edge in keys(edges))
-  right_vertices = unique(last(edge) for edge in keys(edges))
-  length(edges) == length(left_vertices) * length(right_vertices) || return nothing
+  degree(left, right) = first(terms[(left, right)])
+  multiplicity(left, right) = last(terms[(left, right)])
 
-  edge_degree(left, right) = only(keys(edges[(left, right)]))
-  edge_multiplicity(left, right) = only(values(edges[(left, right)]))
-
-  left_anchor = first(left_vertices)
-  right_anchor = first(right_vertices)
-  left_degrees = Dict(left_anchor => 0)
-  right_degrees = Dict(
-    right => edge_degree(left_anchor, right) for right in right_vertices
+  left0, right0 = first(lefts), first(rights)
+  left0_multiplicity = gcd((multiplicity(left0, right) for right in rights)...)
+  right_data = Dict(
+    right => (
+      degree(left0, right),
+      multiplicity(left0, right) ÷ left0_multiplicity,
+    ) for right in rights
   )
-  for left in left_vertices
-    left_degrees[left] =
-      edge_degree(left, right_anchor) - right_degrees[right_anchor]
+  right0_multiplicity = last(right_data[right0])
+  all(multiplicity(left, right0) % right0_multiplicity == 0 for left in lefts) ||
+    return nothing
+  left_data = Dict(
+    left => (
+      degree(left, right0) - degree(left0, right0),
+      multiplicity(left, right0) ÷ right0_multiplicity,
+    ) for left in lefts
+  )
+
+  for left in lefts, right in rights
+    left_degree, left_multiplicity = left_data[left]
+    right_degree, right_multiplicity = right_data[right]
+    terms[(left, right)] == (
+      left_degree + right_degree,
+      left_multiplicity * right_multiplicity,
+    ) || return nothing
   end
-
-  left_anchor_multiplicity = gcd(
-    (edge_multiplicity(left_anchor, right) for right in right_vertices)...
-  )
-  right_multiplicities = Dict(
-    right => edge_multiplicity(left_anchor, right) ÷ left_anchor_multiplicity for
-    right in right_vertices
-  )
-  left_multiplicities = Dict{eltype(left_vertices),Int}()
-  for left in left_vertices
-    right_multiplicity = right_multiplicities[right_anchor]
-    edge_multiplicity(left, right_anchor) % right_multiplicity == 0 || return nothing
-    left_multiplicities[left] =
-      edge_multiplicity(left, right_anchor) ÷ right_multiplicity
-  end
-
-  for left in left_vertices, right in right_vertices
-    haskey(edges, (left, right)) || return nothing
-    edge_degree(left, right) == left_degrees[left] + right_degrees[right] ||
-      return nothing
-    expected_multiplicity = left_multiplicities[left] * right_multiplicities[right]
-    edge_multiplicity(left, right) == expected_multiplicity || return nothing
-  end
-
-  (
-    Dict(
-      left => (left_degrees[left], left_multiplicities[left]) for
-      left in left_vertices
-    ),
-    Dict(
-      right => (right_degrees[right], right_multiplicities[right]) for
-      right in right_vertices
-    ),
-  )
+  left_data, right_data
 end
 
 function _filtered_bundle_from_factor_data(ambient::PartialFlagVariety, data)
   pieces = Dict{Int,Vector{IrrepLevi}}()
-  for (representation, (degree, multiplicity)) in data
-    append!(get!(pieces, degree, IrrepLevi[]), fill(representation, multiplicity))
+  for (irrep, (degree, multiplicity)) in data
+    append!(get!(pieces, degree, IrrepLevi[]), fill(irrep, multiplicity))
   end
   ordered_pieces = CompletelyReducibleBundle[
     CompletelyReducibleBundle(ambient, pieces[degree]) for
@@ -746,35 +722,26 @@ function _factor_filtered_bundle_on_product(
   left_ambient::PartialFlagVariety,
   right_ambient::PartialFlagVariety,
 )
-  edges = Dict{Tuple{IrrepLevi,IrrepLevi},Dict{Int,Int}}()
+  terms = Dict{Tuple{IrrepLevi,IrrepLevi},Tuple{Int,Int}}()
   for (degree, piece) in enumerate(graded_pieces(bundle))
-    for representation in components(piece)
-      split = _split_product_irrep(representation, left_ambient, right_ambient)
+    for irrep in components(piece)
+      split = _split_product_irrep(irrep, left_ambient, right_ambient)
       split === nothing && return nothing
-      _add_bipartite_edge!(edges, split[1], split[2], degree)
+      _add_product_term!(terms, split[1], split[2], degree) || return nothing
     end
   end
-  factorization = _rank_one_bipartite_factor(edges)
-  factorization === nothing && return nothing
-  left_data, right_data = factorization
+  factor_data = _factor_product_terms(terms)
+  factor_data === nothing && return nothing
+  left_data, right_data = factor_data
 
-  left_filtered = _filtered_bundle_from_factor_data(left_ambient, left_data)
-  right_filtered = _filtered_bundle_from_factor_data(right_ambient, right_data)
-  left_options = if n_filtration_steps(left_filtered) == 1
-    _AmbientBundle[total_bundle(left_filtered), left_filtered]
-  else
-    _AmbientBundle[left_filtered]
-  end
-  right_options = if n_filtration_steps(right_filtered) == 1
-    _AmbientBundle[total_bundle(right_filtered), right_filtered]
-  else
-    _AmbientBundle[right_filtered]
-  end
-
-  for left in left_options, right in right_options
-    external_tensor_product(left, right) == bundle && return (left, right)
-  end
-  nothing
+  left = _filtered_bundle_from_factor_data(left_ambient, left_data)
+  right = _filtered_bundle_from_factor_data(right_ambient, right_data)
+  options(F) = n_filtration_steps(F) == 1 ? (total_bundle(F), F) : (F,)
+  matches = [
+    pair for pair in Iterators.product(options(left), options(right)) if
+    external_tensor_product(pair...) == bundle
+  ]
+  length(matches) == 1 ? only(matches) : nothing
 end
 
 function _factor_ambient_bundle_on_product(
@@ -783,14 +750,15 @@ function _factor_ambient_bundle_on_product(
   right_ambient::PartialFlagVariety,
 )
   result = Tuple{_AmbientBundle,_AmbientBundle}[]
-  for representation in components(bundle)
-    split = _split_product_irrep(representation, left_ambient, right_ambient)
+  for irrep in components(bundle)
+    split = _split_product_irrep(irrep, left_ambient, right_ambient)
     split === nothing && return nothing
+    left, right = split
     push!(
       result,
       (
-        CompletelyReducibleBundle(left_ambient, IrrepLevi[split[1]]),
-        CompletelyReducibleBundle(right_ambient, IrrepLevi[split[2]]),
+        CompletelyReducibleBundle(left_ambient, IrrepLevi[left]),
+        CompletelyReducibleBundle(right_ambient, IrrepLevi[right]),
       ),
     )
   end
@@ -809,20 +777,15 @@ function _factor_ambient_bundle_on_product(
   factorization === nothing ? nothing : [factorization]
 end
 
-function _product_of_zero_loci(product_factors)
-  length(product_factors) == 1 && return only(product_factors)
-  product(product_factors[1], product_factors[2], product_factors[3:end]...)
-end
-
 function _product_bipartitions(Z::ZeroLocus)
-  product_factors = factors(Z)
-  result = Tuple{ZeroLocus,ZeroLocus}[]
-  for split_index in 1:(length(product_factors) - 1)
-    left = _product_of_zero_loci(product_factors[1:split_index])
-    right = _product_of_zero_loci(product_factors[(split_index + 1):end])
-    product(left, right) == Z && push!(result, (left, right))
-  end
-  result
+  parts = factors(Z)
+  partitions = [
+    (
+      reduce(product, parts[1:split]),
+      reduce(product, parts[(split + 1):end]),
+    ) for split in 1:(length(parts) - 1)
+  ]
+  filter(pair -> product(pair...) == Z, partitions)
 end
 
 function _presentation_from_factor_data(
@@ -838,85 +801,52 @@ function _presentation_from_factor_data(
   ZeroLocusBundle(locus, _AmbientBundlePresentation(terms))
 end
 
-function _factor_data_rank(data, degree_shift::Int)
-  sum(
-    (isodd(degree + degree_shift) ? -1 : 1) * multiplicity * rank(bundle) for
-    (bundle, (degree, multiplicity)) in data;
-    init=0,
-  )
-end
-
 function _factor_presentation_component(
-  edges, left_locus::ZeroLocus, right_locus::ZeroLocus
+  terms, left_locus::ZeroLocus, right_locus::ZeroLocus
 )
-  factorization = _rank_one_bipartite_factor(edges)
-  factorization === nothing && return nothing
-  left_data, right_data = factorization
+  factor_data = _factor_product_terms(terms)
+  factor_data === nothing && return nothing
+  left_data, right_data = factor_data
 
   shifts = intersect(
     Set(-degree for (_, (degree, _)) in left_data),
     Set(degree for (_, (degree, _)) in right_data),
   )
-  candidates = Tuple{ZeroLocusBundle,ZeroLocusBundle}[]
-  component_rank = sum(
-    (isodd(degree) ? -1 : 1) * multiplicity * rank(left) * rank(right) for
-    ((left, right), degrees) in edges for
-    (degree, multiplicity) in degrees;
+  factor_rank(data, shift) = sum(
+    (isodd(degree + shift) ? -1 : 1) * multiplicity * rank(bundle) for
+    (bundle, (degree, multiplicity)) in data;
     init=0,
   )
+  filter!(
+    shift -> factor_rank(left_data, shift) > 0 && factor_rank(right_data, -shift) > 0,
+    shifts,
+  )
+  length(shifts) == 1 || return nothing
 
-  for shift in shifts
-    left_rank = _factor_data_rank(left_data, shift)
-    right_rank = _factor_data_rank(right_data, -shift)
-    left_rank > 0 && right_rank > 0 || continue
-    left_rank * right_rank == component_rank || continue
-
-    left = _presentation_from_factor_data(left_locus, left_data, shift)
-    right = _presentation_from_factor_data(right_locus, right_data, -shift)
-    push!(candidates, (left, right))
-  end
-  length(candidates) == 1 ? only(candidates) : nothing
-end
-
-function _degree_zero_kunneth_decomposition(
-  F::ZeroLocusBundle, left_locus::ZeroLocus, right_locus::ZeroLocus
-)
-  terms = F.presentation.terms
-  length(terms) == 1 && haskey(terms, 0) || return nothing
-
-  left_ambient = ambient_variety(left_locus)
-  right_ambient = ambient_variety(right_locus)
-  decomposition = Tuple{ZeroLocusBundle,ZeroLocusBundle}[]
-  for summand in terms[0]
-    factorizations = _factor_ambient_bundle_on_product(
-      summand, left_ambient, right_ambient
-    )
-    factorizations === nothing && return nothing
-    for (left, right) in factorizations
-      push!(decomposition, (restrict(left_locus, left), restrict(right_locus, right)))
-    end
-  end
-  decomposition
+  shift = only(shifts)
+  (
+    _presentation_from_factor_data(left_locus, left_data, shift),
+    _presentation_from_factor_data(right_locus, right_data, -shift),
+  )
 end
 
 """
 Recognize a presentation as a direct sum of external tensor products.
 
 The recognition depends only on the current locus and presentation. It first
-finds a product decomposition of the zero locus, then checks complete
-bipartite rank-one conditions on the ambient presentation. Ambiguous or
-nonfactorable presentations return `nothing` and use the generic LES backend.
+finds a product decomposition of the zero locus. It then groups presentation
+terms that share a left or right factor and checks that every group is the
+rectangular grid produced by one external tensor product. Presentation degrees
+must split as sums and multiplicities as products. Ambiguous or nonfactorable
+presentations return `nothing` and use the generic LES backend.
 """
 function _kunneth_decomposition(
   F::ZeroLocusBundle, left_locus::ZeroLocus, right_locus::ZeroLocus
 )
-  degree_zero_decomposition = _degree_zero_kunneth_decomposition(F, left_locus, right_locus)
-  degree_zero_decomposition === nothing || return degree_zero_decomposition
-
   left_ambient = ambient_variety(left_locus)
   right_ambient = ambient_variety(right_locus)
 
-  edges = Dict{Tuple{_AmbientBundle,_AmbientBundle},Dict{Int,Int}}()
+  terms = Dict{Tuple{_AmbientBundle,_AmbientBundle},Tuple{Int,Int}}()
   for (degree, summands) in F.presentation.terms
     for summand in summands
       factorizations = _factor_ambient_bundle_on_product(
@@ -924,28 +854,24 @@ function _kunneth_decomposition(
       )
       factorizations === nothing && return nothing
       for (left, right) in factorizations
-        _add_bipartite_edge!(edges, left, right, degree)
+        _add_product_term!(terms, left, right, degree) || return nothing
       end
     end
   end
-  isempty(edges) && return nothing
+  isempty(terms) && return nothing
 
   decomposition = Tuple{ZeroLocusBundle,ZeroLocusBundle}[]
-  for component in _bipartite_components(edges)
-    factorization = _factor_presentation_component(
-      component, left_locus, right_locus
-    )
-    factorization === nothing && return nothing
-    push!(decomposition, factorization)
+  for component in _product_term_components(terms)
+    factors = _factor_presentation_component(component, left_locus, right_locus)
+    factors === nothing && return nothing
+    push!(decomposition, factors)
   end
-  sum(pair -> rank(pair[1]) * rank(pair[2]), decomposition; init=0) == rank(F) ||
-    return nothing
   decomposition
 end
 
 function _kunneth_decomposition(F::ZeroLocusBundle)
-  for (left_locus, right_locus) in _product_bipartitions(variety(F))
-    decomposition = _kunneth_decomposition(F, left_locus, right_locus)
+  for loci in _product_bipartitions(variety(F))
+    decomposition = _kunneth_decomposition(F, loci...)
     decomposition === nothing || return decomposition
   end
   nothing
@@ -958,13 +884,11 @@ function _kunneth_cohomology(F::ZeroLocusBundle)
   d = dimension(variety(F))
   entries = zeros(BigInt, d + 1)
   for (left, right) in decomposition
-    left_cohomology = cohomology(left)
-    right_cohomology = cohomology(right)
-    is_determined(left_cohomology) && is_determined(right_cohomology) || return nothing
-    for left_degree in 0:left_cohomology.max_degree
-      for right_degree in 0:right_cohomology.max_degree
-        entries[left_degree + right_degree + 1] +=
-          left_cohomology[left_degree].constant * right_cohomology[right_degree].constant
+    left_coh, right_coh = cohomology(left), cohomology(right)
+    is_determined(left_coh) && is_determined(right_coh) || return nothing
+    for p in 0:left_coh.max_degree
+      for q in 0:right_coh.max_degree
+        entries[p + q + 1] += left_coh[p].constant * right_coh[q].constant
       end
     end
   end
