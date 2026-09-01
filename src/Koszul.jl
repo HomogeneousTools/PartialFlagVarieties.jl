@@ -7,7 +7,7 @@
 #  Given the dimension-valued cohomology of two terms of a short exact
 #  sequence, computes the cohomology of the third term as far as exactness
 #  determines it.  Undetermined connecting-map ranks are either reported
-#  (numeric solvers, which return a `determined` flag) or turned into
+#  (determined-dimension solvers, which return a flag) or turned into
 #  symbolic variables (the `AffineExpr`-valued solvers).
 #
 #  Layout:
@@ -15,8 +15,8 @@
 #                          substitution, elimination, and renumbering.
 #   2. Intervals         — bound-consistency propagation over systems of
 #                          nonnegative affine quantities.
-#   3. Numeric solvers   — connecting-rank bound propagation, `determined`
-#                          flag (solve_ses_cohomology, solve_koszul_filtration).
+#   3. BigInt solvers    — connecting-rank bound propagation with a
+#                          `determined` flag.
 #   4. δ-based solvers   — one symbolic variable per open connecting rank
 #                          (solve_ses_cohomology_symbolic and the filtration
 #                          chain).
@@ -430,12 +430,12 @@ function _truncate_cohomology!(entries::Vector{AffineExpr}, d::Int)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Short exact sequence solver (numeric)
+#  Short exact sequence solver (BigInt-valued)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
 Compute bounds on the connecting-map ranks of a short exact sequence
-``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` given numeric cohomology values for
+``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` given integer cohomology dimensions for
 ``\\mathcal{A}`` and ``\\mathcal{B}``.
 
 Writing ``δ_i = \\mathrm{rank}(\\mathrm{H}^i(X, \\mathcal{C}) \\to \\mathrm{H}^{i+1}(X, \\mathcal{A}))``, exactness gives
@@ -520,7 +520,7 @@ function solve_ses_cohomology(a::Cohomology{BigInt}, b::Cohomology{BigInt})
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Koszul filtration solver (numeric)
+#  Koszul filtration solver (BigInt-valued)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
@@ -596,7 +596,7 @@ Symbolic version of [`solve_ses_cohomology`](@ref): solve
 ``0 \\to \\mathcal{A} \\to \\mathcal{B} \\to \\mathcal{C} \\to 0`` for ``\\mathrm{H}^\\bullet(X, \\mathcal{C})``, introducing a fresh
 symbolic variable for every connecting-map rank that is not forced.
 
-For numeric inputs (`Cohomology{BigInt}`) the connecting-map bounds are
+For `Cohomology{BigInt}` inputs the connecting-map bounds are
 propagated first and variables are only introduced where a gap remains.
 For symbolic inputs each rank ``δ_i`` is zero when ``\\mathrm{H}^{i+1}(X, \\mathcal{A}) = 0``,
 equal to ``a_{i+1}`` when ``\\mathrm{H}^{i+1}(X, \\mathcal{B}) = 0`` (the connecting map is then
@@ -648,7 +648,7 @@ function solve_ses_cohomology_symbolic(
     ),
   )
 
-  # Fully determined inputs: use the numeric bound propagation, it is sharper.
+  # Fully determined inputs: BigInt bound propagation is sharper.
   if all(is_determined(a[i]) for i in 0:d) && all(is_determined(b[i]) for i in 0:d)
     return solve_ses_cohomology_symbolic(
       Cohomology{BigInt}(BigInt[a[i].constant for i in 0:d], d),
@@ -711,7 +711,7 @@ function solve_koszul_filtration_symbolic(
   end
 
   # C_r = K_r, then 0 → C_{j+1} → K_j → C_j → 0 for j = r-1, …, 0.  The first
-  # step consumes K_r and K_{r-1} at once (both numeric), which is why the
+  # step consumes K_r and K_{r-1} at once (both BigInt-valued), which is why the
   # loop starts at j = r - 2.
   current = solve_ses_cohomology_symbolic(
     koszul_cohos[r + 1], koszul_cohos[r], var_counter
@@ -804,7 +804,7 @@ function _les_interleave(
   les
 end
 
-function _numeric_les_cokernel(a::Vector{BigInt}, b::Vector{BigInt})
+function _determined_les_cokernel(a::Vector{BigInt}, b::Vector{BigInt})
   d = length(a) - 1
   c, determined = solve_ses_cohomology(Cohomology{BigInt}(a, d), Cohomology{BigInt}(b, d))
   determined || return nothing
@@ -819,7 +819,7 @@ Given ``\\mathrm{H}^\\bullet(X, \\mathcal{A})`` and ``\\mathrm{H}^\\bullet(X, \\
 
 Creates a fresh symbolic variable for each ``\\mathrm{H}^i(X, \\mathcal{C})``, then eliminates as
 many as possible using the alternating-sum equations of the long exact
-sequence (see `_les_equations`).  Fully determined numeric input is
+sequence (see `_les_equations`). Fully determined input is
 delegated to the bound-propagation solver first.
 
 When an `inequalities` vector is passed, the partial alternating-sum
@@ -839,11 +839,13 @@ function les_cokernel(
   # H^*(A) = 0 makes B → C an isomorphism on cohomology.
   all(is_zero_expr, a) && return copy(b)
 
-  # Fully numeric input: bound propagation is sharper than the segment
+  # Fully determined input: bound propagation is sharper than the segment
   # equations, use it whenever it determines the answer.
   if all(is_determined, a) && all(is_determined, b)
-    numeric = _numeric_les_cokernel(_determined_bigints(a), _determined_bigints(b))
-    numeric !== nothing && return numeric
+    determined_result = _determined_les_cokernel(
+      _determined_bigints(a), _determined_bigints(b)
+    )
+    determined_result !== nothing && return determined_result
   end
 
   # One fresh variable per unknown entry of C, then eliminate through the

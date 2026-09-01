@@ -30,15 +30,17 @@ borel_weil_bott
 
 ## Computation
 
-For an equivariant bundle on a partial flag variety, [`cohomology(E)`](@ref)
-returns dimensions by default; pass `characters=true` to keep the full ambient
-representation in each cohomology group.
+For a [`CompletelyReducibleBundle`](@ref) on a partial flag variety,
+[`cohomology(E)`](@ref) returns dimensions by default; pass `characters=true`
+to keep the full ambient representation in each cohomology group.
 
-Cohomology of a bundle on a zero locus is always dimension-valued. A section
-cutting out a zero locus is generally not invariant under the ambient group,
-so its cohomology groups do not carry the corresponding group representation.
-When the induced maps do not determine every dimension, the result has
-[`AffineExpr`](@ref) entries.
+Cohomology of a [`FilteredBundle`](@ref) or [`ZeroLocusBundle`](@ref) is always
+dimension-valued. Both types retain implicit maps: the differentials in the
+filtration spectral sequence or ambient presentation may not determine every
+dimension. In that case the result has [`AffineExpr`](@ref) entries. For a
+zero-locus bundle, character-valued cohomology is moreover not geometrically
+defined in general because the section cutting out the locus need not be
+invariant under the ambient group.
 
 ```@docs
 cohomology

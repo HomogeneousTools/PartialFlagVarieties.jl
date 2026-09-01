@@ -1905,7 +1905,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     # SES 0 → A → B → C → 0 with H*(A) = [1, 0], H*(B) = [2, 0] on a curve.
     # δ_0 ≤ a_1 = 0 forces δ_0 = 0, so C is fully determined and no symbolic
-    # variable is introduced — the symbolic solver agrees with the numeric one.
+    # variable is introduced — the symbolic solver agrees with the BigInt solver.
     a = Cohomology{BigInt}(BigInt[1, 0], 1)
     b = Cohomology{BigInt}(BigInt[2, 0], 1)
     var_counter = Ref(0)
@@ -1962,7 +1962,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "long_exact_sequence_cokernel" begin
-    # Numeric BigInt entry point: r=0 case wraps terms[1] in AffineExpr.
+    # BigInt entry point: r=0 wraps terms[1] in AffineExpr.
     var_counter = Ref(0)
     out0 = PartialFlagVarieties.long_exact_sequence_cokernel(
       Vector{BigInt}[BigInt[3, 5]], var_counter
@@ -2019,7 +2019,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     )
   end
 
-  @testset "Formal subloci" begin
+  @testset "Sublocus data" begin
     X = projective_space(4)
     W = zero_locus(line_bundle(X, 2))
     Z = zero_locus(direct_sum(line_bundle(X, 2), line_bundle(X, 1)))
@@ -2450,7 +2450,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "ZeroLocus: cohomology of restrictions" begin
-    # Numeric-determined case (quintic CY3), wrapped in AffineExpr.
+    # Determined case (quintic CY3), wrapped in AffineExpr.
     P4 = projective_space(4)
     Z = zero_locus(line_bundle(P4, 5))
     H_sym = cohomology(structure_sheaf(Z))
@@ -2820,7 +2820,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "ZeroLocus: symbolic Hodge numbers" begin
-    # Fully determined case: symbolic = numeric
+    # Fully determined case: symbolic and BigInt solvers agree.
     X = projective_space(4)
     Z = zero_locus(line_bundle(X, 5))
     H_sym = hodge_numbers_symbolic(Z)

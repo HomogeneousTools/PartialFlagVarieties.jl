@@ -15,7 +15,7 @@
 #  The script then recomputes the Hodge diamond with PartialFlagVarieties and
 #  reports:
 #    • matches with the paper table,
-#    • numerical discrepancies,
+#    • value discrepancies,
 #    • indeterminacies left by `hodge_numbers_symbolic`.
 #
 #  Usage:
@@ -551,7 +551,7 @@ const PROBLEMATIC_FAMILY_SUMMARIES = Dict(
   "C-2" => "Symbolic case: the ambient/model match is clear, but `hodge_numbers_symbolic` leaves h21 = x_12 and h22 = 21 + 2*x_12 unresolved.",
   "C-11" => "Symbolic case: the long-exact-sequence stage does not eliminate all affine variables, so both h21 and h22 remain undetermined.",
   "K3-37" => "Determined discrepancy: this family is modeled manually as 𝒵(ℙ1×ℙ1×ℙ5, 𝒪(0,0,2) ⊕ 𝒪(0,0,2) ⊕ 𝒪(1,1,1)), and the code consistently returns (3,2,22), not the Appendix C value (3,2,33).",
-  "R-61" => "Symbolic case: even h11 is not forced numerically; the output depends on the free combination x_13 - x_9.",
+  "R-61" => "Symbolic case: even h11 is not determined; the output depends on the free combination x_13 - x_9.",
   "R-63" => "Symbolic case: the unresolved affine parameters affect all three reported entries, so the expected Picard-rank jump cannot be confirmed inside the current code.",
   "R-64" => "Symbolic case: same pattern as R-63, with free variables surviving in h11, h21, and h22.",
 )

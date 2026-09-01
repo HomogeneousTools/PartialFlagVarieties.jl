@@ -35,7 +35,7 @@ equivariant bundle ``\\mathcal{E}`` on the partial flag variety ``X = \\mathrm{G
 
 Assumes the section is regular, so ``\\dim Z = \\dim X - \\mathrm{rank}(\\mathcal{E})``.
 The section itself is not stored: a `ZeroLocus` records only `X` and
-``\\mathcal{E}``, and represents the corresponding formal regular zero locus.
+``\\mathcal{E}``, and represents a regular zero locus with those data.
 
 Equality therefore compares the ambient variety and defining bundle, not
 chosen sections or geometric isomorphism classes.
@@ -72,7 +72,7 @@ Base.hash(Z::ZeroLocus, h::UInt) =
 """
     is_sublocus(Z::ZeroLocus, W::ZeroLocus) -> Bool
 
-Return whether `Z` is a formal sublocus of `W`.
+Return whether the defining-bundle data make `Z` a sublocus of `W`.
 
 If `Z` is cut out by ``\\mathcal{E} \\oplus \\mathcal{E}'`` and `W` by
 ``\\mathcal{E}`` on the same ambient partial flag variety type, then
@@ -80,7 +80,7 @@ If `Z` is cut out by ``\\mathcal{E} \\oplus \\mathcal{E}'`` and `W` by
 be a direct summand of the defining bundle of `Z`, including multiplicities.
 
 Since a [`ZeroLocus`](@ref) does not store a chosen section, this predicate
-compares formal complete-intersection presentations; it does not test
+compares the recorded complete-intersection presentations; it does not test
 containment of independently specified geometric subvarieties.
 
 # Examples
@@ -514,7 +514,8 @@ Instead of parametrising connecting-map ranks (``\\delta``-variables),
 creates a fresh symbolic variable for each output entry and applies
 the alternating-sum LES equations.
 
-Falls back to the numeric path when fully determined.
+Uses the `BigInt` solver first and returns its result when the bounds determine
+every entry.
 """
 function _restrict_to_zero_locus_les(
   Z::ZeroLocus, f_counts::Dict{IrrepLevi,Int}, var_counter::Ref{Int}
@@ -532,10 +533,10 @@ function _restrict_to_zero_locus_les(
   # Compute Koszul cohomologies once (memory-efficient path)
   koszul_cohos = _koszul_dimensions(Z, f_counts, wedge_counts)
 
-  # Try numeric solve first
-  numeric_cohomology, numeric_determined = solve_koszul_filtration(koszul_cohos, d_Z)
-  if numeric_determined
-    return AffineExpr[AffineExpr(numeric_cohomology[k]) for k in 0:d_Z]
+  # Try the determined-dimension solver first.
+  cohomology_candidate, determined = solve_koszul_filtration(koszul_cohos, d_Z)
+  if determined
+    return AffineExpr[AffineExpr(cohomology_candidate[k]) for k in 0:d_Z]
   end
 
   koszul_cohos_dual = nothing
@@ -555,7 +556,7 @@ function _restrict_to_zero_locus_les(
   # For ω_Z ≅ O_Z the dual bundle is chained as well, and Serre duality
   # H^k(Z, \\mathcal{F}|_Z) = H^{d-k}(Z, F^∨|_Z) is imposed entry by entry: both chains
   # are sound parametrizations, so equating them is a sound constraint
-  # (unlike cross-validating two undetermined numeric guesses).
+  # (unlike cross-validating two undetermined candidates).
   inequalities = AffineExpr[]
   primal = long_exact_sequence_cokernel(
     _reversed_koszul_vecs(koszul_cohos), var_counter; inequalities
@@ -622,7 +623,7 @@ Each Koszul term ``\\mathcal{F} ⊗ ∧^k \\mathcal{E}^\\vee`` is again a filter
 on ``X`` is the abutment of the spectral sequence of the filtration
 (see `_cohomology_filtered`), and the Koszul chain is then solved
 with the symbolic LES solver.  When every spectral sequence visibly
-degenerates, the terms are exact and the numeric solver (with its Serre
+degenerates, the terms are determined and the `BigInt` solver (with its Serre
 duality fallback for ``ω_Z ≅ \\mathcal{O}_Z``) is used instead.
 """
 function _restrict_to_zero_locus_les(
@@ -644,9 +645,9 @@ function _restrict_to_zero_locus_les(
     koszul_cohos = [
       Cohomology{BigInt}(_determined_bigints(entries), d_X) for entries in koszul_entries
     ]
-    numeric_cohomology, numeric_determined = solve_koszul_filtration(koszul_cohos, d_Z)
-    numeric_determined && return AffineExpr[
-      AffineExpr(numeric_cohomology[k]) for k in 0:d_Z
+    cohomology_candidate, determined = solve_koszul_filtration(koszul_cohos, d_Z)
+    determined && return AffineExpr[
+      AffineExpr(cohomology_candidate[k]) for k in 0:d_Z
     ]
 
     # Serre duality fallback: sound when ω_Z ≅ O_Z, provided the spectral

@@ -87,7 +87,7 @@ H[2, 2]  # h^{1,1}
 ## Zero-locus assumptions
 
 `zero_locus(E)` studies the zero locus of a **regular section** of `E`. The
-package checks basic numerical consistency such as `rank(E) <= dimension(X)`,
+package checks basic consistency conditions such as `rank(E) <= dimension(X)`,
 but it does **not** prove that a regular section exists or that the geometric
 zero locus is nonempty.
 

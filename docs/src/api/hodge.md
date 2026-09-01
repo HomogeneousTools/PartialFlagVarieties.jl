@@ -10,7 +10,7 @@ in the Fano vanishing check.
 
 There are two rather different regimes:
 
-- for homogeneous varieties ``X = \mathrm{G}/\mathrm{P}``, Hodge-theoretic output is numerical;
+- for homogeneous varieties ``X = \mathrm{G}/\mathrm{P}``, Hodge-theoretic output is integer-valued;
 - for zero loci ``Z``, the package may return symbolic affine expressions when
   the long exact sequences do not force all connecting-map ranks.
 

@@ -121,7 +121,7 @@ Z = zero_locus(E)
 H = hodge_numbers_symbolic(Z)
 ```
 
-Use [`is_determined`](@ref) to test whether an entry is numerical or still
+Use [`is_determined`](@ref) to test whether an entry is determined or still
 contains a symbolic variable.
 
 ## Round-trip external labels
