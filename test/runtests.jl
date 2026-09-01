@@ -656,6 +656,28 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test total_bundle(mixed_left) == external_tensor_product(total_bundle(F), M)
     @test total_bundle(mixed_right) == external_tensor_product(L, total_bundle(G))
     @test iszero(external_tensor_product(F, zero_bundle(Y)))
+
+    mixed_factors = only(
+      PartialFlagVarieties._factor_ambient_bundle_on_product(
+        mixed_left, variety(F), variety(M)
+      ),
+    )
+    @test external_tensor_product(mixed_factors...) == mixed_left
+
+    H = filtered_tangent_bundle(full_flag_variety(TypeB{2}))
+    FH = external_tensor_product(F, H)
+    filtered_factors = only(
+      PartialFlagVarieties._factor_ambient_bundle_on_product(FH, variety(F), variety(H))
+    )
+    @test external_tensor_product(filtered_factors...) == FH
+
+    one_step_product = external_tensor_product(G, G)
+    one_step_factors = only(
+      PartialFlagVarieties._factor_ambient_bundle_on_product(
+        one_step_product, variety(G), variety(G)
+      ),
+    )
+    @test external_tensor_product(one_step_factors...) == total_bundle(one_step_product)
   end
 
   @testset "Twist" begin
@@ -2265,6 +2287,45 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "Bundles on zero loci: external operations" begin
+    # An external tensor product has rectangular support, additive degrees,
+    # and rank-one multiplicities in its left/right factor grid.
+    factor_terms = PartialFlagVarieties._factor_product_terms
+    term_components = PartialFlagVarieties._product_term_components
+    add_term! = PartialFlagVarieties._add_product_term!
+    product_terms = Dict(
+      (:a, :x) => (1, 6),
+      (:a, :y) => (4, 8),
+      (:b, :x) => (2, 15),
+      (:b, :y) => (5, 20),
+    )
+    left_data, right_data = factor_terms(product_terms)
+    for ((left, right), (degree, multiplicity)) in product_terms
+      left_degree, left_multiplicity = left_data[left]
+      right_degree, right_multiplicity = right_data[right]
+      @test degree == left_degree + right_degree
+      @test multiplicity == left_multiplicity * right_multiplicity
+    end
+
+    disconnected_terms = merge(product_terms, Dict((:c, :z) => (0, 1)))
+    @test sort!(length.(term_components(disconnected_terms))) == [1, 4]
+    incomplete_terms = copy(product_terms)
+    delete!(incomplete_terms, (:b, :y))
+    @test all(
+      isnothing ∘ factor_terms,
+      (
+        empty(product_terms),
+        incomplete_terms,
+        merge(product_terms, Dict((:b, :y) => (6, 20))),
+        merge(product_terms, Dict((:b, :y) => (5, 21))),
+      ),
+    )
+
+    repeated_term = Dict{Tuple{Symbol,Symbol},Tuple{Int,Int}}()
+    @test add_term!(repeated_term, (:a, :x), 2, 3)
+    @test add_term!(repeated_term, (:a, :x), 2, 4)
+    @test repeated_term[(:a, :x)] == (2, 7)
+    @test !add_term!(repeated_term, (:a, :x), 3)
+
     Z = zero_locus(line_bundle(projective_space(2), 1))
     W = zero_locus(line_bundle(projective_space(2), 2))
     ZW = product(Z, W)
@@ -2298,6 +2359,45 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test euler_characteristic(tangent_sum) ==
       euler_characteristic(TZ) * euler_characteristic(structure_sheaf(W)) +
           euler_characteristic(structure_sheaf(Z)) * euler_characteristic(TW)
+
+    quartic_ambient = projective_space(3)
+    quartic = zero_locus(line_bundle(quartic_ambient, 4))
+    tangent_quartic = tangent_bundle(quartic)
+    tangent_box_square = external_tensor_product(tangent_quartic, tangent_quartic)
+    tangent_box_sum = external_direct_sum(tangent_quartic, tangent_quartic)
+    @test cohomology(tangent_box_square).entries == AffineExpr.([0, 0, 400, 0, 0])
+    @test cohomology(tangent_box_sum).entries == AffineExpr.([0, 40, 0, 40, 0])
+
+    product_ambient = product(quartic_ambient, quartic_ambient)
+    manual_locus = zero_locus(
+      direct_sum(
+        line_bundle(product_ambient, [4, 0]),
+        line_bundle(product_ambient, [0, 4]),
+      ),
+    )
+    nonfactorable_filtration = FilteredBundle(
+      product_ambient,
+      CompletelyReducibleBundle[
+        line_bundle(product_ambient, [1, 0]),
+        line_bundle(product_ambient, [0, 1]),
+      ],
+    )
+    @test isnothing(
+      PartialFlagVarieties._kunneth_decomposition(
+        restrict(manual_locus, nonfactorable_filtration)
+      ),
+    )
+
+    manual_ambient_bundle = direct_sum(
+      direct_sum(
+        structure_sheaf(product_ambient),
+        line_bundle(product_ambient, [1, 0]),
+      ),
+      line_bundle(product_ambient, [0, 1]),
+    )
+    manual_bundle = restrict(manual_locus, manual_ambient_bundle)
+    @test manual_locus == product(quartic, quartic)
+    @test cohomology(manual_bundle).entries == AffineExpr.([9, 0, 10, 0, 1])
   end
 
   # The zero locus of a section of O(1) on the Cayley plane OP² = E6/P1

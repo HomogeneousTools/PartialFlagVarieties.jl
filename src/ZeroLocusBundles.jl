@@ -15,7 +15,9 @@ export ZeroLocusBundle, restrict
 struct _AmbientBundlePresentation
   terms::Dict{Int,Vector{_AmbientBundle}}
 
-  function _AmbientBundlePresentation(terms::Dict{Int,Vector{_AmbientBundle}})
+  function _AmbientBundlePresentation(
+    terms::AbstractDict{Int,<:AbstractVector{<:_AmbientBundle}}
+  )
     cleaned = Dict{Int,Vector{_AmbientBundle}}()
     for (degree, summands) in terms
       kept = _AmbientBundle[summand for summand in summands if rank(summand) != 0]
@@ -25,11 +27,14 @@ struct _AmbientBundlePresentation
   end
 end
 
+# Wrap one ambient bundle as a one-term presentation in the requested degree.
 _AmbientBundlePresentation(degree::Int, bundle::_AmbientBundle) =
   _AmbientBundlePresentation(
     Dict{Int,Vector{_AmbientBundle}}(degree => _AmbientBundle[bundle])
   )
 
+# Compare summand multisets; their order within one presentation degree carries
+# no mathematical information.
 function _same_summands(left::Vector{_AmbientBundle}, right::Vector{_AmbientBundle})
   length(left) == length(right) || return false
   unmatched = trues(length(right))
@@ -99,6 +104,7 @@ variety(F::ZeroLocusBundle) = F.locus
 """Return the ambient partial flag variety of the base of `F`."""
 ambient_variety(F::ZeroLocusBundle) = ambient_variety(variety(F))
 
+# Guard binary bundle operations against mixing different zero loci.
 function _check_same_locus(F::ZeroLocusBundle, G::ZeroLocusBundle, operation::String)
   variety(F) == variety(G) || throw(
     ArgumentError("$operation requires bundles on the same zero locus.")
@@ -187,6 +193,8 @@ function _lift_bundle_to_product(
   ZeroLocusBundle(product_locus, _AmbientBundlePresentation(terms))
 end
 
+# Lift two presentations to their common product zero locus, placing the right
+# presentation after the left ambient Dynkin block.
 function _lift_external_factors(F::ZeroLocusBundle, G::ZeroLocusBundle)
   product_locus = product(variety(F), variety(G))
   right_offset = rank(dynkin_type(ambient_variety(F)))
@@ -471,8 +479,11 @@ presentation is the normal sequence
 ``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to \\mathcal{E}|_Z \\to 0``.
 """
 function tangent_bundle(Z::ZeroLocus)
+  ambient_tangent = filtered_tangent_bundle(ambient_variety(Z))
+  n_filtration_steps(ambient_tangent) == 1 &&
+    (ambient_tangent = total_bundle(ambient_tangent))
   terms = Dict{Int,Vector{_AmbientBundle}}(
-    0 => _AmbientBundle[filtered_tangent_bundle(ambient_variety(Z))],
+    0 => _AmbientBundle[ambient_tangent],
     1 => _AmbientBundle[defining_bundle(Z)],
   )
   ZeroLocusBundle(Z, _AmbientBundlePresentation(terms))
@@ -532,6 +543,8 @@ end
 #  Additive invariants and cohomology
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Evaluate the Euler characteristic of an ambient bundle after restriction;
+# a filtration contributes the sum of its graded pieces.
 _euler_characteristic_on_restriction(Z::ZeroLocus, F::CompletelyReducibleBundle) =
   _euler_characteristic_from_counts(Z, _to_counts(F))
 
@@ -560,6 +573,7 @@ end
 
 chi(F::ZeroLocusBundle) = euler_characteristic(F)
 
+# Dispatch an ambient summand to the appropriate restriction LES backend.
 function _restriction_cohomology(
   Z::ZeroLocus, F::CompletelyReducibleBundle, var_counter::Ref{Int}
 )
@@ -572,6 +586,8 @@ function _restriction_cohomology(
   _restrict_to_zero_locus_les(Z, F, var_counter)
 end
 
+# Add the restriction cohomologies of all ambient summands in one presentation
+# degree; the presentation overload supplies an empty degree when necessary.
 function _presentation_term_cohomology(
   Z::ZeroLocus, summands::Vector{_AmbientBundle}, var_counter::Ref{Int}
 )
@@ -642,19 +658,19 @@ Compute dimension-valued sheaf cohomology from the ambient presentation.
 Entries are exact integers where exactness and the available geometric
 constraints determine them, and symbolic affine expressions otherwise.
 
+When the zero locus splits as a product and the presentation is
+structurally a direct sum of external tensor products, this method first tries
+the Künneth formula. Recognition uses the current locus and presentation, not
+the constructors that produced them. If no unambiguous factorization is found,
+or factor cohomology remains symbolic, computation falls back to the generic
+long-exact-sequence backend.
+
 Character-valued cohomology is not defined: a section cutting out a zero locus
 is generally not invariant under the ambient group.
 """
 function cohomology(F::ZeroLocusBundle)
   Z = variety(F)
   d = dimension(Z)
-  is_tangent = F == tangent_bundle(Z)
-
-  if is_tangent && n_factors(Z) >= 2
-    tangent_row = AffineExpr[hochschild_cohomology(Z)[1, q] for q in 0:d]
-    all(is_determined, tangent_row) && return Cohomology{AffineExpr}(tangent_row, d)
-  end
-
   var_counter = Ref(0)
 
   # A degree-zero presentation is just a direct sum of restricted ambient
@@ -664,6 +680,15 @@ function cohomology(F::ZeroLocusBundle)
     _renumber_variables!(entries)
     return Cohomology{AffineExpr}(entries, d)
   end
+
+  is_tangent = F == tangent_bundle(Z)
+  if is_tangent && n_factors(Z) >= 2
+    tangent_row = AffineExpr[hochschild_cohomology(Z)[1, q] for q in 0:d]
+    all(is_determined, tangent_row) && return Cohomology{AffineExpr}(tangent_row, d)
+  end
+
+  kunneth_cohomology = _kunneth_cohomology(F)
+  kunneth_cohomology === nothing || return kunneth_cohomology
 
   entries, inequalities = _cohomology_from_presentation(F, var_counter)
   entry_count = length(entries)

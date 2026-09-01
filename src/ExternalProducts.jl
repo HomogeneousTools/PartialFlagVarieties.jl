@@ -19,6 +19,8 @@ function _lift_bundle_to_product(
   )
 end
 
+# Lift two ambient bundles to the common product ambient, placing the right
+# bundle after the left Dynkin block.
 function _lift_external_factors(
   product_ambient::PartialFlagVariety,
   E::_AmbientBundle,

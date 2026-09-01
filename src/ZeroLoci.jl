@@ -189,7 +189,9 @@ latter disconnects `Z` into `m` copies); a single reduced point is a Künneth
 identity and is dropped. `n_factors` counts the kept factors.
 
 `hodge_numbers`, `hochschild_cohomology`, and cohomology of the tangent bundle
-recombine the factors by the Künneth formula, which determines
+recombine the factors by the Künneth formula. Cohomology of any bundle whose
+ambient presentation is structurally recognized as a direct sum of external
+tensor products does the same. This determines
 diamonds/parallelograms the monolithic long-exact-sequence solver leaves
 symbolic. (The remaining invariants — `euler_characteristic`,
 `hilbert_polynomial`, the anticanonical degree — are already exact for a
@@ -237,9 +239,8 @@ function factors(Z::ZeroLocus)
   filter(part -> dimension(part) >= 1 || euler_characteristic(part) >= 2, parts)
 end
 
-# Partition the ambient factors `1:n` into connected blocks, joining two factors
-# whenever some bundle summand is supported on both (union–find with path
-# compression). Untouched factors form singleton blocks.
+# Partition the ambient factors into connected blocks, joining the support of
+# each defining-bundle summand. Untouched factors remain singleton blocks.
 function _connected_ambient_factors(supports, n)
   parent = collect(1:n)
   root(i) = parent[i] == i ? i : (parent[i] = root(parent[i]))
@@ -250,7 +251,7 @@ function _connected_ambient_factors(supports, n)
   for factor in 1:n
     push!(blocks[root(factor)], factor)
   end
-  return filter(!isempty, blocks)
+  filter(!isempty, blocks)
 end
 
 """
