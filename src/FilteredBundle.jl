@@ -24,7 +24,7 @@ export n_filtration_steps
 """
   FilteredBundle
 
-A formal equivariant vector bundle on ``\\mathrm{G}/\\mathrm{P}`` equipped with a filtration by
+An equivariant vector bundle on ``\\mathrm{G}/\\mathrm{P}`` equipped with a filtration by
 equivariant subbundles. It is represented by an ordered list of associated
 graded pieces (each a [`CompletelyReducibleBundle`](@ref)); extension maps are
 implicit, so computations retain any ambiguity that depends on those maps.

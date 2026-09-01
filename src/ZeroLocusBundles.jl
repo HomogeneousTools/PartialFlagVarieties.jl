@@ -73,7 +73,7 @@ maps are implicit: the package records the data needed for bundle operations,
 additive invariants, and symbolic long-exact-sequence calculations.
 
 Equality is structural: two `ZeroLocusBundle`s compare equal when they have the
-same formal zero locus and the same ambient presentation terms, including
+same recorded zero locus and the same ambient presentation terms, including
 multiplicities. It does not try to prove that different presentations represent
 isomorphic bundles. In contrast, [`iszero`](@ref) tests the represented vector
 bundle through its rank, so a nonempty rank-zero presentation can be zero
@@ -112,7 +112,7 @@ end
 Restrict an ambient [`CompletelyReducibleBundle`](@ref) or
 [`FilteredBundle`](@ref) `F` to `Z`.
 
-If `F` already lives on a formal zero locus cut out by `E`, it can be restricted
+If `F` already lives on a zero locus cut out by `E`, it can be restricted
 again to a zero locus in the same ambient variety whose defining bundle
 contains `E` as a direct summand. Thus a bundle on `Z(E)` restricts naturally to
 `Z(E ⊕ E′)`. Since [`ZeroLocus`](@ref) does not store individual sections,
@@ -130,7 +130,7 @@ function restrict(Z::ZeroLocus, F::ZeroLocusBundle)
   source === Z && return F
   is_sublocus(Z, source) || throw(
     ArgumentError(
-      "restrict requires the target zero locus to be a formal sublocus of the source."
+      "restrict requires the target defining bundle to contain the source defining bundle."
     ),
   )
   ZeroLocusBundle(Z, _AmbientBundlePresentation(F.presentation.terms))
@@ -459,7 +459,7 @@ conormal_bundle(Z::ZeroLocus) = dual(normal_bundle(Z))
 """
     tangent_bundle(Z::ZeroLocus) -> ZeroLocusBundle
 
-Return the tangent bundle of a smooth formal zero locus. Its ambient
+Return the tangent bundle of a smooth zero locus. Its ambient
 presentation is the normal sequence
 ``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to \\mathcal{E}|_Z \\to 0``.
 """
@@ -476,7 +476,7 @@ T(Z::ZeroLocus) = tangent_bundle(Z)
 """
     cotangent_bundle(Z::ZeroLocus) -> ZeroLocusBundle
 
-Return the cotangent bundle of a smooth formal zero locus, represented by the
+Return the cotangent bundle of a smooth zero locus, represented by the
 conormal sequence dual to the tangent presentation.
 """
 function cotangent_bundle(Z::ZeroLocus)
