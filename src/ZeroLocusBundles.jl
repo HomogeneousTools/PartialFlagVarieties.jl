@@ -471,8 +471,15 @@ presentation is the normal sequence
 ``0 \\to \\mathrm{T}_Z \\to \\mathrm{T}_X|_Z \\to \\mathcal{E}|_Z \\to 0``.
 """
 function tangent_bundle(Z::ZeroLocus)
+  ambient_tangent = filtered_tangent_bundle(ambient_variety(Z))
+  tangent_term =
+    if n_filtration_steps(ambient_tangent) == 1
+      total_bundle(ambient_tangent)
+    else
+      ambient_tangent
+    end
   terms = Dict{Int,Vector{_AmbientBundle}}(
-    0 => _AmbientBundle[filtered_tangent_bundle(ambient_variety(Z))],
+    0 => _AmbientBundle[tangent_term],
     1 => _AmbientBundle[defining_bundle(Z)],
   )
   ZeroLocusBundle(Z, _AmbientBundlePresentation(terms))
@@ -1024,16 +1031,6 @@ is generally not invariant under the ambient group.
 function cohomology(F::ZeroLocusBundle)
   Z = variety(F)
   d = dimension(Z)
-  is_tangent = F == tangent_bundle(Z)
-
-  kunneth_cohomology = _kunneth_cohomology(F)
-  kunneth_cohomology === nothing || return kunneth_cohomology
-
-  if is_tangent && n_factors(Z) >= 2
-    tangent_row = AffineExpr[hochschild_cohomology(Z)[1, q] for q in 0:d]
-    all(is_determined, tangent_row) && return Cohomology{AffineExpr}(tangent_row, d)
-  end
-
   var_counter = Ref(0)
 
   # A degree-zero presentation is just a direct sum of restricted ambient
@@ -1043,6 +1040,15 @@ function cohomology(F::ZeroLocusBundle)
     _renumber_variables!(entries)
     return Cohomology{AffineExpr}(entries, d)
   end
+
+  is_tangent = F == tangent_bundle(Z)
+  if is_tangent && n_factors(Z) >= 2
+    tangent_row = AffineExpr[hochschild_cohomology(Z)[1, q] for q in 0:d]
+    all(is_determined, tangent_row) && return Cohomology{AffineExpr}(tangent_row, d)
+  end
+
+  kunneth_cohomology = _kunneth_cohomology(F)
+  kunneth_cohomology === nothing || return kunneth_cohomology
 
   entries, inequalities = _cohomology_from_presentation(F, var_counter)
   entry_count = length(entries)
