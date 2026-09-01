@@ -126,8 +126,11 @@ direct sum of external tensor products. If so, and the factor cohomology is
 determined, it applies the Künneth formula. This is structural recognition:
 the optimization also applies when the locus and bundle merely have the
 factorable form, regardless of whether `product` or an `external_*` constructor
-created them. Ambiguous or nonfactorable presentations safely use the generic
-solver.
+created them. Concretely, the recognizer groups terms sharing a factor and
+checks that each group forms the rectangular grid of an external tensor
+product: its presentation degrees must split as sums of factor degrees and its
+multiplicities as products of factor multiplicities. Ambiguous or nonfactorable
+presentations safely use the generic solver.
 
 !!! note "Generic bundle cohomology versus the Hodge engine"
     `cohomology(exterior_power(cotangent_bundle(Z), p))` evaluates that one
