@@ -837,7 +837,7 @@ true
 function tensor_product(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   X = variety(E)
   Y = variety(F)
-  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(
+  Y == X || throw(
     ArgumentError(
       "tensor_product requires bundles on the same partial flag variety type."
     ),
@@ -1118,7 +1118,7 @@ The direct sum ``\\mathcal{E} \\oplus \\mathcal{F}``.
 function direct_sum(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
   X = variety(E)
   Y = variety(F)
-  marked_dynkin_type(Y) == marked_dynkin_type(X) || throw(
+  Y == X || throw(
     ArgumentError(
       "direct_sum requires bundles on the same partial flag variety type."
     ),
@@ -1157,7 +1157,7 @@ false
 function is_summand(
   E::CompletelyReducibleBundle, F::CompletelyReducibleBundle
 )
-  marked_dynkin_type(variety(E)) == marked_dynkin_type(variety(F)) || return false
+  variety(E) == variety(F) || return false
   multiplicities = _to_counts(F)
   all(
     multiplicity <= get(multiplicities, component, 0) for

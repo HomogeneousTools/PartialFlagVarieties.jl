@@ -323,7 +323,7 @@ Return the terms of the twisted Koszul complex:
 where ``\\mathcal{E}`` is the defining bundle and ``r = \\mathrm{rank}(\\mathcal{E})``.
 """
 function koszul_terms(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(F) == Z.ambient || throw(
     ArgumentError(
       "koszul_terms requires a bundle on the ambient variety of the zero locus."
     ),
@@ -417,7 +417,7 @@ This avoids allocating ``O(N^2)`` `IrrepLevi` vectors that are
 immediately re-deduplicated by `dimensions()`.
 """
 function _koszul_dimensions(Z::ZeroLocus, F::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(F) == Z.ambient || throw(
     ArgumentError(
       "_koszul_dimensions requires a bundle on the ambient variety of the zero locus."
     ),
@@ -629,7 +629,7 @@ duality fallback for ``ω_Z ≅ \\mathcal{O}_Z``) is used instead.
 function _restrict_to_zero_locus_les(
   Z::ZeroLocus, F::FilteredBundle, var_counter::Ref{Int}
 )
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(F) == Z.ambient || throw(
     ArgumentError(
       "_restrict_to_zero_locus_les requires a bundle on the ambient variety."
     ),
@@ -996,7 +996,7 @@ true
 ```
 """
 function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
-  marked_dynkin_type(variety(L)) == marked_dynkin_type(Z.ambient) || throw(
+  variety(L) == Z.ambient || throw(
     ArgumentError("the polarization must live on the ambient variety.")
   )
   rank(L) == 1 || throw(

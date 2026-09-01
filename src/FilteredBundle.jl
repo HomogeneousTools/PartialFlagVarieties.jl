@@ -64,7 +64,7 @@ struct FilteredBundle <: Bundle
     pieces::Vector{CompletelyReducibleBundle},
   )
     for (idx, piece) in enumerate(pieces)
-      marked_dynkin_type(variety(piece)) == marked_dynkin_type(X) || throw(
+      variety(piece) == X || throw(
         ArgumentError(
           "Filtered bundle piece $idx lives on $(variety(piece)), expected $X."
         ),
@@ -169,7 +169,7 @@ The tensor product with the convolution filtration. If the graded pieces of
 occurs in filtration degree `i + j`.
 """
 function tensor_product(F::FilteredBundle, G::FilteredBundle)
-  marked_dynkin_type(variety(G)) == marked_dynkin_type(variety(F)) || throw(
+  variety(G) == variety(F) || throw(
     ArgumentError(
       "tensor_product requires bundles on the same partial flag variety type."
     ),

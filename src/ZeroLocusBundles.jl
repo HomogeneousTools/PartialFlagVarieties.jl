@@ -119,7 +119,7 @@ contains `E` as a direct summand. Thus a bundle on `Z(E)` restricts naturally to
 containment is understood through [`is_sublocus`](@ref).
 """
 function restrict(Z::ZeroLocus, F::_AmbientBundle)
-  marked_dynkin_type(variety(F)) == marked_dynkin_type(ambient_variety(Z)) || throw(
+  variety(F) == ambient_variety(Z) || throw(
     ArgumentError("restrict requires a bundle on the ambient variety of the zero locus.")
   )
   ZeroLocusBundle(Z, _AmbientBundlePresentation(0, F))
