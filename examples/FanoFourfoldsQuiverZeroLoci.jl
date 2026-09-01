@@ -48,11 +48,11 @@ struct ComputationResult
   hodge_reference::Matrix{AffineExpr}
   hodge_match::Bool
   underdetermined::Bool
-  h0_antiK::Union{Nothing,Int}
-  antiK4::Union{Nothing,Int}
-  h0_T::Union{Nothing,Int}
-  h1_T::Union{Nothing,Int}
-  chi_T::Union{Nothing,Int}
+  h0_antiK::Union{Nothing,BigInt}
+  antiK4::Union{Nothing,BigInt}
+  h0_T::Union{Nothing,BigInt}
+  h1_T::Union{Nothing,BigInt}
+  chi_T::Union{Nothing,BigInt}
   # Hodge numbers h^{p,q} as display strings ("?" if not computed)
   h11::String
   h12::String
@@ -521,7 +521,7 @@ Compute h⁰(-K_Z) = χ(-K_Z) (by Kodaira vanishing on Fano varieties).
 """
 function compute_h0_antiK(Z::ZeroLocus, X::PartialFlagVariety, E::CompletelyReducibleBundle)
   antiK_Z = tensor_product(anticanonical_bundle(X), dual(det(E)))
-  Int(euler_characteristic(restrict(Z, antiK_Z)))
+  euler_characteristic(restrict(Z, antiK_Z))
 end
 
 """
@@ -542,7 +542,7 @@ function compute_antiK_fourth(
     end
   end
 
-  Int(vals[5] - 4vals[4] + 6vals[3] - 4vals[2] + vals[1])
+  vals[5] - 4vals[4] + 6vals[3] - 4vals[2] + vals[1]
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -805,11 +805,11 @@ function process_entry(entry::QuiverEntry)
 
     h0_aK = compute_h0_antiK(Z, X, E)
     aK4 = compute_antiK_fourth(Z, X, E)
-    chi_T = Int(euler_characteristic(tangent_bundle(Z)))
+    chi_T = euler_characteristic(tangent_bundle(Z))
 
     H_T = cohomology(tangent_bundle(Z))
-    h0_T = is_determined(H_T[0]) ? Int(H_T[0].constant) : nothing
-    h1_T = is_determined(H_T[1]) ? Int(H_T[1].constant) : nothing
+    h0_T = is_determined(H_T[0]) ? H_T[0].constant : nothing
+    h1_T = is_determined(H_T[1]) ? H_T[1].constant : nothing
 
     match_hodge, _ = _match_hodge(hodge, entry.hodge)
 
