@@ -636,16 +636,22 @@ function _cohomology_from_presentation(F::ZeroLocusBundle, var_counter::Ref{Int}
 end
 
 """
-    cohomology(F::ZeroLocusBundle) -> Cohomology{AffineExpr}
+    cohomology(F::ZeroLocusBundle; with_bounds=false)
 
 Compute dimension-valued sheaf cohomology from the ambient presentation.
 Entries are exact integers where exactness and the available geometric
 constraints determine them, and symbolic affine expressions otherwise.
+Pass `with_bounds=true` to return `(values=..., bounds=...)` with bounds for
+the displayed parameters, retaining intermediate exact-sequence constraints.
 
 Character-valued cohomology is not defined: a section cutting out a zero locus
 is generally not invariant under the ambient group.
 """
-function cohomology(F::ZeroLocusBundle)
+function cohomology(F::ZeroLocusBundle; with_bounds::Bool=false)
+  _with_cohomology_bounds(() -> _compute_cohomology(F), with_bounds)
+end
+
+function _compute_cohomology(F::ZeroLocusBundle)
   Z = variety(F)
   d = dimension(Z)
   is_tangent = F == tangent_bundle(Z)

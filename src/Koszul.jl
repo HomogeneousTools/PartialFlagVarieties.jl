@@ -55,6 +55,48 @@ end
 
 AffineExpr(c::Integer) = AffineExpr(BigInt(c), Dict{Int,BigInt}())
 
+# Each public computation owns its collector, including nested calls whose
+# independent symbolic counters also start at zero. Task-local scoping restores
+# the caller's collector even when a computation throws.
+const _BOUNDS_CONTEXT_KEY = :PartialFlagVarieties_symbolic_bounds
+const _ParameterInterval = NamedTuple{
+  (:lower, :upper),Tuple{BigInt,Union{Nothing,BigInt}}
+}
+
+mutable struct _BoundsContext
+  constraints::Vector{AffineExpr}
+  output_ids::Dict{Int,Int}
+end
+
+_bounds_context() = get(task_local_storage(), _BOUNDS_CONTEXT_KEY, nothing)
+
+function _record_nonnegative!(expr::AffineExpr)
+  context = _bounds_context()
+  context === nothing || push!(context.constraints, expr)
+  nothing
+end
+
+function _record_constraints!(system)
+  context = _bounds_context()
+  context === nothing || append!(context.constraints, vec(collect(system)))
+  nothing
+end
+
+function _with_cohomology_bounds(f::Function, with_bounds::Bool)
+  !with_bounds && _bounds_context() === nothing && return f()
+  context = with_bounds ? _BoundsContext(AffineExpr[], Dict{Int,Int}()) : nothing
+  task_local_storage(_BOUNDS_CONTEXT_KEY, context) do
+    values = f()
+    with_bounds || return values
+    intervals = _variable_intervals(context.constraints)
+    bounds = Dict{Int,_ParameterInterval}(
+      new_id => get(intervals, old_id, (lower=BigInt(0), upper=nothing)) for
+      (new_id, old_id) in context.output_ids
+    )
+    (values=values, bounds=bounds)
+  end
+end
+
 """Create a fresh symbolic variable ``x_i``."""
 symbolic_variable(var_id::Int) = AffineExpr(
   BigInt(0), Dict{Int,BigInt}(var_id => BigInt(1))
@@ -67,6 +109,7 @@ be distinct within one computation; the user-facing output is compacted by
 """
 function _fresh_variable(var_counter::Ref{Int})
   x = symbolic_variable(var_counter[])
+  _record_nonnegative!(x)
   var_counter[] += 1
   x
 end
@@ -196,6 +239,11 @@ entry changed.
 function _substitute_var!(
   M::AbstractArray{AffineExpr}, var_id::Int, replacement::AffineExpr
 )
+  if _bounds_context() !== nothing
+    equation = symbolic_variable(var_id) - replacement
+    _record_nonnegative!(equation)
+    _record_nonnegative!(-equation)
+  end
   changed = false
   for i in eachindex(M)
     entry = M[i]
@@ -296,6 +344,13 @@ function _renumber_variables!(M::AbstractArray{AffineExpr})
   for entry in M, var in keys(entry.coeffs)
     push!(old_ids, var)
   end
+  context = _bounds_context()
+  if context !== nothing
+    _record_constraints!(M)
+    context.output_ids = Dict(
+      new_id - 1 => old_id for (new_id, old_id) in enumerate(sort!(collect(old_ids)))
+    )
+  end
   isempty(old_ids) && return M
 
   mapping = Dict{Int,Int}(
@@ -321,36 +376,18 @@ _infeasible_intervals() = error(
   "the expected dimension?)",
 )
 
-"""
-    _propagate_intervals!(system::AbstractArray{AffineExpr}) -> Bool
-
-Interval (bound-consistency) propagation on a system of nonnegative
-quantities.
-
-Every element of `system` represents a nonnegative integer (a cohomology
-dimension or a connecting-map rank), and every symbolic variable is itself a
-nonnegative integer.  Each element ``c + \\sum_j k_j x_j \\ge 0`` bounds each of
-its variables in terms of the current intervals of the others; the bounds are
-tightened to a fixed point, and a variable whose interval collapses to a
-point is substituted throughout `system`.  Raises when an interval empties,
-which means the input data was inconsistent.
-
-Returns `true` when at least one variable was pinned.  This recovers the
-information the equation-only solvers discard: for example the entries
-``(x - 20, 21 - x, 20 - x + y)`` pin ``x = 20`` and then bound ``y``.
-"""
-function _propagate_intervals!(system::AbstractArray{AffineExpr})
+"""Compute sound integer parameter intervals without modifying the constraints."""
+function _variable_intervals(system::AbstractArray{AffineExpr})
   # Fast path: fully determined systems (the common case) need no sweeps,
   # only the nonnegativity sanity check.
   if all(is_determined, system)
     all(constraint -> constraint.constant >= 0, system) || _infeasible_intervals()
-    return false
+    return Dict{Int,_ParameterInterval}()
   end
 
   lower = Dict{Int,BigInt}()  # absent: 0 (every variable is a nonnegative integer)
   upper = Dict{Int,BigInt}()  # absent: unbounded
 
-  pinned_any = false
   # The sweep cap is a backstop: bounds tighten monotonically, so feasible
   # systems reach their fixed point long before it (stopping early is sound).
   for _ in 1:64
@@ -401,18 +438,40 @@ function _propagate_intervals!(system::AbstractArray{AffineExpr})
       end
     end
 
-    # A collapsed interval turns the variable into a known constant.
-    for var in collect(keys(upper))
-      if get(lower, var, BigInt(0)) == upper[var]
-        _substitute_var!(system, var, AffineExpr(upper[var]))
-        delete!(upper, var)
-        delete!(lower, var)
-        changed = true
-        pinned_any = true
-      end
-    end
-
     changed || break
+  end
+  variables = Set(var for constraint in system for var in keys(constraint.coeffs))
+  Dict{Int,_ParameterInterval}(
+    var => (lower=get(lower, var, BigInt(0)), upper=get(upper, var, nothing)) for
+    var in variables
+  )
+end
+
+"""
+    _propagate_intervals!(system::AbstractArray{AffineExpr}) -> Bool
+
+Interval (bound-consistency) propagation on a system of nonnegative
+quantities.
+
+Every element of `system` represents a nonnegative integer (a cohomology
+dimension or a connecting-map rank), and every symbolic variable is itself a
+nonnegative integer.  Each element ``c + \\sum_j k_j x_j \\ge 0`` bounds each of
+its variables in terms of the current intervals of the others; the bounds are
+tightened to a fixed point, and a variable whose interval collapses to a
+point is substituted throughout `system`.  Raises when an interval empties,
+which means the input data was inconsistent.
+
+Returns `true` when at least one variable was pinned.  This recovers the
+information the equation-only solvers discard: for example the entries
+``(x - 20, 21 - x, 20 - x + y)`` pin ``x = 20`` and then bound ``y``.
+"""
+function _propagate_intervals!(system::AbstractArray{AffineExpr})
+  _record_constraints!(system)
+  pinned_any = false
+  for (var, interval) in _variable_intervals(system)
+    if interval.lower == interval.upper
+      pinned_any |= _substitute_var!(system, var, AffineExpr(interval.lower))
+    end
   end
   pinned_any
 end
@@ -626,7 +685,9 @@ function solve_ses_cohomology_symbolic(
     if lower[j] == upper[j]
       AffineExpr(lower[j])
     else
-      AffineExpr(lower[j]) + _fresh_variable(var_counter)
+      x = _fresh_variable(var_counter)
+      _record_nonnegative!(AffineExpr(upper[j] - lower[j]) - x)
+      AffineExpr(lower[j]) + x
     end
     for j in 1:(d + 2)
   ]

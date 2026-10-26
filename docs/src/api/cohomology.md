@@ -47,6 +47,35 @@ cohomology
 dimensions
 ```
 
+Pass `with_bounds=true` to `cohomology`, `hodge_numbers`,
+`twisted_hodge_numbers`, or `hochschild_cohomology` to obtain a named tuple
+`(values=..., bounds=...)`. `values` has the usual return type. `bounds`
+maps each displayed parameter id to `(lower=..., upper=...)`, with exact
+`BigInt` endpoints and `upper=nothing` for an unbounded interval. Determined
+results have an empty dictionary.
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = SGr(2, 6);
+
+julia> F = tensor_product(exterior_power(filtered_cotangent_bundle(X), 3), line_bundle(X, -1));
+
+julia> result = cohomology(F; with_bounds=true);
+
+julia> result.values[4]
+2 - x_0
+
+julia> result.bounds[0].lower, result.bounds[0].upper
+(0, 1)
+```
+
+Bounds retain nonnegativity and map-rank constraints from intermediate exact
+sequences, as well as equations used in elimination. They are sound intervals
+obtained by bound consistency, rather than a claim that every endpoint is
+attainable. Parameters can be correlated, so their intervals cannot generally
+be chosen independently. The default calls continue to return only the values.
+
 ## Derived invariants
 
 ```@docs
