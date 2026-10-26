@@ -58,6 +58,6 @@ Base.iszero(::Cohomology{BigInt})
 ```
 
 Hilbert polynomials use the symbolic Weyl formula with exact rational
-coefficients, without an interpolation degree cap.
+coefficients.
 They also support filtered bundles and bundles on zero loci; the latter
 combine the ambient presentation with the Koszul resolution.
