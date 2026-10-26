@@ -88,6 +88,7 @@ rank(::CompletelyReducibleBundle)
 ```@docs
 picard_degrees
 is_ample_line_bundle
+is_globally_generated
 ```
 
 ## Standard bundles

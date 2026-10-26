@@ -20,6 +20,10 @@ Calabi–Yau / Fano classification.
 The constructor `zero_locus(E)` records the ambient variety and defining bundle,
 but it does not choose or store a section. It represents the data of
 a regular zero locus of `E`, assuming that a regular section exists.
+Use `zero_locus(E; check_global_generation=true)` to check that the defining
+bundle is globally generated. The check is opt-in because the constructor
+also serves to record formal data. It does not certify nonemptiness or
+regularity.
 Accordingly, equality compares the ambient variety and defining bundle. It does
 not compare sections, test containment, or recognize abstractly isomorphic
 subvarieties.
