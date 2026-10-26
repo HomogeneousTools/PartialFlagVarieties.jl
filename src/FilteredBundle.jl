@@ -114,7 +114,7 @@ function is_ample(F::FilteredBundle)
   length(pieces) <= 1 || throw(
     ArgumentError(
       "is_ample requires at most one nonzero graded piece; " *
-      "ampleness of a nontrivial filtered bundle depends on extension maps."
+      "ampleness of a nontrivial filtered bundle depends on extension maps.",
     ),
   )
   isempty(pieces) || is_ample(only(pieces))
@@ -132,7 +132,7 @@ function ampleness_index(F::FilteredBundle)
   length(pieces) <= 1 || throw(
     ArgumentError(
       "ampleness_index requires at most one nonzero graded piece; " *
-      "k-ampleness of a nontrivial filtered bundle depends on extension maps."
+      "k-ampleness of a nontrivial filtered bundle depends on extension maps.",
     ),
   )
   isempty(pieces) ? 0 : ampleness_index(only(pieces))

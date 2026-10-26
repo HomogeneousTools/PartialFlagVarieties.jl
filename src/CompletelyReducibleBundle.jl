@@ -591,7 +591,7 @@ function ampleness_index(E::CompletelyReducibleBundle)
   all(component -> is_dominant(p_dominant_weight(component)), components(E)) || throw(
     ArgumentError(
       "ampleness_index requires a globally generated bundle: " *
-      "every summand must have a dominant ambient highest weight."
+      "every summand must have a dominant ambient highest weight.",
     ),
   )
   roots = positive_nonparabolic_roots(marked_dynkin_type(variety(E)))

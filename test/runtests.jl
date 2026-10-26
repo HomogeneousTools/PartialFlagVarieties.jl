@@ -3824,7 +3824,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Reject multiple layers even when all graded pieces happen to be ample.
     @test_throws ArgumentError is_ample(FilteredBundle(X, [E, E]))
     @test_throws ArgumentError is_ample(FilteredBundle(X, [Z, E, Z, E]))
-    @test_throws ArgumentError is_ample(filtered_tangent_bundle(full_flag_variety(TypeA{2})))
+    @test_throws ArgumentError is_ample(
+      filtered_tangent_bundle(full_flag_variety(TypeA{2}))
+    )
 
     # The Euler sequence on P¹ has ample middle bundle O(1)², but graded O ⊕ O(2).
     P = projective_space(1)
