@@ -54,7 +54,11 @@ julia> H[1, 2]  # h^{0,1}
 0
 ```
 """
-function hodge_numbers(X::PartialFlagVariety)
+function hodge_numbers(X::PartialFlagVariety; with_bounds::Bool=false)
+  _with_cohomology_bounds(() -> _compute_hodge_numbers(X), with_bounds)
+end
+
+function _compute_hodge_numbers(X::PartialFlagVariety)
   d = dimension(X)
   betti = betti_numbers(X)
 
@@ -119,7 +123,13 @@ end
 _collapse_determined(H::Matrix{AffineExpr}) =
   all(is_determined, H) ? map(e -> e.constant, H) : H
 
-function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBundle)
+function twisted_hodge_numbers(
+  X::PartialFlagVariety, L::CompletelyReducibleBundle; with_bounds::Bool=false
+)
+  _with_cohomology_bounds(() -> _compute_twisted_hodge_numbers(X, L), with_bounds)
+end
+
+function _compute_twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBundle)
   rank(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
   d = dimension(X)
   _collapse_determined(
@@ -127,13 +137,13 @@ function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBund
   )
 end
 
-function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
+function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer; with_bounds::Bool=false)
   length(marked_nodes(X)) == 1 || throw(
     ArgumentError(
       "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
     ),
   )
-  twisted_hodge_numbers(X, line_bundle(X, Int(j)))
+  twisted_hodge_numbers(X, line_bundle(X, Int(j)); with_bounds)
 end
 
 """
@@ -154,8 +164,10 @@ julia> twisted_hodge_numbers(X, [1, 1])[1, 1]  # h^0(O(1,1))
 15
 ```
 """
-function twisted_hodge_numbers(X::PartialFlagVariety, degrees::AbstractVector{<:Integer})
-  twisted_hodge_numbers(X, line_bundle(X, collect(Int, degrees)))
+function twisted_hodge_numbers(
+  X::PartialFlagVariety, degrees::AbstractVector{<:Integer}; with_bounds::Bool=false
+)
+  twisted_hodge_numbers(X, line_bundle(X, collect(Int, degrees)); with_bounds)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -300,7 +312,11 @@ julia> P[2, 0]  # h⁰(∧²T) = h⁰(𝒪(3)) for ℙ²
 10
 ```
 """
-function hochschild_cohomology(X::PartialFlagVariety)
+function hochschild_cohomology(X::PartialFlagVariety; with_bounds::Bool=false)
+  _with_cohomology_bounds(() -> _compute_hochschild_cohomology(X), with_bounds)
+end
+
+function _compute_hochschild_cohomology(X::PartialFlagVariety)
   d = dimension(X)
   TX = filtered_tangent_bundle(X)
   # H^q(∧^p T_X) through the spectral sequence of the height filtration, so no
@@ -396,7 +412,11 @@ julia> h[3, 2]  # h^{2,1}
 101
 ```
 """
-function hodge_numbers(Z::ZeroLocus)
+function hodge_numbers(Z::ZeroLocus; with_bounds::Bool=false)
+  _with_cohomology_bounds(() -> _compute_hodge_numbers(Z), with_bounds)
+end
+
+function _compute_hodge_numbers(Z::ZeroLocus)
   # A product Z = Z_1 × ⋯ × Z_k has Hodge diamond the Künneth convolution of the
   # factors', which pins entries the monolithic solver below leaves symbolic.
   if n_factors(Z) >= 2
@@ -504,14 +524,15 @@ julia> H[3, 3].constant  # h^{2,2}
 8
 ```
 """
-hodge_numbers_symbolic(Z::ZeroLocus) = hodge_numbers(Z)
+hodge_numbers_symbolic(Z::ZeroLocus; with_bounds::Bool=false) =
+  hodge_numbers(Z; with_bounds)
 
 """
     hodge_numbers_les(Z::ZeroLocus) -> Matrix{AffineExpr}
 
 Synonym of [`hodge_numbers`](@ref), kept for backwards compatibility.
 """
-hodge_numbers_les(Z::ZeroLocus) = hodge_numbers(Z)
+hodge_numbers_les(Z::ZeroLocus; with_bounds::Bool=false) = hodge_numbers(Z; with_bounds)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Twisted Hodge numbers of zero loci
@@ -961,8 +982,12 @@ julia> M[4, 1]  # h^0(Z, Ω³_Z) = h^{3,0} = 1 (CY3)
 ```
 """
 function twisted_hodge_numbers(
-  Z::ZeroLocus, L::CompletelyReducibleBundle
+  Z::ZeroLocus, L::CompletelyReducibleBundle; with_bounds::Bool=false
 )
+  _with_cohomology_bounds(() -> _compute_twisted_hodge_numbers(Z, L), with_bounds)
+end
+
+function _compute_twisted_hodge_numbers(Z::ZeroLocus, L::CompletelyReducibleBundle)
   M = _twisted_hodge_symbolic(Z, L, Ref(0))
   _renumber_variables!(M)
 end
@@ -994,18 +1019,20 @@ julia> M[2, 2]  # h^1(Z, Ω¹_Z) = h^{1,1} = 1
 1
 ```
 """
-function twisted_hodge_numbers(Z::ZeroLocus, j::Integer)
+function twisted_hodge_numbers(Z::ZeroLocus, j::Integer; with_bounds::Bool=false)
   X = Z.ambient
   length(marked_nodes(X)) == 1 || throw(
     ArgumentError(
       "an integer twist requires Picard rank 1; pass a degree vector or a line bundle"
     ),
   )
-  twisted_hodge_numbers(Z, line_bundle(X, Int(j)))
+  twisted_hodge_numbers(Z, line_bundle(X, Int(j)); with_bounds)
 end
 
-function twisted_hodge_numbers(Z::ZeroLocus, degrees::AbstractVector{<:Integer})
-  twisted_hodge_numbers(Z, line_bundle(Z.ambient, collect(Int, degrees)))
+function twisted_hodge_numbers(
+  Z::ZeroLocus, degrees::AbstractVector{<:Integer}; with_bounds::Bool=false
+)
+  twisted_hodge_numbers(Z, line_bundle(Z.ambient, collect(Int, degrees)); with_bounds)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1054,7 +1081,11 @@ julia> P[3, 0]  # h⁰(∧³T_Z) = h⁰(ω_Z⁻¹) = 1 (CY3)
 1
 ```
 """
-function hochschild_cohomology(Z::ZeroLocus)
+function hochschild_cohomology(Z::ZeroLocus; with_bounds::Bool=false)
+  _with_cohomology_bounds(() -> _compute_hochschild_cohomology(Z), with_bounds)
+end
+
+function _compute_hochschild_cohomology(Z::ZeroLocus)
   # T_{A×B} = T_A ⊞ T_B, so the polyvector parallelogram of a product is the
   # Künneth convolution of the factors' — pinning otherwise-symbolic entries.
   if n_factors(Z) >= 2

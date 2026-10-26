@@ -308,7 +308,13 @@ julia> degree(cohomology(line_bundle(X, 1); characters=true)[0])  # V(ω₁), di
 5
 ```
 """
-function cohomology(E::CompletelyReducibleBundle; characters::Bool=false)
+function cohomology(
+  E::CompletelyReducibleBundle; characters::Bool=false, with_bounds::Bool=false
+)
+  _with_cohomology_bounds(() -> _compute_cohomology(E; characters), with_bounds)
+end
+
+function _compute_cohomology(E::CompletelyReducibleBundle; characters::Bool=false)
   d = dimension(E.variety)
   comps = components(E)
   if characters

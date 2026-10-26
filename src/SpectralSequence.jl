@@ -243,6 +243,7 @@ function _cohomology_filtered(F::FilteredBundle, var_counter::Ref{Int})
       e = AffineExpr(dim_w * D_i)
       haskey(cancelled, i - 1) && (e -= cancelled[i - 1])
       haskey(cancelled, i) && (e -= cancelled[i])
+      _record_nonnegative!(e)
       entries[i + 1] += e
     end
   end
@@ -250,7 +251,7 @@ function _cohomology_filtered(F::FilteredBundle, var_counter::Ref{Int})
 end
 
 """
-    cohomology(F::FilteredBundle) -> Cohomology{AffineExpr}
+    cohomology(F::FilteredBundle; with_bounds=false)
 
 Compute ``\\mathrm{H}^\\bullet(X, \\mathcal{F})`` via the spectral sequence of the filtration.
 
@@ -258,7 +259,10 @@ Entries are affine expressions: exact integers where the spectral sequence
 visibly degenerates (checked per isotypical component), and expressions in
 symbolic variables ``x_0, x_1, \\ldots`` — one per pair of adjacent
 total-degree diagonals of an isotypical component that admits a potential
-differential — otherwise.  Use `is_determined` to check individual entries.
+differential — otherwise. Use `is_determined` to check individual entries.
+With `with_bounds=true`, return `(values=..., bounds=...)`, where `bounds` maps
+displayed parameter ids to integer `(lower, upper)` intervals. An upper
+endpoint of `nothing` means that no finite upper bound was established.
 
 # Examples
 ```jldoctest
@@ -274,7 +278,11 @@ H⁴ = 2 - x_0
 H⁵ = 1 - x_0
 ```
 """
-function cohomology(F::FilteredBundle)
+function cohomology(F::FilteredBundle; with_bounds::Bool=false)
+  _with_cohomology_bounds(() -> _compute_cohomology(F), with_bounds)
+end
+
+function _compute_cohomology(F::FilteredBundle)
   entries = _cohomology_filtered(F, Ref(0))
   _renumber_variables!(entries)
   Cohomology{AffineExpr}(entries, dimension(variety(F)))

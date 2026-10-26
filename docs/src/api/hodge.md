@@ -49,3 +49,7 @@ PartialFlagVarieties.GradedConormal
 PartialFlagVarieties.FilteredConormal
 PartialFlagVarieties._lefschetz_inject!
 ```
+
+Pass `with_bounds=true` to the Hodge, twisted Hodge, and Hochschild functions
+to obtain `(values=..., bounds=...)` while retaining the usual type in `values`.
+See [Cohomology](cohomology.md) for the parameter-bound format and its meaning.
