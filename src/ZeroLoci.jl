@@ -108,13 +108,17 @@ is_sublocus(Z::ZeroLocus, W::ZeroLocus) =
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    zero_locus(E::CompletelyReducibleBundle) -> ZeroLocus
+    zero_locus(E::CompletelyReducibleBundle; check_global_generation=false) -> ZeroLocus
 
 Construct the zero locus of a regular section of the equivariant
 bundle ``\\mathcal{E}``.  Requires ``\\mathrm{rank}(\\mathcal{E}) \\le \\dim(X)``.
 
 This constructor assumes such a regular section exists; it does not try to
 prove existence or regularity, and it does not choose or store a section.
+Pass `check_global_generation=true` to reject a defining bundle that is not
+[`is_globally_generated`](@ref). This optional check preserves the ability to
+record formal zero-locus data; global generation alone does not prove that
+the zero locus is nonempty or has the expected codimension.
 
 # Examples
 ```jldoctest
@@ -128,13 +132,17 @@ julia> dimension(Z)
 3
 ```
 """
-function zero_locus(E::CompletelyReducibleBundle)
+function zero_locus(E::CompletelyReducibleBundle; check_global_generation::Bool=false)
   X = E.variety
   r = Int(rank(E))
   d = dimension(X)
   r <= d || throw(ArgumentError(
     "Bundle rank $r exceeds ambient dimension $d."
   ))
+  check_global_generation && !is_globally_generated(E) &&
+    throw(
+      ArgumentError("The defining bundle is not globally generated.")
+    )
   ZeroLocus(X, E, nothing)
 end
 

@@ -15,6 +15,7 @@ export structure_sheaf, O, zero_bundle, line_bundle, canonical_bundle, anticanon
 export T, E  # shorthands for tangent_bundle and the CompletelyReducibleBundle constructors
 export det, determinant
 export picard_degrees
+export is_globally_generated
 export fano_index
 
 # Names from Lie, StaticArrays, Combinatorics are available via the parent module.
@@ -507,6 +508,38 @@ false
 function is_ample_line_bundle(E::CompletelyReducibleBundle)
   rank(E) == 1 && all(>(0), picard_degrees(E))
 end
+
+"""
+    is_globally_generated(E::CompletelyReducibleBundle) -> Bool
+
+Whether the evaluation map from global sections generates every fibre of `E`.
+A completely reducible equivariant bundle on a partial flag variety is
+globally generated precisely when the ambient highest weight of each
+irreducible Levi summand is dominant for the full group.
+The zero bundle is globally generated.
+
+This criterion applies to completely reducible bundles. Applying it to the
+associated graded of a filtered bundle does not in general decide global
+generation of the extension.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 5);
+
+julia> is_globally_generated(universal_subbundle(X))
+false
+
+julia> is_globally_generated(dual(universal_subbundle(X)))
+true
+
+julia> is_globally_generated(universal_quotient_bundle(X))
+true
+```
+"""
+is_globally_generated(E::CompletelyReducibleBundle) =
+  all(rep -> is_dominant(p_dominant_weight(rep)), components(E))
 
 """
     _product_factor_range(total_rank, factor_rank, offset) -> UnitRange{Int}
