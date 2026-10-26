@@ -89,7 +89,7 @@ export parse_dynkin_type, sub_dynkin_type, sub_dynkin_ordering
 export graded_pieces, total_bundle, filtered_tangent_bundle, filtered_cotangent_bundle
 export n_filtration_steps
 export universal_subbundle, universal_quotient_bundle, spinor_bundle
-export is_ample_line_bundle
+export is_ample, is_ample_line_bundle, ampleness_index
 export is_orthogonal_grassmannian, is_projective_space, is_quadric
 export tautological_bundles, universal_subbundles
 export hodge_numbers, twisted_hodge_numbers, hochschild_cohomology

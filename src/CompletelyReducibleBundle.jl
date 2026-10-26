@@ -509,6 +509,104 @@ function is_ample_line_bundle(E::CompletelyReducibleBundle)
 end
 
 """
+    is_ample(E::CompletelyReducibleBundle) -> Bool
+
+Whether `E` is ample. Each irreducible summand must have strictly positive
+ambient highest-weight coordinates at every marked Dynkin node. Its
+coordinates at the unmarked nodes are already nonnegative by Levi dominance.
+The zero bundle is ample by convention.
+
+This is the completely reducible case of Snow's ampleness criterion
+(*Homogeneous vector bundles*, Corollary 8.5). Sufficiency follows by twisting
+a globally generated bundle by the ample line bundle with degree one at each
+marked node. Necessity follows by restricting to the simple Schubert curves:
+the minimum splitting degree on the curve for node `i` is the `i`th coordinate
+of the summand's highest weight.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 5); Udual = dual(universal_subbundle(X));
+
+julia> is_ample(Udual)
+false
+
+julia> is_ample(twist(Udual, 1))
+true
+
+julia> is_ample(tangent_bundle(projective_space(3)))
+true
+```
+"""
+function is_ample(E::CompletelyReducibleBundle)
+  marked = marked_nodes(variety(E))
+  all(components(E)) do component
+    weight = coefficients(p_dominant_weight(component))
+    all(i -> weight[i] > 0, marked)
+  end
+end
+
+"""
+    ampleness_index(E::CompletelyReducibleBundle) -> Int
+
+Return the least nonnegative integer `k` for which `E` is `k`-ample in the
+sense of Sommese. The bundle must be globally generated: throw `ArgumentError`
+if an irreducible summand's ambient highest weight is not dominant.
+The zero bundle has index zero by convention.
+
+For an irreducible summand of highest weight ``\\lambda``, Snow's formula
+reduces to counting positive non-Levi roots ``\\alpha`` with
+``\\langle\\lambda,\\alpha^\\vee\\rangle=0``. The index of a direct sum is the
+maximum of the indices of its summands. In particular, index zero is
+equivalent to [`is_ample`](@ref), and a nonzero trivial bundle has index
+[`dimension`](@ref) of its base.
+
+This uses [Snow's *On the ampleness of homogeneous vector bundles*](https://doi.org/10.1090/S0002-9947-1986-0825723-9),
+Section 2 (1986), equivalently *Homogeneous vector bundles*, Theorem 8.3, specialized
+to completely reducible globally generated bundles. Here `k` bounds the
+fiber dimensions of the morphism defined by the tautological line bundle on
+the projective bundle.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = Gr(2, 5);
+
+julia> ampleness_index(dual(universal_subbundle(X)))
+3
+
+julia> ampleness_index(universal_quotient_bundle(X))
+4
+
+julia> ampleness_index(tangent_bundle(X))
+2
+
+julia> ampleness_index(twist(dual(universal_subbundle(X)), 1))
+0
+```
+"""
+function ampleness_index(E::CompletelyReducibleBundle)
+  all(component -> is_dominant(p_dominant_weight(component)), components(E)) || throw(
+    ArgumentError(
+      "ampleness_index requires a globally generated bundle: " *
+      "every summand must have a dominant ambient highest weight."
+    ),
+  )
+  roots = positive_nonparabolic_roots(marked_dynkin_type(variety(E)))
+  maximum(components(E); init=0) do component
+    weight = coefficients(p_dominant_weight(component))
+    count(roots) do root
+      support = coefficients(root)
+      # Dominance makes the coroot pairing nonnegative. It vanishes exactly
+      # when the weight is zero on the support of the root (or its coroot).
+      all(i -> iszero(support[i]) || iszero(weight[i]), eachindex(weight))
+    end
+  end
+end
+
+"""
     _product_factor_range(total_rank, factor_rank, offset) -> UnitRange{Int}
 
 Return the block of ambient coordinates occupied by a factor embedded into a

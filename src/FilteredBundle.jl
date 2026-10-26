@@ -99,6 +99,46 @@ Return the number of filtration steps (graded pieces).
 n_filtration_steps(F::FilteredBundle) = length(F.pieces)
 
 """
+    is_ample(F::FilteredBundle) -> Bool
+
+Test ampleness when `F` has at most one nonzero graded piece, by applying
+[`is_ample(::CompletelyReducibleBundle)`](@ref) to that piece. Zero layers
+are ignored, and the zero bundle is ample by convention.
+
+Throw `ArgumentError` when there are multiple nonzero graded pieces:
+ampleness can depend on the extension maps, which `FilteredBundle` does
+not record.
+"""
+function is_ample(F::FilteredBundle)
+  pieces = filter(!iszero, graded_pieces(F))
+  length(pieces) <= 1 || throw(
+    ArgumentError(
+      "is_ample requires at most one nonzero graded piece; " *
+      "ampleness of a nontrivial filtered bundle depends on extension maps."
+    ),
+  )
+  isempty(pieces) || is_ample(only(pieces))
+end
+
+"""
+    ampleness_index(F::FilteredBundle) -> Int
+
+Return [`ampleness_index`](@ref) of the unique nonzero graded piece of `F`,
+or zero if all pieces vanish. Throw `ArgumentError` for multiple nonzero
+graded pieces, since their extension maps can affect `k`-ampleness.
+"""
+function ampleness_index(F::FilteredBundle)
+  pieces = filter(!iszero, graded_pieces(F))
+  length(pieces) <= 1 || throw(
+    ArgumentError(
+      "ampleness_index requires at most one nonzero graded piece; " *
+      "k-ampleness of a nontrivial filtered bundle depends on extension maps."
+    ),
+  )
+  isempty(pieces) ? 0 : ampleness_index(only(pieces))
+end
+
+"""
     total_bundle(F::FilteredBundle) -> CompletelyReducibleBundle
 
 Return the total bundle as a [`CompletelyReducibleBundle`](@ref),
