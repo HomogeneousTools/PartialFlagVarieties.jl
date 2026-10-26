@@ -4,7 +4,6 @@
   @test length(polynomial) == 22
   @test last(polynomial) == 1 // factorial(big(21))
   @test evalpoly(big(21), polynomial) == binomial(big(42), 21)
-  @test hilbert_polynomial(structure_sheaf(P21); max_degree=1) == polynomial
 
   # Compare with BWB, including negative twists, multiplicities, products,
   # exceptional types and both root lengths in B, C, F and G.

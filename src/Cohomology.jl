@@ -535,8 +535,7 @@ chi(E::CompletelyReducibleBundle) = euler_characteristic(E)
 
 """
     hilbert_polynomial(E::CompletelyReducibleBundle,
-                       L::CompletelyReducibleBundle;
-                       max_degree=nothing) -> Vector{Rational{BigInt}}
+                       L::CompletelyReducibleBundle) -> Vector{Rational{BigInt}}
 
 Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to the
 polarization ``\\mathcal{L}``:
@@ -548,7 +547,6 @@ The polarization ``\\mathcal{L}`` must be a line bundle on the same variety as `
 for the result to be a genuine Hilbert polynomial, ``\\mathcal{L}`` should be ample.
 The coefficients are computed exactly by the symbolic Weyl formula over all
 positive coroots, including for negative twists and non-simply-laced types.
-The legacy `max_degree` keyword is accepted but no longer truncates the result.
 
 Returns polynomial coefficients ``[a_0, a_1, \\ldots, a_d]`` such that
 ``P(t) = a_0 + a_1 t + \\cdots + a_d t^d``.
@@ -567,8 +565,7 @@ julia> hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1]))
 ```
 """
 function hilbert_polynomial(
-  E::CompletelyReducibleBundle, L::CompletelyReducibleBundle;
-  max_degree::Union{Nothing,Int}=nothing,
+  E::CompletelyReducibleBundle, L::CompletelyReducibleBundle
 )
   _check_polarization(variety(E), L)
   result = Rational{BigInt}[0]
@@ -645,8 +642,7 @@ hilbert_polynomial(F::FilteredBundle) =
   hilbert_polynomial(F, line_bundle(variety(F), ones(Int, picard_rank(variety(F)))))
 
 """
-    hilbert_polynomial(E::CompletelyReducibleBundle;
-                       max_degree=nothing) -> Vector{Rational{BigInt}}
+    hilbert_polynomial(E::CompletelyReducibleBundle) -> Vector{Rational{BigInt}}
 
 Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to
 the minimal ample polarization ``\\mathcal{O}(1, \\ldots, 1)`` (degree one at
@@ -668,12 +664,10 @@ julia> hilbert_polynomial(structure_sheaf(X))
   1//6
 ```
 """
-function hilbert_polynomial(
-  E::CompletelyReducibleBundle; max_degree::Union{Nothing,Int}=nothing
-)
+function hilbert_polynomial(E::CompletelyReducibleBundle)
   X = variety(E)
   polarization = line_bundle(X, ones(Int, length(marked_nodes(X))))
-  hilbert_polynomial(E, polarization; max_degree=max_degree)
+  hilbert_polynomial(E, polarization)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
