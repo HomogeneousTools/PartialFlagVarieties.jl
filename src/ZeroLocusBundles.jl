@@ -691,3 +691,46 @@ function Base.show(io::IO, F::ZeroLocusBundle)
   show(io, variety(F))
   print(io, ")")
 end
+
+"""
+    hilbert_polynomial(F::ZeroLocusBundle[, L::CompletelyReducibleBundle])
+      -> Vector{Rational{BigInt}}
+
+Compute the polynomial of Euler characteristics of `F` tensored with powers
+of the restriction of an ambient line bundle `L`. The default polarization
+has degree one at every marked node of the ambient variety.
+
+The symbolic Weyl polynomials of the ambient presentation and Koszul complex
+are combined with their alternating signs. This works for restrictions,
+intrinsic tangent and cotangent bundles, and composite presentations, without
+choosing their differentials. An ample `L` gives the usual Hilbert polynomial.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(2); Z = zero_locus(line_bundle(X, 2));
+
+julia> hilbert_polynomial(restrict(Z, line_bundle(X, 1)))
+2-element Vector{Rational{BigInt}}:
+ 3
+ 2
+```
+"""
+function hilbert_polynomial(F::ZeroLocusBundle, L::CompletelyReducibleBundle)
+  Z = variety(F)
+  _check_polarization(ambient_variety(Z), L)
+  result = Rational{BigInt}[0]
+  for (degree, summands) in F.presentation.terms, summand in summands
+    for (k, wedge) in enumerate(_koszul_wedges!(Z))
+      polynomial = hilbert_polynomial(tensor_product(summand, wedge), L)
+      _add_polynomial!(result, polynomial, iseven(degree + k - 1) ? 1 : -1)
+    end
+  end
+  _trim_polynomial!(result)
+end
+
+function hilbert_polynomial(F::ZeroLocusBundle)
+  X = ambient_variety(F)
+  hilbert_polynomial(F, line_bundle(X, ones(Int, picard_rank(X))))
+end

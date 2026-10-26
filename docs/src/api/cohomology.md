@@ -53,5 +53,11 @@ dimensions
 chi
 euler_characteristic
 hilbert_polynomial
+hilbert_polynomial(::FilteredBundle, ::CompletelyReducibleBundle)
 Base.iszero(::Cohomology{BigInt})
 ```
+
+Hilbert polynomials use the symbolic Weyl formula with exact rational
+coefficients, without an interpolation degree cap.
+They also support filtered bundles and bundles on zero loci; the latter
+combine the ambient presentation with the Koszul resolution.

@@ -1001,23 +1001,7 @@ true
 ```
 """
 function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
-  variety(L) == Z.ambient || throw(
-    ArgumentError("the polarization must live on the ambient variety.")
-  )
-  rank(L) == 1 || throw(
-    ArgumentError("the polarization must be a line bundle (rank 1).")
-  )
-
-  # A degree-d polynomial is pinned down by d+1 values; the interpolation
-  # is exact over the rationals.
-  d = dimension(Z)
-  values = Vector{Rational{BigInt}}(undef, d + 1)
-  power = structure_sheaf(Z.ambient)
-  for t in 0:d
-    values[t + 1] = Rational{BigInt}(euler_characteristic(restrict(Z, power)))
-    t < d && (power = tensor_product(power, L))
-  end
-  _newton_interpolation(values)
+  hilbert_polynomial(structure_sheaf(Z), L)
 end
 
 function hilbert_polynomial(Z::ZeroLocus)
