@@ -3687,6 +3687,172 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test !is_ample_line_bundle(line_bundle(X2, [1, 0]))
   end
 
+  @testset "is_ample" begin
+    X = Gr(2, 5)
+    Udual = dual(universal_subbundle(X))
+    Q = universal_quotient_bundle(X)
+    Udual1 = twist(Udual, 1)
+    Q1 = twist(Q, 1)
+
+    # These bundles have ample determinant but have trivial summands on lines.
+    @test is_ample(det(Udual))
+    @test is_ample(det(Q))
+    @test !is_ample(Udual)
+    @test !is_ample(Q)
+    @test !is_ample(symmetric_power(Udual, 2))
+    @test !is_ample(tangent_bundle(X))
+    @test is_ample(Udual1)
+    @test is_ample(Q1)
+    @test is_ample(direct_sum(Udual1, Q1))
+    @test !is_ample(direct_sum(Udual1, Q))
+    @test !is_ample(dual(Udual1))
+    @test is_ample(zero_bundle(X))
+
+    for n in 1:3
+      P = projective_space(n)
+      @test is_ample(tangent_bundle(P))
+      @test !is_ample(cotangent_bundle(P))
+    end
+
+    # Positivity is required in each Picard direction, across Dynkin types.
+    for Y in (X, full_flag_variety(TypeG2), partial_flag_variety(TypeF4, (1, 4)))
+      for degrees in (ones(Int, picard_rank(Y)), zeros(Int, picard_rank(Y)),
+        -ones(Int, picard_rank(Y)))
+        L = line_bundle(Y, degrees)
+        @test is_ample(L) == is_ample_line_bundle(L)
+      end
+    end
+    F = partial_flag_variety(TypeA{3}, (1, 3))
+    @test is_ample(line_bundle(F, [1, 2]))
+    @test !is_ample(line_bundle(F, [1, 0]))
+
+    P = projective_space(1)
+    @test is_ample(external_tensor_product(Udual1, line_bundle(P, 1)))
+    @test !is_ample(external_tensor_product(Udual1, structure_sheaf(P)))
+  end
+
+  @testset "ampleness_index" begin
+    # The evaluation morphisms for U∨ and Q are incidence projections, whose
+    # fibers are smaller Grassmannians. These give the exact minimal indices.
+    for n in 2:7, k in 1:(n - 1)
+      X = Gr(k, n)
+      Udual = dual(universal_subbundle(X))
+      Q = universal_quotient_bundle(X)
+      @test ampleness_index(Udual) == (k - 1) * (n - k)
+      @test ampleness_index(Q) == k * (n - k - 1)
+      @test ampleness_index(tangent_bundle(X)) == (k - 1) * (n - k - 1)
+      @test ampleness_index(twist(Udual, 1)) == 0
+      @test ampleness_index(direct_sum(Udual, Q)) ==
+        max((k - 1) * (n - k), k * (n - k - 1))
+    end
+
+    for X in (projective_space(3), quadric(5), full_flag_variety(TypeG2))
+      @test ampleness_index(structure_sheaf(X)) == dimension(X)
+      @test ampleness_index(3 * structure_sheaf(X)) == dimension(X)
+      @test ampleness_index(anticanonical_bundle(X)) == 0
+      @test ampleness_index(zero_bundle(X)) == 0
+      @test_throws ArgumentError ampleness_index(canonical_bundle(X))
+    end
+    @test ampleness_index(tangent_bundle(quadric(5))) == 1
+
+    X = Gr(2, 5)
+    Udual = dual(universal_subbundle(X))
+    @test ampleness_index(symmetric_power(Udual, 3)) == 3
+    @test ampleness_index(direct_sum(Udual, structure_sheaf(X))) == dimension(X)
+    @test_throws ArgumentError ampleness_index(universal_subbundle(X))
+    @test_throws ArgumentError ampleness_index(direct_sum(Udual, universal_subbundle(X)))
+
+    # Indices add for external tensor products, including a trivial factor.
+    P = projective_space(2)
+    @test ampleness_index(external_tensor_product(Udual, structure_sheaf(P))) == 5
+    @test ampleness_index(external_tensor_product(Udual, line_bundle(P, 1))) == 3
+    XP = X * P
+    @test ampleness_index(line_bundle(XP, [1, 0])) == dimension(P)
+    @test ampleness_index(line_bundle(XP, [0, 1])) == dimension(X)
+    @test ampleness_index(line_bundle(XP, [1, 1])) == 0
+
+    point = partial_flag_variety(TypeA{2}, ())
+    @test ampleness_index(CompletelyReducibleBundle(point, [1, 1])) == 0
+
+    # Independently evaluate Snow's Weyl-length formula: enumerate the Levi
+    # orbit and fold its negatives into the dominant chamber without a ρ shift.
+    function snow_index(X, weight)
+      orbit = [weight]
+      seen = Set(orbit)
+      for current in orbit, node in unmarked_nodes(X)
+        reflected = Semisimple.reflect(current, node)
+        if !(reflected in seen)
+          push!(seen, reflected)
+          push!(orbit, reflected)
+        end
+      end
+      index = minimum(orbit) do extremal
+        _, fold_length = Semisimple.conjugate_dominant_weight_with_length(-extremal)
+        fold_length
+      end
+      dimension(X) - index
+    end
+
+    for (DT, marked) in (
+      (TypeA{3}, (2,)), (TypeA{3}, (1, 3)),
+      (TypeB{3}, (1,)), (TypeB{3}, (2,)), (TypeC{3}, (2,)),
+      (TypeD{4}, (2,)), (TypeG2, (1,)), (TypeG2, (2,)),
+      (TypeF4, (4,)),
+    )
+      X = partial_flag_variety(DT, marked)
+      for coeffs in Iterators.product(ntuple(_ -> 0:1, rank(DT))...)
+        weight = WeightLatticeElem(DT, collect(coeffs))
+        E = CompletelyReducibleBundle(X, weight)
+        @test ampleness_index(E) == snow_index(X, weight)
+        @test iszero(ampleness_index(E)) == is_ample(E)
+      end
+    end
+  end
+
+  @testset "is_ample: filtered bundles" begin
+    X = Gr(2, 5)
+    E = twist(dual(universal_subbundle(X)), 1)
+    Z = zero_bundle(X)
+    @test is_ample(FilteredBundle(X, [E]))
+    @test is_ample(FilteredBundle(X, [Z, E, Z]))
+    @test is_ample(FilteredBundle(X, CompletelyReducibleBundle[]))
+    @test is_ample(FilteredBundle(X, [Z, Z]))
+    @test !is_ample(FilteredBundle(X, [structure_sheaf(X)]))
+    @test !is_ample(filtered_tangent_bundle(X))
+    @test is_ample(filtered_tangent_bundle(projective_space(3)))
+
+    # Reject multiple layers even when all graded pieces happen to be ample.
+    @test_throws ArgumentError is_ample(FilteredBundle(X, [E, E]))
+    @test_throws ArgumentError is_ample(FilteredBundle(X, [Z, E, Z, E]))
+    @test_throws ArgumentError is_ample(
+      filtered_tangent_bundle(full_flag_variety(TypeA{2}))
+    )
+
+    # The Euler sequence on P¹ has ample middle bundle O(1)², but graded O ⊕ O(2).
+    P = projective_space(1)
+    @test is_ample(2 * line_bundle(P, 1))
+    @test !is_ample(direct_sum(structure_sheaf(P), line_bundle(P, 2)))
+    @test_throws ArgumentError is_ample(
+      FilteredBundle(P, [structure_sheaf(P), line_bundle(P, 2)])
+    )
+  end
+
+  @testset "ampleness_index: filtered bundles" begin
+    X = Gr(2, 5)
+    E = dual(universal_subbundle(X))
+    Z = zero_bundle(X)
+    @test ampleness_index(FilteredBundle(X, [E])) == 3
+    @test ampleness_index(FilteredBundle(X, [Z, E, Z])) == 3
+    @test ampleness_index(FilteredBundle(X, CompletelyReducibleBundle[])) == 0
+    @test ampleness_index(FilteredBundle(X, [Z, Z])) == 0
+    @test ampleness_index(filtered_tangent_bundle(X)) == 2
+    @test_throws ArgumentError ampleness_index(FilteredBundle(X, [E, E]))
+    @test_throws ArgumentError ampleness_index(FilteredBundle(X, [universal_subbundle(X)]))
+    @test_throws ArgumentError ampleness_index(
+      filtered_tangent_bundle(full_flag_variety(TypeA{2}))
+    )
+  end
+
   # ═══════════════════════════════════════════════════════════════════════════
   #  Lefschetz hyperplane injection  (issue #17)
   # ═══════════════════════════════════════════════════════════════════════════

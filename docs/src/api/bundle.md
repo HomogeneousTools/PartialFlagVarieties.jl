@@ -88,7 +88,31 @@ rank(::CompletelyReducibleBundle)
 ```@docs
 picard_degrees
 is_ample_line_bundle
+is_ample
+ampleness_index
 ```
+
+For a completely reducible bundle, `is_ample` checks that every irreducible
+summand has positive highest-weight coordinates at all marked Dynkin nodes.
+For example, the dual universal subbundle on a Grassmannian need not be ample,
+while its twist by `line_bundle(X, 1)` is ample.
+Filtered bundles with multiple nonzero graded layers raise `ArgumentError`,
+because their extension maps can affect ampleness.
+
+For a globally generated completely reducible bundle, `ampleness_index(E)`
+returns the least `k` for which `E` is `k`-ample in Sommese's sense.
+It is zero exactly for ample bundles.
+For example, on `Gr(2, 5)` the dual universal subbundle has index `3`,
+the universal quotient bundle has index `4`, and the tangent bundle has
+index `2`. Non-globally-generated bundles raise `ArgumentError`.
+
+Snow's formula uses ordinary Weyl-group lengths. For a dominant highest
+weight, the Levi Weyl group permutes the positive non-Levi roots, so the
+minimum length in that formula counts those roots with positive coroot
+pairing. Subtracting from the dimension of the base leaves precisely the
+roots with zero pairing. The implementation counts these using their
+supports, which also handles nonsimply laced Dynkin types without enumerating
+weights of the representation.
 
 ## Standard bundles
 
