@@ -61,6 +61,7 @@ include("ZeroLocusBundles.jl")
 include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
+include("Invariants.jl")
 include("CacheConfig.jl")
 include("SpectralSequence.jl")
 

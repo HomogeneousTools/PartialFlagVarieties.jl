@@ -3,6 +3,8 @@ using PartialFlagVarieties
 using Semisimple
 using StaticArrays
 
+include("invariants.jl")
+
 # The default cache budget is ~10% of system RAM per process, which is far
 # more than the test workloads need; cap it so a test run stays lean.
 PartialFlagVarieties.configure_caches!(; budget=256 * 1024^2)
