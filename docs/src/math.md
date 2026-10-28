@@ -64,6 +64,48 @@ Let ``\mu = \lambda + \rho`` where ``\rho`` is the Weyl vector.
 For a bundle on ``\mathrm{G}/\mathrm{P}``, we apply this to each irreducible Levi summand by
 converting back to an ambient weight via the decomposition matrix.
 
+## [Hilbert polynomials](@id hilbert-polynomials)
+
+Let ``\mathcal{E}_\lambda`` be an irreducible homogeneous bundle with
+Levi-dominant ambient weight ``\lambda``, and let ``\mathcal{L}`` be a line bundle
+of weight ``\mu`` on the same partial flag variety.
+Twisting replaces ``\lambda`` by ``\lambda + t\mu``.
+The line bundle weight pairs to zero with the simple coroots of the Levi,
+so every twist remains Levi-dominant.
+The relative Borel–Weil theorem for the projection from ``\mathrm{G}/\mathrm{B}``
+to ``\mathrm{G}/\mathrm{P}`` therefore identifies its cohomology with that of the
+corresponding line bundle on the full flag variety.
+
+Combining Borel–Weil–Bott with the Weyl dimension formula gives
+
+```math
+\begin{equation}
+\chi(\mathcal{E}_\lambda \otimes \mathcal{L}^{\otimes t})
+= \prod_{\alpha^\vee \in \Phi^{\vee,+}}
+\frac{\langle \lambda + \rho + t\mu, \alpha^\vee \rangle}
+     {\langle \rho, \alpha^\vee \rangle}.
+\end{equation}
+```
+
+If ``\lambda + \rho + t\mu`` is singular, a numerator factor vanishes,
+in agreement with the vanishing of all cohomology.
+Otherwise, a Weyl group element ``w`` moves this weight into the dominant chamber.
+The product of the positive-coroot pairings changes by ``(-1)^{\ell(w)}``,
+which is precisely the sign of the unique nonzero cohomology group.
+This proves the formula for every integer ``t``, including negative twists.
+For background, see Fulton–Harris, *Representation Theory: A First Course*,
+[§§23.3 and 24.1](https://doi.org/10.1007/978-1-4612-0979-9),
+and Andersen, *Line bundles on flag manifolds*,
+[§2, Theorems 2.1–2.2](https://www.numdam.org/item/AST_1981__87-88__21_0/).
+
+Each factor is affine in ``t`` with a nonzero, constant denominator.
+Multiplying the factors therefore produces a polynomial with exact rational coefficients.
+When ``\mathcal{L}`` is ample, Serre vanishing makes its values equal to
+``\dim \mathrm{H}^0(\mathcal{E}_\lambda \otimes \mathcal{L}^{\otimes t})``
+for sufficiently large ``t``, so it is the Hilbert polynomial.
+Additivity of Euler characteristics extends the calculation to direct sums,
+filtered bundles, and the alternating sums in Koszul resolutions and ambient presentations.
+
 ## Topological invariants
 
 - **Dimension**: ``\dim(\mathrm{G}/\mathrm{P}) = |\Phi^+_{\mathrm{G}}| - |\Phi^+_{\mathrm{L}}|`` (positive roots of ``\mathrm{G}``

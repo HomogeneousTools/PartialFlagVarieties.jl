@@ -24,6 +24,7 @@ using LinearAlgebra
 using Combinatorics
 using PrecompileTools
 using Distributed: myid
+using Polynomials: Polynomial
 
 # ─── Extend Semisimple.jl functions (avoids name collisions) ─────────────────
 

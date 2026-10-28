@@ -162,6 +162,7 @@ koszul_terms
 hodge_numbers_symbolic
 hodge_numbers_les
 hilbert_polynomial(::ZeroLocus, ::CompletelyReducibleBundle)
+hilbert_polynomial(::ZeroLocusBundle, ::CompletelyReducibleBundle)
 fano_index(::ZeroLocus)
 ```
 

@@ -533,22 +533,61 @@ chi(E::CompletelyReducibleBundle) = euler_characteristic(E)
 #  Hilbert polynomial
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Fix the exact coefficient type and variable, including for zero and empty sums.
+const _HilbertPolynomial = Polynomial{Rational{BigInt},:t}
+
+# Require a polarization to be a line bundle on the given ambient variety.
+function _check_polarization(X::PartialFlagVariety, L::CompletelyReducibleBundle)
+  variety(L) == X ||
+    throw(ArgumentError("Polarization L must live on the same ambient variety."))
+  rank(L) == 1 || throw(ArgumentError("Polarization L must be a line bundle (rank 1)."))
+  nothing
+end
+
 """
-    hilbert_polynomial(E::CompletelyReducibleBundle,
-                       L::CompletelyReducibleBundle;
-                       max_degree::Int=20) -> Vector{Rational{BigInt}}
+    hilbert_polynomial(E::CompletelyReducibleBundle[, L::CompletelyReducibleBundle])
+      -> Polynomials.Polynomial{Rational{BigInt}}
 
 Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to the
 polarization ``\\mathcal{L}``:
 ```math
+\\begin{equation}
 P(t) = \\chi(\\mathcal{E} \\otimes \\mathcal{L}^{\\otimes t}).
+\\end{equation}
 ```
 
 The polarization ``\\mathcal{L}`` must be a line bundle on the same variety as ``\\mathcal{E}``;
 for the result to be a genuine Hilbert polynomial, ``\\mathcal{L}`` should be ample.
+Omitting `L` uses the minimal ample polarization ``\\mathcal{O}(1, \\ldots, 1)``,
+with degree one at every marked node.
+For Picard rank one, this is the ample generator of ``\\operatorname{Pic}(X)``.
 
-Returns polynomial coefficients ``[a_0, a_1, \\ldots, a_d]`` such that
-``P(t) = a_0 + a_1 t + \\cdots + a_d t^d``.
+For an irreducible Levi summand with ambient weight ``\\lambda`` and polarization
+weight ``\\mu``, Borel–Weil–Bott and the Weyl dimension formula give
+```math
+\\begin{equation}
+\\chi(\\mathcal{E}_\\lambda \\otimes \\mathcal{L}^{\\otimes t})
+= \\prod_{\\alpha^\\vee > 0}
+\\frac{\\langle \\lambda + \\rho + t\\mu, \\alpha^\\vee \\rangle}
+     {\\langle \\rho, \\alpha^\\vee \\rangle}.
+\\end{equation}
+```
+Here ``\\rho`` is the Weyl vector and the product runs over all positive coroots.
+The product vanishes at singular weights; at regular weights its Weyl sign
+is exactly the cohomological sign in Borel–Weil–Bott.
+Thus it computes the Euler characteristic for every integer twist, including
+negative twists, with exact rational coefficients.
+For ample `L`, Serre vanishing identifies it with the usual Hilbert polynomial.
+See Fulton–Harris, *Representation Theory: A First Course*,
+[§§23.3 and 24.1](https://doi.org/10.1007/978-1-4612-0979-9),
+and the [mathematical background](@ref hilbert-polynomials).
+
+Returns a [Polynomials.jl `Polynomial`](https://juliamath.github.io/Polynomials.jl/stable/)
+in `t` with exact `Rational{BigInt}` coefficients, evaluated with `P(t)`.
+Use `P[k]` for the coefficient of degree `k`, and `Polynomials.coeffs(P)`
+for the coefficient vector in increasing degree order.
+`Polynomials.degree(P)` and `Polynomials.constantterm(P)` give the degree
+and constant coefficient.
 
 # Examples
 ```jldoctest
@@ -557,124 +596,68 @@ julia> using PartialFlagVarieties
 julia> X = projective_space(1) * projective_space(1);
 
 julia> hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1]))
-3-element Vector{Rational{BigInt}}:
- 1
- 2
- 1
+Polynomial(1//1 + 2//1*t + t^2)
+
+julia> hilbert_polynomial(structure_sheaf(projective_space(3)))
+Polynomial(1//1 + 11//6*t + t^2 + 1//6*t^3)
 ```
 """
 function hilbert_polynomial(
-  E::CompletelyReducibleBundle, L::CompletelyReducibleBundle; max_degree::Int=20
+  E::CompletelyReducibleBundle, L::CompletelyReducibleBundle
 )
-  variety(E) == variety(L) || throw(ArgumentError(
-    "Polarization L must live on the same variety as E."
-  ))
-  rank(L) == 1 || throw(
-    ArgumentError(
-      "Polarization L must be a line bundle (rank 1), got rank $(rank(L))."
-    ),
-  )
+  _check_polarization(variety(E), L)
+  result = zero(_HilbertPolynomial)
+  coroots = positive_coroots(RootSystem(dynkin_type(variety(E))))
+  μ = p_dominant_weight(L)
+  for (rep, mult) in _to_counts(E)
+    λ = p_dominant_weight(rep)
+    polynomial = one(_HilbertPolynomial)
+    for coroot in coroots
+      # Weights use fundamental-weight coordinates and coroots use
+      # simple-coroot coordinates, so their natural pairing is the coordinate
+      # dot product. Semisimple.dot instead computes a metric inner product.
+      # Promote before arithmetic so the Weyl factors cannot overflow Int.
+      coroot_coefficients = coefficients(coroot)
+      indices = eachindex(coroot_coefficients)
 
-  d = dimension(variety(E))
-  n_points = min(d + rank(E) + 5, max_degree + 1)
-  values = Rational{BigInt}[Rational{BigInt}(euler_characteristic(E))]
-  Lt = L
-  for _ in 1:(n_points - 1)
-    push!(values, Rational{BigInt}(euler_characteristic(tensor_product(E, Lt))))
-    Lt = tensor_product(Lt, L)
-  end
-  _newton_interpolation(values)
-end
+      # Since ρ has all fundamental-weight coordinates equal to one,
+      # these are <ρ, α∨>, <λ + ρ, α∨>, and <μ, α∨>, respectively.
+      denominator = sum(BigInt, coroot_coefficients)
+      constant = sum((BigInt(λ[i]) + 1) * coroot_coefficients[i] for i in indices)
+      slope = sum(BigInt(μ[i]) * coroot_coefficients[i] for i in indices)
 
-"""
-    hilbert_polynomial(E::CompletelyReducibleBundle;
-                       max_degree::Int=20) -> Vector{Rational{BigInt}}
-
-Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to
-the minimal ample polarization ``\\mathcal{O}(1, \\ldots, 1)`` (degree one at
-every marked node); for Picard rank 1 this is the ample generator of
-``\\operatorname{Pic}(X)``.  Pass an explicit line bundle as a second
-argument for any other polarization.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(3);
-
-julia> hilbert_polynomial(structure_sheaf(X))
-4-element Vector{Rational{BigInt}}:
-   1
- 11//6
-   1
-  1//6
-```
-"""
-function hilbert_polynomial(E::CompletelyReducibleBundle; max_degree::Int=20)
-  X = variety(E)
-  polarization = line_bundle(X, ones(Int, length(marked_nodes(X))))
-  hilbert_polynomial(E, polarization; max_degree=max_degree)
-end
-
-"""
-    _newton_interpolation(values::Vector{Rational{BigInt}}) -> Vector{Rational{BigInt}}
-
-Given `values[i] = P(i-1)` for `i = 1, ..., n`, recover the polynomial
-coefficients `[a_0, a_1, ..., a_{n-1}]` with `P(t) = Σ aₖ tᵏ` via Newton's
-forward differences: `P(t) = Σ_k C(t, k) Δᵏf(0)`.
-"""
-function _newton_interpolation(values::Vector{Rational{BigInt}})
-  n = length(values)
-
-  deltas = Rational{BigInt}[]
-  forward_differences = values
-  while !isempty(forward_differences)
-    push!(deltas, forward_differences[1])
-    forward_differences = diff(forward_differences)
-  end
-
-  # Convert from the Newton basis C(t, k) to the monomial basis tᵏ.
-  result = zeros(Rational{BigInt}, n)
-  for k in 0:(n - 1)
-    for (d, c) in enumerate(_binomial_poly_coeffs(k))
-      result[d] += deltas[k + 1] * c
+      # Multiply by (<λ + ρ, α∨> + t<μ, α∨>) / <ρ, α∨>.
+      # A zero factor means every twist is singular and hence acyclic.
+      polynomial *= _HilbertPolynomial([constant // denominator, slope // denominator])
+      iszero(polynomial) && break
     end
-  end
-
-  # Trim trailing zeros.
-  while length(result) > 1 && result[end] == 0
-    pop!(result)
+    result += mult * polynomial
   end
   result
 end
 
 """
-    _binomial_poly_coeffs(k::Int) -> Vector{Rational{BigInt}}
+    hilbert_polynomial(F::FilteredBundle[, L::CompletelyReducibleBundle])
+      -> Polynomials.Polynomial{Rational{BigInt}}
 
-Coefficients of C(t, k) = t(t-1)...(t-k+1)/k! as polynomial in t.
-Returns [a_0, a_1, ..., a_k].
+Compute the Hilbert polynomial by adding the symbolic Weyl polynomials of
+its associated graded pieces. Additivity makes the result independent of
+extension maps. The default polarization has degree one at every marked node.
 """
-function _binomial_poly_coeffs(k::Int)
-  k == 0 && return Rational{BigInt}[1]
+function hilbert_polynomial(F::FilteredBundle, L::CompletelyReducibleBundle)
+  _check_polarization(variety(F), L)
+  sum(
+    piece -> hilbert_polynomial(piece, L), graded_pieces(F); init=zero(_HilbertPolynomial)
+  )
+end
 
-  # Start with polynomial 1
-  poly = Rational{BigInt}[1]
+hilbert_polynomial(F::FilteredBundle) =
+  hilbert_polynomial(F, line_bundle(variety(F), ones(Int, picard_rank(variety(F)))))
 
-  for j in 0:(k - 1)
-    # Multiply by (t - j)
-    new_poly = zeros(Rational{BigInt}, length(poly) + 1)
-    for (d, c) in enumerate(poly)
-      new_poly[d + 1] += c         # c * t
-      new_poly[d] -= j * c         # c * (-j)
-    end
-    poly = new_poly
-  end
-
-  # Divide by k!
-  fact = Rational{BigInt}(factorial(big(k)))
-  poly ./= fact
-
-  return poly
+function hilbert_polynomial(E::CompletelyReducibleBundle)
+  X = variety(E)
+  L = line_bundle(X, ones(Int, picard_rank(X)))
+  hilbert_polynomial(E, L)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
