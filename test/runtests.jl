@@ -4637,4 +4637,34 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test R[begin] == OX
     @test R[end] == 2 * line_bundle(X, -3)
   end
+
+  @testset "Relative BWB product and duality controls" begin
+    X = projective_space(1)
+    for (n, k) in ((3, 1), (4, 2), (3, 3))
+      G = GrassmannBundle(k, n * structure_sheaf(X))
+      if k < n
+        A = Gr(k, n)
+        for t in (-n - 1):2
+          L = tensor_product(O(G, t), pullback(G, line_bundle(X, -2)))
+          M = external_tensor_product(line_bundle(X, -2), line_bundle(A, t))
+          @test cohomology(L).entries == cohomology(M).entries
+          @test chi(L) == chi(M)
+        end
+      end
+      for B in (universal_subbundle(G), universal_quotient_bundle(G),
+        relative_tangent_bundle(G))
+        @test chi(tensor_product(dual(B), canonical_bundle(G))) ==
+          (-1)^dimension(G) * chi(B)
+      end
+    end
+  end
+
+  @testset "Filtered Schur operations" begin
+    X = projective_space(1)
+    E = FilteredBundle(X, [line_bundle(X, -2), structure_sheaf(X), line_bundle(X, 1)])
+    for k in 0:3
+      @test total_bundle(schur_functor(E, fill(1, k))) == total_bundle(exterior_power(E, k))
+      @test total_bundle(schur_functor(E, [k])) == total_bundle(symmetric_power(E, k))
+    end
+  end
 end  # @testset "PartialFlagVarieties.jl"
