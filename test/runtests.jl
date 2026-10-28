@@ -2,6 +2,7 @@ using Test
 using PartialFlagVarieties
 using Semisimple
 using StaticArrays
+import Polynomials
 
 # The default cache budget is ~10% of system RAM per process, which is far
 # more than the test workloads need; cap it so a test run stays lean.
@@ -10,58 +11,6 @@ PartialFlagVarieties.configure_caches!(; budget=256 * 1024^2)
 mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
 @testset "PartialFlagVarieties.jl" begin
-  @testset "Exact rational polynomials" begin
-    input = [1, 2, 1, 0]
-    p = Polynomial(input)
-    input[1] = 9
-    @test coefficients(p) == [1, 2, 1]
-    @test degree(p) == 2
-    @test constant_coefficient(p) == 1
-    @test leading_coefficient(p) == 1
-    @test coefficient(p, 1) == 2
-    @test coefficient(p, 10) == 0
-    @test coefficient(p, big(typemax(Int)) + 1) == 0
-    @test_throws DomainError coefficient(p, -1)
-    extracted = coefficients(p)
-    extracted[1] = 9
-    @test constant_coefficient(p) == 1
-    @test eltype(coefficients(p)) == Rational{BigInt}
-
-    @test p(3) == 16
-    @test p(-1) == 0
-    @test p(1 // 2) == 9 // 4
-    @test p(typemax(Int)) == (big(typemax(Int)) + 1)^2
-    @test Polynomial(Int[]) == Polynomial([0, 0]) == zero(Polynomial)
-    @test iszero(Polynomial())
-    @test degree(zero(p)) == -1
-    @test leading_coefficient(zero(p)) == constant_coefficient(zero(p)) == 0
-    @test_throws ArgumentError Polynomial([1 // 0])
-
-    t = Polynomial([0, 1])
-    @test (t + 1)^2 == p
-    @test 1 + t == t + 1
-    @test 1 - t == Polynomial([1, -1])
-    @test p - t - 1 == Polynomial([0, 1, 1])
-    @test p - p == zero(p)
-    @test (t + 1) * (t - 1) == Polynomial([-1, 0, 1])
-    @test zero(p) * p == p * zero(p) == zero(p)
-    @test zero(p) + p == p + zero(p) == p
-    @test (1 // 2) * p == p * (1 // 2) == p / 2
-    @test p / (2 // 3) == Polynomial([3 // 2, 3, 3 // 2])
-    @test t^0 == one(t)
-    @test t^1 == t
-    @test zero(p)^0 == one(Polynomial)
-    @test zero(p)^4 == zero(Polynomial)
-    @test_throws DomainError t^(-1)
-    @test_throws DivideError p / 0
-    @test length(Set([p, copy(p), Polynomial([1, 2, 1, 0])])) == 1
-
-    @test sprint(show, p) == "t^2 + 2*t + 1"
-    @test sprint(show, (1 // 2) * t^3 - t + 1) == "1//2*t^3 - t + 1"
-    @test sprint(show, -t^2 - 2) == "-t^2 - 2"
-    @test sprint(show, zero(p)) == "0"
-    @test sprint(show, Polynomial(-2)) == "-2"
-  end
 
   # ═══════════════════════════════════════════════════════════════════════════
   #  Dynkin type strings
@@ -967,29 +916,35 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "hilbert_polynomial" begin
+    P = Polynomials.Polynomial{Rational{BigInt},:t}
     # χ(O_{P^3}(t)) = (t+1)(t+2)(t+3)/6 = 1 + 11t/6 + t^2 + t^3/6.
     P3 = projective_space(3)
+    polynomial = hilbert_polynomial(structure_sheaf(P3))
+    @test polynomial isa P
+    @test Polynomials.coeffs(polynomial) == Rational{BigInt}[1, 11 // 6, 1, 1 // 6]
+    @test polynomial(1 // 2) == 35 // 16
+    @test polynomial(typemax(Int)) == binomial(big(typemax(Int)) + 3, 3)
     @test hilbert_polynomial(structure_sheaf(P3)) ==
-      Polynomial([1, 11 // 6, 1, 1 // 6])
+      P([1, 11 // 6, 1, 1 // 6])
 
     # χ(O_{P^3}(1)(t)) = (t+2)(t+3)(t+4)/6 = 4 + 13t/3 + 3t^2/2 + t^3/6.
     @test hilbert_polynomial(line_bundle(P3, 1)) ==
-      Polynomial([4, 13 // 3, 3 // 2, 1 // 6])
+      P([4, 13 // 3, 3 // 2, 1 // 6])
 
     # Polarization on Picard rank > 1: χ(O(t,t)) = (t+1)^2 on P^1 × P^1.
     X = projective_space(1) * projective_space(1)
     @test hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1])) ==
-      Polynomial([1, 2, 1])
+      P([1, 2, 1])
 
     # No polarization: the minimal ample O(1, …, 1) is the default.
     @test hilbert_polynomial(structure_sheaf(X)) ==
       hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1]))
 
     # Constant polarizations give constant Weyl factors, including zero factors.
-    @test hilbert_polynomial(tangent_bundle(P3), structure_sheaf(P3)) == Polynomial(15)
+    @test hilbert_polynomial(tangent_bundle(P3), structure_sheaf(P3)) == P(15)
     @test iszero(hilbert_polynomial(line_bundle(P3, -1), structure_sheaf(P3)))
     @test hilbert_polynomial(structure_sheaf(P3), line_bundle(P3, -1)) ==
-      Polynomial([1, -11 // 6, 1, -1 // 6])
+      P([1, -11 // 6, 1, -1 // 6])
 
     # Polarization must be a line bundle on the same variety as E.
     @test_throws ArgumentError hilbert_polynomial(
@@ -1000,11 +955,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   @testset "Symbolic Weyl Hilbert polynomials" begin
+    P = Polynomials.Polynomial{Rational{BigInt},:t}
     P21 = projective_space(21)
     polynomial = hilbert_polynomial(structure_sheaf(P21))
-    @test degree(polynomial) == 21
-    @test leading_coefficient(polynomial) == 1 // factorial(big(21))
-    @test constant_coefficient(polynomial) == 1
+    @test Polynomials.degree(polynomial) == 21
+    @test polynomial[Polynomials.degree(polynomial)] == 1 // factorial(big(21))
+    @test Polynomials.constantterm(polynomial) == 1
     @test polynomial(21) == binomial(big(42), 21)
 
     # Compare with BWB, including negative twists, multiplicities, products,
@@ -1026,14 +982,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     X = SGr(2, 6)
     F = filtered_tangent_bundle(X)
+    @test hilbert_polynomial(F) isa P
+    @test hilbert_polynomial(FilteredBundle(X, CompletelyReducibleBundle[])) isa P
     @test hilbert_polynomial(F) == hilbert_polynomial(total_bundle(F))
     @test iszero(hilbert_polynomial(FilteredBundle(X, CompletelyReducibleBundle[])))
 
     X = projective_space(2)
     Z = zero_locus(line_bundle(X, 2))
-    @test hilbert_polynomial(Z) == Polynomial([1, 2])
-    @test hilbert_polynomial(restrict(Z, line_bundle(X, 1))) == Polynomial([3, 2])
-    @test hilbert_polynomial(tangent_bundle(Z)) == Polynomial([3, 2])
+    @test hilbert_polynomial(Z) isa P
+    @test hilbert_polynomial(zero_bundle(Z)) isa P
+    @test hilbert_polynomial(Z) == P([1, 2])
+    @test hilbert_polynomial(restrict(Z, line_bundle(X, 1))) == P([3, 2])
+    @test hilbert_polynomial(tangent_bundle(Z)) == P([3, 2])
     @test iszero(hilbert_polynomial(zero_bundle(Z)))
     @test iszero(hilbert_polynomial(zero_locus(structure_sheaf(X))))
     @test hilbert_polynomial(zero_locus(zero_bundle(X))) ==
@@ -1041,8 +1001,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     P3 = projective_space(3)
     K3 = zero_locus(line_bundle(P3, 4))
-    @test hilbert_polynomial(K3) == Polynomial([2, 0, 2])
-    @test hilbert_polynomial(tangent_bundle(K3)) == Polynomial([-20, 0, 4])
+    @test hilbert_polynomial(K3) == P([2, 0, 2])
+    @test hilbert_polynomial(tangent_bundle(K3)) == P([-20, 0, 4])
 
     X = projective_space(4)
     Z = zero_locus(line_bundle(X, 5))

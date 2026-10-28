@@ -974,10 +974,12 @@ end
 
 """
     hilbert_polynomial(Z::ZeroLocus[, L::CompletelyReducibleBundle])
-      -> Polynomial
+      -> Polynomials.Polynomial{Rational{BigInt}}
 
 Compute the Hilbert polynomial ``P(t) = \\chi(Z, \\mathcal{L}^{\\otimes t}|_Z)`` of the
-zero locus with respect to the polarization ``\\mathcal{L}``, as a [`Polynomial`](@ref).
+zero locus with respect to the polarization ``\\mathcal{L}``, as a
+[Polynomials.jl `Polynomial`](https://juliamath.github.io/Polynomials.jl/stable/)
+with exact `Rational{BigInt}` coefficients.
 
 The polarization must be a line bundle on the ambient variety; for the
 result to be a genuine Hilbert polynomial it should be ample. Without an
@@ -994,7 +996,7 @@ julia> X = projective_space(4);
 julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> hilbert_polynomial(Z)
-5//6*t^3 + 25//6*t
+Polynomial(25//6*t + 5//6*t^3)
 ```
 """
 function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)

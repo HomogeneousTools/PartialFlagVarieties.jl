@@ -53,10 +53,33 @@ Hilbert polynomials use the symbolic Weyl formula with exact rational
 coefficients.
 They also support filtered bundles and bundles on zero loci; the latter
 combine the ambient presentation with the Koszul resolution.
-The result is a [`Polynomial`](@ref): write `P(t)` to evaluate it,
-`degree(P)` for its degree, and `constant_coefficient(P)` or
-`leading_coefficient(P)` for the endpoint coefficients.
-Use `coefficients(P)` when a vector in increasing degree order is needed.
+The result is a [Polynomials.jl `Polynomial`](https://juliamath.github.io/Polynomials.jl/stable/)
+in `t` with exact `Rational{BigInt}` coefficients.
+Write `P(t)` to evaluate it and `P[k]` for the coefficient of degree `k`.
+After `import Polynomials`, use `Polynomials.degree(P)` for its degree,
+`Polynomials.constantterm(P)` for the constant coefficient, and
+`P[Polynomials.degree(P)]` for the leading coefficient.
+`Polynomials.coeffs(P)` returns the coefficient vector in increasing degree order.
+
+```jldoctest
+julia> using PartialFlagVarieties; import Polynomials
+
+julia> X = projective_space(1) * projective_space(1);
+
+julia> P = hilbert_polynomial(structure_sheaf(X));
+
+julia> Polynomials.degree(P)
+2
+
+julia> Polynomials.constantterm(P)
+1//1
+
+julia> P[1]
+2//1
+
+julia> P(3)
+16//1
+```
 
 ```@docs
 chi
@@ -64,15 +87,4 @@ euler_characteristic
 hilbert_polynomial
 hilbert_polynomial(::FilteredBundle, ::CompletelyReducibleBundle)
 Base.iszero(::Cohomology{BigInt})
-```
-
-## Exact rational polynomials
-
-```@docs
-Polynomial
-coefficients(::Polynomial)
-coefficient
-constant_coefficient
-leading_coefficient
-degree(::Polynomial)
 ```

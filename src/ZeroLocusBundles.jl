@@ -694,7 +694,7 @@ end
 
 """
     hilbert_polynomial(F::ZeroLocusBundle[, L::CompletelyReducibleBundle])
-      -> Polynomial
+      -> Polynomials.Polynomial{Rational{BigInt}}
 
 Compute the polynomial of Euler characteristics of `F` tensored with powers
 of the restriction of an ambient line bundle `L`. The default polarization
@@ -712,13 +712,13 @@ julia> using PartialFlagVarieties
 julia> X = projective_space(2); Z = zero_locus(line_bundle(X, 2));
 
 julia> hilbert_polynomial(restrict(Z, line_bundle(X, 1)))
-2*t + 3
+Polynomial(3//1 + 2//1*t)
 ```
 """
 function hilbert_polynomial(F::ZeroLocusBundle, L::CompletelyReducibleBundle)
   Z = variety(F)
   _check_polarization(ambient_variety(Z), L)
-  result = zero(Polynomial)
+  result = zero(_HilbertPolynomial)
   for (degree, summands) in F.presentation.terms, summand in summands
     for (k, wedge) in enumerate(_koszul_wedges!(Z))
       polynomial = hilbert_polynomial(tensor_product(summand, wedge), L)

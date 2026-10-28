@@ -24,12 +24,13 @@ using LinearAlgebra
 using Combinatorics
 using PrecompileTools
 using Distributed: myid
+using Polynomials: Polynomial
 
 # ─── Extend Semisimple.jl functions (avoids name collisions) ─────────────────
 
 import Semisimple: dimension, dual, tensor_product, exterior_power, symmetric_power
 import Semisimple: n_components
-import Semisimple: rank, degree, coefficients
+import Semisimple: rank, degree
 
 # ─── Cache budget (computed before any cache is created) ─────────────────────
 
@@ -52,7 +53,6 @@ include("CompletelyReducibleBundle.jl")
 include("FilteredBundle.jl")
 include("ExternalProducts.jl")
 include("UniversalBundles.jl")
-include("Polynomial.jl")
 include("Cohomology.jl")
 include("Projections.jl")
 include("Constructions.jl")
