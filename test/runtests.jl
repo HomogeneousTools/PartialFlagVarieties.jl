@@ -10,6 +10,58 @@ PartialFlagVarieties.configure_caches!(; budget=256 * 1024^2)
 mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
 @testset "PartialFlagVarieties.jl" begin
+  @testset "Exact rational polynomials" begin
+    input = [1, 2, 1, 0]
+    p = Polynomial(input)
+    input[1] = 9
+    @test coefficients(p) == [1, 2, 1]
+    @test degree(p) == 2
+    @test constant_coefficient(p) == 1
+    @test leading_coefficient(p) == 1
+    @test coefficient(p, 1) == 2
+    @test coefficient(p, 10) == 0
+    @test coefficient(p, big(typemax(Int)) + 1) == 0
+    @test_throws DomainError coefficient(p, -1)
+    extracted = coefficients(p)
+    extracted[1] = 9
+    @test constant_coefficient(p) == 1
+    @test eltype(coefficients(p)) == Rational{BigInt}
+
+    @test p(3) == 16
+    @test p(-1) == 0
+    @test p(1 // 2) == 9 // 4
+    @test p(typemax(Int)) == (big(typemax(Int)) + 1)^2
+    @test Polynomial(Int[]) == Polynomial([0, 0]) == zero(Polynomial)
+    @test iszero(Polynomial())
+    @test degree(zero(p)) == -1
+    @test leading_coefficient(zero(p)) == constant_coefficient(zero(p)) == 0
+    @test_throws ArgumentError Polynomial([1 // 0])
+
+    t = Polynomial([0, 1])
+    @test (t + 1)^2 == p
+    @test 1 + t == t + 1
+    @test 1 - t == Polynomial([1, -1])
+    @test p - t - 1 == Polynomial([0, 1, 1])
+    @test p - p == zero(p)
+    @test (t + 1) * (t - 1) == Polynomial([-1, 0, 1])
+    @test zero(p) * p == p * zero(p) == zero(p)
+    @test zero(p) + p == p + zero(p) == p
+    @test (1 // 2) * p == p * (1 // 2) == p / 2
+    @test p / (2 // 3) == Polynomial([3 // 2, 3, 3 // 2])
+    @test t^0 == one(t)
+    @test t^1 == t
+    @test zero(p)^0 == one(Polynomial)
+    @test zero(p)^4 == zero(Polynomial)
+    @test_throws DomainError t^(-1)
+    @test_throws DivideError p / 0
+    @test length(Set([p, copy(p), Polynomial([1, 2, 1, 0])])) == 1
+
+    @test sprint(show, p) == "t^2 + 2*t + 1"
+    @test sprint(show, (1 // 2) * t^3 - t + 1) == "1//2*t^3 - t + 1"
+    @test sprint(show, -t^2 - 2) == "-t^2 - 2"
+    @test sprint(show, zero(p)) == "0"
+    @test sprint(show, Polynomial(-2)) == "-2"
+  end
 
   # ═══════════════════════════════════════════════════════════════════════════
   #  Dynkin type strings

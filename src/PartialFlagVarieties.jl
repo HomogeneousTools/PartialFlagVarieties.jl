@@ -29,7 +29,7 @@ using Distributed: myid
 
 import Semisimple: dimension, dual, tensor_product, exterior_power, symmetric_power
 import Semisimple: n_components
-import Semisimple: rank, degree
+import Semisimple: rank, degree, coefficients
 
 # ─── Cache budget (computed before any cache is created) ─────────────────────
 
@@ -52,6 +52,7 @@ include("CompletelyReducibleBundle.jl")
 include("FilteredBundle.jl")
 include("ExternalProducts.jl")
 include("UniversalBundles.jl")
+include("Polynomial.jl")
 include("Cohomology.jl")
 include("Projections.jl")
 include("Constructions.jl")

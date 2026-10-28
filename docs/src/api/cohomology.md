@@ -49,6 +49,11 @@ dimensions
 
 ## Derived invariants
 
+Hilbert polynomials use the symbolic Weyl formula with exact rational
+coefficients.
+They also support filtered bundles and bundles on zero loci; the latter
+combine the ambient presentation with the Koszul resolution.
+
 ```@docs
 chi
 euler_characteristic
@@ -57,7 +62,13 @@ hilbert_polynomial(::FilteredBundle, ::CompletelyReducibleBundle)
 Base.iszero(::Cohomology{BigInt})
 ```
 
-Hilbert polynomials use the symbolic Weyl formula with exact rational
-coefficients.
-They also support filtered bundles and bundles on zero loci; the latter
-combine the ambient presentation with the Koszul resolution.
+## Exact rational polynomials
+
+```@docs
+Polynomial
+coefficients(::Polynomial)
+coefficient
+constant_coefficient
+leading_coefficient
+degree(::Polynomial)
+```
