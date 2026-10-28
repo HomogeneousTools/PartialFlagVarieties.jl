@@ -4054,6 +4054,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       tensor_product(symmetric_power(dual(F), 2), tensor_product(det(F), det(F)))
     @test iszero(schur_functor(U, [1, 1, 1]))
     @test schur_functor(zero_bundle(X), Int[]) == structure_sheaf(X)
+    # Weyl dimensions for GL(6), testing larger row and column determinants.
+    V = direct_sum(2 * U, 2 * line_bundle(X, 1))
+    @test rank(schur_functor(V, [3, 2, 1])) == 896
+    @test rank(schur_functor(V, [2, 2, 2])) == 175
+    @test rank(schur_functor(V, [3, 3])) == 490
     @test_throws ArgumentError schur_functor(F, [1, 2])
     @test_throws ArgumentError schur_functor(F, [-1])
   end

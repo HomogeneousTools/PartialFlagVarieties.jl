@@ -1,16 +1,6 @@
 export schur_functor
 
 # Signed multiplicities are used only while evaluating Jacobi--Trudi.
-function _virtual_tensor(a::Dict{IrrepLevi,BigInt}, b::Dict{IrrepLevi,BigInt})
-  result = Dict{IrrepLevi,BigInt}()
-  for (u, m) in a, (v, n) in b
-    for (w, k) in _tensor_product_terms(u, v)
-      result[w] = get(result, w, BigInt(0)) + m * n * k
-    end
-  end
-  filter!(p -> !iszero(last(p)), result)
-end
-
 _virtual_bundle(E::CompletelyReducibleBundle) =
   Dict(u => BigInt(m) for (u, m) in _to_counts(E))
 
@@ -46,9 +36,7 @@ function schur_functor(E::CompletelyReducibleBundle, λ::AbstractVector{<:Intege
     length(a) == r ||
       throw(ArgumentError("Negative Schur weights require exactly rank(E) entries."))
   else
-    while !isempty(a) && last(a) == 0
-      pop!(a)
-    end
+    filter!(!iszero, a)
     length(a) > r && return zero_bundle(X)
   end
   isempty(a) && return structure_sheaf(X)
@@ -83,7 +71,7 @@ function _jacobi_trudi(E::CompletelyReducibleBundle, a::Vector{Int})
   n = length(λ)
   n < 8 * sizeof(UInt) ||
     throw(ArgumentError("Schur determinant is too large for subset evaluation."))
-  powers = Dict(k => _virtual_bundle(power(E, k)) for k in 0:(first(λ) + n - 1))
+  powers = [_virtual_bundle(power(E, k)) for k in 0:(first(λ) + n - 1)]
   states = Dict(UInt(0) => _virtual_bundle(structure_sheaf(variety(E))))
   for i in 1:n
     next = Dict{UInt,Dict{IrrepLevi,BigInt}}()
@@ -94,8 +82,10 @@ function _jacobi_trudi(E::CompletelyReducibleBundle, a::Vector{Int})
       k < 0 && continue
       sign = isodd(count_ones(mask >> j)) ? -1 : 1
       target = get!(() -> Dict{IrrepLevi,BigInt}(), next, mask | bit)
-      for (u, m) in _virtual_tensor(value, powers[k])
-        target[u] = get(target, u, BigInt(0)) + sign * m
+      for (u, m) in value, (v, n_v) in powers[k + 1],
+        (w, multiplicity) in _tensor_product_terms(u, v)
+
+        target[w] = get(target, w, BigInt(0)) + sign * m * n_v * multiplicity
       end
       filter!(p -> !iszero(last(p)), target)
     end
@@ -114,8 +104,7 @@ even when Jacobi--Trudi cancels intermediate virtual summands.
 function schur_functor(F::FilteredBundle, λ::AbstractVector{<:Integer})
   X = variety(F)
   P = projective_space(1)
-  A = product(X, P)
-  tagged = zero_bundle(A)
+  tagged = zero_bundle(product(X, P))
   for (i, piece) in enumerate(graded_pieces(F))
     tagged = direct_sum(tagged, external_tensor_product(piece, line_bundle(P, i)))
   end
