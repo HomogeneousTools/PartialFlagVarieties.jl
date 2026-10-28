@@ -38,16 +38,8 @@ Base.isequal(Z::DegeneracyLocus, W::DegeneracyLocus) = Z == W
 Base.hash(Z::DegeneracyLocus, h::UInt) =
   hash(Z.incidence, hash(Z.data, hash(Z.construction, h)))
 Base.show(io::IO, Z::DegeneracyLocus) =
-  print(
-    io,
-    "Degeneracy locus(",
-    Z.construction,
-    ", dim ",
-    dimension(Z),
-    " in ",
-    ambient_variety(Z),
-    ")",
-  )
+  print(io, "Degeneracy locus(", Z.construction, ", dim ", dimension(Z),
+    " in ", ambient_variety(Z), ")")
 
 """A bundle on a degeneracy locus, represented on its incidence resolution."""
 struct DegeneracyLocusBundle{
@@ -131,11 +123,7 @@ tensor_product(
   tensor_product(restrict(variety(F), H), F)
 function Base.:*(n::Integer, F::DegeneracyLocusBundle)
   n >= 0 || throw(ArgumentError("Multiplicity must be nonnegative."))
-  result = zero_bundle(variety(F))
-  for _ in 1:n
-    result = direct_sum(result, F)
-  end
-  result
+  reduce(direct_sum, Iterators.repeated(F, n); init=zero_bundle(variety(F)))
 end
 
 cohomology(F::DegeneracyLocusBundle; kwargs...) = cohomology(F.presentation; kwargs...)
@@ -197,13 +185,11 @@ end
 
 function _check_degeneracy_geometry(
   section::_AmbientBundle, cuts::_AmbientBundle, lower_codimension::Integer;
-  check_global_generation::Bool=false, check_smoothness::Bool=false,
+  check_smoothness::Bool=false,
 )
   variety(cuts) == variety(section) || throw(ArgumentError("Incorrect base equations."))
-  if check_global_generation || check_smoothness
-    _require_generation(section, "the section bundle")
-    _require_generation(cuts, "the base equations")
-  end
+  _require_generation(section, "the section bundle")
+  _require_generation(cuts, "the base equations")
   if check_smoothness
     d = dimension(variety(section)) - rank(cuts)
     lower_codimension > d || throw(
@@ -270,7 +256,7 @@ function _positive_polarization(G::GrassmannBundle)
       t = max(t, -coefficients(p_dominant_weight(rep))[i])
     end
   end
-  tensor_product(O(G, 1), pullback(G, _line_power(H, max(0, t) + 1)))
+  tensor_product(O(G, 1), pullback(G, _line_power(H, t + 1)))
 end
 
 function _check_degeneracy_nonempty(
@@ -284,16 +270,13 @@ function _check_degeneracy_nonempty(
     line_bundle(A, ones(Int, picard_rank(A)))
   end
   volume = degree(restrict(Z, L))
-  volume > 0 || throw(
-    ArgumentError(
-      if iszero(volume)
-        "The expected regular locus is empty."
-      else
-        "A negative polarization degree contradicts the regularity assumptions."
-      end,
-    ),
-  )
-  Z
+  volume > 0 && return Z
+  message = if iszero(volume)
+    "The expected regular locus is empty."
+  else
+    "A negative polarization degree contradicts the regularity assumptions."
+  end
+  throw(ArgumentError(message))
 end
 
 # ─── Locus constructors and bundle resolutions ───────────────────────────
@@ -370,33 +353,33 @@ function determinantal_resolution(
 end
 
 """
-    degeneracy_locus(E, F, r; check_global_generation=false, check_smoothness=false, check_nonempty=false, kwargs...)
+    degeneracy_locus(E, F, r; presentation=:auto, base_equations=...,
+                     check_global_generation=false, check_smoothness=false, check_nonempty=false)
 
 A rank-at-most-`r` degeneracy locus of a general map, retaining its incidence presentation.
 The optional smoothness check certifies global generation and verifies that
 expected codimension excludes the next rank stratum. Without that bound the
 result is an incidence resolution whose invariants can differ from the image.
 Failed sufficient certificates need not disprove smoothness.
-No actual section is stored. Use `is_strongly_fano` on the result to query
-the sufficient ambient anticanonical positivity certificate.
+No actual section is stored.
 `check_nonempty=true` tests positive ample polarization degree under the
 regularity assumptions; this optional intersection calculation can be costly.
 """
 function degeneracy_locus(
   E::_AmbientBundle, F::_AmbientBundle, r::Integer;
+  presentation::Symbol=:auto, base_equations::_AmbientBundle=zero_bundle(variety(E)),
   check_global_generation::Bool=false, check_smoothness::Bool=false,
-  check_nonempty::Bool=false, kwargs...,
+  check_nonempty::Bool=false,
 )
   _check_degeneracy_data(E, F, r)
-  cuts = get(kwargs, :base_equations, zero_bundle(variety(E)))
   lower = r == 0 ? dimension(variety(E)) + 1 : (rank(E)-r+1)*(rank(F)-r+1)
   if check_global_generation || check_smoothness
-    _check_degeneracy_geometry(tensor_product(dual(E), F), cuts, lower;
-      check_global_generation, check_smoothness)
+    _check_degeneracy_geometry(tensor_product(dual(E), F), base_equations, lower;
+      check_smoothness)
   end
-  R = determinantal_resolution(E, F, r; check_nonempty, kwargs...)
+  R = determinantal_resolution(E, F, r; presentation, base_equations, check_nonempty)
   DegeneracyLocus(
-    R, :determinantal, (; E, F, r=Int(r), base_equations=cuts, lower_codimension=lower)
+    R, :determinantal, (; E, F, r=Int(r), base_equations, lower_codimension=lower)
   )
 end
 
@@ -419,19 +402,18 @@ function _quadratic_locus(
   lower = next > n ? dimension(X)+1 : (symmetric ? next*(next+1)÷2 : next*(next-1)÷2)
   if check_global_generation || check_smoothness
     _check_degeneracy_geometry(tensor_product(power(E, 2), L), base_equations, lower;
-      check_global_generation, check_smoothness)
+      check_smoothness)
   end
   # At rank zero the form itself vanishes. The identity Grassmann bundle
   # also handles filtered equations without replacing their extensions.
-  if corank == n
-    G = GrassmannBundle(n, E)
-    B = pullback(G, tensor_product(power(E, 2), L))
+  G = GrassmannBundle(corank == n ? n : n-Int(corank), E)
+  B = if corank == n
+    pullback(G, tensor_product(power(E, 2), L))
   else
-    G = GrassmannBundle(n-Int(corank), E)
     S, Q = universal_subbundle(G), universal_quotient_bundle(G)
     pieces = [tensor_product(S, Q).representation, power(Q, 2).representation]
     W = RelativeGrassmannianBundle(G, FilteredBundle(G.auxiliary, pieces))
-    B = tensor_product(W, pullback(G, L))
+    tensor_product(W, pullback(G, L))
   end
   Z = zero_locus(direct_sum(B, pullback(G, base_equations)))
   _check_degeneracy_nonempty(Z; check_nonempty)
@@ -490,7 +472,7 @@ function partially_decomposable_locus(
   variety(base_equations) == variety(E) || throw(ArgumentError("Incorrect base equations."))
   if check_global_generation || check_smoothness
     _check_degeneracy_geometry(exterior_power(E, 3), base_equations, 10;
-      check_global_generation, check_smoothness)
+      check_smoothness)
   end
   G = GrassmannBundle(1, E)
   Z = zero_locus(
@@ -523,7 +505,7 @@ function rank_one_nilpotent_locus(
     adjoint = tensor_product(E, dual(E))
     # Generation of End(E) suffices for its trace-free direct summand.
     _check_degeneracy_geometry(tensor_product(adjoint, L), base_equations, rank(E)^2-1;
-      check_global_generation, check_smoothness)
+      check_smoothness)
   end
   G = GrassmannBundle(1, E)
   S, Q = universal_subbundle(G), universal_quotient_bundle(G)
@@ -584,12 +566,10 @@ function gulliksen_negard(E::CompletelyReducibleBundle, F::CompletelyReducibleBu
   D = tensor_product(det(E), dual(det(F)))
   terms = [
     structure_sheaf(variety(E)),
-    tensor_product(tensor_product(dual(E), F), D),
-    tensor_product(
-      direct_sum(_trace_free_endomorphisms(E), _trace_free_endomorphisms(F)), D
-    ),
-    tensor_product(tensor_product(dual(F), E), D),
-    tensor_product(D, D),
+    dual(E) ⊗ F ⊗ D,
+    (_trace_free_endomorphisms(E) + _trace_free_endomorphisms(F)) ⊗ D,
+    dual(F) ⊗ E ⊗ D,
+    D ⊗ D,
   ]
   BundleResolution(terms, dimension(variety(E)) - 4)
 end
@@ -602,14 +582,11 @@ function eagon_northcott(E::CompletelyReducibleBundle, F::CompletelyReducibleBun
   e >= f > 0 || throw(ArgumentError("Require rank(E) ≥ rank(F) > 0."))
   D = dual(det(F))
   terms = [structure_sheaf(variety(E))]
-  for i in 1:(e - f + 1)
-    push!(
-      terms,
-      tensor_product(
-        tensor_product(exterior_power(E, f + i - 1), symmetric_power(dual(F), i - 1)), D
-      ),
-    )
-  end
+  append!(
+    terms, [
+      exterior_power(E, f+i) ⊗ symmetric_power(dual(F), i) ⊗ D for i in 0:(e - f)
+    ]
+  )
   BundleResolution(terms, dimension(variety(E)) - (e - f + 1))
 end
 
@@ -619,16 +596,13 @@ function buchsbaum_rim(E::CompletelyReducibleBundle, F::CompletelyReducibleBundl
     throw(ArgumentError("Source and target must live on the same base."))
   e, f = Int(rank(E)), Int(rank(F))
   e >= f > 0 || throw(ArgumentError("Require rank(E) ≥ rank(F) > 0."))
+  D = dual(det(F))
   terms = [F, E]
-  for i in 2:(e - f + 1)
-    push!(
-      terms,
-      tensor_product(
-        tensor_product(exterior_power(E, f + i - 1), symmetric_power(dual(F), i - 2)),
-        dual(det(F)),
-      ),
-    )
-  end
+  append!(
+    terms, [
+      exterior_power(E, f+i) ⊗ symmetric_power(dual(F), i-1) ⊗ D for i in 1:(e - f)
+    ]
+  )
   BundleResolution(terms, dimension(variety(E)) - (e - f + 1))
 end
 
@@ -643,9 +617,9 @@ function pfaffian_resolution(
   m = (n - 1) ÷ 2
   D = dual(det(E))
   terms = [structure_sheaf(variety(E)),
-    tensor_product(E, tensor_product(D, _line_power(L, -m))),
-    tensor_product(dual(E), tensor_product(D, _line_power(L, -m - 1))),
-    tensor_product(tensor_product(D, D), _line_power(L, -n))]
+    E ⊗ D ⊗ _line_power(L, -m),
+    dual(E) ⊗ D ⊗ _line_power(L, -m - 1),
+    D ⊗ D ⊗ _line_power(L, -n)]
   BundleResolution(terms, dimension(variety(E)) - 3)
 end
 
