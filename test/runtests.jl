@@ -4516,4 +4516,102 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test chi(structure_sheaf(C)) == 0
     @test degree(line_bundle(C, 1)) == 3
   end
+  @testset "Relative bundle operations on P² × P²" begin
+    X = projective_space(2)
+    G = GrassmannBundle(1, 3 * structure_sheaf(X))
+    L = O(G, 1)
+    H = pullback(G, line_bundle(X, 1))
+    Q = universal_quotient_bundle(G)
+
+    # The two hyperplane classes have three sections each; O(1,1) has nine.
+    @test chi(L + H) == 6
+    @test chi(L * H) == 9
+    @test chi(2 * L) == 6
+    @test iszero(0 * L)
+    @test all(iszero, cohomology(0 * L))
+    @test_throws ArgumentError (-1) * L
+    @test chi(tensor_product(line_bundle(X, 1), L)) == 9
+    @test chi(tensor_product(L, line_bundle(X, 1))) == 9
+    @test chi(twist(L, 1)) == 6
+    @test schur_functor(Q, [1, 1]) == determinant(Q) == det(Q)
+    @test chi(schur_functor(Q, [1, 1])) == 3
+    @test rank(tangent_bundle(G)) == 4
+    @test chi(tangent_bundle(G)) == 16
+
+    # Equivalent constructions must also work as keys, not just compare with ==.
+    @test Dict(G => :product)[GrassmannBundle(1, 3 * structure_sheaf(X))] == :product
+    @test Dict(L => :hyperplane)[O(G, 1)] == :hyperplane
+    @test occursin("Gr(1,", sprint(show, G))
+    @test occursin("rank 1", sprint(show, L))
+  end
+
+  @testset "Relative hyperplane presentation of P⁴" begin
+    X = projective_space(4)
+    G = GrassmannBundle(1, 2 * structure_sheaf(X))
+    Z = zero_locus(O(G, 1))
+    H = pullback(G, line_bundle(X, 1))
+    A = restrict(Z, H)
+
+    # A fibrewise hyperplane in P¹ × P⁴ is P⁴. The normal line is trivial.
+    @test chi(normal_bundle(Z)) == chi(conormal_bundle(Z)) == 1
+    @test chi(A + dual(A)) == 5
+    @test chi(A * dual(A)) == 1
+    @test determinant(A) == det(A) == A
+    @test cohomology(Z, H)[0] == 5
+    @test cohomology(zero_bundle(Z)).entries == zeros(Int, 5)
+    @test hodge_numbers(Z) == [Int(p == q) for p in 0:4, q in 0:4]
+
+    # Computing a Koszul cache must not change equality or dictionary lookup.
+    @test Dict(Z => :P4)[zero_locus(O(G, 1))] == :P4
+    @test Dict(A => :hyperplane)[restrict(Z, H)] == :hyperplane
+    @test occursin("dim 4", sprint(show, Z))
+    @test occursin("rank 1", sprint(show, A))
+  end
+
+  @testset "Nilpotent conic bundle operations" begin
+    X = projective_space(2)
+    E, L = 2 * structure_sheaf(X), line_bundle(X, 1)
+    Z = rank_one_nilpotent_locus(E, L;
+      check_global_generation=true, check_smoothness=true)
+    A = restrict(Z, L)
+
+    # The determinant of a general traceless 2×2 matrix cuts out a conic.
+    @test dimension(Z) == 1
+    @test chi(structure_sheaf(Z)) == 1
+    @test degree(anticanonical_bundle(Z)) == 2
+    @test O(Z, [1]) == A
+    @test chi(A * dual(A)) == 1
+    @test chi(tensor_product(L, A)) == 5
+    @test Dict(Z => :conic)[rank_one_nilpotent_locus(E, L)] == :conic
+    @test Dict(A => :hyperplane)[O(Z, [1])] == :hyperplane
+    @test occursin("nilpotent", sprint(show, Z))
+    @test occursin("rank 1", sprint(show, A))
+
+    P = hochschild_cohomology(Z)
+    @test [P[0, q] for q in 0:1] == [1, 0]
+    # The tangent differential can remain symbolic, with its Euler index exact.
+    @test P[1, 0] - P[1, 1] == 3
+  end
+
+  @testset "Generation certificates and resolution indexing" begin
+    X = projective_space(3)
+    OX, L = structure_sheaf(X), line_bundle(X, 1)
+    # Three independent linear equations in P³ cut out one point.
+    Z = determinantal_resolution(2 * dual(L), OX, 0;
+      base_equations=L, check_global_generation=true)
+    @test chi(structure_sheaf(Z)) == 1
+    @test_throws ArgumentError determinantal_resolution(2 * dual(L), OX, 0;
+      base_equations=dual(L), check_global_generation=true)
+
+    # A graded-weight test must report an uncertified filtered extension.
+    Y = projective_space(1)
+    F = FilteredBundle(Y, [line_bundle(Y, -1), line_bundle(Y, 1)])
+    @test_throws ArgumentError degeneracy_locus(F, 2 * structure_sheaf(Y), 1;
+      check_global_generation=true)
+
+    # The Hilbert–Burch resolution of the twisted cubic is zero-indexed.
+    R = eagon_northcott(3 * dual(L), 2 * OX)
+    @test R[begin] == OX
+    @test R[end] == 2 * line_bundle(X, -3)
+  end
 end  # @testset "PartialFlagVarieties.jl"
