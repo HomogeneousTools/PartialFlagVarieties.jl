@@ -204,10 +204,6 @@ function residual_bundle(X::PartialFlagVariety)
   marked = marked_nodes(X)[1]
   R = rank(DT)
 
-  marked == 1 && throw(
-    ArgumentError("not implemented for marked node 1")
-  )
-
   # Weight formulas: Frassineti–Manivel, arXiv:2605.28712, §1.
   if DT <: TypeB
     if marked == R

@@ -19,13 +19,20 @@ filtration data, see [`FilteredBundle`](@ref); bundles on zero loci use
 ambient presentations as described under [Zero Loci](zero_loci.md).
 
 !!! note "Design note"
-    The abstract type [`Bundle`](@ref) has three concrete subtypes:
-    `CompletelyReducibleBundle` (the semisimplification — a direct sum),
+    [`AmbientBundle`](@ref) is the subtype of [`Bundle`](@ref) for homogeneous
+    bundles on a [`PartialFlagVariety`](@ref). Its concrete subtypes are
+    `CompletelyReducibleBundle` (the semisimplification — a direct sum), and
     [`FilteredBundle`](@ref) (a bundle with a filtration by subbundles,
-    retaining the ordering), and [`ZeroLocusBundle`](@ref) (a bundle represented
-    by an ambient presentation on a zero locus). Most ambient operations produce
+    retaining the ordering). [`ZeroLocusBundle`](@ref) represents a bundle
+    by an ambient presentation on a zero locus. Most ambient operations produce
     `CompletelyReducibleBundle`; filtered bundles arise from
     [`filtered_tangent_bundle`](@ref) and its derived operations.
+
+    [`RelativeGrassmannianBundle`](@ref), [`RelativeZeroLocusBundle`](@ref), and
+    [`DegeneracyLocusBundle`](@ref) represent bundles on the corresponding
+    relative spaces and incidence resolutions. See
+    [Relative Grassmann bundles](relative_bundles.md) and
+    [Degeneracy loci](degeneracy_loci.md).
 
     Tensor products and exterior powers of `CompletelyReducibleBundle` are
     computed by decomposing into Semisimple.jl character arithmetic, then
@@ -42,9 +49,10 @@ is not an isomorphism test.
   summands. Summand order is ignored, while multiplicities are retained.
 - [`FilteredBundle`](@ref) compares the base and the ordered graded pieces. It
   does not try to identify different filtrations with isomorphic total bundles.
-- A bundle on a [`ZeroLocus`](@ref) compares the recorded locus and all terms of
-  its ambient presentation. It does not simplify quasi-isomorphic
-  presentations.
+- A bundle on a [`ZeroLocus`](@ref) or [`RelativeZeroLocus`](@ref) compares the
+  recorded locus and all terms of its ambient presentation. It does not
+  simplify quasi-isomorphic presentations. A [`DegeneracyLocusBundle`](@ref)
+  also compares the degeneracy construction data.
 
 `iszero(F)` asks whether `F` represents a rank-zero bundle at the corresponding
 abstraction level. Consequently, `iszero(F)` can be `true` while
@@ -58,6 +66,7 @@ structural equality as `==`.
 
 ```@docs
 Bundle
+AmbientBundle
 CompletelyReducibleBundle
 ```
 
@@ -108,6 +117,10 @@ determinant
 ```
 
 ## Operations
+
+[`schur_functor`](@ref) applies an integral dominant Schur weight to a
+completely reducible or filtered bundle. For a filtered bundle it retains
+the induced filtration.
 
 ```@docs
 dual(::CompletelyReducibleBundle)

@@ -55,7 +55,7 @@ julia> n_filtration_steps(F)
 1
 ```
 """
-struct FilteredBundle <: Bundle
+struct FilteredBundle <: AmbientBundle
   variety::PartialFlagVariety
   pieces::Vector{CompletelyReducibleBundle}
 

@@ -29,6 +29,8 @@ makedocs(;
       "UniversalBundles" => "api/universal_bundles.md",
       "Cohomology" => "api/cohomology.md",
       "Projections" => "api/projections.md",
+      "Relative bundles" => "api/relative_bundles.md",
+      "Degeneracy loci" => "api/degeneracy_loci.md",
       "Hodge & Hochschild" => "api/hodge.md",
       "ZeroLoci" => "api/zero_loci.md",
       "Koszul Algebra" => "api/koszul.md",
