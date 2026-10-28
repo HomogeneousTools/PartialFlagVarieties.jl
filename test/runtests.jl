@@ -680,6 +680,21 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test det(direct_sum(L, M)) == tensor_product(L, M)  # det(L⊕M) = L⊗M
   end
 
+  @testset "p_dominant_weight: bundles" begin
+    X = Gr(3, 6)
+    λ = WeightLatticeElem(dynkin_type(X), [0, 1, -1, 0, 0])
+    E = CompletelyReducibleBundle(X, λ)
+    @test p_dominant_weight(E) == λ
+    @test p_dominant_weight(structure_sheaf(X)) == WeightLatticeElem(dynkin_type(X))
+    @test_throws ArgumentError p_dominant_weight(zero_bundle(X))
+    @test_throws ArgumentError p_dominant_weight(direct_sum(E, structure_sheaf(X)))
+    @test_throws ArgumentError p_dominant_weight(2 * structure_sheaf(X))
+
+    X_flag = partial_flag_variety(TypeA{3}, (1, 3))
+    @test p_dominant_weight(line_bundle(X_flag, [-2, 3])) ==
+      WeightLatticeElem(dynkin_type(X_flag), [-2, 0, 3])
+  end
+
   @testset "picard_degrees" begin
     @test picard_degrees(line_bundle(projective_space(4), 3)) == [3]
     @test picard_degrees(structure_sheaf(projective_space(4))) == [0]
@@ -972,7 +987,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       L = line_bundle(X, ones(Int, picard_rank(X)))
       F = direct_sum(cotangent_bundle(X), 2 * structure_sheaf(X))
       polynomial = hilbert_polynomial(F, L)
-      weight = p_dominant_weight(only(components(L)))
+      weight = p_dominant_weight(L)
       for t in (-3, -1, 0, 2, 4)
         Lt = CompletelyReducibleBundle(X, t * weight)
         @test polynomial(t) == euler_characteristic(tensor_product(F, Lt))

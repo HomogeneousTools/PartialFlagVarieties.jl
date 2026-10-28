@@ -608,7 +608,7 @@ function hilbert_polynomial(
   _check_polarization(variety(E), L)
   result = zero(_HilbertPolynomial)
   coroots = positive_coroots(RootSystem(dynkin_type(variety(E))))
-  μ = p_dominant_weight(only(components(L))) # Weight of the polarization L.
+  μ = p_dominant_weight(L)
   for (rep, mult) in _to_counts(E)
     λ = p_dominant_weight(rep)
     polynomial = one(_HilbertPolynomial)
