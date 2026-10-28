@@ -4143,4 +4143,18 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test count(!iszero, images) == 1
     @test iszero(pushforward(P6, dual(W)))
   end
+
+  @testset "Relative polyvector cohomology" begin
+    X = projective_space(2)
+    G = GrassmannBundle(1, 2 * structure_sheaf(X))
+    # A fibrewise hyperplane in P¹ × P² is P².
+    Z = zero_locus(dual(universal_subbundle(G)))
+    P = hochschild_cohomology(Z)
+    # The implicit tangent differential may leave h⁰(T), h¹(T) symbolic.
+    # Their Euler characteristic and the other two rows must still be exact.
+    @test [P[0, q] for q in 0:2] == [1, 0, 0]
+    @test [P[2, q] for q in 0:2] == [10, 0, 0]
+    @test P[1, 0] - P[1, 1] + P[1, 2] == 8
+    @test sum((-1)^i * P[i] for i in 0:4) == 3
+  end
 end  # @testset "PartialFlagVarieties.jl"

@@ -766,6 +766,9 @@ Check whether the zero locus ``Z`` is strongly Fano: the anticanonical bundle
 By the adjunction formula ``\\omega_Z^\\vee = (\\omega_X^\\vee \\otimes \\det(\\mathcal{E})^\\vee)|_Z``,
 this holds when every Picard-basis coordinate of ``\\omega_X^\\vee \\otimes \\det(\\mathcal{E})^\\vee``
 is strictly positive.  Strong Fano implies (ordinary) Fano.
+A false result does not prove that the locus is not Fano: the restriction
+can be ample even when this ambient lift is not. Smoothness and nonemptiness
+are assumptions about the regular section, not conclusions of this query.
 
 # Examples
 ```jldoctest

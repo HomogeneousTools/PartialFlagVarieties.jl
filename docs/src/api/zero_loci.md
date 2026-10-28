@@ -23,7 +23,7 @@ a regular zero locus of `E`, assuming that a regular section exists.
 Use `zero_locus(E; check_global_generation=true)` to check that the defining
 bundle is globally generated. The check is opt-in because the constructor
 also serves to record formal data. It does not certify nonemptiness or
-regularity.
+regularity. For relative bundles, the check uses a sufficient certificate.
 Accordingly, equality compares the ambient variety and defining bundle. It does
 not compare sections, test containment, or recognize abstractly isomorphic
 subvarieties.
