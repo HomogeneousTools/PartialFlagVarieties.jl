@@ -157,6 +157,7 @@ degeneracy_locus
 DegeneracyLocus
 DegeneracyLocusBundle
 incidence_resolution
+degree(::Union{ZeroLocusBundle,RelativeZeroLocusBundle})
 determinantal_resolution
 RelativeZeroLocus
 RelativeZeroLocusBundle

@@ -34,6 +34,10 @@ Concrete subtypes:
 - [`FilteredBundle`](@ref): bundles with a filtration by equivariant subbundles
 - [`ZeroLocusBundle`](@ref): bundles on a [`ZeroLocus`](@ref), represented by
   ambient presentations
+- [`RelativeGrassmannianBundle`](@ref): bundles on a [`GrassmannBundle`](@ref)
+- [`RelativeZeroLocusBundle`](@ref): bundles on a [`RelativeZeroLocus`](@ref)
+- [`DegeneracyLocusBundle`](@ref): bundles represented on a degeneracy locus's
+  incidence resolution
 """
 abstract type Bundle end
 
