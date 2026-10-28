@@ -4593,6 +4593,29 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test P[1, 0] - P[1, 1] == 3
   end
 
+  @testset "Relative zero bundles with exact presentations" begin
+    X = projective_space(2)
+    G = GrassmannBundle(1, structure_sheaf(X))
+    # Two lines in P² cut out a reduced point. Its tangent presentation has
+    # nonzero terms, but the bundle itself is zero.
+    Z = zero_locus(pullback(G, 2 * line_bundle(X, 1)))
+    T = tangent_bundle(Z)
+    @test dimension(Z) == 0
+    @test rank(T) == 0
+    @test iszero(T)
+    @test iszero(dual(T))
+    @test iszero(T + T)
+    @test iszero(symmetric_power(T, 2))
+    @test cohomology(T).entries == [0]
+    @test !iszero(structure_sheaf(Z))
+
+    # The degeneracy wrapper must preserve the same zero-bundle semantics.
+    F = FilteredBundle(X, [line_bundle(X, 1), line_bundle(X, 1)])
+    D = degeneracy_locus(structure_sheaf(X), F, 0)
+    @test iszero(tangent_bundle(D))
+    @test !iszero(structure_sheaf(D))
+  end
+
   @testset "Generation certificates and resolution indexing" begin
     X = projective_space(3)
     OX, L = structure_sheaf(X), line_bundle(X, 1)

@@ -59,7 +59,9 @@ end
 variety(F::RelativeZeroLocusBundle) = F.variety
 ambient_variety(F::RelativeZeroLocusBundle) = ambient_variety(variety(F))
 rank(F::RelativeZeroLocusBundle) = sum(((-1)^i * rank(A) for (i, A) in F.terms); init=0)
-Base.iszero(F::RelativeZeroLocusBundle) = isempty(F.terms)
+# A rank-zero vector bundle is zero even when its exact ambient presentation
+# has nonzero terms, as for the tangent bundle of a reduced point.
+Base.iszero(F::RelativeZeroLocusBundle) = iszero(rank(F))
 Base.:(==)(F::RelativeZeroLocusBundle, H::RelativeZeroLocusBundle) =
   variety(F) == variety(H) && F.terms == H.terms
 Base.isequal(F::RelativeZeroLocusBundle, H::RelativeZeroLocusBundle) = F == H
