@@ -3991,6 +3991,54 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test PartialFlagVarieties.configure_caches!() === nothing
   end
 
+  @testset "Projective bundles" begin
+    X = projective_space(2)
+    F = direct_sum(line_bundle(X, -1), 3 * structure_sheaf(X))
+    P = GrassmannBundle(1, F)
+
+    @test base_variety(P) == X
+    @test grassmannized_bundle(P) == F
+    @test dimension(P) == 5
+    @test picard_rank(P) == 2
+
+    L = relative_line_bundle(P)
+    @test rank(L) == 1
+    @test pushforward(P, structure_sheaf(P))[0] == structure_sheaf(X)
+    @test iszero(pushforward(P, relative_line_bundle(P, -1)))
+    @test iszero(pushforward(P, relative_line_bundle(P, -3)))
+    @test pushforward(P, L)[0] == dual(F)
+    @test pushforward(P, relative_line_bundle(P, -4))[3] == det(F)
+    @test exterior_power(L, 2) == zero_bundle(P)
+    @test cohomology(L)[0] == 6
+    @test canonical_bundle(P) ==
+      tensor_product(
+      relative_line_bundle(P, -4),
+      pullback(P, tensor_product(canonical_bundle(X), dual(det(F)))),
+    )
+    @test direct_sum(L, relative_line_bundle(P, -1)) ==
+      direct_sum(relative_line_bundle(P, -1), L)
+    @test tensor_product(L, zero_bundle(P)) == zero_bundle(P)
+    @test symmetric_power(zero_bundle(P), 2) == zero_bundle(P)
+    @test cohomology(canonical_bundle(P))[dimension(P)] == 1
+
+    # A line projectivizes to the base; O(1) becomes its dual.
+    P1 = GrassmannBundle(1, line_bundle(X, 2))
+    @test picard_rank(P1) == picard_rank(X)
+    @test pushforward(P1, O(P1, -3))[0] == line_bundle(X, 6)
+    @test cohomology(canonical_bundle(P1)).entries ==
+      cohomology(canonical_bundle(X)).entries
+
+    # Compare all three pushforward regimes with the actual product.
+    P0 = GrassmannBundle(1, 3 * structure_sheaf(X))
+    for t in (-5, -3, -2, 0, 2)
+      B = tensor_product(pullback(P0, line_bundle(X, -3)), O(P0, t))
+      product_B = external_tensor_product(
+        line_bundle(X, -3), line_bundle(projective_space(2), t)
+      )
+      @test cohomology(B).entries == cohomology(product_B).entries
+    end
+  end
+
   @testset "Schur functors" begin
     X = Gr(2, 5)
     U = dual(universal_subbundle(X))
@@ -4008,5 +4056,91 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test schur_functor(zero_bundle(X), Int[]) == structure_sheaf(X)
     @test_throws ArgumentError schur_functor(F, [1, 2])
     @test_throws ArgumentError schur_functor(F, [-1])
+  end
+
+  @testset "Filtered input is not split" begin
+    X = projective_space(1)
+    E = FilteredBundle(X, [line_bundle(X, -2), structure_sheaf(X)])
+    # A nontrivial such extension is O(-1)² and is acyclic. Its associated
+    # graded has H⁰=H¹=1, so treating it as split would be observably wrong.
+    G = GrassmannBundle(1, E)
+    H = cohomology(universal_quotient_bundle(G))
+    @test !is_determined(H[0])
+    @test !is_determined(H[1])
+    @test H[0] == H[1]
+    @test chi(universal_quotient_bundle(G)) == 0
+    @test cohomology(canonical_bundle(G))[dimension(G)] == 1
+    for λ in ([2], [1, 1], [2, 1], [0, -1])
+      @test total_bundle(schur_functor(E, λ)) == schur_functor(total_bundle(E), λ)
+    end
+
+    # The quotient on a quadric really is an extension. Its higher direct
+    # images must retain that filtration even though its Euler data are exact.
+    Q3 = quadric(3)
+    Q = universal_quotient_bundle(Q3)
+    GQ = GrassmannBundle(2, Q)
+    images = pushforward(GQ, universal_quotient_bundle(GQ))
+    @test images[0] isa FilteredBundle
+    @test total_bundle(images[0]) == total_bundle(Q)
+    @test chi(universal_quotient_bundle(GQ)) == 5
+    for d in 3:6
+      Y = quadric(d)
+      R = residual_bundle(Y)
+      @test rank(R) == d
+      @test dual(R) == R
+      @test rank(universal_quotient_bundle(Y)) == d + 1
+      @test cohomology(universal_quotient_bundle(Y))[0] == d + 2
+    end
+  end
+
+  @testset "Relative Grassmann BWB" begin
+    X = projective_space(2)
+    E = direct_sum(line_bundle(X, -1), 3 * structure_sheaf(X))
+    G = GrassmannBundle(2, E)
+    S, Q = universal_subbundle(G), universal_quotient_bundle(G)
+    @test pushforward(G, dual(S))[0] == dual(E)
+    @test pushforward(G, Q)[0] == E
+    @test iszero(pushforward(G, S))
+    @test iszero(pushforward(G, dual(Q)))
+    @test pushforward(G, det(dual(S)))[0] == exterior_power(dual(E), 2)
+    @test pushforward(G, det(relative_cotangent_bundle(G)))[4] == structure_sheaf(X)
+    @test cohomology(canonical_bundle(G))[dimension(G)] == 1
+
+    # Independent projective pushforward formula, including the determinant
+    # character in top degree, exercised through the single Grassmann backend.
+    GP = GrassmannBundle(1, E)
+    for t in (-6, -4, -2, 0, 3)
+      images = pushforward(GP, O(GP, t))
+      expected = if t >= 0
+        symmetric_power(dual(E), t)
+      elseif t <= -4
+        tensor_product(symmetric_power(E, -t-4), det(E))
+      else
+        zero_bundle(X)
+      end
+      @test images[t <= -4 ? 3 : 0] == expected
+      @test count(!iszero, images) == (iszero(expected) ? 0 : 1)
+    end
+
+    # Simultaneous line twist: S_{E⊗L} = S_E⊗π*L.
+    L = line_bundle(X, 2)
+    GL = GrassmannBundle(2, tensor_product(E, L))
+    @test pushforward(GL, O(GL, 1))[0] ==
+      tensor_product(pushforward(G, O(G, 1))[0], line_bundle(X, -4))
+
+    # The central GL character must survive every fibre tensor operation.
+    @test pushforward(G, tensor_product(det(S), det(Q)))[0] == det(E)
+    @test_throws ArgumentError GrassmannBundle(5, E)
+    @test_throws ArgumentError pullback(G, structure_sheaf(projective_space(3)))
+
+    # Appendix A, Table 9: first nontrivial direct image for partially
+    # decomposable three-forms, independently computed from the relative bundle.
+    E6 = direct_sum(dual(universal_subbundle(Gr(3, 6))), 3 * structure_sheaf(Gr(3, 6)))
+    P6 = GrassmannBundle(1, E6)
+    W = exterior_power(universal_quotient_bundle(P6), 3)
+    images = pushforward(P6, exterior_power(dual(W), 3))
+    @test images[2] == schur_functor(dual(E6), [2, 2, 2, 1, 1, 1])
+    @test count(!iszero, images) == 1
+    @test iszero(pushforward(P6, dual(W)))
   end
 end  # @testset "PartialFlagVarieties.jl"

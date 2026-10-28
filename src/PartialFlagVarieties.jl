@@ -56,6 +56,7 @@ include("UniversalBundles.jl")
 include("Cohomology.jl")
 include("Projections.jl")
 include("Constructions.jl")
+include("GrassmannBundles.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
 include("ZeroLocusBundles.jl")
@@ -87,6 +88,7 @@ export tangent_weights, positive_nonparabolic_roots, positive_parabolic_roots
 export direct_sum, is_summand, external_direct_sum, external_tensor_product
 export twist, product
 export parse_dynkin_type, sub_dynkin_type, sub_dynkin_ordering
+export base_variety, relative_line_bundle
 export graded_pieces, total_bundle, filtered_tangent_bundle, filtered_cotangent_bundle
 export n_filtration_steps
 export universal_subbundle, universal_quotient_bundle, spinor_bundle
