@@ -3990,4 +3990,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
     @test PartialFlagVarieties.configure_caches!() === nothing
   end
+
+  @testset "Schur functors" begin
+    X = Gr(2, 5)
+    U = dual(universal_subbundle(X))
+    F = direct_sum(U, line_bundle(X, 1))
+    @test schur_functor(F, [3]) == symmetric_power(F, 3)
+    @test schur_functor(F, [1, 1]) == exterior_power(F, 2)
+    @test direct_sum(schur_functor(F, [2, 1]), exterior_power(F, 3)) ==
+      tensor_product(F, exterior_power(F, 2))
+    @test schur_functor(U, [3, 1]) == tensor_product(det(U), symmetric_power(U, 2))
+    @test schur_functor(U, [0, -2]) == symmetric_power(dual(U), 2)
+    @test schur_functor(F, [2, 2, 2]) == tensor_product(det(F), det(F))
+    @test schur_functor(F, [2, 2, 0]) ==
+      tensor_product(symmetric_power(dual(F), 2), tensor_product(det(F), det(F)))
+    @test iszero(schur_functor(U, [1, 1, 1]))
+    @test schur_functor(zero_bundle(X), Int[]) == structure_sheaf(X)
+    @test_throws ArgumentError schur_functor(F, [1, 2])
+    @test_throws ArgumentError schur_functor(F, [-1])
+  end
 end  # @testset "PartialFlagVarieties.jl"
