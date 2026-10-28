@@ -164,15 +164,11 @@ euler_characteristic(F::RelativeZeroLocusBundle) = sum(
 )
 chi(F::RelativeZeroLocusBundle) = euler_characteristic(F)
 
-function _relative_ambient_cohomology(F::RelativeGrassmannianBundle, counter::Ref{Int})
-  _relative_filtered_cohomology(F, counter)
-end
-
 function _relative_restriction_cohomology(
   Z::RelativeZeroLocus, F::RelativeGrassmannianBundle, counter::Ref{Int}
 )
   rows = [
-    _relative_ambient_cohomology(tensor_product(F, W), counter) for
+    _relative_filtered_cohomology(tensor_product(F, W), counter) for
     W in reverse(_relative_wedges!(Z))
   ]
   inequalities = AffineExpr[]
@@ -189,25 +185,14 @@ end
 function _relative_bundle_cohomology(F::RelativeZeroLocusBundle, counter::Ref{Int})
   d = dimension(variety(F))
   isempty(F.terms) && return [AffineExpr(0) for _ in 0:d]
-  rows = Dict(
-    i => _relative_restriction_cohomology(variety(F), A, counter) for (i, A) in F.terms
-  )
-  row(i) = get(rows, i, [AffineExpr(0) for _ in 0:d])
-  lo, hi = min(0, minimum(keys(rows))), max(0, maximum(keys(rows)))
-  inequalities = AffineExpr[]
-  kernel = row(hi)
-  for i in (hi - 1):-1:0
-    kernel = les_kernel(row(i), kernel, counter; inequalities)
+  row(i) = if haskey(F.terms, i)
+    _relative_restriction_cohomology(variety(F), F.terms[i], counter)
+  else
+    [AffineExpr(0) for _ in 0:d]
   end
-  if lo < 0
-    image = row(lo)
-    for i in (lo + 1):-1
-      image = les_cokernel(image, row(i), counter; inequalities)
-    end
-    kernel = les_cokernel(image, kernel, counter; inequalities)
-  end
-  system = vcat(kernel, inequalities)
-  equation = _alternating_sum(kernel) - AffineExpr(euler_characteristic(F))
+  entries, inequalities = _cohomology_from_presentation(row, keys(F.terms), counter)
+  system = vcat(entries, inequalities)
+  equation = _alternating_sum(entries) - AffineExpr(euler_characteristic(F))
   is_zero_expr(equation) || _apply_equation!(system, equation)
   _propagate_intervals!(system)
   system[1:(d + 1)]

@@ -602,38 +602,33 @@ The positive-degree half is reduced to its degree-zero kernel from right to
 left. The negative-degree half is reduced to its image in degree zero from
 left to right, and the requested bundle is the resulting cokernel.
 """
-function _cohomology_from_presentation(F::ZeroLocusBundle, var_counter::Ref{Int})
-  Z = variety(F)
-  presentation = F.presentation
-  isempty(presentation.terms) && return (
-    AffineExpr[AffineExpr(0) for _ in 0:dimension(Z)],
-    AffineExpr[],
-  )
-
-  minimum_degree = min(0, minimum(keys(presentation.terms)))
-  maximum_degree = max(0, maximum(keys(presentation.terms)))
+function _cohomology_from_presentation(term_cohomology, degrees, var_counter::Ref{Int})
+  minimum_degree = minimum(degrees; init=0)
+  maximum_degree = maximum(degrees; init=0)
   inequalities = AffineExpr[]
 
   # K_0 = ker(C^0 -> C^1), computed through all positive degrees.
-  kernel = _presentation_term_cohomology(
-    Z, presentation, maximum_degree, var_counter
-  )
+  kernel = term_cohomology(maximum_degree)
   for degree in (maximum_degree - 1):-1:0
-    term = _presentation_term_cohomology(Z, presentation, degree, var_counter)
-    kernel = les_kernel(term, kernel, var_counter; inequalities)
+    kernel = les_kernel(term_cohomology(degree), kernel, var_counter; inequalities)
   end
 
   minimum_degree == 0 && return (kernel, inequalities)
 
   # I_0 = im(C^-1 -> C^0), computed as the final cokernel of the negative
   # half. Then 0 -> I_0 -> K_0 -> F -> 0.
-  image = _presentation_term_cohomology(Z, presentation, minimum_degree, var_counter)
+  image = term_cohomology(minimum_degree)
   for degree in (minimum_degree + 1):-1
-    term = _presentation_term_cohomology(Z, presentation, degree, var_counter)
-    image = les_cokernel(image, term, var_counter; inequalities)
+    image = les_cokernel(image, term_cohomology(degree), var_counter; inequalities)
   end
   (les_cokernel(image, kernel, var_counter; inequalities), inequalities)
 end
+
+_cohomology_from_presentation(F::ZeroLocusBundle, counter::Ref{Int}) =
+  _cohomology_from_presentation(
+    i -> _presentation_term_cohomology(variety(F), F.presentation, i, counter),
+    keys(F.presentation.terms), counter,
+  )
 
 """
     cohomology(F::ZeroLocusBundle) -> Cohomology{AffineExpr}
