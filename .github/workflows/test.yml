@@ -81,6 +81,7 @@ jobs:
           - BottVanishing.jl
           - CICY3-1606.04076.jl
           - CICY3-1607.07821.jl
+          - DegeneracyLoci.jl
           - FanoFourfoldsK3.jl
           - FanoFourfoldsQuiverZeroLoci.jl
           - FanoThreefolds.jl

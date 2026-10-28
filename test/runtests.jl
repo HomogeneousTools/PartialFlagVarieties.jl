@@ -4144,6 +4144,75 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test iszero(pushforward(P6, dual(W)))
   end
 
+  @testset "Determinantal incidence and resolutions" begin
+    # A codimension-two linear section of Segre P² × P² is a degree-six
+    # del Pezzo surface. Compare its two incidence presentations.
+    X = projective_space(6)
+    E, F = 3 * structure_sheaf(X), 3 * line_bundle(X, 1)
+    Z = degeneracy_locus(E, F, 1)
+    R = degeneracy_locus(E, F, 1; presentation=:relative)
+    @test dimension(Z) == dimension(R) == 2
+    @test cohomology(structure_sheaf(R))[0] == 1
+    @test euler_characteristic(cotangent_bundle(R)) == -4
+    @test degree(anticanonical_bundle(R)) == 6
+    @test hodge_numbers(R) == hodge_numbers(Z)
+
+    # Twisting source and target by the same line does not change the map.
+    Ztwist = degeneracy_locus(3 * line_bundle(X, 2), 3 * line_bundle(X, 3), 1)
+    @test defining_bundle(incidence_resolution(Ztwist)) ==
+      defining_bundle(incidence_resolution(Z))
+    @test_throws ArgumentError degeneracy_locus(
+      3 * structure_sheaf(X), F, 2; check_smoothness=true
+    )
+
+    # A genuinely nonconstant Grassmann bundle over P⁸.
+    P8 = projective_space(8)
+    source = direct_sum(2 * structure_sheaf(P8), line_bundle(P8, -1))
+    target = 3 * line_bundle(P8, 1)
+    mixed = degeneracy_locus(source, target, 1; presentation=:relative)
+    product_model = degeneracy_locus(source, target, 1)
+    for p in 0:2
+      @test chi(exterior_power(cotangent_bundle(mixed), p)) ==
+        chi(exterior_power(cotangent_bundle(product_model), p))
+    end
+
+    # A determinant of Q∨ → O⁴ on Q³ is a hyperplane section, hence Q².
+    # This exercises a nonsplit source all the way through the incidence Koszul
+    # and conormal computations, with independent known surface invariants.
+    Y = quadric(3)
+    quadric_section = degeneracy_locus(
+      dual(universal_quotient_bundle(Y)), 4 * structure_sheaf(Y), 3
+    )
+    @test chi(structure_sheaf(quadric_section)) == 1
+    @test chi(cotangent_bundle(quadric_section)) == -2
+    @test degree(anticanonical_bundle(quadric_section)) == 8
+
+    # Hilbert--Burch: maximal minors of a 2×3 linear matrix define a twisted
+    # cubic. Its structure sheaf has χ(O(t)) = 3t+1; the cokernel is O_P¹(1),
+    # hence its Euler characteristic after twisting is 3t+2.
+    P3 = projective_space(3)
+    A, B = 3 * line_bundle(P3, -1), 2 * structure_sheaf(P3)
+    EN, BR = eagon_northcott(A, B), buchsbaum_rim(A, B)
+    M = line_bundle(P3, 2)
+    @test eagon_northcott(tensor_product(A, M), tensor_product(B, M)).terms == EN.terms
+    @test buchsbaum_rim(tensor_product(A, M), tensor_product(B, M)).terms ==
+      tensor_product(BR, M).terms
+    C = degeneracy_locus(A, B, 1)
+    for t in -2:3
+      L = line_bundle(P3, t)
+      @test chi(tensor_product(EN, L)) == 3t + 1
+      @test chi(tensor_product(BR, L)) == 3t + 2
+      @test chi(tensor_product(EN, L)) ==
+        chi(restrict(C, external_tensor_product(L, structure_sheaf(Gr(2, 3)))))
+    end
+    @test cohomology(EN)[0] == 1
+    @test cohomology(BR)[0] == 2
+
+    # Rank-one target recovers Koszul, including its twists.
+    K = eagon_northcott(3 * line_bundle(P3, -1), structure_sheaf(P3))
+    @test [K[i] for i in 0:3] == [binomial(3, i) * line_bundle(P3, -i) for i in 0:3]
+  end
+
   @testset "Gulliksen--Negard resolution" begin
     X = projective_space(8)
     E, F = 3 * structure_sheaf(X), 3 * line_bundle(X, 1)
@@ -4197,5 +4266,254 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       (-1)^(4-i) * binomial(4, i) * chi(tensor_product(R7, line_bundle(P7, i))) for i in 0:4
     ) == 14
     @test_throws ArgumentError pfaffian_resolution(4 * structure_sheaf(P7))
+  end
+
+  @testset "Published Table 8 invariants" begin
+    include(joinpath(@__DIR__, "..", "examples", "DegeneracyLoci.jl"))
+    expected = [
+      (63, -2, 21, 19),
+      (69, -4, 26, 20),
+      (47, -7, 54, 16),
+      (40, -18, 114, 15),
+      (70, -6, 46, 21),
+    ]
+    for (Z, values) in zip(orbital_fano_fourfolds(), expected)
+      @test dimension(Z) == 4
+      @test Tuple(table8_euler_invariants(Z)) == values
+    end
+  end
+
+  @testset "Orbital and Pfaffian incidence" begin
+    # Five-by-five Pfaffians on P⁶ give the Fano threefold V₅.
+    X = projective_space(6)
+    Z = pfaffian_locus(5 * structure_sheaf(X), line_bundle(X, 1))
+    @test dimension(Z) == 3
+    @test chi(structure_sheaf(Z)) == 1
+    @test chi(restrict(Z, line_bundle(X, 1))) == 7
+    @test chi(cotangent_bundle(Z)) == -1
+    @test cohomology(structure_sheaf(Z))[0] == 1
+
+    # Rank-one traceless 3×3 matrices in P⁶ give the degree-six del Pezzo
+    # surface as a hyperplane section of Fl(1,2;3).
+    N = rank_one_nilpotent_locus(3 * structure_sheaf(X), line_bundle(X, 1))
+    @test dimension(N) == 2
+    @test chi(cotangent_bundle(N)) == -4
+    @test degree(anticanonical_bundle(N)) == 6
+
+    # Table 8, first row: χ(Ω¹)=-2, χ(Ω²)=21, h⁰(-K)=19, (-K)^4=63.
+    Y = Gr(3, 6)
+    E = direct_sum(dual(universal_subbundle(Y)), 3 * structure_sheaf(Y))
+    ODL = partially_decomposable_locus(E)
+    @test dimension(ODL) == 4
+    @test chi(structure_sheaf(ODL)) == 1
+    @test chi(cotangent_bundle(ODL)) == -2
+    @test chi(exterior_power(cotangent_bundle(ODL), 2)) == 21
+    @test cohomology(anticanonical_bundle(ODL))[0] == 19
+    @test degree(anticanonical_bundle(ODL)) == 63
+  end
+
+  @testset "Symmetric and higher-corank skew incidence" begin
+    # Rank-one symmetric 3×3 matrices form the quadratic Veronese P² in P⁵.
+    X = projective_space(5)
+    Z = symmetric_locus(3 * structure_sheaf(X), line_bundle(X, 1);
+      corank=2, check_smoothness=true, check_nonempty=true)
+    @test dimension(Z) == 2
+    @test is_strongly_fano(Z)
+    @test chi(structure_sheaf(Z)) == 1
+    @test chi(cotangent_bundle(Z)) == -1
+    @test degree(anticanonical_bundle(Z)) == 9
+
+    # Even-rank skew forms: the 4×4 Pfaffian is a quadric in P⁵.
+    Q = pfaffian_locus(4 * structure_sheaf(X), line_bundle(X, 1);
+      corank=2, check_smoothness=true)
+    @test dimension(Q) == 4
+    @test is_strongly_fano(Q)
+    @test chi(structure_sheaf(Q)) == 1
+    @test degree(anticanonical_bundle(Q)) == 512
+
+    # Corank four of a 6×6 skew form gives a linear section of Gr(2,6).
+    # Adjunction gives -K = 6H on Gr(2,6) in its Plücker embedding.
+    P = projective_space(14)
+    E, L = 6 * structure_sheaf(P), line_bundle(P, 1)
+    R = pfaffian_locus(E, L; corank=4, check_smoothness=true)
+    @test dimension(R) == 8
+    @test is_strongly_fano(R)
+    G = ambient_variety(incidence_resolution(R))
+    expected = tensor_product(O(G, 5), pullback(G, line_bundle(P, 1)))
+    # Central GL characters become det(E) on the base, which is trivial here.
+    ratio = tensor_product(
+      anticanonical_bundle(incidence_resolution(R)).terms[0], dual(expected)
+    )
+    @test pushforward(G, ratio)[0] == structure_sheaf(P)
+    # A common bundle twist cancels against the inverse square line twist.
+    Rt = pfaffian_locus(6 * line_bundle(P, 2), line_bundle(P, -3); corank=4)
+    @test dimension(Rt) == dimension(R)
+    @test pushforward(
+      ambient_variety(incidence_resolution(Rt)),
+      det(defining_bundle(incidence_resolution(Rt))),
+    )[0] ==
+      pushforward(
+      ambient_variety(incidence_resolution(R)),
+      det(defining_bundle(incidence_resolution(R))),
+    )[0]
+
+    # Full corank is the ordinary zero locus of the entire form.
+    A = projective_space(3)
+    S0 = symmetric_locus(2 * structure_sheaf(A), line_bundle(A, 1); corank=2)
+    @test dimension(S0) == 0
+    @test chi(structure_sheaf(S0)) == 1
+    @test_throws ArgumentError pfaffian_locus(E, L; corank=3)
+    @test_throws ArgumentError symmetric_locus(E, L; corank=7)
+    @test_throws ArgumentError symmetric_locus(E, L; corank=-1)
+    @test_throws ArgumentError symmetric_locus(E, structure_sheaf(A); corank=2)
+  end
+
+  @testset "Optional degeneracy geometry checks" begin
+    X = projective_space(6)
+    E, F = 3 * structure_sheaf(X), 3 * line_bundle(X, 1)
+    @test dimension(degeneracy_locus(E, F, 2)) == 5
+    @test_throws ArgumentError degeneracy_locus(E, F, 2; check_smoothness=true)
+    @test dimension(
+      degeneracy_locus(E, F, 1; check_global_generation=true,
+        check_smoothness=true),
+    ) == 2
+    @test dimension(degeneracy_locus(E, F, 1; presentation=:relative)) == 2
+
+    for presentation in (:auto, :relative)
+      Z = degeneracy_locus(E, F, 1; presentation)
+      @test degree(anticanonical_bundle(Z)) == 6
+      @test is_strongly_fano(Z)
+      @test !is_strongly_fano(incidence_resolution(Z))
+    end
+
+    P = projective_space(2)
+    @test dimension(degeneracy_locus(line_bundle(P, 1), structure_sheaf(P), 0)) == 1
+    @test_throws ArgumentError degeneracy_locus(line_bundle(P, 1), structure_sheaf(P), 0;
+      check_global_generation=true)
+    @test_throws ArgumentError determinantal_resolution(line_bundle(P, 1),
+      structure_sheaf(P),
+      0;
+      check_global_generation=true)
+    @test !is_strongly_fano(degeneracy_locus(structure_sheaf(P), line_bundle(P, 3), 0))
+    @test dimension(zero_locus(line_bundle(P, -1))) == 1
+    @test_throws ArgumentError zero_locus(line_bundle(P, -1); check_global_generation=true)
+    @test is_globally_generated(zero_bundle(P))
+    @test is_globally_generated(dual(universal_subbundle(Gr(2, 5))))
+    @test !is_globally_generated(universal_subbundle(Gr(2, 5)))
+    @test dimension(
+      degeneracy_locus(structure_sheaf(P), line_bundle(P, 3), 0;
+        check_nonempty=true),
+    ) == 1
+    @test_throws ArgumentError degeneracy_locus(structure_sheaf(P), structure_sheaf(P), 0;
+      check_nonempty=true)
+    @test_throws ArgumentError pfaffian_locus(2 * structure_sheaf(P); corank=2,
+      check_nonempty=true)
+
+    G = GrassmannBundle(1, 2 * structure_sheaf(P))
+    @test is_strongly_fano(zero_locus(O(G, 1); check_global_generation=true))
+    @test_throws ArgumentError zero_locus(O(G, -1); check_global_generation=true)
+
+    # The orbital smoothness bounds are also opt-in.
+    Y = projective_space(10)
+    @test dimension(partially_decomposable_locus(6 * structure_sheaf(Y))) == 5
+    @test_throws ArgumentError partially_decomposable_locus(6 * structure_sheaf(Y);
+      check_smoothness=true)
+    @test_throws ArgumentError rank_one_nilpotent_locus(
+      3 * structure_sheaf(P), structure_sheaf(X)
+    )
+  end
+
+  @testset "Filtered equations and identity Grassmann bundles" begin
+    X = projective_space(4)
+    F = FilteredBundle(X, [line_bundle(X, 1), line_bundle(X, 2)])
+    # A hyperplane and a quadric in P⁴ form a quadric surface.
+    Z = degeneracy_locus(structure_sheaf(X), F, 0; check_smoothness=true)
+    @test dimension(Z) == 2
+    @test chi(structure_sheaf(Z)) == 1
+    @test chi(cotangent_bundle(Z)) == -2
+    @test degree(anticanonical_bundle(Z)) == 8
+    Zdual = degeneracy_locus(F, line_bundle(X, 3), 0)
+    @test chi(cotangent_bundle(Zdual)) == -2
+    @test is_strongly_fano(Z)
+    @test is_strongly_fano(Zdual)
+
+    G = GrassmannBundle(2, F)
+    @test dimension(G) == dimension(X)
+    @test picard_rank(G) == picard_rank(X)
+    @test iszero(universal_quotient_bundle(G))
+    @test total_bundle(pushforward(G, universal_subbundle(G))[0]) == total_bundle(F)
+    @test cohomology(canonical_bundle(G))[dimension(G)] == 1
+    @test is_strongly_fano(zero_locus(zero_bundle(G)))
+
+    E = 3 * structure_sheaf(X)
+    T = 3 * line_bundle(X, 1)
+    cuts = FilteredBundle(X, [line_bundle(X, 1)])
+    R = determinantal_resolution(E, T, 2; base_equations=cuts)
+    @test dimension(R) == 2
+    @test defining_bundle(R).representation isa FilteredBundle
+    @test_throws ArgumentError determinantal_resolution(E, T, 2;
+      base_equations=cuts, presentation=:product)
+  end
+
+  @testset "Degeneracy locus objects" begin
+    X = projective_space(6)
+    E, F = 3 * structure_sheaf(X), 3 * line_bundle(X, 1)
+    for presentation in (:auto, :relative)
+      Z = degeneracy_locus(E, F, 1; presentation)
+      R = incidence_resolution(Z)
+      @test Z isa DegeneracyLocus
+      @test (R isa ZeroLocus) == (presentation == :auto)
+      @test base_variety(Z) == ambient_variety(Z) == X
+      @test dimension(Z) == 2
+      @test codimension(Z) == 4
+      @test Z.construction == :determinantal
+      @test Z.data.E == E && Z.data.F == F && Z.data.r == 1
+      @test Z == degeneracy_locus(E, F, 1; presentation)
+      @test hash(Z) == hash(degeneracy_locus(E, F, 1; presentation))
+
+      A = restrict(Z, line_bundle(X, 1))
+      @test A isa DegeneracyLocusBundle
+      @test variety(A) == Z
+      @test ambient_variety(A) == X
+      @test rank(A) == 1
+      @test chi(A) == 7
+      @test degree(A) == 6
+      @test line_bundle(Z, 1) == O(Z, 1) == A
+      @test O(Z) == structure_sheaf(Z)
+      @test twist(structure_sheaf(Z), 1) == A
+      @test twist(A, [-1]) == tensor_product(A, dual(A))
+      @test rank(A + dual(A)) == 2
+      @test rank(2 * A) == 2
+      @test iszero(0 * A)
+      @test iszero(exterior_power(A, 2))
+      @test det(A) == determinant(A) == A
+      @test chi(tensor_product(A, line_bundle(X, 1))) == chi(symmetric_power(A, 2))
+      @test cohomology(structure_sheaf(Z))[0] == 1
+      @test cohomology(Z, structure_sheaf(X))[0] == 1
+      @test euler_characteristic(Z) == 6
+      @test rank(cotangent_bundle(Z)) == rank(tangent_bundle(Z)) == 2
+      @test hodge_numbers(Z) == hodge_numbers(R)
+      @test is_strongly_fano(Z)
+      @test !is_strongly_fano(R)
+      @test_throws ArgumentError restrict(Z, structure_sheaf(projective_space(3)))
+      @test_throws ArgumentError twist(A, 2)
+      @test_throws ArgumentError (-1) * A
+    end
+
+    Z = degeneracy_locus(E, F, 1)
+    W = degeneracy_locus(E, F, 2)
+    @test !is_strongly_fano(W)
+    @test_throws ArgumentError tensor_product(structure_sheaf(Z), structure_sheaf(W))
+    @test_throws ArgumentError DegeneracyLocusBundle(
+      Z, structure_sheaf(incidence_resolution(W))
+    )
+
+    # A rank-zero presentation stays an ordinary zero locus internally.
+    P = projective_space(2)
+    C = degeneracy_locus(structure_sheaf(P), line_bundle(P, 3), 0)
+    @test incidence_resolution(C) isa ZeroLocus
+    @test !is_strongly_fano(C)
+    @test chi(structure_sheaf(C)) == 0
+    @test degree(line_bundle(C, 1)) == 3
   end
 end  # @testset "PartialFlagVarieties.jl"
