@@ -534,19 +534,42 @@ chi(E::CompletelyReducibleBundle) = euler_characteristic(E)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    hilbert_polynomial(E::CompletelyReducibleBundle,
-                       L::CompletelyReducibleBundle) -> Vector{Rational{BigInt}}
+    hilbert_polynomial(E::CompletelyReducibleBundle[, L::CompletelyReducibleBundle])
+      -> Vector{Rational{BigInt}}
 
 Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to the
 polarization ``\\mathcal{L}``:
 ```math
+\\begin{equation}
 P(t) = \\chi(\\mathcal{E} \\otimes \\mathcal{L}^{\\otimes t}).
+\\end{equation}
 ```
 
 The polarization ``\\mathcal{L}`` must be a line bundle on the same variety as ``\\mathcal{E}``;
 for the result to be a genuine Hilbert polynomial, ``\\mathcal{L}`` should be ample.
-The coefficients are computed exactly by the symbolic Weyl formula over all
-positive coroots, including for negative twists and non-simply-laced types.
+Omitting `L` uses the minimal ample polarization ``\\mathcal{O}(1, \\ldots, 1)``,
+with degree one at every marked node.
+For Picard rank one, this is the ample generator of ``\\operatorname{Pic}(X)``.
+
+For an irreducible Levi summand with ambient weight ``\\lambda`` and polarization
+weight ``\\mu``, Borel–Weil–Bott and the Weyl dimension formula give
+```math
+\\begin{equation}
+\\chi(\\mathcal{E}_\\lambda \\otimes \\mathcal{L}^{\\otimes t})
+= \\prod_{\\alpha^\\vee > 0}
+\\frac{\\langle \\lambda + \\rho + t\\mu, \\alpha^\\vee \\rangle}
+     {\\langle \\rho, \\alpha^\\vee \\rangle}.
+\\end{equation}
+```
+Here ``\\rho`` is the Weyl vector and the product runs over all positive coroots.
+The product vanishes at singular weights; at regular weights its Weyl sign
+is exactly the cohomological sign in Borel–Weil–Bott.
+Thus it computes the Euler characteristic for every integer twist, including
+negative twists, with exact rational coefficients.
+For ample `L`, Serre vanishing identifies it with the usual Hilbert polynomial.
+See Fulton–Harris, *Representation Theory: A First Course*,
+[§§23.3 and 24.1](https://doi.org/10.1007/978-1-4612-0979-9),
+and the [mathematical background](@ref hilbert-polynomials).
 
 Returns polynomial coefficients ``[a_0, a_1, \\ldots, a_d]`` such that
 ``P(t) = a_0 + a_1 t + \\cdots + a_d t^d``.
@@ -641,33 +664,10 @@ end
 hilbert_polynomial(F::FilteredBundle) =
   hilbert_polynomial(F, line_bundle(variety(F), ones(Int, picard_rank(variety(F)))))
 
-"""
-    hilbert_polynomial(E::CompletelyReducibleBundle) -> Vector{Rational{BigInt}}
-
-Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to
-the minimal ample polarization ``\\mathcal{O}(1, \\ldots, 1)`` (degree one at
-every marked node); for Picard rank 1 this is the ample generator of
-``\\operatorname{Pic}(X)``.  Pass an explicit line bundle as a second
-argument for any other polarization.
-
-# Examples
-```jldoctest
-julia> using PartialFlagVarieties
-
-julia> X = projective_space(3);
-
-julia> hilbert_polynomial(structure_sheaf(X))
-4-element Vector{Rational{BigInt}}:
-   1
- 11//6
-   1
-  1//6
-```
-"""
 function hilbert_polynomial(E::CompletelyReducibleBundle)
   X = variety(E)
-  polarization = line_bundle(X, ones(Int, length(marked_nodes(X))))
-  hilbert_polynomial(E, polarization)
+  L = line_bundle(X, ones(Int, picard_rank(X)))
+  hilbert_polynomial(E, L)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
