@@ -974,14 +974,13 @@ end
 
 """
     hilbert_polynomial(Z::ZeroLocus[, L::CompletelyReducibleBundle])
-      -> Vector{Rational{BigInt}}
+      -> Polynomial
 
 Compute the Hilbert polynomial ``P(t) = \\chi(Z, \\mathcal{L}^{\\otimes t}|_Z)`` of the
-zero locus with respect to the polarization ``\\mathcal{L}``, as coefficients
-``[a_0, a_1, \\ldots, a_d]`` with ``P(t) = \\sum_k a_k t^k``.
+zero locus with respect to the polarization ``\\mathcal{L}``, as a [`Polynomial`](@ref).
 
 The polarization must be a line bundle on the ambient variety; for the
-result to be a genuine Hilbert polynomial it should be ample.  Without an
+result to be a genuine Hilbert polynomial it should be ample. Without an
 explicit polarization the minimal ample line bundle
 ``\\mathcal{O}(1, \\ldots, 1)`` (degree one at every marked node) is used;
 for Picard rank 1 this is the ample generator of ``\\mathrm{Pic}(X)``.
@@ -994,10 +993,8 @@ julia> X = projective_space(4);
 
 julia> Z = zero_locus(line_bundle(X, 5));
 
-julia> hp = hilbert_polynomial(Z);
-
-julia> length(hp) >= 3
-true
+julia> hilbert_polynomial(Z)
+5//6*t^3 + 25//6*t
 ```
 """
 function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)

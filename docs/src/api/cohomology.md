@@ -53,6 +53,10 @@ Hilbert polynomials use the symbolic Weyl formula with exact rational
 coefficients.
 They also support filtered bundles and bundles on zero loci; the latter
 combine the ambient presentation with the Koszul resolution.
+The result is a [`Polynomial`](@ref): write `P(t)` to evaluate it,
+`degree(P)` for its degree, and `constant_coefficient(P)` or
+`leading_coefficient(P)` for the endpoint coefficients.
+Use `coefficients(P)` when a vector in increasing degree order is needed.
 
 ```@docs
 chi

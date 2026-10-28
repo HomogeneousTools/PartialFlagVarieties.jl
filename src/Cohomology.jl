@@ -533,9 +533,17 @@ chi(E::CompletelyReducibleBundle) = euler_characteristic(E)
 #  Hilbert polynomial
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Require a polarization to be a line bundle on the given ambient variety.
+function _check_polarization(X::PartialFlagVariety, L::CompletelyReducibleBundle)
+  variety(L) == X ||
+    throw(ArgumentError("Polarization L must live on the same ambient variety."))
+  rank(L) == 1 || throw(ArgumentError("Polarization L must be a line bundle (rank 1)."))
+  nothing
+end
+
 """
     hilbert_polynomial(E::CompletelyReducibleBundle[, L::CompletelyReducibleBundle])
-      -> Vector{Rational{BigInt}}
+      -> Polynomial
 
 Compute the Hilbert polynomial of a bundle ``\\mathcal{E}`` with respect to the
 polarization ``\\mathcal{L}``:
@@ -571,8 +579,10 @@ See Fulton–Harris, *Representation Theory: A First Course*,
 [§§23.3 and 24.1](https://doi.org/10.1007/978-1-4612-0979-9),
 and the [mathematical background](@ref hilbert-polynomials).
 
-Returns polynomial coefficients ``[a_0, a_1, \\ldots, a_d]`` such that
-``P(t) = a_0 + a_1 t + \\cdots + a_d t^d``.
+Returns a [`Polynomial`](@ref), evaluated with `P(t)`.
+Use [`constant_coefficient`](@ref), [`leading_coefficient`](@ref), and
+[`coefficient`](@ref) for individual coefficients, or
+[`coefficients(::Polynomial)`](@ref) for the coefficient vector in increasing degree order.
 
 # Examples
 ```jldoctest
@@ -581,72 +591,49 @@ julia> using PartialFlagVarieties
 julia> X = projective_space(1) * projective_space(1);
 
 julia> hilbert_polynomial(structure_sheaf(X), line_bundle(X, [1, 1]))
-3-element Vector{Rational{BigInt}}:
- 1
- 2
- 1
+t^2 + 2*t + 1
+
+julia> hilbert_polynomial(structure_sheaf(projective_space(3)))
+1//6*t^3 + t^2 + 11//6*t + 1
 ```
 """
 function hilbert_polynomial(
   E::CompletelyReducibleBundle, L::CompletelyReducibleBundle
 )
   _check_polarization(variety(E), L)
-  result = Rational{BigInt}[0]
-  roots = positive_coroots(RootSystem(dynkin_type(variety(E))))
-  twist_weight = coefficients(p_dominant_weight(only(components(L))))
+  result = zero(Polynomial)
+  coroots = positive_coroots(RootSystem(dynkin_type(variety(E))))
+  μ = p_dominant_weight(only(components(L))) # Weight of the polarization L.
   for (rep, mult) in _to_counts(E)
-    weight = coefficients(p_dominant_weight(rep))
-    polynomial = Rational{BigInt}[1]
-    for root in roots
-      coroot = coefficients(root)
-      denominator = sum(BigInt, coroot)
-      constant = sum((BigInt(weight[i]) + 1) * coroot[i] for i in eachindex(weight))
-      slope = sum(BigInt(twist_weight[i]) * coroot[i] for i in eachindex(weight))
-      if iszero(slope)
-        polynomial .*= constant // denominator
-      else
-        next = zeros(Rational{BigInt}, length(polynomial) + 1)
-        for i in eachindex(polynomial)
-          next[i] += polynomial[i] * (constant // denominator)
-          next[i + 1] += polynomial[i] * (slope // denominator)
-        end
-        polynomial = next
-      end
-      all(iszero, polynomial) && break
+    λ = p_dominant_weight(rep)
+    polynomial = one(Polynomial)
+    for coroot in coroots
+      # Weights use fundamental-weight coordinates and coroots use
+      # simple-coroot coordinates, so their natural pairing is the coordinate
+      # dot product. Semisimple.dot instead computes a metric inner product.
+      # Promote before arithmetic so the Weyl factors cannot overflow Int.
+      coroot_coefficients = coefficients(coroot)
+      indices = eachindex(coroot_coefficients)
+
+      # Since ρ has all fundamental-weight coordinates equal to one,
+      # these are <ρ, α∨>, <λ + ρ, α∨>, and <μ, α∨>, respectively.
+      denominator = sum(BigInt, coroot_coefficients)
+      constant = sum((BigInt(λ[i]) + 1) * coroot_coefficients[i] for i in indices)
+      slope = sum(BigInt(μ[i]) * coroot_coefficients[i] for i in indices)
+
+      # Multiply by (<λ + ρ, α∨> + t<μ, α∨>) / <ρ, α∨>.
+      # A zero factor means every twist is singular and hence acyclic.
+      polynomial *= Polynomial([constant, slope]) / denominator
+      iszero(polynomial) && break
     end
-    _add_polynomial!(result, polynomial, mult)
-  end
-  _trim_polynomial!(result)
-end
-
-function _check_polarization(X::PartialFlagVariety, L::CompletelyReducibleBundle)
-  variety(L) == X ||
-    throw(ArgumentError("Polarization L must live on the same ambient variety."))
-  rank(L) == 1 || throw(ArgumentError("Polarization L must be a line bundle (rank 1)."))
-  nothing
-end
-
-function _add_polynomial!(result::Vector{Rational{BigInt}}, polynomial, multiplicity)
-  old_length = length(result)
-  if length(polynomial) > old_length
-    resize!(result, length(polynomial))
-    result[(old_length + 1):end] .= 0
-  end
-  for i in eachindex(polynomial)
-    result[i] += multiplicity * polynomial[i]
+    result += mult * polynomial
   end
   result
 end
 
-function _trim_polynomial!(polynomial)
-  while length(polynomial) > 1 && iszero(last(polynomial))
-    pop!(polynomial)
-  end
-  polynomial
-end
-
 """
     hilbert_polynomial(F::FilteredBundle[, L::CompletelyReducibleBundle])
+      -> Polynomial
 
 Compute the Hilbert polynomial by adding the symbolic Weyl polynomials of
 its associated graded pieces. Additivity makes the result independent of
@@ -654,11 +641,7 @@ extension maps. The default polarization has degree one at every marked node.
 """
 function hilbert_polynomial(F::FilteredBundle, L::CompletelyReducibleBundle)
   _check_polarization(variety(F), L)
-  result = Rational{BigInt}[0]
-  for piece in graded_pieces(F)
-    _add_polynomial!(result, hilbert_polynomial(piece, L), 1)
-  end
-  _trim_polynomial!(result)
+  sum(piece -> hilbert_polynomial(piece, L), graded_pieces(F); init=zero(Polynomial))
 end
 
 hilbert_polynomial(F::FilteredBundle) =
