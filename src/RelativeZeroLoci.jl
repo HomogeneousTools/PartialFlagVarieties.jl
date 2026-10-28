@@ -70,7 +70,7 @@ Base.show(io::IO, F::RelativeZeroLocusBundle) =
   print(io, "Bundle(rank ", rank(F), " on ", variety(F), ")")
 restrict(Z::RelativeZeroLocus, F::RelativeGrassmannianBundle) =
   RelativeZeroLocusBundle(Z, Dict(0 => F))
-restrict(Z::RelativeZeroLocus, F::_AmbientBundle) =
+restrict(Z::RelativeZeroLocus, F::AmbientBundle) =
   restrict(Z, pullback(ambient_variety(Z), F))
 structure_sheaf(Z::RelativeZeroLocus) = restrict(Z, structure_sheaf(ambient_variety(Z)))
 zero_bundle(Z::RelativeZeroLocus) =

@@ -7,7 +7,7 @@
 #  together with a reference to the underlying partial flag variety.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-export Bundle
+export Bundle, AmbientBundle
 export CompletelyReducibleBundle
 export components, variety
 export tangent_bundle, cotangent_bundle
@@ -29,9 +29,8 @@ export fano_index
 
 Abstract supertype for vector bundles supported by the package.
 
-Concrete subtypes:
-- [`CompletelyReducibleBundle`](@ref): semisimple equivariant bundles
-- [`FilteredBundle`](@ref): bundles with a filtration by equivariant subbundles
+Subtypes:
+- [`AmbientBundle`](@ref): homogeneous bundles on a [`PartialFlagVariety`](@ref)
 - [`ZeroLocusBundle`](@ref): bundles on a [`ZeroLocus`](@ref), represented by
   ambient presentations
 - [`RelativeGrassmannianBundle`](@ref): bundles on a [`GrassmannBundle`](@ref)
@@ -40,6 +39,16 @@ Concrete subtypes:
   incidence resolution
 """
 abstract type Bundle end
+
+"""
+    AmbientBundle <: Bundle
+
+Abstract supertype for homogeneous vector bundles on a [`PartialFlagVariety`](@ref).
+[`CompletelyReducibleBundle`](@ref) represents semisimple equivariant bundles;
+[`FilteredBundle`](@ref) retains a filtration by equivariant subbundles.
+For either representation, [`variety`](@ref) returns its homogeneous base.
+"""
+abstract type AmbientBundle <: Bundle end
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Type definition
@@ -72,7 +81,7 @@ julia> rank(T)
 4
 ```
 """
-struct CompletelyReducibleBundle <: Bundle
+struct CompletelyReducibleBundle <: AmbientBundle
   variety::PartialFlagVariety
   components::Vector{IrrepLevi}
 

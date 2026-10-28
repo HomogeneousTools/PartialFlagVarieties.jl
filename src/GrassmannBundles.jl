@@ -12,12 +12,12 @@ When `k == rank(E)`, the projection is the identity on the base.
 """
 struct GrassmannBundle
   k::Int
-  bundle::_AmbientBundle
+  bundle::AmbientBundle
   # Fl(k,n;n+1) retains the GL(n) determinant character, lost on SL(n)/P_k.
   # This is representation bookkeeping, not the geometric ambient variety.
   auxiliary::PartialFlagVariety
 
-  function GrassmannBundle(k::Integer, E::_AmbientBundle)
+  function GrassmannBundle(k::Integer, E::AmbientBundle)
     n = Int(rank(E))
     0 < k <= n || throw(ArgumentError("Require 0 < k ≤ rank(E)."))
     A = product(variety(E), flag_variety(n + 1, unique([Int(k), n])))
@@ -45,9 +45,9 @@ The universal extension `π*E` is represented by `pullback(G, E)`, not `S ⊕ Q`
 """
 struct RelativeGrassmannianBundle <: Bundle
   variety::GrassmannBundle
-  representation::_AmbientBundle
+  representation::AmbientBundle
 
-  function RelativeGrassmannianBundle(G::GrassmannBundle, F::_AmbientBundle)
+  function RelativeGrassmannianBundle(G::GrassmannBundle, F::AmbientBundle)
     variety(F) == G.auxiliary ||
       throw(ArgumentError("Incorrect auxiliary representation space."))
     new(G, F)
@@ -65,7 +65,7 @@ Base.hash(F::RelativeGrassmannianBundle, h::UInt) =
 Base.show(io::IO, F::RelativeGrassmannianBundle) =
   print(io, "Bundle(rank ", rank(F), " on ", variety(F), ")")
 
-function pullback(G::GrassmannBundle, E::_AmbientBundle)
+function pullback(G::GrassmannBundle, E::AmbientBundle)
   variety(E) == base_variety(G) || throw(ArgumentError("The bundle must live on the base."))
   RelativeGrassmannianBundle(G, _lift_bundle_to_product(G.auxiliary, E, 0))
 end
@@ -96,16 +96,16 @@ function _grassmann_binary(op, E::RelativeGrassmannianBundle, F::RelativeGrassma
   RelativeGrassmannianBundle(variety(E), op(E.representation, F.representation))
 end
 
-tensor_product(E::_AmbientBundle, F::RelativeGrassmannianBundle) =
+tensor_product(E::AmbientBundle, F::RelativeGrassmannianBundle) =
   tensor_product(pullback(variety(F), E), F)
-tensor_product(E::RelativeGrassmannianBundle, F::_AmbientBundle) =
+tensor_product(E::RelativeGrassmannianBundle, F::AmbientBundle) =
   tensor_product(E, pullback(variety(E), F))
 _relative_pieces(F::CompletelyReducibleBundle) = [F]
 _relative_pieces(F::FilteredBundle) = graded_pieces(F)
 _relative_total(F::CompletelyReducibleBundle) = F
 _relative_total(F::FilteredBundle) = total_bundle(F)
 
-function _relative_direct_sum(E::_AmbientBundle, F::_AmbientBundle)
+function _relative_direct_sum(E::AmbientBundle, F::AmbientBundle)
   iszero(E) && return F
   iszero(F) && return E
   E isa CompletelyReducibleBundle && F isa CompletelyReducibleBundle &&
@@ -178,8 +178,8 @@ function pushforward(G::GrassmannBundle, F::RelativeGrassmannianBundle)
   n = Int(rank(G.bundle))
   b = rank(dynkin_type(X))
   d = G.k * (n - G.k)
-  entries = _AmbientBundle[zero_bundle(X) for _ in 0:d]
-  schurs = Dict{Vector{Int},_AmbientBundle}()
+  entries = AmbientBundle[zero_bundle(X) for _ in 0:d]
+  schurs = Dict{Vector{Int},AmbientBundle}()
   for (rep, multiplicity) in _to_counts(F.representation)
     c = collect(coefficients(p_dominant_weight(rep)))
     fibre_weight = WeightLatticeElem(TypeA{n}, c[(b + 1):end])
@@ -198,7 +198,7 @@ function pushforward(G::GrassmannBundle, F::RelativeGrassmannianBundle)
   if all(A -> A isa CompletelyReducibleBundle, entries)
     return Cohomology{CompletelyReducibleBundle}(CompletelyReducibleBundle[entries...], d)
   end
-  Cohomology{_AmbientBundle}(entries, d)
+  Cohomology{AmbientBundle}(entries, d)
 end
 
 """Cohomology of a direct sum of relative Levi bundles by fibrewise BWB and Leray."""

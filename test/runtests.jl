@@ -1373,6 +1373,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Bundle type hierarchy" begin
+    @test AmbientBundle <: Bundle
+    @test supertype(CompletelyReducibleBundle) === AmbientBundle
+    @test supertype(FilteredBundle) === AmbientBundle
+    @test all(T -> !(T <: AmbientBundle),
+      (ZeroLocusBundle, RelativeGrassmannianBundle, RelativeZeroLocusBundle,
+        DegeneracyLocusBundle))
     X = Gr(2, 4)
     T = tangent_bundle(X)
     @test T isa Bundle

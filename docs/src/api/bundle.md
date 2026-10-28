@@ -19,11 +19,12 @@ filtration data, see [`FilteredBundle`](@ref); bundles on zero loci use
 ambient presentations as described under [Zero Loci](zero_loci.md).
 
 !!! note "Design note"
-    The abstract type [`Bundle`](@ref) supports
-    `CompletelyReducibleBundle` (the semisimplification — a direct sum),
+    [`AmbientBundle`](@ref) is the subtype of [`Bundle`](@ref) for homogeneous
+    bundles on a [`PartialFlagVariety`](@ref). Its concrete subtypes are
+    `CompletelyReducibleBundle` (the semisimplification — a direct sum), and
     [`FilteredBundle`](@ref) (a bundle with a filtration by subbundles,
-    retaining the ordering), and [`ZeroLocusBundle`](@ref) (a bundle represented
-    by an ambient presentation on a zero locus). Most ambient operations produce
+    retaining the ordering). [`ZeroLocusBundle`](@ref) represents a bundle
+    by an ambient presentation on a zero locus. Most ambient operations produce
     `CompletelyReducibleBundle`; filtered bundles arise from
     [`filtered_tangent_bundle`](@ref) and its derived operations.
 
@@ -65,6 +66,7 @@ structural equality as `==`.
 
 ```@docs
 Bundle
+AmbientBundle
 CompletelyReducibleBundle
 ```
 

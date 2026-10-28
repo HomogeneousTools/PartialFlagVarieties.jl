@@ -67,9 +67,9 @@ Base.hash(F::DegeneracyLocusBundle, h::UInt) = hash(F.presentation, hash(variety
 Base.show(io::IO, F::DegeneracyLocusBundle) =
   print(io, "Bundle(rank ", rank(F), " on ", variety(F), ")")
 
-function restrict(Z::DegeneracyLocus, F::Union{_AmbientBundle,RelativeGrassmannianBundle})
+function restrict(Z::DegeneracyLocus, F::Union{AmbientBundle,RelativeGrassmannianBundle})
   R = incidence_resolution(Z)
-  if R isa ZeroLocus && F isa _AmbientBundle && variety(F) == base_variety(Z) &&
+  if R isa ZeroLocus && F isa AmbientBundle && variety(F) == base_variety(Z) &&
     variety(F) != ambient_variety(R)
     F = _lift_bundle_to_product(ambient_variety(R), F, 0)
   end
@@ -114,11 +114,11 @@ end
 Base.:+(F::DegeneracyLocusBundle, H::DegeneracyLocusBundle) = direct_sum(F, H)
 Base.:*(F::DegeneracyLocusBundle, H::DegeneracyLocusBundle) = tensor_product(F, H)
 tensor_product(
-  F::DegeneracyLocusBundle, H::Union{_AmbientBundle,RelativeGrassmannianBundle}
+  F::DegeneracyLocusBundle, H::Union{AmbientBundle,RelativeGrassmannianBundle}
 ) =
   tensor_product(F, restrict(variety(F), H))
 tensor_product(
-  H::Union{_AmbientBundle,RelativeGrassmannianBundle}, F::DegeneracyLocusBundle
+  H::Union{AmbientBundle,RelativeGrassmannianBundle}, F::DegeneracyLocusBundle
 ) =
   tensor_product(restrict(variety(F), H), F)
 function Base.:*(n::Integer, F::DegeneracyLocusBundle)
@@ -127,7 +127,7 @@ function Base.:*(n::Integer, F::DegeneracyLocusBundle)
 end
 
 cohomology(F::DegeneracyLocusBundle; kwargs...) = cohomology(F.presentation; kwargs...)
-cohomology(Z::DegeneracyLocus, F::Union{_AmbientBundle,RelativeGrassmannianBundle}) =
+cohomology(Z::DegeneracyLocus, F::Union{AmbientBundle,RelativeGrassmannianBundle}) =
   cohomology(restrict(Z, F))
 chi(F::DegeneracyLocusBundle) = chi(F.presentation)
 euler_characteristic(F::DegeneracyLocusBundle) = euler_characteristic(F.presentation)
@@ -173,7 +173,7 @@ end
 _generation_certificate(F::CompletelyReducibleBundle) = is_globally_generated(F)
 _generation_certificate(F::FilteredBundle) = all(is_globally_generated, graded_pieces(F))
 
-function _require_generation(F::_AmbientBundle, name::AbstractString)
+function _require_generation(F::AmbientBundle, name::AbstractString)
   _generation_certificate(F) && return nothing
   reason = if F isa FilteredBundle
     "Global generation could not be certified"
@@ -184,7 +184,7 @@ function _require_generation(F::_AmbientBundle, name::AbstractString)
 end
 
 function _check_degeneracy_geometry(
-  section::_AmbientBundle, cuts::_AmbientBundle, lower_codimension::Integer;
+  section::AmbientBundle, cuts::AmbientBundle, lower_codimension::Integer;
   check_smoothness::Bool=false,
 )
   variety(cuts) == variety(section) || throw(ArgumentError("Incorrect base equations."))
@@ -281,7 +281,7 @@ end
 
 # ─── Locus constructors and bundle resolutions ───────────────────────────
 
-function _check_degeneracy_data(E::_AmbientBundle, F::_AmbientBundle, r::Integer)
+function _check_degeneracy_data(E::AmbientBundle, F::AmbientBundle, r::Integer)
   variety(E) == variety(F) ||
     throw(ArgumentError("Source and target must live on the same base."))
   0 <= r < min(rank(E), rank(F)) ||
@@ -308,8 +308,8 @@ Regularity and expected codimension are assumed.
 `base_equations` may be filtered. Generation and nonemptiness checks are opt-in.
 """
 function determinantal_resolution(
-  E::_AmbientBundle, F::_AmbientBundle, r::Integer;
-  presentation::Symbol=:auto, base_equations::_AmbientBundle=zero_bundle(variety(E)),
+  E::AmbientBundle, F::AmbientBundle, r::Integer;
+  presentation::Symbol=:auto, base_equations::AmbientBundle=zero_bundle(variety(E)),
   check_global_generation::Bool=false, check_nonempty::Bool=false,
 )
   _check_degeneracy_data(E, F, r)
@@ -366,8 +366,8 @@ No actual section is stored.
 regularity assumptions; this optional intersection calculation can be costly.
 """
 function degeneracy_locus(
-  E::_AmbientBundle, F::_AmbientBundle, r::Integer;
-  presentation::Symbol=:auto, base_equations::_AmbientBundle=zero_bundle(variety(E)),
+  E::AmbientBundle, F::AmbientBundle, r::Integer;
+  presentation::Symbol=:auto, base_equations::AmbientBundle=zero_bundle(variety(E)),
   check_global_generation::Bool=false, check_smoothness::Bool=false,
   check_nonempty::Bool=false,
 )
@@ -384,8 +384,8 @@ function degeneracy_locus(
 end
 
 function _quadratic_locus(
-  E::_AmbientBundle, L::CompletelyReducibleBundle, corank::Integer, symmetric::Bool;
-  base_equations::_AmbientBundle=zero_bundle(variety(E)),
+  E::AmbientBundle, L::CompletelyReducibleBundle, corank::Integer, symmetric::Bool;
+  base_equations::AmbientBundle=zero_bundle(variety(E)),
   check_global_generation::Bool=false, check_smoothness::Bool=false,
   check_nonempty::Bool=false,
 )
@@ -433,7 +433,7 @@ Global-generation, smoothness and nonemptiness checks are optional, as for
 resolve a singular image. Coranks zero and full rank are also supported.
 """
 function pfaffian_locus(
-  E::_AmbientBundle, L::CompletelyReducibleBundle=structure_sheaf(variety(E));
+  E::AmbientBundle, L::CompletelyReducibleBundle=structure_sheaf(variety(E));
   corank::Integer=3, kwargs...,
 )
   _quadratic_locus(E, L, corank, false; kwargs...)
@@ -449,7 +449,7 @@ The equations are the filtered quotient `Sym²π*E / Sym²S` on
 [`degeneracy_locus`](@ref).
 """
 function symmetric_locus(
-  E::_AmbientBundle, L::CompletelyReducibleBundle=structure_sheaf(variety(E));
+  E::AmbientBundle, L::CompletelyReducibleBundle=structure_sheaf(variety(E));
   corank::Integer=1, kwargs...,
 )
   _quadratic_locus(E, L, corank, true; kwargs...)
@@ -464,7 +464,7 @@ Accepts optional global-generation, smoothness and nonemptiness checks.
 The smoothness certificate excludes the decomposable stratum by dimension.
 """
 function partially_decomposable_locus(
-  E::_AmbientBundle; base_equations::_AmbientBundle=zero_bundle(variety(E)),
+  E::AmbientBundle; base_equations::AmbientBundle=zero_bundle(variety(E)),
   check_global_generation::Bool=false, check_smoothness::Bool=false,
   check_nonempty::Bool=false,
 )
@@ -492,8 +492,8 @@ Accepts optional global-generation, smoothness and nonemptiness checks.
 The smoothness certificate excludes the zero endomorphism stratum.
 """
 function rank_one_nilpotent_locus(
-  E::_AmbientBundle, L::CompletelyReducibleBundle;
-  base_equations::_AmbientBundle=zero_bundle(variety(E)),
+  E::AmbientBundle, L::CompletelyReducibleBundle;
+  base_equations::AmbientBundle=zero_bundle(variety(E)),
   check_global_generation::Bool=false, check_smoothness::Bool=false,
   check_nonempty::Bool=false,
 )

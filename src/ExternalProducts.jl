@@ -4,8 +4,6 @@
 
 export external_direct_sum, external_tensor_product
 
-const _AmbientBundle = Union{CompletelyReducibleBundle,FilteredBundle}
-
 # Lift every graded piece of `F` into one factor of `product_ambient`.
 function _lift_bundle_to_product(
   product_ambient::PartialFlagVariety, F::FilteredBundle, offset::Int
@@ -21,8 +19,8 @@ end
 
 function _lift_external_factors(
   product_ambient::PartialFlagVariety,
-  E::_AmbientBundle,
-  F::_AmbientBundle,
+  E::AmbientBundle,
+  F::AmbientBundle,
   right_offset::Int,
 )
   (
@@ -54,7 +52,7 @@ julia> L == line_bundle(product(X, Y), [2, 3])
 true
 ```
 """
-function external_tensor_product(E::_AmbientBundle, F::_AmbientBundle)
+function external_tensor_product(E::AmbientBundle, F::AmbientBundle)
   product_ambient = product(variety(E), variety(F))
   right_offset = rank(dynkin_type(variety(E)))
   lifted_E, lifted_F = _lift_external_factors(product_ambient, E, F, right_offset)
