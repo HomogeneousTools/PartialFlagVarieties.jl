@@ -121,11 +121,7 @@ Base.:+(E::RelativeGrassmannianBundle, F::RelativeGrassmannianBundle) = direct_s
 Base.:*(E::RelativeGrassmannianBundle, F::RelativeGrassmannianBundle) = tensor_product(E, F)
 function Base.:*(n::Integer, E::RelativeGrassmannianBundle)
   n >= 0 || throw(ArgumentError("Multiplicity must be nonnegative."))
-  result = zero_bundle(variety(E))
-  for _ in 1:n
-    result = direct_sum(result, E)
-  end
-  result
+  reduce(direct_sum, Iterators.repeated(E, n); init=zero_bundle(variety(E)))
 end
 dual(E::RelativeGrassmannianBundle) =
   RelativeGrassmannianBundle(variety(E), dual(E.representation))
@@ -136,7 +132,7 @@ symmetric_power(E::RelativeGrassmannianBundle, k::Integer) =
 schur_functor(E::RelativeGrassmannianBundle, λ::AbstractVector{<:Integer}) =
   RelativeGrassmannianBundle(variety(E), schur_functor(E.representation, λ))
 det(E::RelativeGrassmannianBundle) =
-  RelativeGrassmannianBundle(variety(E), det(_relative_total(E.representation)))
+  RelativeGrassmannianBundle(variety(E), det(E.representation))
 determinant(E::RelativeGrassmannianBundle) = det(E)
 twist(E::RelativeGrassmannianBundle, t::Integer) = tensor_product(E, O(variety(E), t))
 
@@ -207,21 +203,14 @@ end
 
 """Cohomology of a direct sum of relative Levi bundles by fibrewise BWB and Leray."""
 function cohomology(F::RelativeGrassmannianBundle)
-  if F.representation isa FilteredBundle || variety(F).bundle isa FilteredBundle
-    entries = _relative_filtered_cohomology(F, Ref(0))
-    _renumber_variables!(entries)
-    return Cohomology{AffineExpr}(entries, dimension(variety(F)))
+  entries = _relative_filtered_cohomology(F, Ref(0))
+  d = dimension(variety(F))
+  if F.representation isa CompletelyReducibleBundle &&
+    variety(F).bundle isa CompletelyReducibleBundle
+    return Cohomology{BigInt}([e.constant for e in entries], d)
   end
-  G = variety(F)
-  images = pushforward(G, F)
-  entries = zeros(BigInt, dimension(G) + 1)
-  for q in 0:lastindex(images)
-    H = cohomology(images[q])
-    for p in 0:lastindex(H)
-      entries[p + q + 1] += H[p]
-    end
-  end
-  Cohomology{BigInt}(entries, dimension(G))
+  _renumber_variables!(entries)
+  Cohomology{AffineExpr}(entries, d)
 end
 
 function euler_characteristic(F::RelativeGrassmannianBundle)
@@ -239,6 +228,8 @@ chi(F::RelativeGrassmannianBundle) = euler_characteristic(F)
 # A differential in the filtration spectral sequence goes from a quotient
 # layer to an earlier subbundle layer and increases total cohomological degree.
 function _relative_filtered_cohomology(F::RelativeGrassmannianBundle, counter::Ref{Int})
+  F.representation isa CompletelyReducibleBundle &&
+    return _relative_levi_cohomology(F, counter)
   G = variety(F)
   pieces = _relative_pieces(F.representation)
   rows = [

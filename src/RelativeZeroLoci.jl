@@ -82,11 +82,7 @@ end
 
 function direct_sum(F::RelativeZeroLocusBundle, H::RelativeZeroLocusBundle)
   variety(F) == variety(H) || throw(ArgumentError("Bundles must live on the same locus."))
-  terms = copy(F.terms)
-  for (i, A) in H.terms
-    _relative_add_term!(terms, i, A)
-  end
-  RelativeZeroLocusBundle(variety(F), terms)
+  RelativeZeroLocusBundle(variety(F), mergewith(direct_sum, F.terms, H.terms))
 end
 function tensor_product(F::RelativeZeroLocusBundle, H::RelativeZeroLocusBundle)
   variety(F) == variety(H) || throw(ArgumentError("Bundles must live on the same locus."))
@@ -149,17 +145,12 @@ canonical_bundle(Z::RelativeZeroLocus) =
   restrict(Z, tensor_product(canonical_bundle(ambient_variety(Z)), det(defining_bundle(Z))))
 anticanonical_bundle(Z::RelativeZeroLocus) = dual(canonical_bundle(Z))
 
-function _relative_restriction_chi(Z::RelativeZeroLocus, F::RelativeGrassmannianBundle)
-  sum(
-    (
-      (-1)^i * euler_characteristic(tensor_product(F, W)) for
-      (i, W) in enumerate(_relative_wedges!(Z))
-    );
-    init=BigInt(0),
-  ) * -1
-end
+# Alternate over the ambient presentation and the Koszul complex.
 euler_characteristic(F::RelativeZeroLocusBundle) = sum(
-  ((-1)^i * _relative_restriction_chi(variety(F), A) for (i, A) in F.terms);
+  (
+    (-1)^(i+j-1) * chi(A ⊗ W) for (i, A) in F.terms
+    for (j, W) in enumerate(_relative_wedges!(variety(F)))
+  );
   init=BigInt(0),
 )
 chi(F::RelativeZeroLocusBundle) = euler_characteristic(F)
@@ -185,11 +176,12 @@ end
 function _relative_bundle_cohomology(F::RelativeZeroLocusBundle, counter::Ref{Int})
   d = dimension(variety(F))
   isempty(F.terms) && return [AffineExpr(0) for _ in 0:d]
-  row(i) = if haskey(F.terms, i)
-    _relative_restriction_cohomology(variety(F), F.terms[i], counter)
-  else
-    [AffineExpr(0) for _ in 0:d]
-  end
+  row(i) =
+    if haskey(F.terms, i)
+      _relative_restriction_cohomology(variety(F), F.terms[i], counter)
+    else
+      [AffineExpr(0) for _ in 0:d]
+    end
   entries, inequalities = _cohomology_from_presentation(row, keys(F.terms), counter)
   system = vcat(entries, inequalities)
   equation = _alternating_sum(entries) - AffineExpr(euler_characteristic(F))
