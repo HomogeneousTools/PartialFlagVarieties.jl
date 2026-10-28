@@ -4144,6 +4144,25 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test iszero(pushforward(P6, dual(W)))
   end
 
+  @testset "Gulliksen--Negard resolution" begin
+    X = projective_space(8)
+    E, F = 3 * structure_sheaf(X), 3 * line_bundle(X, 1)
+    R = gulliksen_negard(E, F)
+    # The 2x2 minors of a generic 3x3 matrix give Segre P² × P².
+    for t in -3:5
+      @test chi(tensor_product(R, line_bundle(X, t))) == binomial(BigInt(t + 2), 2)^2
+    end
+    @test cohomology(R)[0] == 1
+    @test gulliksen_negard(3 * line_bundle(X, 2), 3 * line_bundle(X, 3)).terms == R.terms
+
+    # In rank two the entries themselves cut out a complete intersection.
+    A = direct_sum(structure_sheaf(X), line_bundle(X, -1))
+    B = direct_sum(line_bundle(X, 1), line_bundle(X, 2))
+    H = tensor_product(dual(A), B)
+    @test gulliksen_negard(A, B).terms == [exterior_power(dual(H), i) for i in 0:4]
+    @test_throws ArgumentError gulliksen_negard(E, B)
+  end
+
   @testset "Relative polyvector cohomology" begin
     X = projective_space(2)
     G = GrassmannBundle(1, 2 * structure_sheaf(X))
@@ -4156,5 +4175,27 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test [P[2, q] for q in 0:2] == [10, 0, 0]
     @test P[1, 0] - P[1, 1] + P[1, 2] == 8
     @test sum((-1)^i * P[i] for i in 0:4) == 3
+  end
+
+  @testset "Pfaffian resolution" begin
+    # The 5×5 linear Pfaffians cut out Gr(2,5) in P⁹. Compare its Hilbert
+    # polynomial with BWB on the Grassmannian, not another resolution.
+    X = projective_space(9)
+    R = pfaffian_resolution(5 * structure_sheaf(X), line_bundle(X, 1))
+    # ∧²(E⊗M)⊗(L⊗M⁻²) is the same section bundle. All determinant and
+    # line twists in its resolution must cancel, not just their ranks.
+    @test pfaffian_resolution(5 * line_bundle(X, 2), line_bundle(X, -3)).terms == R.terms
+    for t in 0:5
+      @test chi(tensor_product(R, line_bundle(X, t))) == chi(line_bundle(Gr(2, 5), t))
+    end
+    @test cohomology(R)[0] == 1
+    # The 7×7 linear Pfaffians on P⁷ give a degree-14 fourfold.
+    P7 = projective_space(7)
+    R7 = pfaffian_resolution(7 * structure_sheaf(P7), line_bundle(P7, 1))
+    @test chi(tensor_product(R7, line_bundle(P7, 1))) == 8
+    @test sum(
+      (-1)^(4-i) * binomial(4, i) * chi(tensor_product(R7, line_bundle(P7, i))) for i in 0:4
+    ) == 14
+    @test_throws ArgumentError pfaffian_resolution(4 * structure_sheaf(P7))
   end
 end  # @testset "PartialFlagVarieties.jl"

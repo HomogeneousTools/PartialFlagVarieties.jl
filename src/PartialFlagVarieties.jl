@@ -67,6 +67,7 @@ include("CacheConfig.jl")
 include("SpectralSequence.jl")
 include("RelativeZeroLoci.jl")
 include("DegeneracyGeometry.jl")
+include("DegeneracyLoci.jl")
 
 # ─── Reexport commonly used Semisimple.jl types ──────────────────────────────
 
