@@ -166,6 +166,40 @@ hilbert_polynomial(::ZeroLocusBundle, ::CompletelyReducibleBundle)
 fano_index(::ZeroLocus)
 ```
 
+## Projective degree
+
+[`degree`](@ref degree(::Union{PartialFlagVariety,ZeroLocus})) uses the restriction
+of the ambient minimal ample polarization ``\mathcal{O}(1, \ldots, 1)``.
+An explicit polarization must be a line bundle on the ambient variety, following
+the same convention as [`hilbert_polynomial`](@ref).
+This gives a top intersection number even when the restriction is not ample.
+The default is independent of whether the zero locus is Fano.
+
+For example, the catalecticant sixfold in
+[Kuznetsov, arXiv:2611.07079](https://arxiv.org/abs/2611.07079), Remark 4.1,
+has Plücker degree ``61``:
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> G = Gr(3, 7);
+
+julia> A = exterior_power(dual(universal_subbundle(G)), 2);
+
+julia> X = zero_locus(A ⊕ A);
+
+julia> degree(X)
+61
+
+julia> degree(X, line_bundle(G, 3))  # anticanonical degree, since ω_X ≅ O_X(-3)
+44469
+```
+
+For zero-dimensional loci the degree is the scheme-theoretic length, and empty
+recorded loci have degree zero.
+As with the rest of the zero-locus API, the construction assumes a regular
+section with the expected codimension.
+
 ## Classification predicates
 
 ```@docs
