@@ -1036,6 +1036,80 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     )
   end
 
+  @testset "degree: homogeneous varieties" begin
+    # Standard projective embeddings, including a partial flag with Picard rank 2.
+    @test degree(projective_space(3)) == 1
+    @test degree(quadric(5)) == 2
+    @test degree(Gr(2, 5)) == 5
+    @test degree(flag_variety(3, [1, 2])) == 6
+    @test degree(partial_flag_variety(TypeA{1}, ())) == 1
+
+    # No Hilbert-polynomial interpolation cap, and no machine-integer overflow.
+    P21 = projective_space(21)
+    @test degree(P21) == 1
+    veronese_degree = degree(P21, line_bundle(P21, 10))
+    @test veronese_degree == big(10)^21
+    @test veronese_degree isa BigInt
+  end
+
+  @testset "degree: explicit polarizations" begin
+    P3 = projective_space(3)
+    @test degree(P3, line_bundle(P3, 2)) == 8
+    @test degree(P3, anticanonical_bundle(P3)) == 64
+
+    # Top self-intersections remain defined without ampleness. In particular,
+    # the coefficient of t^dim(X) is zero when the Euler polynomial is constant.
+    @test degree(P3, structure_sheaf(P3)) == 0
+    @test degree(P3, line_bundle(P3, -2)) == -8
+
+    # (aH_1 + bH_2)^3 = 3ab^2 on P^1 × P^2.
+    X = projective_space(1) * projective_space(2)
+    @test degree(X) == 3
+    @test degree(X, line_bundle(X, [2, 3])) == 54
+    @test degree(X, line_bundle(X, [1, 0])) == 0
+  end
+
+  @testset "degree: zero loci" begin
+    # Bézout degrees of a quintic threefold and a (2,3) complete intersection.
+    P4 = projective_space(4)
+    @test degree(zero_locus(line_bundle(P4, 5))) == 5
+    P5 = projective_space(5)
+    Z = zero_locus(line_bundle(P5, 2) ⊕ line_bundle(P5, 3))
+    @test degree(Z) == 6
+    @test degree(Z, line_bundle(P5, 2)) == 48
+
+    # S_2Gr(3,7): Kuznetsov, arXiv:2611.07079, Remark 4.1.
+    G = Gr(3, 7)
+    A = exterior_power(dual(universal_subbundle(G)), 2)
+    X = zero_locus(A ⊕ A)
+    @test degree(X) == 61
+    @test degree(X, line_bundle(G, 1)) == 61
+    @test degree(X, line_bundle(G, 3)) == 3^6 * 61
+
+    # The Segre degree of P^1 × Q^2 is binomial(3,1) * 1 * 2.
+    P2, P3 = projective_space(2), projective_space(3)
+    line = zero_locus(line_bundle(P2, 1))
+    surface = zero_locus(line_bundle(P3, 2))
+    @test degree(line * surface) == 6
+
+    # Dimension zero measures length; an empty recorded locus has degree zero.
+    P1 = projective_space(1)
+    points = zero_locus(line_bundle(P1, 2))
+    @test degree(points) == 2
+    @test degree(points, line_bundle(P1, -3)) == 2
+    @test degree(zero_locus(structure_sheaf(P2))) == 0
+  end
+
+  @testset "degree: invalid polarizations" begin
+    P2, P3 = projective_space(2), projective_space(3)
+    Z = zero_locus(line_bundle(P3, 2))
+    @test_throws ArgumentError degree(P3, tangent_bundle(P3))
+    @test_throws ArgumentError degree(P3, zero_bundle(P3))
+    @test_throws ArgumentError degree(P3, line_bundle(P2, 1))
+    @test_throws ArgumentError degree(Z, tangent_bundle(P3))
+    @test_throws ArgumentError degree(Z, line_bundle(P2, 1))
+  end
+
   @testset "Cohomology: 0-based indexing" begin
     X = projective_space(2)
     O = structure_sheaf(X)

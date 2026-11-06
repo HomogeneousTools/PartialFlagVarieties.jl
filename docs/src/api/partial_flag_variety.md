@@ -70,6 +70,19 @@ anticanonical_degrees
 fano_index
 ```
 
+## Degree and polarization
+
+The projective degree depends on the polarization.
+[`degree`](@ref degree(::Union{PartialFlagVariety,ZeroLocus})) uses the minimal
+ample line bundle with degree one at every marked node by default, and accepts
+an explicit line bundle as its second argument.
+On Grassmannians the default is the Plücker polarization; on products it gives
+the corresponding Segre embedding.
+
+```@docs
+degree(::Union{PartialFlagVariety,ZeroLocus})
+```
+
 ## Classification predicates
 
 ```@docs

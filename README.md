@@ -21,6 +21,7 @@ Part of the [HomogeneousTools](https://homogeneous.tools) project, building on [
 - **Filtered bundles**: tangent bundle filtration by root height, with induced filtrations on exterior/symmetric powers, duals, and tensor products
 - **Sheaf cohomology** via the Borel–Weil–Bott theorem (both dimension-valued and character-valued)
 - **Hilbert polynomials** of equivariant bundles and zero loci
+- **Projective degrees** of partial flag varieties and zero loci, with default or explicit polarizations
 - **Zero loci** of sections of equivariant bundles, with products, composable bundle operations, Koszul resolutions, restriction cohomology, and Calabi–Yau detection
 - **Hodge numbers**, **twisted Hodge numbers**, **Hochschild cohomology** with polyvector parallelogram display
 - **Symbolic Hodge computation** for zero loci using long exact sequences, Serre duality cross-constraints, and Akizuki–Nakano vanishing
