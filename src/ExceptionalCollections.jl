@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-#  ExceptionalCollections — exceptional objects and collections on G/P
+#  ExceptionalCollections — exceptional objects on G/P and its zero loci
 #
 #  Implements predicates for exceptionality and standard constructions:
 #
@@ -26,7 +26,7 @@ export kapranov_collection
 export schur_functor, kapranov_bundles_grassmannian
 
 const _SEQUENCE_STATUS_CACHE = let b = _default_cache_budget()
-  LRU{Tuple{Vector{CompletelyReducibleBundle},CompletelyReducibleBundle},Tuple{Bool,Bool}}(;
+  LRU{Vector{ZeroLocusBundle},Tuple{Bool,Bool}}(;
     maxsize=_cache_maxsize(b, _DEFAULT_STRUCTURAL_FRAC * 0.1),
     by=Base.summarysize,
   )
@@ -38,14 +38,20 @@ end
 
 """
     is_exceptional(E::CompletelyReducibleBundle) -> Bool
+    is_exceptional(E::ZeroLocusBundle) -> Bool
 
-Check whether `E` is an exceptional object in `D^b(G/P)`.
+Check whether `E` is an exceptional object on its base variety.
+Accept a homogeneous bundle or a bundle already defined on a zero locus.
 
 An object `E` is **exceptional** if:
 - ``\\operatorname{Hom}(\\mathcal{E}, \\mathcal{E}) = \\mathbb{C}``  (i.e., ``\\mathrm{h}^0(\\mathcal{E}^\\vee \\otimes \\mathcal{E}) = 1``), and
 - ``\\operatorname{Ext}^i(\\mathcal{E}, \\mathcal{E}) = 0`` for all ``i > 0``  (i.e., ``\\mathrm{h}^i(\\mathcal{E}^\\vee \\otimes \\mathcal{E}) = 0``).
 
 Uses Borel–Weil–Bott to compute cohomology of ``\\mathcal{E}^\\vee \\otimes \\mathcal{E}``.
+For a [`ZeroLocusBundle`](@ref), use its ambient presentation and the Koszul
+resolution. Undetermined cohomology emits a warning; `true` is returned only
+when the required dimensions are certified. Thus `false` need not disprove
+exceptionality when cohomology is symbolic.
 
 # Examples
 ```jldoctest
@@ -60,20 +66,26 @@ julia> is_exceptional(line_bundle(X, 2))
 true
 ```
 """
-function is_exceptional(E::CompletelyReducibleBundle)
+function is_exceptional(E::Union{CompletelyReducibleBundle,ZeroLocusBundle})
   H = cohomology(dual(E) ⊗ E)
+  is_determined(H) || @warn "Cohomology underdetermined for self-Ext"
   H[0] == 1 && all(H[i] == 0 for i in 1:(H.max_degree))
 end
 
 """
     is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
+    is_exceptional_pair(E::ZeroLocusBundle, F::ZeroLocusBundle) -> Bool
 
 Check whether `(E, F)` is an **exceptional pair**: ``\\operatorname{RHom}(\\mathcal{F}, \\mathcal{E}) = 0``,
-i.e., ``\\mathrm{H}^i(\\mathrm{G}/\\mathrm{P},\\, \\mathcal{F}^\\vee \\otimes \\mathcal{E}) = 0`` for all ``i \\geq 0``.
+i.e., ``\\mathrm{H}^i(X,\\, \\mathcal{F}^\\vee \\otimes \\mathcal{E}) = 0`` for all ``i \\geq 0``,
+where ``X`` is their common base variety.
 
 Note: this is the orthogonality condition; the pair is ordered so that
 ``(\\mathcal{E}_i, \\mathcal{E}_j)`` is an exceptional pair for ``i < j`` in an exceptional
 sequence ``\\langle \\mathcal{E}_1, \\ldots, \\mathcal{E}_n \\rangle``.
+The bundles must live on the same variety. Ambient bundles must be explicitly
+restricted before pairing them with bundles on a zero locus.
+As for [`is_exceptional`](@ref), symbolic cohomology is checked conservatively.
 
 # Examples
 ```jldoctest
@@ -89,18 +101,28 @@ julia> is_exceptional_pair(O0, O1)
 true
 ```
 """
-function is_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+function is_exceptional_pair(
+  E::Union{CompletelyReducibleBundle,ZeroLocusBundle},
+  F::Union{CompletelyReducibleBundle,ZeroLocusBundle},
+)
+  variety(E) == variety(F) ||
+    throw(ArgumentError("Exceptionality requires bundles on the same variety."))
   # Ext^i(F, E) = H^i(F^∨ ⊗ E)
-  FvE = dual(F) ⊗ E
-  return iszero(cohomology(FvE))
+  H = cohomology(dual(F) ⊗ E)
+  is_determined(H) || @warn "Cohomology underdetermined for exceptional pair"
+  all(H[i] == 0 for i in 0:(H.max_degree))
 end
 
 """
     is_strong_exceptional_pair(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle) -> Bool
+    is_strong_exceptional_pair(E::ZeroLocusBundle, F::ZeroLocusBundle) -> Bool
 
 Check whether `(E, F)` is a **strong exceptional pair**:
 - ``\\operatorname{Ext}^i(\\mathcal{F}, \\mathcal{E}) = 0`` for all ``i`` (i.e., ``(\\mathcal{E}, \\mathcal{F})`` is an exceptional pair), and
 - ``\\operatorname{Ext}^i(\\mathcal{E}, \\mathcal{F}) = 0`` for all ``i > 0`` (only ``\\operatorname{Hom}(\\mathcal{E}, \\mathcal{F})`` can be nonzero).
+
+Both bundles must live on the same variety. The symbolic-cohomology convention
+is the same as for [`is_exceptional`](@ref).
 
 # Examples
 ```jldoctest
@@ -117,7 +139,8 @@ true
 ```
 """
 function is_strong_exceptional_pair(
-  E::CompletelyReducibleBundle, F::CompletelyReducibleBundle
+  E::Union{CompletelyReducibleBundle,ZeroLocusBundle},
+  F::Union{CompletelyReducibleBundle,ZeroLocusBundle},
 )
   # Check RHom(F, E) = 0
   is_exceptional_pair(E, F) || return false
@@ -125,8 +148,12 @@ function is_strong_exceptional_pair(
   _has_no_positive_exts(E, F)
 end
 
-function _has_no_positive_exts(E::CompletelyReducibleBundle, F::CompletelyReducibleBundle)
+function _has_no_positive_exts(
+  E::Union{CompletelyReducibleBundle,ZeroLocusBundle},
+  F::Union{CompletelyReducibleBundle,ZeroLocusBundle},
+)
   H = cohomology(dual(E) ⊗ F)
+  is_determined(H) || @warn "Cohomology underdetermined for strong pair"
   all(H[i] == 0 for i in 1:(H.max_degree))
 end
 
@@ -134,7 +161,7 @@ end
     is_exceptional_sequence(Es::Vector{<:CompletelyReducibleBundle}) -> Bool
 
 Check whether `Es = [E₁, ..., Eₙ]` is an **exceptional sequence**:
-- Each ``\\mathcal{E}_i`` is exceptional (``\\operatorname{Ext}^\\vee(\\mathcal{E}_i, \\mathcal{E}_i) = \\mathbb{C}``), and
+- Each ``\\mathcal{E}_i`` is exceptional (``\\operatorname{Ext}^\\bullet(\\mathcal{E}_i, \\mathcal{E}_i) = \\mathbb{C}``), and
 - ``(\\mathcal{E}_i, \\mathcal{E}_j)`` is an exceptional pair (``\\operatorname{RHom}(\\mathcal{E}_j, \\mathcal{E}_i) = 0``) for all ``i < j``.
 
 # Examples
@@ -605,15 +632,12 @@ end
 Check whether the restriction ``\\mathcal{E}|_Z`` is an exceptional object on the
 zero locus ``Z``.
 
-Computes ``\\operatorname{Ext}^\\vee(\\mathcal{E}|_Z, \\mathcal{E}|_Z) = \\mathrm{H}^\\bullet(Z, \\mathcal{E}^\\vee \\otimes \\mathcal{E}|_Z)``
+Computes ``\\operatorname{Ext}^\\bullet(\\mathcal{E}|_Z, \\mathcal{E}|_Z) = \\mathrm{H}^\\bullet(Z, \\mathcal{E}^\\vee \\otimes \\mathcal{E}|_Z)``
 via the Koszul resolution and checks that ``\\operatorname{Hom} = \\mathbb{C}``
 and all higher Ext groups vanish.
 """
 function is_exceptional(E::CompletelyReducibleBundle, Z::ZeroLocus)
-  endomorphism_bundle = dual(E) ⊗ E
-  H = cohomology(restrict(Z, endomorphism_bundle))
-  is_determined(H) || @warn "Cohomology underdetermined for self-Ext"
-  H[0] == 1 && all(H[i] == 0 for i in 1:dimension(Z))
+  is_exceptional(restrict(Z, E))
 end
 
 """
@@ -628,11 +652,7 @@ function is_exceptional_pair(
   F::CompletelyReducibleBundle,
   Z::ZeroLocus,
 )
-  # Ext^i(F|_Z, E|_Z) = H^i(Z, (F^∨ ⊗ E)|_Z)
-  hom_bundle = dual(F) ⊗ E
-  H = cohomology(restrict(Z, hom_bundle))
-  is_determined(H) || @warn "Cohomology underdetermined for exceptional pair"
-  all(H[i] == 0 for i in 0:dimension(Z))
+  is_exceptional_pair(restrict(Z, E), restrict(Z, F))
 end
 
 """
@@ -648,45 +668,31 @@ function is_strong_exceptional_pair(
   F::CompletelyReducibleBundle,
   Z::ZeroLocus,
 )
-  is_exceptional_pair(E, F, Z) || return false
-  _has_no_positive_exts(E, F, Z)
+  is_strong_exceptional_pair(restrict(Z, E), restrict(Z, F))
 end
 
-function _has_no_positive_exts(
-  E::CompletelyReducibleBundle,
-  F::CompletelyReducibleBundle,
-  Z::ZeroLocus,
-)
-  hom_bundle = dual(E) ⊗ F
-  H = cohomology(restrict(Z, hom_bundle))
-  is_determined(H) || @warn "Cohomology underdetermined for strong pair"
-  all(H[i] == 0 for i in 1:dimension(Z))
-end
-
-# Content-based key: the bundles determine the answer, and the defining
-# bundle (whose variety is part of its hash) determines the zero locus.
-_sequence_status_key(Es::Vector{<:CompletelyReducibleBundle}, Z::ZeroLocus) = (
-  collect(CompletelyReducibleBundle, Es), defining_bundle(Z)
-)
-
-function _exceptional_sequence_status(
-  Es::Vector{<:CompletelyReducibleBundle},
-  Z::ZeroLocus,
-)
-  get!(_SEQUENCE_STATUS_CACHE, _sequence_status_key(Es, Z)) do
-    _exceptional_sequence_status_uncached(Es, Z)
+function _exceptional_sequence_status(Es::AbstractVector{<:ZeroLocusBundle})
+  if !isempty(Es)
+    Z = variety(first(Es))
+    all(E -> variety(E) == Z, Es) ||
+      throw(
+        ArgumentError("An exceptional sequence requires bundles on the same zero locus.")
+      )
+  end
+  # The key includes each presentation and its zero locus. Copy the vector
+  # so reordering the caller's collection cannot mutate a stored cache key.
+  key = collect(ZeroLocusBundle, Es)
+  get!(_SEQUENCE_STATUS_CACHE, key) do
+    _exceptional_sequence_status_uncached(key)
   end
 end
 
-function _exceptional_sequence_status_uncached(
-  Es::Vector{<:CompletelyReducibleBundle},
-  Z::ZeroLocus,
-)
+function _exceptional_sequence_status_uncached(Es::Vector{ZeroLocusBundle})
   n = length(Es)
-  all(is_exceptional(Es[i], Z) for i in 1:n) || return (false, false)
-  all(is_exceptional_pair(Es[i], Es[j], Z) for i in 1:n for j in (i + 1):n) ||
+  all(is_exceptional, Es) || return (false, false)
+  all(is_exceptional_pair(Es[i], Es[j]) for i in 1:n for j in (i + 1):n) ||
     return (false, false)
-  strong = all(_has_no_positive_exts(Es[i], Es[j], Z) for i in 1:n for j in (i + 1):n)
+  strong = all(_has_no_positive_exts(Es[i], Es[j]) for i in 1:n for j in (i + 1):n)
   (true, strong)
 end
 
@@ -700,7 +706,7 @@ function is_exceptional_sequence(
   Es::Vector{<:CompletelyReducibleBundle},
   Z::ZeroLocus,
 )
-  first(_exceptional_sequence_status(Es, Z))
+  is_exceptional_sequence(ZeroLocusBundle[restrict(Z, E) for E in Es])
 end
 
 """
@@ -713,5 +719,42 @@ function is_strong_exceptional_sequence(
   Es::Vector{<:CompletelyReducibleBundle},
   Z::ZeroLocus,
 )
-  last(_exceptional_sequence_status(Es, Z))
+  is_strong_exceptional_sequence(ZeroLocusBundle[restrict(Z, E) for E in Es])
+end
+
+"""
+    is_exceptional_sequence(Es::AbstractVector{<:ZeroLocusBundle}) -> Bool
+
+Check whether bundles already defined on a zero locus form an exceptional
+sequence. All bundles must live on the same recorded zero locus; restrict
+ambient bundles explicitly with [`restrict`](@ref).
+
+Use the same self-Ext and backward-Ext checks as [`is_exceptional`](@ref) and
+[`is_exceptional_pair`](@ref), including their conservative symbolic-cohomology
+convention. The empty sequence is exceptional.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(4), 3));
+
+julia> is_exceptional_sequence([structure_sheaf(Z), line_bundle(Z, 1)])
+true
+```
+"""
+function is_exceptional_sequence(Es::AbstractVector{<:ZeroLocusBundle})
+  first(_exceptional_sequence_status(Es))
+end
+
+"""
+    is_strong_exceptional_sequence(Es::AbstractVector{<:ZeroLocusBundle}) -> Bool
+
+Check whether bundles already defined on one zero locus form a strong
+exceptional sequence. In addition to exceptionality, all forward higher Ext
+groups must vanish. The base and symbolic-cohomology conventions are the same
+as for [`is_exceptional_sequence`](@ref). The empty sequence is strong exceptional.
+"""
+function is_strong_exceptional_sequence(Es::AbstractVector{<:ZeroLocusBundle})
+  last(_exceptional_sequence_status(Es))
 end
