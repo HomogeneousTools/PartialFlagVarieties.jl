@@ -2792,6 +2792,126 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_exceptional_pair(structure_sheaf(X), line_bundle(X, 1), Z)
   end
 
+  @testset "Exceptionality for bundles on a zero locus" begin
+    P4 = projective_space(4)
+    Z = zero_locus(line_bundle(P4, 3))
+    O0, O1 = structure_sheaf(Z), line_bundle(Z, 1)
+    @test is_exceptional(O0)
+    @test is_exceptional(O1)
+    @test !is_exceptional(O0 ⊕ O0)
+    @test !is_exceptional(zero_bundle(Z))
+    @test is_exceptional_pair(O0, O1)
+    @test !is_exceptional_pair(O1, O0)
+    @test is_strong_exceptional_pair(O0, O1)
+    @test !is_strong_exceptional_pair(O1, O0)
+    @test is_exceptional_sequence([O0, O1])
+    @test is_strong_exceptional_sequence([O0, O1])
+    @test !is_exceptional_sequence([O1, O0])
+    @test !is_strong_exceptional_sequence([O1, O0])
+    @test !is_exceptional_sequence([O0, O0])
+    @test is_exceptional_sequence(ZeroLocusBundle[])
+    @test is_strong_exceptional_sequence(ZeroLocusBundle[])
+    @test is_strong_exceptional_sequence(@view [O0, O1][1:2])
+
+    # The ambient API and the direct API certify the same cubic-threefold pair.
+    E, F = structure_sheaf(P4), line_bundle(P4, 1)
+    @test is_exceptional(E, Z) == is_exceptional(O0)
+    @test is_exceptional_pair(E, F, Z) == is_exceptional_pair(O0, O1)
+    @test is_strong_exceptional_pair(E, F, Z) == is_strong_exceptional_pair(O0, O1)
+    @test is_exceptional_sequence([E, F], Z) == is_exceptional_sequence([O0, O1])
+    @test is_strong_exceptional_sequence([E, F], Z) ==
+      is_strong_exceptional_sequence([O0, O1])
+
+    # The cache must distinguish zero loci in the same ambient variety.
+    quintic = zero_locus(line_bundle(P4, 5))
+    @test !is_exceptional(structure_sheaf(quintic))
+    @test !is_exceptional_sequence([E, F], quintic)
+    @test !is_strong_exceptional_sequence([E, F], quintic)
+    @test is_strong_exceptional_sequence([E, F], Z)
+  end
+
+  @testset "Exceptional and strong exceptional sequences differ" begin
+    # On P^1 × P^1, H^•(O(-1,2)) = 0 but h^1(O(1,-2)) = 2.
+    G = projective_space(1) * projective_space(1)
+    Z = zero_locus(zero_bundle(G))
+    O0 = structure_sheaf(Z)
+    L = restrict(Z, line_bundle(G, [1, -2]))
+    @test is_exceptional(L)
+    @test is_exceptional_pair(O0, L)
+    @test !is_strong_exceptional_pair(O0, L)
+    Es = [O0, L]
+    original = copy(Es)
+    @test is_exceptional_sequence(Es)
+    @test !is_strong_exceptional_sequence(Es)
+    @test Es == original
+
+    # Reordering the caller's vector must not mutate an existing cache key.
+    reverse!(Es)
+    @test !is_exceptional_sequence(Es)
+    @test !is_strong_exceptional_sequence(Es)
+    @test is_exceptional_sequence(original)
+    @test !is_strong_exceptional_sequence(original)
+  end
+
+  @testset "Intrinsic zero-locus bundles and symbolic self-Ext" begin
+    P3 = projective_space(3)
+    Z = zero_locus(line_bundle(P3, 1))  # a projective plane
+    @test is_exceptional(canonical_bundle(Z))
+    T = tangent_bundle(Z)
+    H = cohomology(dual(T) ⊗ T)
+    # The presentation constraints leave h^0 = 1 + x_0 and h^1 = x_0.
+    @test !is_determined(H)
+    @test H[0] - H[1] == 1
+    @test_logs (:warn, r"underdetermined for self-Ext") begin
+      @test !is_exceptional(T)
+    end
+    @test_logs (:warn, r"underdetermined for self-Ext") begin
+      @test !is_exceptional_sequence([T])
+    end
+
+    # A determined obstruction: O on an elliptic curve has nonzero self-Ext^1.
+    cubic = zero_locus(line_bundle(projective_space(2), 3))
+    @test !is_exceptional(structure_sheaf(cubic))
+  end
+
+  @testset "Exceptional predicates require a common base" begin
+    P3 = projective_space(3)
+    Z = zero_locus(line_bundle(P3, 1))
+    W = zero_locus(line_bundle(P3, 2))
+    OZ, OW = structure_sheaf(Z), structure_sheaf(W)
+    @test_throws ArgumentError is_exceptional_pair(OZ, OW)
+    @test_throws ArgumentError is_strong_exceptional_pair(OZ, OW)
+    @test_throws ArgumentError is_exceptional_pair(structure_sheaf(P3), OZ)
+    @test_throws ArgumentError is_strong_exceptional_pair(OZ, structure_sheaf(P3))
+    @test_throws ArgumentError is_exceptional_sequence([OZ, OW])
+    # Validate the base even when an earlier object is already nonexceptional.
+    @test_throws ArgumentError is_strong_exceptional_sequence([OZ ⊕ OZ, OW])
+  end
+
+  @testset "Catalecticant sixfold exceptional collections" begin
+    # Kuznetsov, arXiv:2611.07079, Proposition 4.2 and Theorem 1.1.
+    G = Gr(3, 7)
+    U, Q = universal_subbundle(G), universal_quotient_bundle(G)
+    A = exterior_power(dual(U), 2)
+    X = zero_locus(A ⊕ A)
+    B = [U, structure_sheaf(G), dual(U)]
+    C = vcat(
+      [exterior_power(dual(Q), 2)],
+      [twist(F, 1, t) for t in 0:2 for F in B],
+    )
+    D = vcat(
+      B, [exterior_power(Q, 2)],
+      [twist(F, 1, t) for t in 1:2 for F in B],
+    )
+    for ambient_collection in (C, D)
+      collection = [restrict(X, F) for F in ambient_collection]
+      @test is_exceptional_sequence(collection)
+      @test is_strong_exceptional_sequence(collection)
+      @test is_exceptional_sequence(ambient_collection, X)
+      @test is_strong_exceptional_sequence(ambient_collection, X)
+    end
+  end
+
   @testset "Exceptional sequence on zero locus: Fano lines on Q₁∩Q₂, g=3" begin
     # Conjecture: F₁(Q₁∩Q₂) for g=3 has (g-1)(2g-5) = 2 exceptional objects
     # F = Z((Sym²U^∨)^⊕2) on Gr(2,8)
