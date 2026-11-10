@@ -165,6 +165,28 @@ hilbert_polynomial(::ZeroLocus, ::CompletelyReducibleBundle)
 fano_index(::ZeroLocus)
 ```
 
+## Local completeness
+
+[`local_completeness`](@ref) checks whether varying the defining section
+captures every small abstract deformation of a smooth regular zero locus.
+It certifies completeness when both
+``\mathrm{H}^1(Z, \mathrm{T}_X|_Z) = 0`` and
+``\mathrm{H}^1(X, \mathcal{E} \otimes \mathcal{I}_Z) = 0``.
+These vanishings force surjectivity of the section restriction map and the
+connecting map of the normal sequence.
+The returned report includes both cohomology entries as evidence.
+
+The check uses only the ambient variety and defining bundle.
+It makes no assumption that an unknown map has maximal rank for a general
+section: nonzero or symbolic evidence gives `:undetermined`, rather than a
+claim that the family is incomplete.
+The target is the full abstract deformation space, with no polarization fixed;
+for example, the check is undetermined for quartic K3 surfaces.
+
+```@docs
+local_completeness
+```
+
 ## Classification predicates
 
 ```@docs

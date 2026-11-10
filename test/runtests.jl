@@ -3238,6 +3238,57 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  Local completeness of families of zero loci (issue #29)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "ZeroLocus: local completeness" begin
+    # Hypersurfaces: a cubic threefold and a quintic Calabi–Yau threefold.
+    for degree in (3, 5)
+      Z = zero_locus(line_bundle(projective_space(4), degree))
+      report = local_completeness(Z)
+      @test report.status === :complete
+      @test report.ambient_tangent_h1 == 0
+      @test report.ideal_twist_h1 == 0
+    end
+
+    # A rank-two Koszul resolution, rather than just the hypersurface case.
+    X = projective_space(5)
+    Z = zero_locus(direct_sum(line_bundle(X, 2), line_bundle(X, 3)))
+    @test local_completeness(Z).status === :complete
+
+    # Quartic K3s have an abstract deformation direction outside the polarized
+    # family. Failing the sufficient criterion must remain inconclusive.
+    K3 = zero_locus(line_bundle(projective_space(3), 4))
+    report = local_completeness(K3)
+    @test report.status === :undetermined
+    @test report.ambient_tangent_h1 == 1
+    @test report.ideal_twist_h1 == 0
+
+    # The restriction check matters independently of tangent vanishing.
+    # Z consists of two disjoint lines; equations from P² cannot move the
+    # two lines independently, although the abstract variety is rigid.
+    X = product(projective_space(1), projective_space(2))
+    E = direct_sum(line_bundle(X, [2, 0]), line_bundle(X, [0, 1]))
+    report = local_completeness(zero_locus(E))
+    @test report.status === :undetermined
+    @test report.ambient_tangent_h1 == 0
+    @test !is_zero_expr(report.ideal_twist_h1)
+
+    # No H¹ exists on a zero-dimensional zero locus, and a rank-zero
+    # defining bundle has zero ideal sheaf.
+    @test local_completeness(zero_locus(line_bundle(projective_space(1), 2))).status ===
+      :complete
+    X = product(projective_space(1), projective_space(1))
+    E = direct_sum(line_bundle(X, [2, 0]), line_bundle(X, [0, 2]))
+    report = local_completeness(zero_locus(E))
+    @test report.status === :undetermined
+    @test report.ambient_tangent_h1 == 0
+    @test !is_zero_expr(report.ideal_twist_h1)
+    @test local_completeness(zero_locus(zero_bundle(projective_space(2)))).status ===
+      :complete
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  SpectralSequence of a filtered bundle
   # ═══════════════════════════════════════════════════════════════════════════
 
