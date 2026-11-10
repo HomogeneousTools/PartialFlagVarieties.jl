@@ -12,6 +12,8 @@ Returns `true` when both cohomology groups
 ``X`` is the ambient variety and ``\\mathcal{E}`` is its defining bundle.
 Otherwise returns `nothing`: the sufficient criterion is inconclusive,
 so the family is not asserted to be incomplete.
+For `codimension(Z) == 0`, returns `true` immediately: ``Z = X = G/P``
+is infinitesimally rigid, so its constant family is locally complete.
 
 The restriction and normal sequences give the Kodaira–Spencer map
 
@@ -53,13 +55,14 @@ true
 ```
 """
 function is_locally_complete(Z::ZeroLocus)
+  # With no defining equations, Z = X = G/P is infinitesimally rigid.
+  codimension(Z) == 0 && return true
   X = ambient_variety(Z)
   if dimension(Z) > 0
     ambient_tangent = restrict(Z, filtered_tangent_bundle(X))
     cohomology(ambient_tangent)[1] == 0 || return nothing
   end
 
-  codimension(Z) == 0 && return true
   ideal_cohomology = _ideal_sheaf_cohomology(Z, defining_bundle(Z))
   ideal_cohomology[1] == 0 ? true : nothing
 end

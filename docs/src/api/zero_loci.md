@@ -176,6 +176,8 @@ These vanishings force surjectivity of the section restriction map and the
 connecting map of the normal sequence.
 It returns `true` when the criterion proves completeness, and `nothing`
 when the check is inconclusive.
+For a rank-zero defining bundle, ``Z = X = G/P`` and it returns `true`
+immediately by the infinitesimal rigidity of rational homogeneous varieties.
 
 The check uses only the ambient variety and defining bundle.
 It makes no assumption that an unknown map has maximal rank for a general

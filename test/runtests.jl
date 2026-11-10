@@ -3289,6 +3289,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     E = direct_sum(line_bundle(X, [2, 0]), line_bundle(X, [0, 2]))
     @test is_locally_complete(zero_locus(E)) === nothing
     @test is_locally_complete(zero_locus(zero_bundle(projective_space(2)))) === true
+
+    # G/P is rigid even when the filtered cohomology solver cannot determine
+    # H¹(T_X). The rank-zero case must bypass that solver.
+    for X in (full_flag_variety(TypeB{2}), full_flag_variety(TypeG2))
+      @test is_locally_complete(zero_locus(zero_bundle(X))) === true
+    end
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
