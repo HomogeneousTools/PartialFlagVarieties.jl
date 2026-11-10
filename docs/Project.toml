@@ -2,6 +2,7 @@
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 LRUCache = "8ac3fa9e-de4c-5943-b1dc-09c6b5f20637"
 PartialFlagVarieties = "965b632c-8f0e-44b9-bcdc-fceb5db1f8c7"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 ZeroLocus62 = "f62862d0-cf9d-4d05-9b2d-cd2c169505b1"
 

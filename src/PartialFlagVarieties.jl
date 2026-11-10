@@ -24,6 +24,7 @@ using LinearAlgebra
 using Combinatorics
 using PrecompileTools
 using Distributed: myid
+using Polynomials: Polynomial
 
 # ─── Extend Semisimple.jl functions (avoids name collisions) ─────────────────
 
@@ -58,6 +59,7 @@ include("Constructions.jl")
 include("Koszul.jl")
 include("ZeroLoci.jl")
 include("ZeroLocusBundles.jl")
+include("Polarization.jl")
 include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")

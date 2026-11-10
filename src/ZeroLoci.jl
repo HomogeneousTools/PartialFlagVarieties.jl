@@ -61,7 +61,12 @@ mutable struct ZeroLocus
   # Exterior powers of the dual bundle: koszul_wedges[i+1] = ∧ⁱE*.
   # Populated lazily on the first call that needs them; reused thereafter.
   koszul_wedges::Union{Nothing,Vector{CompletelyReducibleBundle}}
+  polarization::Union{Nothing,Tuple{Vararg{Int}}}
 end
+
+# Preserve the existing constructor for an unpolarized presentation.
+ZeroLocus(X::PartialFlagVariety, E::CompletelyReducibleBundle, wedges) =
+  ZeroLocus(X, E, wedges, nothing)
 
 Base.:(==)(Z::ZeroLocus, W::ZeroLocus) =
   ambient_variety(Z) == ambient_variety(W) && defining_bundle(Z) == defining_bundle(W)
@@ -128,14 +133,16 @@ julia> dimension(Z)
 3
 ```
 """
-function zero_locus(E::CompletelyReducibleBundle)
+function zero_locus(E::CompletelyReducibleBundle; polarization=nothing)
   X = E.variety
   r = Int(rank(E))
   d = dimension(X)
   r <= d || throw(ArgumentError(
     "Bundle rank $r exceeds ambient dimension $d."
   ))
-  ZeroLocus(X, E, nothing)
+  Z = ZeroLocus(X, E, nothing)
+  polarization === nothing || set_polarization!(Z, polarization)
+  Z
 end
 
 """
@@ -164,6 +171,10 @@ function product(Z1::ZeroLocus, Z2::ZeroLocus, Zs::ZeroLocus...)
   Z = zero_locus(external_direct_sum(defining_bundle(Z1), defining_bundle(Z2)))
   for W in Zs
     Z = zero_locus(external_direct_sum(defining_bundle(Z), defining_bundle(W)))
+  end
+  varieties = (Z1, Z2, Zs...)
+  if any(V -> V.polarization !== nothing, varieties)
+    Z.polarization = Tuple(vcat(collect.(_polarization_degrees.(varieties))...))
   end
   Z
 end
@@ -974,17 +985,17 @@ end
 
 """
     hilbert_polynomial(Z::ZeroLocus[, L::CompletelyReducibleBundle])
-      -> Vector{Rational{BigInt}}
+      -> Polynomials.Polynomial{Rational{BigInt}}
 
 Compute the Hilbert polynomial ``P(t) = \\chi(Z, \\mathcal{L}^{\\otimes t}|_Z)`` of the
-zero locus with respect to the polarization ``\\mathcal{L}``, as coefficients
-``[a_0, a_1, \\ldots, a_d]`` with ``P(t) = \\sum_k a_k t^k``.
+zero locus with respect to the polarization ``\\mathcal{L}``, as a
+[Polynomials.jl `Polynomial`](https://juliamath.github.io/Polynomials.jl/stable/)
+with exact `Rational{BigInt}` coefficients.
 
-The polarization must be a line bundle on the ambient variety; for the
-result to be a genuine Hilbert polynomial it should be ample.  Without an
-explicit polarization the minimal ample line bundle
-``\\mathcal{O}(1, \\ldots, 1)`` (degree one at every marked node) is used;
-for Picard rank 1 this is the ample generator of ``\\mathrm{Pic}(X)``.
+The polarization can be an ambient line bundle or its recorded restriction
+on `Z`; it should be ample for the result to be a genuine Hilbert polynomial.
+Omitting `L` uses [`polarization`](@ref) of `Z`, which inherits the ambient
+choice unless explicitly set with [`set_polarization!`](@ref).
 
 # Examples
 ```jldoctest
@@ -994,35 +1005,16 @@ julia> X = projective_space(4);
 
 julia> Z = zero_locus(line_bundle(X, 5));
 
-julia> hp = hilbert_polynomial(Z);
-
-julia> length(hp) >= 3
-true
+julia> hilbert_polynomial(Z)
+Polynomial(25//6*t + 5//6*t^3)
 ```
 """
 function hilbert_polynomial(Z::ZeroLocus, L::CompletelyReducibleBundle)
-  variety(L) == Z.ambient || throw(
-    ArgumentError("the polarization must live on the ambient variety.")
-  )
-  rank(L) == 1 || throw(
-    ArgumentError("the polarization must be a line bundle (rank 1).")
-  )
-
-  # A degree-d polynomial is pinned down by d+1 values; the interpolation
-  # is exact over the rationals.
-  d = dimension(Z)
-  values = Vector{Rational{BigInt}}(undef, d + 1)
-  power = structure_sheaf(Z.ambient)
-  for t in 0:d
-    values[t + 1] = Rational{BigInt}(euler_characteristic(restrict(Z, power)))
-    t < d && (power = tensor_product(power, L))
-  end
-  _newton_interpolation(values)
+  hilbert_polynomial(structure_sheaf(Z), L)
 end
 
 function hilbert_polynomial(Z::ZeroLocus)
-  X = Z.ambient
-  hilbert_polynomial(Z, line_bundle(X, ones(Int, length(marked_nodes(X)))))
+  hilbert_polynomial(Z, _ambient_polarization(Z))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

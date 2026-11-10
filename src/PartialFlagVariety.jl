@@ -18,12 +18,20 @@ Most users should create these through the named constructors (`Gr`, `quadric`,
 `cayley_plane`, ...) or via [`partial_flag_variety`](@ref), rather than by
 assembling a `MarkedDynkinType` manually.
 """
-struct PartialFlagVariety
-  name::String
-  mdt::MarkedDynkinType
+mutable struct PartialFlagVariety
+  const name::String
+  const mdt::MarkedDynkinType
+  polarization::Union{Nothing,Tuple{Vararg{Int}}}
 end
 
-PartialFlagVariety(mdt::MarkedDynkinType, name::String="") = PartialFlagVariety(name, mdt)
+function PartialFlagVariety(mdt::MarkedDynkinType, name::String=""; polarization=nothing)
+  X = PartialFlagVariety(name, mdt, nothing)
+  polarization === nothing || set_polarization!(X, polarization)
+  X
+end
+
+PartialFlagVariety(name::String, mdt::MarkedDynkinType; kwargs...) =
+  PartialFlagVariety(mdt, name; kwargs...)
 
 """
     partial_flag_variety(DT::Type{<:DynkinType}, marked, name="") -> PartialFlagVariety
@@ -66,28 +74,32 @@ julia> marked_nodes(PartialFlagVariety("A3", [2]))
 ```
 """
 function partial_flag_variety(
-  ::Type{DT}, marked::Tuple, name::String=""
+  ::Type{DT}, marked::Tuple, name::String=""; polarization=nothing
 ) where {DT<:DynkinType}
-  PartialFlagVariety(MarkedDynkinType(DT, marked), name)
+  PartialFlagVariety(MarkedDynkinType(DT, marked), name; polarization)
 end
 
 partial_flag_variety(
-  ::Type{DT}, marked::Vector{<:Integer}, name::String=""
-) where {DT<:DynkinType} = partial_flag_variety(DT, Tuple(marked), name)
+  ::Type{DT}, marked::Vector{<:Integer}, name::String=""; kwargs...
+) where {DT<:DynkinType} = partial_flag_variety(DT, Tuple(marked), name; kwargs...)
 
-partial_flag_variety(::Type{DT}, marked::Integer, name::String="") where {DT<:DynkinType} =
+partial_flag_variety(
+  ::Type{DT}, marked::Integer, name::String=""; kwargs...
+) where {DT<:DynkinType} =
   partial_flag_variety(
-    DT, (Int(marked),), name
+    DT, (Int(marked),), name; kwargs...
   )
 
 function partial_flag_variety(
-  s::AbstractString, marked::AbstractVector{<:Integer}, name::String=""
+  s::AbstractString, marked::AbstractVector{<:Integer}, name::String=""; kwargs...
 )
-  partial_flag_variety(parse_dynkin_type(s), Vector{Int}(marked), name)
+  partial_flag_variety(parse_dynkin_type(s), Vector{Int}(marked), name; kwargs...)
 end
 
-function partial_flag_variety(s::AbstractString, marked::Integer, name::String="")
-  partial_flag_variety(parse_dynkin_type(s), Int(marked), name)
+function partial_flag_variety(
+  s::AbstractString, marked::Integer, name::String=""; kwargs...
+)
+  partial_flag_variety(parse_dynkin_type(s), Int(marked), name; kwargs...)
 end
 
 """
@@ -100,9 +112,10 @@ This two-argument form parses `s` as a Dynkin-type string such as `"A3"` or
 [`PartialFlagVariety(label::AbstractString)`](@ref), which decodes a
 ZeroLocus62 label.
 """
-PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_variety(
-  parse_dynkin_type(s), Vector{Int}(marked)
-)
+PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}; kwargs...) =
+  partial_flag_variety(
+    parse_dynkin_type(s), Vector{Int}(marked); kwargs...
+  )
 
 """
     full_flag_variety(::Type{DT}, name="") -> PartialFlagVariety
@@ -110,8 +123,8 @@ PartialFlagVariety(s::AbstractString, marked::Vector{<:Integer}) = partial_flag_
 Construct the full flag variety ``\\mathrm{G}/\\mathrm{B}`` of type `DT`, i.e. the case where every
 simple root is marked.
 """
-function full_flag_variety(::Type{DT}, name::String="") where {DT<:DynkinType}
-  partial_flag_variety(DT, Tuple(1:rank(DT)), name)
+function full_flag_variety(::Type{DT}, name::String=""; kwargs...) where {DT<:DynkinType}
+  partial_flag_variety(DT, Tuple(1:rank(DT)), name; kwargs...)
 end
 
 """
@@ -186,7 +199,12 @@ julia> picard_rank(X)
 function product(
   X::PartialFlagVariety, Y::PartialFlagVariety, Zs::PartialFlagVariety...
 )
-  PartialFlagVariety(_product_marked_dynkin_type(X, Y, Zs...))
+  varieties = (X, Y, Zs...)
+  result = PartialFlagVariety(_product_marked_dynkin_type(varieties...))
+  if any(V -> V.polarization !== nothing, varieties)
+    result.polarization = Tuple(vcat(collect.(_polarization_degrees.(varieties))...))
+  end
+  result
 end
 
 Base.:*(X::PartialFlagVariety, Y::PartialFlagVariety) = product(X, Y)

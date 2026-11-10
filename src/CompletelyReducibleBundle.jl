@@ -255,6 +255,29 @@ Return the irreducible summands.
 components(E::CompletelyReducibleBundle) = E.components
 
 """
+    p_dominant_weight(E::CompletelyReducibleBundle) -> WeightLatticeElem
+
+Return the ambient ``\\mathrm{P}``-dominant weight of a bundle with exactly one
+irreducible summand. In particular, this applies to every line bundle.
+
+Throws an `ArgumentError` for the zero bundle or for a bundle with multiple
+irreducible summands, counting multiplicities.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = partial_flag_variety(TypeA{3}, (1, 3));
+
+julia> L = line_bundle(X, [-2, 3]);
+
+julia> p_dominant_weight(L) == WeightLatticeElem(dynkin_type(X), [-2, 0, 3])
+true
+```
+"""
+p_dominant_weight(E::CompletelyReducibleBundle) = p_dominant_weight(only(components(E)))
+
+"""
     n_components(E::CompletelyReducibleBundle) -> Int
 
 Return the number of irreducible summands.
@@ -476,7 +499,7 @@ function picard_degrees(E::CompletelyReducibleBundle)
     ArgumentError("picard_degrees requires a rank-1 bundle, got rank $(rank(E)).")
   )
   X = variety(E)
-  v = coefficients(p_dominant_weight(only(components(E))))
+  v = coefficients(p_dominant_weight(E))
   Int[v[m] for m in marked_nodes(X)]
 end
 

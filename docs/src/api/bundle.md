@@ -79,6 +79,7 @@ E
 ```@docs
 variety
 components
+p_dominant_weight(::CompletelyReducibleBundle)
 n_components
 rank(::CompletelyReducibleBundle)
 ```
