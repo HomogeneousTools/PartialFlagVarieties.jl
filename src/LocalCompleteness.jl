@@ -1,19 +1,17 @@
-export local_completeness
+export is_locally_complete
 
 """
-    local_completeness(Z::ZeroLocus) -> NamedTuple
+    is_locally_complete(Z::ZeroLocus) -> Union{Bool,Nothing}
 
 Check a sufficient criterion for the family of sections of the defining bundle
 to be locally complete at a smooth regular zero locus `Z`.
 
-Returns `status = :complete` when both cohomology groups
+Returns `true` when both cohomology groups
 ``\\mathrm{H}^1(Z, \\mathrm{T}_X|_Z)`` and
 ``\\mathrm{H}^1(X, \\mathcal{E} \\otimes \\mathcal{I}_Z)`` vanish, where
 ``X`` is the ambient variety and ``\\mathcal{E}`` is its defining bundle.
-Otherwise returns `status = :undetermined`, which does not assert that the
-family is incomplete.
-The fields `ambient_tangent_h1` and `ideal_twist_h1` contain the corresponding
-dimension-valued [`AffineExpr`](@ref) entries, possibly symbolic.
+Otherwise returns `nothing`: the sufficient criterion is inconclusive,
+so the family is not asserted to be incomplete.
 
 The restriction and normal sequences give the Kodaira–Spencer map
 
@@ -45,38 +43,27 @@ julia> using PartialFlagVarieties
 
 julia> Z = zero_locus(line_bundle(projective_space(4), 5));
 
-julia> local_completeness(Z)
-(status = :complete, ambient_tangent_h1 = 0, ideal_twist_h1 = 0)
+julia> is_locally_complete(Z)
+true
 
 julia> K3 = zero_locus(line_bundle(projective_space(3), 4));
 
-julia> local_completeness(K3)
-(status = :undetermined, ambient_tangent_h1 = 1, ideal_twist_h1 = 0)
+julia> is_locally_complete(K3) === nothing
+true
 ```
 """
-function local_completeness(Z::ZeroLocus)
+function is_locally_complete(Z::ZeroLocus)
   X = ambient_variety(Z)
   counter = Ref(0)
-  tangent_h1 = if dimension(Z) == 0
-    AffineExpr(0)
-  else
-    _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(X), counter)[2]
+  if dimension(Z) > 0
+    tangent_h1 = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(X), counter)[2]
+    is_zero_expr(tangent_h1) || return nothing
   end
 
-  ideal_h1 = if codimension(Z) == 0
-    AffineExpr(0)
-  else
-    # E ⊗ ∧^r E* → ⋯ → E ⊗ E* resolves E ⊗ I_Z, a sheaf on X.
-    # Do not truncate its cohomology to dim(Z), even when Z is a point.
-    terms = _koszul_dimensions(Z, defining_bundle(Z))[2:end]
-    solve_koszul_filtration_symbolic(terms, dimension(X), counter)[1]
-  end
-
-  entries = [tangent_h1, ideal_h1]
-  _renumber_variables!(entries)
-  (
-    status=all(is_zero_expr, entries) ? :complete : :undetermined,
-    ambient_tangent_h1=entries[1],
-    ideal_twist_h1=entries[2],
-  )
+  codimension(Z) == 0 && return true
+  # E ⊗ ∧^r E* → ⋯ → E ⊗ E* resolves E ⊗ I_Z, a sheaf on X.
+  # Do not truncate its cohomology to dim(Z), even when Z is a point.
+  terms = _koszul_dimensions(Z, defining_bundle(Z))[2:end]
+  ideal_h1 = solve_koszul_filtration_symbolic(terms, dimension(X), counter)[1]
+  is_zero_expr(ideal_h1) ? true : nothing
 end
