@@ -3258,6 +3258,37 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test all(H[i] == 0 for i in 0:3)
   end
 
+  @testset "ZeroLocus: surjectivity of section restriction" begin
+    X = projective_space(1)
+    Z = zero_locus(line_bundle(X, 2))
+    @test is_restriction_surjective(Z, line_bundle(X, 1)) === true
+    @test is_restriction_surjective(Z, structure_sheaf(X)) === false
+    @test is_restriction_surjective(Z, zero_bundle(X)) === true
+
+    # Rank–nullity proves failure even though the ambient H¹ is nonzero.
+    point = zero_locus(line_bundle(X, 1))
+    @test is_restriction_surjective(point, line_bundle(X, -2)) === false
+
+    # A nonzero H¹(F ⊗ I_Z) is insufficient to prove failure when H¹(F) is
+    # nonzero as well. The unresolved map ranks must remain inconclusive.
+    X = product(projective_space(1), projective_space(1))
+    Z = zero_locus(line_bundle(X, [1, 0]))
+    @test is_restriction_surjective(Z, line_bundle(X, [1, -2])) === nothing
+
+    # The source is too small even if the kernel dimension is undetermined.
+    E = direct_sum(line_bundle(X, [2, 0]), line_bundle(X, [0, 2]))
+    @test is_restriction_surjective(zero_locus(E), E) === false
+
+    # Identity restrictions are surjective for every twist, after checking
+    # that the twist actually belongs to the ambient variety.
+    X = projective_space(2)
+    Z = zero_locus(zero_bundle(X))
+    @test is_restriction_surjective(Z, line_bundle(X, -3)) === true
+    @test_throws ArgumentError is_restriction_surjective(
+      Z, structure_sheaf(projective_space(1))
+    )
+  end
+
   @testset "ZeroLocus: local completeness" begin
     # Hypersurfaces: a cubic threefold and a quintic Calabi–Yau threefold.
     for degree in (3, 5)

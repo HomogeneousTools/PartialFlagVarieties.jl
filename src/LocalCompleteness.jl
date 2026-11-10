@@ -6,10 +6,11 @@ export is_locally_complete
 Check a sufficient criterion for the family of sections of the defining bundle
 to be locally complete at a smooth regular zero locus `Z`.
 
-Returns `true` when both cohomology groups
-``\\mathrm{H}^1(Z, \\mathrm{T}_X|_Z)`` and
-``\\mathrm{H}^1(X, \\mathcal{E} \\otimes \\mathcal{I}_Z)`` vanish, where
-``X`` is the ambient variety and ``\\mathcal{E}`` is its defining bundle.
+Returns `true` when ``\\mathrm{H}^1(Z, \\mathrm{T}_X|_Z) = 0`` and
+[`is_restriction_surjective`](@ref) certifies that sections of the defining
+bundle ``\\mathcal{E}`` restrict surjectively to `Z`.
+A sufficient condition for the latter is
+``\\mathrm{H}^1(X, \\mathcal{E} \\otimes \\mathcal{I}_Z) = 0``, where ``X`` is the ambient variety.
 Otherwise returns `nothing`: the sufficient criterion is inconclusive,
 so the family is not asserted to be incomplete.
 For `codimension(Z) == 0`, returns `true` immediately: ``Z = X = G/P``
@@ -63,6 +64,5 @@ function is_locally_complete(Z::ZeroLocus)
     cohomology(ambient_tangent)[1] == 0 || return nothing
   end
 
-  ideal_cohomology = _ideal_sheaf_cohomology(Z, defining_bundle(Z))
-  ideal_cohomology[1] == 0 ? true : nothing
+  is_restriction_surjective(Z, defining_bundle(Z)) === true ? true : nothing
 end

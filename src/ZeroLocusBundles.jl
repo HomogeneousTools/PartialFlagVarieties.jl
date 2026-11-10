@@ -10,6 +10,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export ZeroLocusBundle, restrict
+export is_restriction_surjective
 
 """Terms of a bounded ambient presentation which is exact away from degree zero."""
 struct _AmbientBundlePresentation
@@ -684,6 +685,60 @@ function cohomology(F::ZeroLocusBundle)
   entries = system[1:entry_count]
   _renumber_variables!(entries)
   Cohomology{AffineExpr}(entries, d)
+end
+
+"""
+    is_restriction_surjective(Z::ZeroLocus, F::CompletelyReducibleBundle) -> Union{Bool,Nothing}
+
+Check whether every global section of ``\\mathcal{F}|_Z`` extends to the ambient
+variety ``X``, where `F` is a bundle on ``X``.
+Returns `true` or `false` when the available cohomology determines
+surjectivity, and `nothing` when it is inconclusive.
+
+Vanishing of ``\\mathrm{H}^1(X, \\mathcal{F} \\otimes \\mathcal{I}_Z)`` certifies
+surjectivity immediately.
+Otherwise, the kernel of restriction is
+``\\mathrm{H}^0(X, \\mathcal{F} \\otimes \\mathcal{I}_Z)``:
+when the source, kernel, and target dimensions are determined, rank–nullity
+decides surjectivity without assuming ``\\mathrm{H}^1(X, \\mathcal{F}) = 0``.
+Nonvanishing of the ideal-sheaf group alone does not imply failure.
+
+This uses the same section-free data as [`restrict`](@ref).
+It makes no generic maximal-rank assumption.
+For a line bundle ``\\mathcal{F}``, it checks that the ambient sections cut out
+the complete linear system on `Z`.
+[`is_locally_complete`](@ref) applies this check to the defining bundle.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(1); Z = zero_locus(line_bundle(X, 2));
+
+julia> is_restriction_surjective(Z, line_bundle(X, 1))  # linear interpolation at two points
+true
+
+julia> is_restriction_surjective(Z, structure_sheaf(X))  # constants do not interpolate
+false
+```
+"""
+function is_restriction_surjective(Z::ZeroLocus, F::CompletelyReducibleBundle)
+  variety(F) == ambient_variety(Z) || throw(
+    ArgumentError("is_restriction_surjective requires a bundle on the ambient variety.")
+  )
+  codimension(Z) == 0 && return true
+
+  ideal_cohomology = _ideal_sheaf_cohomology(Z, F)
+  ideal_cohomology[1] == 0 && return true
+
+  target_dimension = cohomology(restrict(Z, F))[0]
+  target_dimension == 0 && return true
+  source_dimension = cohomology(F)[0]
+  is_determined(target_dimension) && target_dimension.constant > source_dimension &&
+    return false
+  image_dimension = source_dimension - ideal_cohomology[0]
+  is_determined(image_dimension) && is_determined(target_dimension) || return nothing
+  image_dimension == target_dimension
 end
 
 function Base.show(io::IO, F::ZeroLocusBundle)
