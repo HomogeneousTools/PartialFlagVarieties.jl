@@ -63,6 +63,7 @@ include("Polarization.jl")
 include("Labels.jl")
 include("ExceptionalCollections.jl")
 include("Hodge.jl")
+include("ProjectiveDuality.jl")
 include("CacheConfig.jl")
 include("SpectralSequence.jl")
 

@@ -24,3 +24,9 @@ PartialFlagVarieties.configure_caches!
 PartialFlagVarieties.clear_caches!
 PartialFlagVarieties.cache_info
 ```
+
+Projective-duality computations share a cache for the chosen embedding,
+the resulting invariants, and the section Euler characteristics used to find them.
+Its key includes the line bundle, so changing a stored polarization selects
+the appropriate computation. It is included in `configure_caches!`,
+`clear_caches!`, and `cache_info().projective_dual`.

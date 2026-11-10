@@ -53,8 +53,8 @@ Resize all LRU caches according to the given total memory budget and per-cache
 fractions. The budget is in bytes; fractions should sum to ≤ 1.0.
 
  The structural fraction is split among the marked-Dynkin, tangent-reps,
- cotangent-reps, and the two cotangent exterior power caches (35%, 25%, 25%,
- 7.5%, 7.5% respectively).
+ cotangent-reps, the two cotangent exterior power caches, and the projective
+ dual cache (35%, 22.5%, 22.5%, 7.5%, 7.5%, 5% respectively).
 
 # Examples
 ```julia
@@ -80,10 +80,11 @@ function configure_caches!(;
   resize!(_BWB_PAIR_CACHE; maxsize=_cache_maxsize(b, bf * 0.8))
   resize!(_BWB_WEIGHT_CACHE; maxsize=_cache_maxsize(b, bf * 0.2))
   resize!(_marked_dynkin_cache; maxsize=_cache_maxsize(b, sf * 0.35))
-  resize!(_tangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.25))
-  resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.25))
+  resize!(_tangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.225))
+  resize!(_cotangent_reps_cache; maxsize=_cache_maxsize(b, sf * 0.225))
   resize!(_COTANGENT_POWER_CACHE; maxsize=_cache_maxsize(b, sf * 0.075))
   resize!(_FILTERED_COTANGENT_POWER_CACHE; maxsize=_cache_maxsize(b, sf * 0.075))
+  resize!(_PROJECTIVE_DUAL_CACHE; maxsize=_cache_maxsize(b, sf * 0.05))
   nothing
 end
 
@@ -99,6 +100,7 @@ function clear_caches!()
   empty!(_cotangent_reps_cache)
   empty!(_COTANGENT_POWER_CACHE)
   empty!(_FILTERED_COTANGENT_POWER_CACHE)
+  empty!(_PROJECTIVE_DUAL_CACHE)
   empty!(_TENSOR_PRODUCT_CACHE)
   empty!(_BWB_PAIR_CACHE)
   empty!(_BWB_WEIGHT_CACHE)
@@ -127,6 +129,7 @@ function cache_info()
     cotangent_reps=LRUCache.cache_info(_cotangent_reps_cache),
     cotangent_powers=LRUCache.cache_info(_COTANGENT_POWER_CACHE),
     filtered_cotangent_powers=LRUCache.cache_info(_FILTERED_COTANGENT_POWER_CACHE),
+    projective_dual=LRUCache.cache_info(_PROJECTIVE_DUAL_CACHE),
     tensor_product=LRUCache.cache_info(_TENSOR_PRODUCT_CACHE),
     bwb_pair=LRUCache.cache_info(_BWB_PAIR_CACHE),
     bwb_weight=LRUCache.cache_info(_BWB_WEIGHT_CACHE),

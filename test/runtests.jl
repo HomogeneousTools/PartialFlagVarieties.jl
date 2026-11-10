@@ -12,6 +12,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
 @testset "PartialFlagVarieties.jl" begin
   include("polarization.jl")
+  include("projective_duality.jl")
 
   # ═══════════════════════════════════════════════════════════════════════════
   #  Dynkin type strings
