@@ -47,6 +47,31 @@ partial_flag_variety
 full_flag_variety
 ```
 
+## Polarizations
+
+Varieties carry an optional choice of ample line bundle.
+Use `set_polarization!(X, L)` to update it, or supply Picard degrees at construction:
+
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = partial_flag_variety("A2", 1; polarization=2);
+
+julia> hilbert_polynomial(structure_sheaf(X))
+Polynomial(1//1 + 3//1*t + 2//1*t^2)
+```
+
+Without an override, the choice is degree one at every marked node.
+Zero loci inherit the current ambient choice and can carry their own override.
+An explicit `L` in a computation takes precedence for that call.
+Products use the external tensor product of the factor polarizations.
+Equality, hashing, and labels still describe the underlying geometry and ignore this choice.
+
+```@docs
+polarization
+set_polarization!
+```
+
 ## Products
 
 ```@docs

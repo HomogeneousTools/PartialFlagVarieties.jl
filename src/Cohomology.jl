@@ -558,9 +558,8 @@ P(t) = \\chi(\\mathcal{E} \\otimes \\mathcal{L}^{\\otimes t}).
 
 The polarization ``\\mathcal{L}`` must be a line bundle on the same variety as ``\\mathcal{E}``;
 for the result to be a genuine Hilbert polynomial, ``\\mathcal{L}`` should be ample.
-Omitting `L` uses the minimal ample polarization ``\\mathcal{O}(1, \\ldots, 1)``,
-with degree one at every marked node.
-For Picard rank one, this is the ample generator of ``\\operatorname{Pic}(X)``.
+Omitting `L` uses [`polarization`](@ref) of the base variety, which defaults
+to degree one at every marked node.
 
 For an irreducible Levi summand with ambient weight ``\\lambda`` and polarization
 weight ``\\mu``, Borel–Weil–Bott and the Weyl dimension formula give
@@ -642,7 +641,7 @@ end
 
 Compute the Hilbert polynomial by adding the symbolic Weyl polynomials of
 its associated graded pieces. Additivity makes the result independent of
-extension maps. The default polarization has degree one at every marked node.
+extension maps. Omitting `L` uses [`polarization`](@ref) of the base variety.
 """
 function hilbert_polynomial(F::FilteredBundle, L::CompletelyReducibleBundle)
   _check_polarization(variety(F), L)
@@ -652,12 +651,10 @@ function hilbert_polynomial(F::FilteredBundle, L::CompletelyReducibleBundle)
 end
 
 hilbert_polynomial(F::FilteredBundle) =
-  hilbert_polynomial(F, line_bundle(variety(F), ones(Int, picard_rank(variety(F)))))
+  hilbert_polynomial(F, polarization(variety(F)))
 
 function hilbert_polynomial(E::CompletelyReducibleBundle)
-  X = variety(E)
-  L = line_bundle(X, ones(Int, picard_rank(X)))
-  hilbert_polynomial(E, L)
+  hilbert_polynomial(E, polarization(variety(E)))
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════

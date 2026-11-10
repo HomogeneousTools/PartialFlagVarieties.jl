@@ -11,6 +11,7 @@ PartialFlagVarieties.configure_caches!(; budget=256 * 1024^2)
 mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
 @testset "PartialFlagVarieties.jl" begin
+  include("polarization.jl")
 
   # ═══════════════════════════════════════════════════════════════════════════
   #  Dynkin type strings

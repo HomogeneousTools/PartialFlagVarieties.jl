@@ -697,8 +697,8 @@ end
       -> Polynomials.Polynomial{Rational{BigInt}}
 
 Compute the polynomial of Euler characteristics of `F` tensored with powers
-of the restriction of an ambient line bundle `L`. The default polarization
-has degree one at every marked node of the ambient variety.
+of the restriction of an ambient line bundle `L`, or its recorded restriction.
+Omitting `L` uses [`polarization`](@ref) of the zero locus.
 
 The symbolic Weyl polynomials of the ambient presentation and Koszul complex
 are combined with their alternating signs. This works for restrictions,
@@ -730,6 +730,5 @@ function hilbert_polynomial(F::ZeroLocusBundle, L::CompletelyReducibleBundle)
 end
 
 function hilbert_polynomial(F::ZeroLocusBundle)
-  X = ambient_variety(F)
-  hilbert_polynomial(F, line_bundle(X, ones(Int, picard_rank(X))))
+  hilbert_polynomial(F, _ambient_polarization(variety(F)))
 end
