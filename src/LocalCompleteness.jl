@@ -54,16 +54,12 @@ true
 """
 function is_locally_complete(Z::ZeroLocus)
   X = ambient_variety(Z)
-  counter = Ref(0)
   if dimension(Z) > 0
-    tangent_h1 = _restrict_to_zero_locus_les(Z, filtered_tangent_bundle(X), counter)[2]
-    is_zero_expr(tangent_h1) || return nothing
+    ambient_tangent = restrict(Z, filtered_tangent_bundle(X))
+    cohomology(ambient_tangent)[1] == 0 || return nothing
   end
 
   codimension(Z) == 0 && return true
-  # E ⊗ ∧^r E* → ⋯ → E ⊗ E* resolves E ⊗ I_Z, a sheaf on X.
-  # Do not truncate its cohomology to dim(Z), even when Z is a point.
-  terms = _koszul_dimensions(Z, defining_bundle(Z))[2:end]
-  ideal_h1 = solve_koszul_filtration_symbolic(terms, dimension(X), counter)[1]
-  is_zero_expr(ideal_h1) ? true : nothing
+  ideal_cohomology = _ideal_sheaf_cohomology(Z, defining_bundle(Z))
+  ideal_cohomology[1] == 0 ? true : nothing
 end

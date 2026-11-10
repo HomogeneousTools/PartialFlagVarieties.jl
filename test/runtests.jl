@@ -3241,6 +3241,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   #  Local completeness of families of zero loci (issue #29)
   # ═══════════════════════════════════════════════════════════════════════════
 
+  @testset "ZeroLocus: twisted ideal-sheaf cohomology" begin
+    X = projective_space(3)
+    Z = zero_locus(line_bundle(X, 4))
+    # I_Z = O(-4) has H³ = k, above the dimension of the quartic surface.
+    H = PartialFlagVarieties._ideal_sheaf_cohomology(Z, structure_sheaf(X))
+    @test [H[i] for i in 0:3] == AffineExpr.([0, 0, 0, 1])
+    @test_throws ArgumentError PartialFlagVarieties._ideal_sheaf_cohomology(
+      Z, structure_sheaf(projective_space(2))
+    )
+
+    # With no defining equations, Z = X and I_Z = 0.
+    H = PartialFlagVarieties._ideal_sheaf_cohomology(
+      zero_locus(zero_bundle(X)), line_bundle(X, 1)
+    )
+    @test all(H[i] == 0 for i in 0:3)
+  end
+
   @testset "ZeroLocus: local completeness" begin
     # Hypersurfaces: a cubic threefold and a quintic Calabi–Yau threefold.
     for degree in (3, 5)

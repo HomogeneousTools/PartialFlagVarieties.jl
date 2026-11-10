@@ -469,6 +469,20 @@ function _koszul_dimensions(
 end
 
 """
+Compute cohomology of ``\\mathcal{F} \\otimes \\mathcal{I}_Z`` on the ambient variety.
+
+The ideal sheaf is resolved by the positive Koszul terms, omitting
+``\\mathcal{F}`` itself. The calculation is on the ambient variety, so the result
+retains the full ambient cohomological range, even when `Z` is a point.
+"""
+function _ideal_sheaf_cohomology(Z::ZeroLocus, F::CompletelyReducibleBundle)
+  terms = _koszul_dimensions(Z, F)
+  d = dimension(ambient_variety(Z))
+  codimension(Z) == 0 && return Cohomology{AffineExpr}([AffineExpr(0) for _ in 0:d], d)
+  solve_koszul_filtration_symbolic(terms[2:end], d, Ref(0))
+end
+
+"""
 Dual of a multiplicity dict: map each IrrepLevi to its dual.
 """
 function _dual_counts(f_counts::Dict{IrrepLevi,Int})
