@@ -744,16 +744,19 @@ end
 """
     is_locally_complete(Z::ZeroLocus) -> Union{Bool,Nothing}
 
-Check a sufficient criterion for the family of sections of the defining bundle
-to be locally complete at a smooth regular zero locus `Z`.
+Check cohomological certificates for local completeness of the family of
+sections of the defining bundle at a smooth regular zero locus `Z`.
 
 Returns `true` when ``\\mathrm{H}^1(Z, \\mathrm{T}_X|_Z) = 0`` and
 [`is_restriction_surjective`](@ref) certifies that sections of the defining
 bundle ``\\mathcal{E}`` restrict surjectively to `Z`.
 A sufficient condition for the latter is
 ``\\mathrm{H}^1(X, \\mathcal{E} \\otimes \\mathcal{I}_Z) = 0``, where ``X`` is the ambient variety.
-Otherwise returns `nothing`: the sufficient criterion is inconclusive,
-so the family is not asserted to be incomplete.
+Returns `false` when both dimensions are determined and
+``\\mathrm{h}^1(Z, \\mathrm{T}_X|_Z) > \\mathrm{h}^1(Z, \\mathcal{E}|_Z)``.
+The normal sequence then forces a nonzero cokernel of the Kodaira–Spencer map,
+so some abstract infinitesimal deformations cannot come from varying sections.
+Otherwise returns `nothing`: neither certificate decides completeness.
 For `codimension(Z) == 0`, returns `true` immediately: ``Z = X = G/P``
 is infinitesimally rigid, so its constant family is locally complete.
 
@@ -770,14 +773,18 @@ The restriction and normal sequences give the Kodaira–Spencer map
 The two vanishings force both arrows to be surjective, so the
 [Kodaira–Spencer completeness theorem](https://doi.org/10.1007/s13373-015-0070-1)
 (Corollary 157) applies to the smooth base of regular sections.
+For the negative certificate, the cokernel of the second arrow is the kernel of
+``\\mathrm{H}^1(Z, \\mathrm{T}_X|_Z) \\to \\mathrm{H}^1(Z, \\mathcal{E}|_Z)``.
+The strict dimension inequality forces that kernel to be nonzero without
+determining the map's rank.
 The ideal-sheaf twist is computed from the Koszul resolution with its
 ``\\mathcal{E}`` term omitted, in the full ambient cohomological range.
 The actual filtered tangent bundle is used on a general partial flag variety.
 
 No chosen section, generic maximal-rank assumption, or unobstructedness
-assumption is required for this certificate.
-It applies to every smooth regular section for which these vanishings are
-forced by the recorded data.
+assumption is required for either certificate.
+They apply to every smooth regular section for which the required cohomology
+is forced by the recorded data.
 Smoothness and regularity of the zero locus are assumed, as for
 [`tangent_bundle(::ZeroLocus)`](@ref).
 
@@ -792,8 +799,13 @@ true
 
 julia> K3 = zero_locus(line_bundle(projective_space(3), 4));
 
-julia> is_locally_complete(K3) === nothing
-true
+julia> is_locally_complete(K3)
+false
+
+julia> X = OGr(2, 7); Y = zero_locus(symmetric_power(spinor_bundle(X), 2));
+
+julia> is_locally_complete(Y)
+false
 ```
 """
 function is_locally_complete(Z::ZeroLocus)
@@ -802,7 +814,15 @@ function is_locally_complete(Z::ZeroLocus)
   X = ambient_variety(Z)
   if dimension(Z) > 0
     ambient_tangent = restrict(Z, filtered_tangent_bundle(X))
-    cohomology(ambient_tangent)[1] == 0 || return nothing
+    ambient_h1 = cohomology(ambient_tangent)[1]
+    if ambient_h1 != 0
+      normal_h1 = cohomology(normal_bundle(Z))[1]
+      if is_determined(ambient_h1) && is_determined(normal_h1) &&
+        ambient_h1.constant > normal_h1.constant
+        return false
+      end
+      return nothing
+    end
   end
 
   is_restriction_surjective(Z, defining_bundle(Z)) === true ? true : nothing

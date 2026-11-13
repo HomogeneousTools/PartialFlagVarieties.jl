@@ -188,17 +188,24 @@ It combines ``\mathrm{H}^1(Z, \mathrm{T}_X|_Z) = 0`` with
 [`is_restriction_surjective(Z, defining_bundle(Z))`](@ref is_restriction_surjective).
 The vanishing forces surjectivity of the connecting map of the normal sequence;
 the general restriction check certifies the other arrow of the Kodaira–Spencer map.
-It returns `true` when the criterion proves completeness, and `nothing`
-when the check is inconclusive.
+It returns `true` when the criterion proves completeness.
+It returns `false` when the computed dimensions satisfy
+``\mathrm{h}^1(Z, \mathrm{T}_X|_Z) > \mathrm{h}^1(Z, \mathcal{E}|_Z)``:
+the normal sequence then forces a nonzero cokernel of the Kodaira–Spencer map.
+For example, the fourfold cut out by `symmetric_power(spinor_bundle(OGr(2, 7)), 2)`
+has these dimensions equal to 1 and 0, so its section model is not locally complete.
+It returns `nothing` when neither certificate decides the question.
 For a rank-zero defining bundle, ``Z = X = G/P`` and it returns `true`
 immediately by the infinitesimal rigidity of rational homogeneous varieties.
 
 The check uses only the ambient variety and defining bundle.
 It makes no assumption that an unknown map has maximal rank for a general
-section: nonzero or symbolic cohomology gives `nothing`, rather than a
-claim that the family is incomplete.
+section. Nonzero ambient tangent cohomology alone does not prove incompleteness;
+the negative certificate needs the strict dimension inequality above.
+Undetermined dimensions leave the negative check inconclusive.
 The target is the full abstract deformation space, with no polarization fixed;
-for example, the check is undetermined for quartic K3 surfaces.
+for example, it returns `false` for quartic K3 surfaces, which have abstract
+deformations outside their polarized family.
 
 ```@docs
 is_locally_complete

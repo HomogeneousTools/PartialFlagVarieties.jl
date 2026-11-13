@@ -3302,9 +3302,32 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_locally_complete(Z) === true
 
     # Quartic K3s have an abstract deformation direction outside the polarized
-    # family. Failing the sufficient criterion must remain inconclusive.
+    # family, detected by the normal-sequence dimension obstruction.
     K3 = zero_locus(line_bundle(projective_space(3), 4))
-    @test is_locally_complete(K3) === nothing
+    @test is_locally_complete(K3) === false
+
+    # Frassineti, arXiv:2609.09310, Propositions 5.1–5.3: the first two
+    # section models are complete, while the third misses a deformation.
+    X = OGr(3, 9)
+    S = spinor_bundle(X)
+    @test is_locally_complete(zero_locus(S ⊕ S ⊕ S ⊕ S)) === true
+    X = OGr(5, 10)
+    L = line_bundle(X, 1)
+    E = line_bundle(X, 2) ⊕ L ⊕ L ⊕ L ⊕ L ⊕ L
+    @test is_locally_complete(zero_locus(E)) === true
+    X = OGr(2, 7)
+    Z = zero_locus(symmetric_power(spinor_bundle(X), 2))
+    @test cohomology(restrict(Z, filtered_tangent_bundle(X)))[1] == 1
+    @test cohomology(normal_bundle(Z))[1] == 0
+    @test is_locally_complete(Z) === false
+
+    # Symbolic H¹ of the restricted ambient tangent must not be interpreted
+    # as a positive dimension, even when H¹ of the normal bundle vanishes.
+    X = SGr(2, 8)
+    E =
+      CompletelyReducibleBundle(X, fundamental_weight(TypeC{4}, 4)) ⊕
+      dual(universal_subbundle(X))
+    @test is_locally_complete(zero_locus(E)) === nothing
 
     # The restriction check matters independently of tangent vanishing.
     # Z consists of two disjoint lines; equations from P² cannot move the
