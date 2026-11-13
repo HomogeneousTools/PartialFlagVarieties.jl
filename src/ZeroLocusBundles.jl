@@ -10,6 +10,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 export ZeroLocusBundle, restrict
+export is_restriction_surjective, is_locally_complete
 
 """Terms of a bounded ambient presentation which is exact away from degree zero."""
 struct _AmbientBundlePresentation
@@ -684,6 +685,147 @@ function cohomology(F::ZeroLocusBundle)
   entries = system[1:entry_count]
   _renumber_variables!(entries)
   Cohomology{AffineExpr}(entries, d)
+end
+
+"""
+    is_restriction_surjective(Z::ZeroLocus, F::CompletelyReducibleBundle) -> Union{Bool,Nothing}
+
+Check whether every global section of ``\\mathcal{F}|_Z`` extends to the ambient
+variety ``X``, where `F` is a bundle on ``X``.
+Returns `true` or `false` when the available cohomology determines
+surjectivity, and `nothing` when it is inconclusive.
+
+Vanishing of ``\\mathrm{H}^1(X, \\mathcal{F} \\otimes \\mathcal{I}_Z)`` certifies
+surjectivity immediately.
+Otherwise, the kernel of restriction is
+``\\mathrm{H}^0(X, \\mathcal{F} \\otimes \\mathcal{I}_Z)``:
+when the source, kernel, and target dimensions are determined, rank–nullity
+decides surjectivity without assuming ``\\mathrm{H}^1(X, \\mathcal{F}) = 0``.
+Nonvanishing of the ideal-sheaf group alone does not imply failure.
+
+This uses the same section-free data as [`restrict`](@ref).
+It makes no generic maximal-rank assumption.
+For a line bundle ``\\mathcal{F}``, it checks that the ambient sections cut out
+the complete linear system on `Z`.
+[`is_locally_complete`](@ref) applies this check to the defining bundle.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> X = projective_space(1); Z = zero_locus(line_bundle(X, 2));
+
+julia> is_restriction_surjective(Z, line_bundle(X, 1))  # linear interpolation at two points
+true
+
+julia> is_restriction_surjective(Z, structure_sheaf(X))  # constants do not interpolate
+false
+```
+"""
+function is_restriction_surjective(Z::ZeroLocus, F::CompletelyReducibleBundle)
+  variety(F) == ambient_variety(Z) || throw(
+    ArgumentError("is_restriction_surjective requires a bundle on the ambient variety.")
+  )
+  codimension(Z) == 0 && return true
+
+  ideal_cohomology = _ideal_sheaf_cohomology(Z, F)
+  ideal_cohomology[1] == 0 && return true
+
+  target_dimension = cohomology(restrict(Z, F))[0]
+  target_dimension == 0 && return true
+  source_dimension = cohomology(F)[0]
+  is_determined(target_dimension) && target_dimension.constant > source_dimension &&
+    return false
+  image_dimension = source_dimension - ideal_cohomology[0]
+  is_determined(image_dimension) && is_determined(target_dimension) || return nothing
+  image_dimension == target_dimension
+end
+
+"""
+    is_locally_complete(Z::ZeroLocus) -> Union{Bool,Nothing}
+
+Check cohomological certificates for local completeness of the family of
+sections of the defining bundle at a smooth regular zero locus `Z`.
+
+Returns `true` when ``\\mathrm{H}^1(Z, \\mathrm{T}_X|_Z) = 0`` and
+[`is_restriction_surjective`](@ref) certifies that sections of the defining
+bundle ``\\mathcal{E}`` restrict surjectively to `Z`.
+A sufficient condition for the latter is
+``\\mathrm{H}^1(X, \\mathcal{E} \\otimes \\mathcal{I}_Z) = 0``, where ``X`` is the ambient variety.
+Returns `false` when both dimensions are determined and
+``\\mathrm{h}^1(Z, \\mathrm{T}_X|_Z) > \\mathrm{h}^1(Z, \\mathcal{E}|_Z)``.
+The normal sequence then forces a nonzero cokernel of the Kodaira–Spencer map,
+so some abstract infinitesimal deformations cannot come from varying sections.
+Otherwise returns `nothing`: neither certificate decides completeness.
+For `codimension(Z) == 0`, returns `true` immediately: ``Z = X = G/P``
+is infinitesimally rigid, so its constant family is locally complete.
+
+The restriction and normal sequences give the Kodaira–Spencer map
+
+```math
+\\begin{equation}
+\\mathrm{H}^0(X, \\mathcal{E})
+\\longrightarrow \\mathrm{H}^0(Z, \\mathcal{E}|_Z)
+\\longrightarrow \\mathrm{H}^1(Z, \\mathrm{T}_Z).
+\\end{equation}
+```
+
+The two vanishings force both arrows to be surjective, so the
+[Kodaira–Spencer completeness theorem](https://doi.org/10.1007/s13373-015-0070-1)
+(Corollary 157) applies to the smooth base of regular sections.
+For the negative certificate, the cokernel of the second arrow is the kernel of
+``\\mathrm{H}^1(Z, \\mathrm{T}_X|_Z) \\to \\mathrm{H}^1(Z, \\mathcal{E}|_Z)``.
+The strict dimension inequality forces that kernel to be nonzero without
+determining the map's rank.
+The ideal-sheaf twist is computed from the Koszul resolution with its
+``\\mathcal{E}`` term omitted, in the full ambient cohomological range.
+The actual filtered tangent bundle is used on a general partial flag variety.
+
+No chosen section, generic maximal-rank assumption, or unobstructedness
+assumption is required for either certificate.
+They apply to every smooth regular section for which the required cohomology
+is forced by the recorded data.
+Smoothness and regularity of the zero locus are assumed, as for
+[`tangent_bundle(::ZeroLocus)`](@ref).
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(4), 5));
+
+julia> is_locally_complete(Z)
+true
+
+julia> K3 = zero_locus(line_bundle(projective_space(3), 4));
+
+julia> is_locally_complete(K3)
+false
+
+julia> X = OGr(2, 7); Y = zero_locus(symmetric_power(spinor_bundle(X), 2));
+
+julia> is_locally_complete(Y)
+false
+```
+"""
+function is_locally_complete(Z::ZeroLocus)
+  # With no defining equations, Z = X = G/P is infinitesimally rigid.
+  codimension(Z) == 0 && return true
+  X = ambient_variety(Z)
+  if dimension(Z) > 0
+    ambient_tangent = restrict(Z, filtered_tangent_bundle(X))
+    ambient_h1 = cohomology(ambient_tangent)[1]
+    if ambient_h1 != 0
+      normal_h1 = cohomology(normal_bundle(Z))[1]
+      if is_determined(ambient_h1) && is_determined(normal_h1) &&
+        ambient_h1.constant > normal_h1.constant
+        return false
+      end
+      return nothing
+    end
+  end
+
+  is_restriction_surjective(Z, defining_bundle(Z)) === true ? true : nothing
 end
 
 function Base.show(io::IO, F::ZeroLocusBundle)

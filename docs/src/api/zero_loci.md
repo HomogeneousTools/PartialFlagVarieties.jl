@@ -165,6 +165,52 @@ hilbert_polynomial(::ZeroLocus, ::CompletelyReducibleBundle)
 fano_index(::ZeroLocus)
 ```
 
+## Restriction of sections
+
+[`is_restriction_surjective`](@ref) checks whether all sections of an ambient
+bundle restricted to `Z` extend to the ambient variety.
+It returns `true`, `false`, or `nothing` when the answer is undetermined.
+For ``\mathcal{F} = \mathcal{O}_X(m)``, this tests whether degree-``m`` ambient
+sections give a complete linear system on `Z`.
+The kernel consists of the sections of
+``\mathcal{F} \otimes \mathcal{I}_Z``, so it also supplies the rank calculation
+when the cohomology dimensions are determined.
+
+```@docs
+is_restriction_surjective
+```
+
+## Local completeness
+
+[`is_locally_complete`](@ref) checks whether varying the defining section
+captures every small abstract deformation of a smooth regular zero locus.
+It combines ``\mathrm{H}^1(Z, \mathrm{T}_X|_Z) = 0`` with
+[`is_restriction_surjective(Z, defining_bundle(Z))`](@ref is_restriction_surjective).
+The vanishing forces surjectivity of the connecting map of the normal sequence;
+the general restriction check certifies the other arrow of the Kodaira–Spencer map.
+It returns `true` when the criterion proves completeness.
+It returns `false` when the computed dimensions satisfy
+``\mathrm{h}^1(Z, \mathrm{T}_X|_Z) > \mathrm{h}^1(Z, \mathcal{E}|_Z)``:
+the normal sequence then forces a nonzero cokernel of the Kodaira–Spencer map.
+For example, the fourfold cut out by `symmetric_power(spinor_bundle(OGr(2, 7)), 2)`
+has these dimensions equal to 1 and 0, so its section model is not locally complete.
+It returns `nothing` when neither certificate decides the question.
+For a rank-zero defining bundle, ``Z = X = G/P`` and it returns `true`
+immediately by the infinitesimal rigidity of rational homogeneous varieties.
+
+The check uses only the ambient variety and defining bundle.
+It makes no assumption that an unknown map has maximal rank for a general
+section. Nonzero ambient tangent cohomology alone does not prove incompleteness;
+the negative certificate needs the strict dimension inequality above.
+Undetermined dimensions leave the negative check inconclusive.
+The target is the full abstract deformation space, with no polarization fixed;
+for example, it returns `false` for quartic K3 surfaces, which have abstract
+deformations outside their polarized family.
+
+```@docs
+is_locally_complete
+```
+
 ## Classification predicates
 
 ```@docs

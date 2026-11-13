@@ -3238,6 +3238,126 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
+  #  Local completeness of families of zero loci (issue #29)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  @testset "ZeroLocus: twisted ideal-sheaf cohomology" begin
+    X = projective_space(3)
+    Z = zero_locus(line_bundle(X, 4))
+    # I_Z = O(-4) has H³ = k, above the dimension of the quartic surface.
+    H = PartialFlagVarieties._ideal_sheaf_cohomology(Z, structure_sheaf(X))
+    @test [H[i] for i in 0:3] == AffineExpr.([0, 0, 0, 1])
+    @test_throws ArgumentError PartialFlagVarieties._ideal_sheaf_cohomology(
+      Z, structure_sheaf(projective_space(2))
+    )
+
+    # With no defining equations, Z = X and I_Z = 0.
+    H = PartialFlagVarieties._ideal_sheaf_cohomology(
+      zero_locus(zero_bundle(X)), line_bundle(X, 1)
+    )
+    @test all(H[i] == 0 for i in 0:3)
+  end
+
+  @testset "ZeroLocus: surjectivity of section restriction" begin
+    X = projective_space(1)
+    Z = zero_locus(line_bundle(X, 2))
+    @test is_restriction_surjective(Z, line_bundle(X, 1)) === true
+    @test is_restriction_surjective(Z, structure_sheaf(X)) === false
+    @test is_restriction_surjective(Z, zero_bundle(X)) === true
+
+    # The source and target both have dimension four, but the cubic
+    # summand has a two-dimensional restriction kernel. Counting source
+    # sections alone cannot detect this failure of interpolation.
+    F = line_bundle(X, 3) ⊕ line_bundle(X, -1)
+    @test is_restriction_surjective(Z, F) === false
+
+    # Rank–nullity proves failure even though the ambient H¹ is nonzero.
+    point = zero_locus(line_bundle(X, 1))
+    @test is_restriction_surjective(point, line_bundle(X, -2)) === false
+
+    # A nonzero H¹(F ⊗ I_Z) is insufficient to prove failure when H¹(F) is
+    # nonzero as well. The unresolved map ranks must remain inconclusive.
+    X = product(projective_space(1), projective_space(1))
+    Z = zero_locus(line_bundle(X, [1, 0]))
+    @test is_restriction_surjective(Z, line_bundle(X, [1, -2])) === nothing
+
+    # The source is too small even if the kernel dimension is undetermined.
+    E = direct_sum(line_bundle(X, [2, 0]), line_bundle(X, [0, 2]))
+    @test is_restriction_surjective(zero_locus(E), E) === false
+
+    # Identity restrictions are surjective for every twist, after checking
+    # that the twist actually belongs to the ambient variety.
+    X = projective_space(2)
+    Z = zero_locus(zero_bundle(X))
+    @test is_restriction_surjective(Z, line_bundle(X, -3)) === true
+    @test_throws ArgumentError is_restriction_surjective(
+      Z, structure_sheaf(projective_space(1))
+    )
+  end
+
+  @testset "ZeroLocus: local completeness" begin
+    # Hypersurfaces: a cubic threefold and a quintic Calabi–Yau threefold.
+    for degree in (3, 5)
+      Z = zero_locus(line_bundle(projective_space(4), degree))
+      @test is_locally_complete(Z) === true
+    end
+
+    # A rank-two Koszul resolution, rather than just the hypersurface case.
+    X = projective_space(5)
+    Z = zero_locus(direct_sum(line_bundle(X, 2), line_bundle(X, 3)))
+    @test is_locally_complete(Z) === true
+
+    # Quartic K3s have an abstract deformation direction outside the polarized
+    # family, detected by the normal-sequence dimension obstruction.
+    K3 = zero_locus(line_bundle(projective_space(3), 4))
+    @test is_locally_complete(K3) === false
+
+    # Frassineti, arXiv:2609.09310, Propositions 5.1–5.3: the first two
+    # section models are complete, while the third misses a deformation.
+    X = OGr(3, 9)
+    S = spinor_bundle(X)
+    @test is_locally_complete(zero_locus(S ⊕ S ⊕ S ⊕ S)) === true
+    X = OGr(5, 10)
+    L = line_bundle(X, 1)
+    E = line_bundle(X, 2) ⊕ L ⊕ L ⊕ L ⊕ L ⊕ L
+    @test is_locally_complete(zero_locus(E)) === true
+    X = OGr(2, 7)
+    Z = zero_locus(symmetric_power(spinor_bundle(X), 2))
+    @test cohomology(restrict(Z, filtered_tangent_bundle(X)))[1] == 1
+    @test cohomology(normal_bundle(Z))[1] == 0
+    @test is_locally_complete(Z) === false
+
+    # Symbolic H¹ of the restricted ambient tangent must not be interpreted
+    # as a positive dimension, even when H¹ of the normal bundle vanishes.
+    X = SGr(2, 8)
+    E =
+      CompletelyReducibleBundle(X, fundamental_weight(TypeC{4}, 4)) ⊕
+      dual(universal_subbundle(X))
+    @test is_locally_complete(zero_locus(E)) === nothing
+
+    # The restriction check matters independently of tangent vanishing.
+    # Z consists of two disjoint lines; equations from P² cannot move the
+    # two lines independently, although the abstract variety is rigid.
+    X = product(projective_space(1), projective_space(2))
+    E = direct_sum(line_bundle(X, [2, 0]), line_bundle(X, [0, 1]))
+    @test is_locally_complete(zero_locus(E)) === nothing
+
+    # No H¹ exists on a zero-dimensional zero locus, and a rank-zero
+    # defining bundle has zero ideal sheaf.
+    @test is_locally_complete(zero_locus(line_bundle(projective_space(1), 2))) === true
+    X = product(projective_space(1), projective_space(1))
+    E = direct_sum(line_bundle(X, [2, 0]), line_bundle(X, [0, 2]))
+    @test is_locally_complete(zero_locus(E)) === nothing
+    @test is_locally_complete(zero_locus(zero_bundle(projective_space(2)))) === true
+
+    # G/P is rigid even when the filtered cohomology solver cannot determine
+    # H¹(T_X). The rank-zero case must bypass that solver.
+    for X in (full_flag_variety(TypeB{2}), full_flag_variety(TypeG2))
+      @test is_locally_complete(zero_locus(zero_bundle(X))) === true
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
   #  SpectralSequence of a filtered bundle
   # ═══════════════════════════════════════════════════════════════════════════
 
