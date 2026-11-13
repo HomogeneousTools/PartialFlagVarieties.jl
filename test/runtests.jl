@@ -3265,6 +3265,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_restriction_surjective(Z, structure_sheaf(X)) === false
     @test is_restriction_surjective(Z, zero_bundle(X)) === true
 
+    # The source and target both have dimension four, but the cubic
+    # summand has a two-dimensional restriction kernel. Counting source
+    # sections alone cannot detect this failure of interpolation.
+    F = line_bundle(X, 3) ⊕ line_bundle(X, -1)
+    @test is_restriction_surjective(Z, F) === false
+
     # Rank–nullity proves failure even though the ambient H¹ is nonzero.
     point = zero_locus(line_bundle(X, 1))
     @test is_restriction_surjective(point, line_bundle(X, -2)) === false
