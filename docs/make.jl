@@ -29,7 +29,7 @@ makedocs(;
       "UniversalBundles" => "api/universal_bundles.md",
       "Cohomology" => "api/cohomology.md",
       "Projections" => "api/projections.md",
-      "Hodge & Hochschild" => "api/hodge.md",
+      "Hodge, Betti & Hochschild" => "api/hodge.md",
       "ZeroLoci" => "api/zero_loci.md",
       "Koszul Algebra" => "api/koszul.md",
       "Constructions" => "api/constructions.md",

@@ -59,12 +59,11 @@ function hodge_numbers(X::PartialFlagVariety)
   betti = betti_numbers(X)
 
   # For G/P: h^{p,q} = δ_{p,q} * b_{2p}
-  # betti_numbers returns only even Betti numbers: betti[p] = b_{2p}
-  H = zeros(BigInt, d + 1, d + 1)
-  for p in 0:min(d, length(betti) - 1)
-    H[p + 1, p + 1] = betti[p]
+  H = OffsetMatrix(zeros(BigInt, d + 1, d + 1), 0:d, 0:d)
+  for p in 0:d
+    H[p, p] = betti[2 * p]
   end
-  OffsetArray(H, -1, -1)
+  H
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -123,7 +122,7 @@ function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBund
   rank(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
   d = dimension(X)
   H = _filtered_hodge_matrix(d, p -> tensor_product(_filtered_cotangent_power(X, p), L))
-  OffsetArray(_collapse_determined(H), -1, -1)
+  OffsetMatrix(_collapse_determined(H), -1, -1)
 end
 
 function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
@@ -401,7 +400,7 @@ function hodge_numbers(Z::ZeroLocus)
   if n_factors(Z) >= 2
     diamonds = map(hodge_numbers, factors(Z))
     all(diamond -> all(is_determined, diamond), diamonds) &&
-      return OffsetArray(_kunneth_bigraded(parent.(diamonds)), -1, -1)
+      return OffsetMatrix(_kunneth_bigraded(parent.(diamonds)), -1, -1)
   end
 
   d = dimension(Z)
@@ -425,7 +424,7 @@ function hodge_numbers(Z::ZeroLocus)
   # to the zero diamond explicitly (matching hochschild_cohomology, which already
   # returns the zero parallelogram for an empty zero locus).
   if is_determined(M[1, 1]) && M[1, 1].constant == 0
-    return OffsetArray(fill(AffineExpr(0), d + 1, d + 1), -1, -1)
+    return OffsetMatrix(fill(AffineExpr(0), d + 1, d + 1), -1, -1)
   end
 
   # The Lefschetz hyperplane theorem can pin down entries the long exact
@@ -439,7 +438,37 @@ function hodge_numbers(Z::ZeroLocus)
     M[p + 1, q + 1] = M[d - p + 1, d - q + 1]
   end
 
-  OffsetArray(_renumber_variables!(M), -1, -1)
+  OffsetMatrix(_renumber_variables!(M), -1, -1)
+end
+
+"""
+    betti_numbers(Z::ZeroLocus) -> OffsetVector{AffineExpr}
+
+Return the Betti numbers ``b_k(Z) = \\dim \\mathrm{H}^k(Z, \\mathbb{Q})``
+in all degrees, indexed by `0:2*dimension(Z)`.
+
+Sum the entries of [`hodge_numbers`](@ref) with total degree ``k``:
+``b_k(Z) = \\sum_{p+q=k} \\mathrm{h}^{p,q}(Z)``.
+Entries are [`AffineExpr`](@ref)s, retaining any unresolved parameters.
+As for Hodge numbers, this assumes a smooth zero locus of a regular section.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(4), 3));
+
+julia> b = betti_numbers(Z);
+
+julia> b[3]
+10
+```
+"""
+function betti_numbers(Z::ZeroLocus)
+  H = hodge_numbers(Z)
+  d = dimension(Z)
+  b = [sum(H[p, k - p] for p in max(0, k - d):min(d, k)) for k in 0:(2 * d)]
+  OffsetVector(b, -1)
 end
 
 """
@@ -963,7 +992,7 @@ function twisted_hodge_numbers(
   Z::ZeroLocus, L::CompletelyReducibleBundle
 )
   M = _twisted_hodge_symbolic(Z, L, Ref(0))
-  OffsetArray(_renumber_variables!(M), -1, -1)
+  OffsetMatrix(_renumber_variables!(M), -1, -1)
 end
 
 """

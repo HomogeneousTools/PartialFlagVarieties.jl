@@ -37,6 +37,7 @@ const BATCH_SIZE = parse(
 
 @everywhere begin
   using PartialFlagVarieties
+  using OffsetArrays: OffsetMatrix
   using JSON
 
   const WORKER_GC_EVERY = parse(Int, get(ENV, "FANO4_WORKER_GC_EVERY", "16"))
@@ -236,14 +237,11 @@ const BATCH_SIZE = parse(
   Fills by Serre duality h^{p,q} = h^{d-p,d-q} for d=4.
   """
   function parse_reference_hodge(hodge_data::Vector)
-    H = Matrix{AffineExpr}(undef, 5, 5)
-    for i in eachindex(H)
-      H[i] = AffineExpr(0)
-    end
-    known = falses(5, 5)
+    H = OffsetMatrix(fill(AffineExpr(0), 5, 5), 0:4, 0:4)
+    known = OffsetMatrix(falses(5, 5), 0:4, 0:4)
 
-    for (q, row) in enumerate(hodge_data)
-      for (p, val) in enumerate(row)
+    for (q, row) in zip(Iterators.countfrom(0), hodge_data)
+      for (p, val) in zip(Iterators.countfrom(0), row)
         H[p, q] = parse_hodge_value(val)
         known[p, q] = true
       end
@@ -251,11 +249,9 @@ const BATCH_SIZE = parse(
 
     # Fill by Serre duality: h^{p,q} = h^{d-p,d-q}
     for p in 0:4, q in 0:4
-      pi, qi = p + 1, q + 1
-      sp, sq = 4 - p + 1, 4 - q + 1
-      if !known[pi, qi] && sp >= 1 && sq >= 1 && known[sp, sq]
-        H[pi, qi] = H[sp, sq]
-        known[pi, qi] = true
+      if !known[p, q] && known[4 - p, 4 - q]
+        H[p, q] = H[4 - p, 4 - q]
+        known[p, q] = true
       end
     end
 
@@ -309,7 +305,7 @@ const BATCH_SIZE = parse(
   Returns `(matches, mapping)`.
   """
   function find_variable_mapping(
-    computed::Matrix{AffineExpr}, reference::Matrix{AffineExpr}
+    computed::AbstractMatrix{AffineExpr}, reference::AbstractMatrix{AffineExpr}
   )
     c_var_set = Set{Int}()
     r_var_set = Set{Int}()
@@ -390,15 +386,7 @@ const BATCH_SIZE = parse(
   function ambient_hodge_numbers(X)
     d = dimension(X)
     d == 4 || error("ambient dimension $d != 4")
-    betti = betti_numbers(X)
-    H = Matrix{AffineExpr}(undef, 5, 5)
-    for i in eachindex(H)
-      H[i] = AffineExpr(0)
-    end
-    for p in 0:4
-      H[p + 1, p + 1] = AffineExpr(betti[p])
-    end
-    H
+    AffineExpr.(hodge_numbers(X))
   end
 
   # =============================================================================
@@ -452,8 +440,7 @@ const BATCH_SIZE = parse(
     Z = zero_locus(E)
 
     t_hodge = time_ns()
-    # The reference data uses ordinary one-based matrices.
-    H = parent(hodge_numbers_symbolic(Z))
+    H = hodge_numbers_symbolic(Z)
     hodge_elapsed = (time_ns() - t_hodge) / 1e9
 
     polyvector = maybe_compute_polyvector(Z)
@@ -492,13 +479,13 @@ end  # @everywhere
 #  Pretty-print helpers
 # =============================================================================
 
-function format_hodge_matrix(H::Matrix{AffineExpr})
+function format_hodge_matrix(H::AbstractMatrix{AffineExpr})
   d = size(H, 1) - 1
   lines = String[]
   for q in 0:d
     entries = String[]
     for p in 0:d
-      push!(entries, sprint(show, H[p + 1, q + 1]))
+      push!(entries, sprint(show, H[p, q]))
     end
     push!(lines, join(entries, "  "))
   end
