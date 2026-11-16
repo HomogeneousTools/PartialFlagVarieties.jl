@@ -1,6 +1,6 @@
-# Hodge & Hochschild
+# Hodge, Betti & Hochschild
 
-Hodge numbers, twisted Hodge numbers, and Hochschild cohomology.
+Hodge numbers, Betti numbers, twisted Hodge numbers, and Hochschild cohomology.
 
 See the [mathematical background](../math.md#Hochschild-cohomology-of-zero-loci) for a detailed
 description of the algorithm, including why both twisted Hodge matrices ``M_1`` and ``M_2``
@@ -28,6 +28,14 @@ hodge_numbers
 twisted_hodge_numbers
 print_hodge_diamond
 ```
+
+## Betti numbers
+
+[`betti_numbers`](@ref) returns a zero-based vector of all Betti numbers,
+with `b[k]` equal to ``b_k(X)`` for `k` in `0:2*dimension(X)`.
+For a partial flag variety, odd entries vanish.
+For a smooth zero locus, the entries are sums of Hodge numbers with fixed total degree;
+any unresolved parameters are retained as [`AffineExpr`](@ref)s.
 
 ## Hochschild cohomology
 

@@ -276,24 +276,23 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   # ═══════════════════════════════════════════════════════════════════════════
 
   @testset "Betti numbers" begin
-    # ℙⁿ: all Betti numbers = 1
-    @test parent(betti_numbers(projective_space(2))) == [1, 1, 1]
-    @test parent(betti_numbers(projective_space(4))) == [1, 1, 1, 1, 1]
+    # ℙⁿ has one class in each even degree.
+    @test parent(betti_numbers(projective_space(2))) == [1, 0, 1, 0, 1]
+    @test parent(betti_numbers(projective_space(4))) == [1, 0, 1, 0, 1, 0, 1, 0, 1]
 
     b = betti_numbers(Gr(2, 4))
-    @test axes(b) == (0:4,)
+    @test axes(b) == (0:8,)
     @test b[0] == 1
-    @test b[1] == 1
-    @test b[2] == 2
-    @test b[4] == 1
+    @test b[1] == 0
+    @test b[2] == 1
+    @test b[4] == 2
+    @test b[8] == 1
     @test_throws BoundsError b[-1]
-    @test_throws BoundsError b[5]
+    @test_throws BoundsError b[9]
 
-    # Gr(2,4): Betti = 1, 1, 2, 1, 1
-    @test parent(betti_numbers(Gr(2, 4))) == [1, 1, 2, 1, 1]
+    @test parent(betti_numbers(Gr(2, 4))) == [1, 0, 1, 0, 2, 0, 1, 0, 1]
 
-    # Gr(2,5): Betti = 1, 1, 2, 2, 2, 1, 1
-    @test parent(betti_numbers(Gr(2, 5))) == [1, 1, 2, 2, 2, 1, 1]
+    @test parent(betti_numbers(Gr(2, 5))) == [1, 0, 1, 0, 2, 0, 2, 0, 2, 0, 1, 0, 1]
 
     # Sum of Betti = χ
     @test sum(betti_numbers(cayley_plane())) == 27
@@ -979,7 +978,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Projective space" begin
     V = projective_space(4)
     @test dimension(V) == 4
-    @test parent(betti_numbers(V)) == [1, 1, 1, 1, 1]
+    @test parent(betti_numbers(V)) == [1, 0, 1, 0, 1, 0, 1, 0, 1]
   end
 
   @testset "Flag varieties" begin
@@ -2537,6 +2536,45 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test H_tw[0] == AffineExpr(1)
   end
 
+  @testset "ZeroLocus: Betti numbers" begin
+    for (n, degree, expected) in (
+      (2, 3, [1, 2, 1]),
+      (3, 4, [1, 0, 22, 0, 1]),
+      (4, 3, [1, 0, 1, 10, 1, 0, 1]),
+      (4, 5, [1, 0, 1, 204, 1, 0, 1]),
+      (5, 3, [1, 0, 1, 0, 23, 0, 1, 0, 1]),
+    )
+      Z = zero_locus(line_bundle(projective_space(n), degree))
+      b = betti_numbers(Z)
+      @test axes(b) == (0:(2 * dimension(Z)),)
+      @test eltype(b) == AffineExpr
+      @test all(is_determined, b)
+      @test parent(b) == expected
+      @test sum((-1)^k * b[k] for k in axes(b, 1)) == euler_characteristic(Z)
+    end
+
+    points = zero_locus(line_bundle(projective_space(1), 2))
+    b = betti_numbers(points)
+    @test axes(b) == (0:0,)
+    @test b[0] == 2
+    @test_throws BoundsError b[1]
+
+    W = zero_locus(line_bundle(projective_space(4), 3))
+    P1 = zero_locus(zero_bundle(projective_space(1)))
+    @test parent(betti_numbers(product(W, P1))) == [1, 0, 2, 10, 2, 10, 2, 0, 1]
+
+    G = Gr(2, 6)
+    Z = zero_locus(symmetric_power(dual(universal_subbundle(G)), 3))
+    b = betti_numbers(Z)
+    @test !is_determined(b[3])
+    @test b[0] == b[8] == 1
+    @test sum((-1)^k * b[k] for k in axes(b, 1)) == 324
+
+    G = product(projective_space(1), projective_space(5))
+    Z = zero_locus(2 * line_bundle(G, [1, 0]))
+    @test all(is_zero_expr, betti_numbers(Z))
+  end
+
   @testset "ZeroLocus: Hodge numbers (CY3)" begin
     # Quintic CY3: h^{1,1}=1, h^{2,1}=101
     X = projective_space(4)
@@ -3331,7 +3369,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       H = cohomology(exterior_power(Omega, p))
       for q in 0:dimension(X)
         if is_determined(H[q])
-          @test H[q] == (p == q ? betti[p] : 0)
+          @test H[q] == (p == q ? betti[2 * p] : 0)
         end
       end
     end
@@ -3720,7 +3758,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     h = hodge_numbers(zero_locus(line_bundle(X, 1)))
     for p in 0:6, q in 0:6
       p + q < 6 || continue
-      @test h[p, q] == (p == q ? betti[p] : 0)
+      @test h[p, q] == (p == q ? betti[2 * p] : 0)
     end
     @test h[3, 3] == 4
 

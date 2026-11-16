@@ -17,7 +17,7 @@ module PartialFlagVarieties
 
 using Semisimple
 using LRUCache
-using OffsetArrays: OffsetArray
+using OffsetArrays: OffsetMatrix, OffsetVector
 using Preferences
 using PrettyTables
 using StaticArrays
@@ -173,6 +173,7 @@ end
     Z = zero_locus(L)
     euler_characteristic(Z)
     hodge_numbers(Z)
+    betti_numbers(Z)
   end
 end
 
