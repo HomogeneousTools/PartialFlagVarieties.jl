@@ -74,9 +74,9 @@ remaining cohomology groups are uniquely determined.
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> A = Cohomology{BigInt}(BigInt[3, 0, 0], 2);  # H⁰=3, H¹=H²=0
+julia> A = Cohomology{BigInt}(BigInt[3, 0, 0], 2);
 
-julia> B = Cohomology{BigInt}(BigInt[7, 2, 0], 2);  # H⁰=7, H¹=2, H²=0
+julia> B = Cohomology{BigInt}(BigInt[7, 2, 0], 2);
 
 julia> C, exact = solve_ses_cohomology(A, B)
 (H⁰ = 4
@@ -95,9 +95,9 @@ connecting-map rank, the symbolic solver introduces fresh variables.
 ```jldoctest
 julia> using PartialFlagVarieties
 
-julia> A = Cohomology{BigInt}(BigInt[3, 2, 0], 2);  # H⁰=3, H¹=2, H²=0
+julia> A = Cohomology{BigInt}(BigInt[3, 2, 0], 2);
 
-julia> B = Cohomology{BigInt}(BigInt[5, 5, 1], 2);  # H⁰=5, H¹=5, H²=1
+julia> B = Cohomology{BigInt}(BigInt[5, 5, 1], 2);
 
 julia> C, exact = solve_ses_cohomology(A, B)
 (H⁰ = 2
@@ -143,7 +143,7 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> h = hodge_numbers(Z);
 
-julia> h[2, 3]   # h^{1,2}(Z)
+julia> h[1, 2]
 101
 
 julia> all(PartialFlagVarieties.is_determined, h)
@@ -173,13 +173,13 @@ julia> Z = zero_locus(E);  # dim 4
 
 julia> h = hodge_numbers(Z);
 
-julia> h[2, 2]   # h^{1,1}(Z)
+julia> h[1, 1]
 8 + x_0
 
-julia> h[2, 3]   # h^{1,2}(Z)
+julia> h[1, 2]
 x_0
 
-julia> h[3, 3]   # h^{2,2}(Z)
+julia> h[2, 2]
 30 + 2 * x_0
 
 julia> all(PartialFlagVarieties.is_determined, h)

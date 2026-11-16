@@ -76,7 +76,7 @@ julia> dimension(V)
 4
 
 julia> betti_numbers(V)
-5-element Vector{BigInt}:
+5-element OffsetArray(::Vector{BigInt}, 0:4) with eltype BigInt with indices 0:4:
  1
  1
  1
@@ -252,7 +252,7 @@ julia> dimension(V)
 4
 
 julia> betti_numbers(V)
-5-element Vector{BigInt}:
+5-element OffsetArray(::Vector{BigInt}, 0:4) with eltype BigInt with indices 0:4:
  1
  1
  2

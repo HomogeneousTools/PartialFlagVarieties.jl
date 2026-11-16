@@ -67,21 +67,25 @@ inside a function or `let` block — a local binding shadows the function there.
 
 ## Indexing conventions
 
-Two indexing conventions show up repeatedly:
+Cohomological indices start at zero:
 
 1. [`Cohomology`](@ref) objects are **0-indexed**: `H[0]` means ``\mathrm{H}^0``.
-2. Hodge matrices use ordinary Julia matrix indexing, so the entry
-   corresponding to ``(p,q)`` is stored at `[p+1, q+1]`.
+2. Hodge matrices are **0-indexed**: `H[p, q]` means ``\mathrm{h}^{p,q}``.
+   The same convention applies to [`twisted_hodge_numbers`](@ref).
 3. The Hochschild [`PolyvectorParallelogram`](@ref) is **0-indexed**:
    `P[p, q]` is ``\mathrm{h}^q(X, \bigwedge\nolimits^p \mathrm{T}_X)`` and `P[n]` is
    ``\dim \mathrm{HH}^n``.
+4. [`betti_numbers`](@ref) returns a **zero-based** vector containing only even degrees.
+   For `b = betti_numbers(X)`, `b[p]` is ``b_{2p}(X)``, with indices `0:dimension(X)`.
 
 For example:
 
 ```julia
 X = projective_space(2)
+b = betti_numbers(X)
+b[0]
 H = hodge_numbers(X)
-H[2, 2]  # h^{1,1}
+H[1, 1]
 ```
 
 ## Zero-locus assumptions

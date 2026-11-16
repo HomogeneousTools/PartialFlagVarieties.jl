@@ -45,17 +45,17 @@ bundle_sum(E::CompletelyReducibleBundle, F::Vararg{CompletelyReducibleBundle}) =
 
 function hodge_signature(h)
   (
-    h00=h[1, 1],
-    h10=h[2, 1],
-    h20=h[3, 1],
-    h30=h[4, 1],
-    h11=h[2, 2],
-    h21=h[3, 2],
+    h00=h[0, 0],
+    h10=h[1, 0],
+    h20=h[2, 0],
+    h30=h[3, 0],
+    h11=h[1, 1],
+    h21=h[2, 1],
   )
 end
 
 function topological_euler(h)
-  sum((-1)^(p + q) * h[p + 1, q + 1] for p in 0:3, q in 0:3)
+  sum((-1)^(p + q) * h[p, q] for p in 0:3, q in 0:3)
 end
 
 fmt(x) = string(x)

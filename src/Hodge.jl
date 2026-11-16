@@ -24,7 +24,7 @@ export print_hodge_diamond
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    hodge_numbers(X::PartialFlagVariety) -> Matrix{BigInt}
+    hodge_numbers(X::PartialFlagVariety) -> OffsetMatrix{BigInt}
 
 Compute the Hodge numbers ``\\mathrm{h}^{p,q}(X) = \\dim \\mathrm{H}^q(X, \\Omega^p_X)``
 of the partial flag variety ``X = \\mathrm{G}/\\mathrm{P}``.
@@ -33,8 +33,8 @@ Since ``\\mathrm{G}/\\mathrm{P}`` is rational (and simply connected), the Hodge 
 diagonal: ``\\mathrm{h}^{p,q} = 0`` for ``p \\neq q``, and ``\\mathrm{h}^{p,p} = b_{2p}``
 where ``b_i`` are the Betti numbers.
 
-Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^{p,q}``,
-with ``d = \\dim X``.
+Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p, q] = \\mathrm{h}^{p,q}``,
+with ``d = \\dim X`` and both axes indexed by `0:d`.
 
 # Examples
 ```jldoctest
@@ -44,13 +44,13 @@ julia> X = Gr(2, 4);
 
 julia> H = hodge_numbers(X);
 
-julia> H[1, 1]  # h^{0,0}
+julia> H[0, 0]
 1
 
-julia> H[2, 2]  # h^{1,1}
+julia> H[1, 1]
 1
 
-julia> H[1, 2]  # h^{0,1}
+julia> H[0, 1]
 0
 ```
 """
@@ -59,12 +59,12 @@ function hodge_numbers(X::PartialFlagVariety)
   betti = betti_numbers(X)
 
   # For G/P: h^{p,q} = δ_{p,q} * b_{2p}
-  # betti_numbers returns only even Betti numbers: betti[i] = b_{2(i-1)}
+  # betti_numbers returns only even Betti numbers: betti[p] = b_{2p}
   H = zeros(BigInt, d + 1, d + 1)
   for p in 0:min(d, length(betti) - 1)
-    H[p + 1, p + 1] = betti[p + 1]  # betti[p+1] = b_{2p}
+    H[p + 1, p + 1] = betti[p]
   end
-  H
+  OffsetArray(H, -1, -1)
 end
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -72,16 +72,16 @@ end
 # ═══════════════════════════════════════════════════════════════════════════════
 
 """
-    twisted_hodge_numbers(X::PartialFlagVariety, j::Integer) -> Matrix
+    twisted_hodge_numbers(X::PartialFlagVariety, j::Integer) -> OffsetMatrix
 
 Compute the twisted Hodge numbers ``\\mathrm{h}^q(X, \\Omega^p_X(j))`` for the
 twist ``j``.
 
-Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^q(X, \\Omega^p(j))``.
+Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p, q] = \\mathrm{h}^q(X, \\Omega^p(j))``.
 Each entry is computed through the spectral sequence of the filtration on
 ``\\Omega^p_X``, so no ``E_1``-degeneration is assumed: the matrix is
-`Matrix{BigInt}` when every entry is determined (the cominuscule case) and
-`Matrix{`[`AffineExpr`](@ref)`}` when some are symbolic.
+`OffsetMatrix{BigInt}` when every entry is determined (the cominuscule case) and
+`OffsetMatrix{`[`AffineExpr`](@ref)`}` when some are symbolic.
 
 Here `j` means tensoring by the generator of ``\\operatorname{Pic}(X)``. This
 therefore requires ``X`` to have Picard rank 1, equivalently to be a
@@ -95,7 +95,7 @@ julia> X = projective_space(3);
 
 julia> H = twisted_hodge_numbers(X, 0);
 
-julia> H[1, 1]  # h^0(ℙ³, 𝒪)
+julia> H[0, 0]
 1
 ```
 """
@@ -122,9 +122,8 @@ _collapse_determined(H::Matrix{AffineExpr}) =
 function twisted_hodge_numbers(X::PartialFlagVariety, L::CompletelyReducibleBundle)
   rank(L) == 1 || throw(ArgumentError("the twist must be a line bundle"))
   d = dimension(X)
-  _collapse_determined(
-    _filtered_hodge_matrix(d, p -> tensor_product(_filtered_cotangent_power(X, p), L))
-  )
+  H = _filtered_hodge_matrix(d, p -> tensor_product(_filtered_cotangent_power(X, p), L))
+  OffsetArray(_collapse_determined(H), -1, -1)
 end
 
 function twisted_hodge_numbers(X::PartialFlagVariety, j::Integer)
@@ -150,7 +149,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{3}, (1, 3));
 
-julia> twisted_hodge_numbers(X, [1, 1])[1, 1]  # h^0(O(1,1))
+julia> twisted_hodge_numbers(X, [1, 1])[0, 0]
 15
 ```
 """
@@ -293,10 +292,10 @@ julia> X = projective_space(2);
 
 julia> P = hochschild_cohomology(X);
 
-julia> P[0, 0]  # h⁰(𝒪) = 1
+julia> P[0, 0]
 1
 
-julia> P[2, 0]  # h⁰(∧²T) = h⁰(𝒪(3)) for ℙ²
+julia> P[2, 0]  # ∧²T ≅ 𝒪(3) on ℙ²
 10
 ```
 """
@@ -344,7 +343,7 @@ function _kunneth_bigraded(mats)
 end
 
 """
-    hodge_numbers(Z::ZeroLocus) -> Matrix{AffineExpr}
+    hodge_numbers(Z::ZeroLocus) -> OffsetMatrix{AffineExpr}
 
 Compute the Hodge diamond ``\\mathrm{h}^{p,q}(Z)`` for ``p, q = 0, \\ldots, \\dim Z``.
 
@@ -361,7 +360,7 @@ Lefschetz hyperplane theorem when the defining bundle splits off an ample
 line bundle (see [`_lefschetz_inject!`](@ref)); the remaining rows follow
 by Serre duality.
 
-Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p+1, q+1] = \\mathrm{h}^{p,q}``.
+Returns a ``(d+1) \\times (d+1)`` matrix where entry ``[p, q] = \\mathrm{h}^{p,q}``.
 Entries that are fully determined are plain integers (wrapped in `AffineExpr`);
 entries that cannot be resolved from the available constraints contain
 symbolic variables.
@@ -389,10 +388,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> h = hodge_numbers(Z);
 
-julia> h[2, 2]  # h^{1,1}
+julia> h[1, 1]
 1
 
-julia> h[3, 2]  # h^{2,1}
+julia> h[2, 1]
 101
 ```
 """
@@ -402,7 +401,7 @@ function hodge_numbers(Z::ZeroLocus)
   if n_factors(Z) >= 2
     diamonds = map(hodge_numbers, factors(Z))
     all(diamond -> all(is_determined, diamond), diamonds) &&
-      return _kunneth_bigraded(diamonds)
+      return OffsetArray(_kunneth_bigraded(parent.(diamonds)), -1, -1)
   end
 
   d = dimension(Z)
@@ -426,7 +425,7 @@ function hodge_numbers(Z::ZeroLocus)
   # to the zero diamond explicitly (matching hochschild_cohomology, which already
   # returns the zero parallelogram for an empty zero locus).
   if is_determined(M[1, 1]) && M[1, 1].constant == 0
-    return fill(AffineExpr(0), d + 1, d + 1)
+    return OffsetArray(fill(AffineExpr(0), d + 1, d + 1), -1, -1)
   end
 
   # The Lefschetz hyperplane theorem can pin down entries the long exact
@@ -440,11 +439,11 @@ function hodge_numbers(Z::ZeroLocus)
     M[p + 1, q + 1] = M[d - p + 1, d - q + 1]
   end
 
-  _renumber_variables!(M)
+  OffsetArray(_renumber_variables!(M), -1, -1)
 end
 
 """
-    hodge_numbers_symbolic(Z::ZeroLocus) -> Matrix{AffineExpr}
+    hodge_numbers_symbolic(Z::ZeroLocus) -> OffsetMatrix{AffineExpr}
 
 Symbolic version of `hodge_numbers`. When the long exact sequence does
 not uniquely determine a Hodge number, the entry is an `AffineExpr`
@@ -473,13 +472,13 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> H = hodge_numbers_symbolic(Z);
 
-julia> is_determined(H[2, 2])  # h^{1,1} fully determined
+julia> is_determined(H[1, 1])
 true
 
-julia> H[2, 2].constant
+julia> H[1, 1].constant
 1
 
-julia> H[3, 2].constant  # h^{2,1}
+julia> H[2, 1].constant
 101
 ```
 
@@ -494,20 +493,20 @@ julia> Z = zero_locus(E);
 
 julia> H = hodge_numbers_symbolic(Z);
 
-julia> all(is_determined(H[p+1, q+1]) for p in 0:4, q in 0:4)
+julia> all(is_determined(H[p, q]) for p in 0:4, q in 0:4)
 true
 
-julia> H[2, 2].constant  # h^{1,1}
+julia> H[1, 1].constant
 1
 
-julia> H[3, 3].constant  # h^{2,2}
+julia> H[2, 2].constant
 8
 ```
 """
 hodge_numbers_symbolic(Z::ZeroLocus) = hodge_numbers(Z)
 
 """
-    hodge_numbers_les(Z::ZeroLocus) -> Matrix{AffineExpr}
+    hodge_numbers_les(Z::ZeroLocus) -> OffsetMatrix{AffineExpr}
 
 Synonym of [`hodge_numbers`](@ref), kept for backwards compatibility.
 """
@@ -826,7 +825,7 @@ julia> E = tensor_product(dual(universal_quotient_bundle(X)), line_bundle(X, 1))
 
 julia> h = hodge_numbers(zero_locus(direct_sum(E, line_bundle(X, 1))));
 
-julia> h[3, 3]
+julia> h[2, 2]
 3
 ```
 """
@@ -856,7 +855,7 @@ function _lefschetz_inject!(M::Matrix{AffineExpr}, Z::ZeroLocus)
   changed = false
   for p in 0:half, q in 0:d
     p + q < d || continue
-    v = H[p + 1, q + 1]
+    v = H[p, q]
     v isa AffineExpr && !is_determined(v) && continue
     val = v isa AffineExpr ? v.constant : BigInt(v)
     changed |= _inject_exact!(M, p + 1, q + 1, val)
@@ -925,7 +924,7 @@ function _twisted_hodge_symbolic(
 end
 
 """
-    twisted_hodge_numbers(Z::ZeroLocus, L::CompletelyReducibleBundle) -> Matrix{AffineExpr}
+    twisted_hodge_numbers(Z::ZeroLocus, L::CompletelyReducibleBundle) -> OffsetMatrix{AffineExpr}
 
 Compute the twisted Hodge numbers ``\\mathrm{h}^q(Z, \\Omega^p_Z \\otimes \\mathcal{L}|_Z)``
 for the zero locus ``Z = Z(s) \\subset X = \\mathrm{G}/\\mathrm{P}`` and a line bundle ``\\mathcal{L}``
@@ -936,8 +935,8 @@ from the ambient variety, computes each piece via the Koszul resolution,
 and chains the results symbolically.
 
 Returns a ``(d+1) \\times (d+1)`` matrix of `AffineExpr` entries where
-``d = \\dim Z`` and entry ``[p+1, q+1] = \\mathrm{h}^q(Z, \\Omega^p_Z \\otimes \\mathcal{L}|_Z)``.
-Fully determined entries display as integers; use `is_determined(M[p+1,q+1])`
+``d = \\dim Z`` and entry ``[p, q] = \\mathrm{h}^q(Z, \\Omega^p_Z \\otimes \\mathcal{L}|_Z)``.
+Fully determined entries display as integers; use `is_determined(M[p,q])`
 to check.
 
 The bundle `L` is given on the ambient variety; the computation is for its
@@ -953,10 +952,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> M = twisted_hodge_numbers(Z, structure_sheaf(X));
 
-julia> M[1, 1]  # h^0(Z, 𝒪_Z) = 1
+julia> M[0, 0]
 1
 
-julia> M[4, 1]  # h^0(Z, Ω³_Z) = h^{3,0} = 1 (CY3)
+julia> M[3, 0]
 1
 ```
 """
@@ -964,11 +963,11 @@ function twisted_hodge_numbers(
   Z::ZeroLocus, L::CompletelyReducibleBundle
 )
   M = _twisted_hodge_symbolic(Z, L, Ref(0))
-  _renumber_variables!(M)
+  OffsetArray(_renumber_variables!(M), -1, -1)
 end
 
 """
-    twisted_hodge_numbers(Z::ZeroLocus, j::Integer) -> Matrix{AffineExpr}
+    twisted_hodge_numbers(Z::ZeroLocus, j::Integer) -> OffsetMatrix{AffineExpr}
 
 Compute the twisted Hodge numbers ``\\mathrm{h}^q(Z, \\Omega^p_Z(j))`` where the
 twist is by ``\\mathcal{O}_X(j)|_Z``.
@@ -987,10 +986,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> M = twisted_hodge_numbers(Z, 0);
 
-julia> M[1, 1]  # h^0(Z, 𝒪_Z) = 1
+julia> M[0, 0]
 1
 
-julia> M[2, 2]  # h^1(Z, Ω¹_Z) = h^{1,1} = 1
+julia> M[1, 1]
 1
 ```
 """
@@ -1047,10 +1046,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> P = hochschild_cohomology(Z);
 
-julia> P[0, 0]  # h⁰(𝒪_Z) = 1
+julia> P[0, 0]
 1
 
-julia> P[3, 0]  # h⁰(∧³T_Z) = h⁰(ω_Z⁻¹) = 1 (CY3)
+julia> P[3, 0]
 1
 ```
 """
@@ -1197,11 +1196,13 @@ const _DIAMOND_FMT = TextTableFormat(;
 )
 
 """
-    print_hodge_diamond([io::IO,] h::Matrix)
+    print_hodge_diamond([io::IO,] h::AbstractMatrix)
 
 Print a centred ASCII Hodge diamond for a variety of arbitrary dimension.
 
-`h[p+1, q+1] = \\mathrm{h}^{p,q}` (1-based matrix indexing). The diamond is centred
+`h[p, q] = \\mathrm{h}^{p,q}` for a zero-based Hodge matrix.
+Ordinary one-based matrices are also accepted, with the entry at `[p+1, q+1]`.
+The diamond is centred
 using PrettyTables so that each column is as wide as its largest entry,
 giving exact alignment regardless of digit count.
 
@@ -1225,13 +1226,13 @@ julia> print_hodge_diamond(stdout, hodge_numbers(Z));  # K3 of degree 14 in P^5
        1
 ```
 """
-function print_hodge_diamond(io::IO, h::Matrix)
+function print_hodge_diamond(io::IO, h::AbstractMatrix)
   d = size(h, 1) - 1
   sz = 2 * d + 1
 
   cells = fill("", sz, sz)
   for p in 0:d, q in 0:d
-    cells[p + q + 1, p - q + d + 1] = string(h[p + 1, q + 1])
+    cells[p + q + 1, p - q + d + 1] = string(h[p + firstindex(h, 1), q + firstindex(h, 2)])
   end
 
   pretty_table(io, cells;
@@ -1241,4 +1242,4 @@ function print_hodge_diamond(io::IO, h::Matrix)
   )
 end
 
-print_hodge_diamond(h::Matrix) = print_hodge_diamond(stdout, h)
+print_hodge_diamond(h::AbstractMatrix) = print_hodge_diamond(stdout, h)

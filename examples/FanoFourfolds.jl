@@ -396,7 +396,7 @@ const BATCH_SIZE = parse(
       H[i] = AffineExpr(0)
     end
     for p in 0:4
-      H[p + 1, p + 1] = AffineExpr(betti[p + 1])
+      H[p + 1, p + 1] = AffineExpr(betti[p])
     end
     H
   end
@@ -452,7 +452,8 @@ const BATCH_SIZE = parse(
     Z = zero_locus(E)
 
     t_hodge = time_ns()
-    H = hodge_numbers_symbolic(Z)
+    # The reference data uses ordinary one-based matrices.
+    H = parent(hodge_numbers_symbolic(Z))
     hodge_elapsed = (time_ns() - t_hodge) / 1e9
 
     polyvector = maybe_compute_polyvector(Z)

@@ -16,6 +16,13 @@ There are two rather different regimes:
 
 ## Hodge numbers
 
+Both `hodge_numbers(X)` and `twisted_hodge_numbers(X, L)` return an
+`OffsetArrays.OffsetMatrix` with axes `0:dimension(X)` in both directions.
+Thus `H[p, q]` is the Hodge number with indices `(p, q)`.
+The aliases `hodge_numbers_symbolic` and `hodge_numbers_les` use the same convention.
+
+Use `parent(H)` to access the underlying ordinary one-based matrix.
+
 ```@docs
 hodge_numbers
 twisted_hodge_numbers

@@ -801,7 +801,8 @@ function process_entry(entry::QuiverEntry)
 
     Z = zero_locus(E)
 
-    hodge = hodge_numbers_symbolic(Z)
+    # The reference data uses ordinary one-based matrices.
+    hodge = parent(hodge_numbers_symbolic(Z))
 
     h0_aK = compute_h0_antiK(Z, X, E)
     aK4 = compute_antiK_fourth(Z, X, E)

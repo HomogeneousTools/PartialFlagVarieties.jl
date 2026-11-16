@@ -696,12 +696,12 @@ julia> K = canonical_bundle(X);
 julia> rank(K)
 1
 
-julia> cohomology(K)[1]  # H¹(ℙ¹, 𝒪(-2)) = 1
+julia> cohomology(K)[1]
 1
 
 julia> K2 = canonical_bundle(projective_space(4));
 
-julia> cohomology(K2)[4]  # H⁴(ℙ⁴, 𝒪(-5)) = 1
+julia> cohomology(K2)[4]
 1
 ```
 """
@@ -735,12 +735,12 @@ julia> L = anticanonical_bundle(X);
 julia> rank(L)
 1
 
-julia> cohomology(L)[0]  # H⁰(ℙ¹, 𝒪(2)) = 3
+julia> cohomology(L)[0]
 3
 
 julia> L2 = anticanonical_bundle(projective_space(4));
 
-julia> cohomology(L2)[0]  # H⁰(ℙ⁴, 𝒪(5)) = 126
+julia> cohomology(L2)[0]
 126
 ```
 """

@@ -53,7 +53,7 @@ struct SectionRecord
   d::Int
   χ::BigInt
   fano_idx::Int          # -999 = not defined (d==0) or not computed
-  hodge::Union{Nothing,Matrix}
+  hodge::Union{Nothing,AbstractMatrix}
   note::String
 end
 
@@ -81,7 +81,7 @@ function hodge_desc(r::SectionRecord)
   hh === nothing && return "(dim $(r.d), not computed)"
   parts = String[]
   for p in 0:d, q in 0:d
-    v = hh[p + 1, q + 1]
+    v = hh[p, q]
     if (p, q) == (0, 0) || (p, q) == (d, d)
       continue   # structural 1s
     end

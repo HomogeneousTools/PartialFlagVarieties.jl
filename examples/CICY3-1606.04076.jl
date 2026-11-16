@@ -187,8 +187,8 @@ function search_cy3(X::PartialFlagVariety, name::String, results::Vector{CY3Resu
     h21 = nothing
     try
       h = hodge_numbers(Z)
-      h11 = h[2, 2]  # h^{1,1}
-      h21 = h[2, 3]  # h^{1,2} = h^{2,1}
+      h11 = h[1, 1]  # h^{1,1}
+      h21 = h[1, 2]  # h^{1,2} = h^{2,1}
     catch e
       println("    (Hodge failed for $E: $(sprint(showerror, e)))")
     end
