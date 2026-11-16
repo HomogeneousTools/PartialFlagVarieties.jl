@@ -62,12 +62,12 @@ println("Hodge diamond of F(cubic fourfold) in Gr(2,6) (d = 4):")
 print_hodge_diamond(stdout, H1)
 println()
 
-@assert H1[1, 1] == 1 "h^{0,0} ≠ 1"
-@assert H1[3, 1] == 1 "h^{2,0} ≠ 1 (the holomorphic symplectic form)"
-@assert H1[2, 1] == 0 "h^{1,0} ≠ 0"
+@assert H1[0, 0] == 1 "h^{0,0} ≠ 1"
+@assert H1[2, 0] == 1 "h^{2,0} ≠ 1 (the holomorphic symplectic form)"
+@assert H1[1, 0] == 0 "h^{1,0} ≠ 0"
 # Parameter-free consequences matching h^{1,1} = h^{1,3} = 21, h^{2,2} = 232:
-@assert H1[3, 3] - 2 * H1[3, 2] == AffineExpr(232) "h^{2,2} - 2h^{2,1} ≠ 232"
-@assert H1[2, 2] - H1[2, 3] + H1[2, 4] == AffineExpr(42) "h^{1,1} - h^{1,2} + h^{1,3} ≠ 42"
+@assert H1[2, 2] - 2 * H1[2, 1] == AffineExpr(232) "h^{2,2} - 2h^{2,1} ≠ 232"
+@assert H1[1, 1] - H1[1, 2] + H1[1, 3] == AffineExpr(42) "h^{1,1} - h^{1,2} + h^{1,3} ≠ 42"
 
 # ─── 2. Debarre–Voisin variety ────────────────────────────────────────────────
 
@@ -86,11 +86,11 @@ println("Hodge diamond of Debarre–Voisin variety in Gr(6,10) (d = 4):")
 print_hodge_diamond(stdout, H2)
 println()
 
-@assert H2[1, 1] == 1 "h^{0,0} ≠ 1"
-@assert H2[3, 1] == 1 "h^{2,0} ≠ 1 (the holomorphic symplectic form)"
-@assert H2[2, 1] == 0 "h^{1,0} ≠ 0"
-@assert H2[3, 3] - 2 * H2[3, 2] == AffineExpr(232) "h^{2,2} - 2h^{2,1} ≠ 232"
-@assert H2[2, 2] - H2[2, 3] + H2[2, 4] == AffineExpr(42) "h^{1,1} - h^{1,2} + h^{1,3} ≠ 42"
+@assert H2[0, 0] == 1 "h^{0,0} ≠ 1"
+@assert H2[2, 0] == 1 "h^{2,0} ≠ 1 (the holomorphic symplectic form)"
+@assert H2[1, 0] == 0 "h^{1,0} ≠ 0"
+@assert H2[2, 2] - 2 * H2[2, 1] == AffineExpr(232) "h^{2,2} - 2h^{2,1} ≠ 232"
+@assert H2[1, 1] - H2[1, 2] + H2[1, 3] == AffineExpr(42) "h^{1,1} - h^{1,2} + h^{1,3} ≠ 42"
 
 # ─── Comparison ──────────────────────────────────────────────────────────────
 
