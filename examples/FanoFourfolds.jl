@@ -240,10 +240,10 @@ const BATCH_SIZE = parse(
     H = OffsetMatrix(fill(AffineExpr(0), 5, 5), 0:4, 0:4)
     known = OffsetMatrix(falses(5, 5), 0:4, 0:4)
 
-    for (q, row) in zip(Iterators.countfrom(0), hodge_data)
-      for (p, val) in zip(Iterators.countfrom(0), row)
-        H[p, q] = parse_hodge_value(val)
-        known[p, q] = true
+    for (q, row) in enumerate(hodge_data)
+      for (p, val) in enumerate(row)
+        H[p - 1, q - 1] = parse_hodge_value(val)
+        known[p - 1, q - 1] = true
       end
     end
 
