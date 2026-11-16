@@ -145,7 +145,7 @@ end
 struct Result
   v::Variety
   Z::ZeroLocus
-  hodge::Matrix{AffineExpr}
+  hodge::AbstractMatrix{AffineExpr}
   h1_TX::BigInt              # h¹(Z, T_{G/P}|_Z),  for rigidity
   h1_E::BigInt               # h¹(Z, E|_Z),        for rigidity
   hodge_seconds::Float64
@@ -174,13 +174,13 @@ is_rigid(r::Result) = r.h1_TX == 0 && r.h1_E == 0
 
 fmt(e::AffineExpr) = is_determined(e) ? string(Int(e.constant)) : string(e)
 
-diagonal(H::Matrix{AffineExpr}) = [H[p + 1, p + 1] for p in 0:(size(H, 1) - 1)]
+diagonal(H::AbstractMatrix{AffineExpr}) = [H[p, p] for p in 0:(size(H, 1) - 1)]
 
-function off_diagonal_nonzero(H::Matrix{AffineExpr})
+function off_diagonal_nonzero(H::AbstractMatrix{AffineExpr})
   d = size(H, 1) - 1
   [
-    (p, q, H[p + 1, q + 1]) for p in 0:d for q in 0:d
-    if p != q && !is_zero_expr(H[p + 1, q + 1])
+    (p, q, H[p, q]) for p in 0:d for q in 0:d
+                                     if p != q && !is_zero_expr(H[p, q])
   ]
 end
 
@@ -193,7 +193,7 @@ function free_parameters(H::AbstractMatrix{AffineExpr})
 end
 
 # Print the Hodge diamond at any width by using a wide IOContext.
-print_diamond_wide(io::IO, H::Matrix{AffineExpr}) =
+print_diamond_wide(io::IO, H::AbstractMatrix{AffineExpr}) =
   print_hodge_diamond(IOContext(io, :displaysize => (10_000, 10_000)), H)
 
 # ───────────────────────────────────────────────────────────────────────────────

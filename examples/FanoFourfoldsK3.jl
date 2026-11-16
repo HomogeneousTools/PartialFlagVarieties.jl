@@ -682,7 +682,8 @@ function compute_family(spec::FamilySpec, description::String, db)
   end
 
   Z = zero_locus(E)
-  Hsym = hodge_numbers_symbolic(Z)
+  # The reference data uses ordinary one-based matrices.
+  Hsym = parent(hodge_numbers_symbolic(Z))
   exprs = matrix_entry_exprs(Hsym)
 
   if all_relevant_determined(exprs)

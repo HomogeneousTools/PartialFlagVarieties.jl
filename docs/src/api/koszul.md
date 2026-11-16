@@ -143,7 +143,7 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> h = hodge_numbers(Z);
 
-julia> h[2, 3]   # h^{1,2}(Z)
+julia> h[1, 2]   # h^{1,2}(Z)
 101
 
 julia> all(PartialFlagVarieties.is_determined, h)
@@ -173,13 +173,13 @@ julia> Z = zero_locus(E);  # dim 4
 
 julia> h = hodge_numbers(Z);
 
-julia> h[2, 2]   # h^{1,1}(Z)
+julia> h[1, 1]   # h^{1,1}(Z)
 8 + x_0
 
-julia> h[2, 3]   # h^{1,2}(Z)
+julia> h[1, 2]   # h^{1,2}(Z)
 x_0
 
-julia> h[3, 3]   # h^{2,2}(Z)
+julia> h[2, 2]   # h^{2,2}(Z)
 30 + 2 * x_0
 
 julia> all(PartialFlagVarieties.is_determined, h)

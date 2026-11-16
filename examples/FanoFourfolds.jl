@@ -452,7 +452,8 @@ const BATCH_SIZE = parse(
     Z = zero_locus(E)
 
     t_hodge = time_ns()
-    H = hodge_numbers_symbolic(Z)
+    # The reference data uses ordinary one-based matrices.
+    H = parent(hodge_numbers_symbolic(Z))
     hodge_elapsed = (time_ns() - t_hodge) / 1e9
 
     polyvector = maybe_compute_polyvector(Z)

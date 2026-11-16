@@ -212,12 +212,12 @@ function compute_family(label, k, n, weights, desc)
   try
     hm = hodge_numbers(Z)
     # χ_top = Σ_{p,q} (-1)^{p+q} h^{p,q}
-    chi = sum((-1)^(p + q) * hm[p + 1, q + 1] for p in 0:4, q in 0:4)
-    β2 = hm[2, 2]                    # h^{1,1}
-    β3 = hm[3, 2] + hm[2, 3]        # h^{2,1} + h^{1,2} = 2 h^{2,1}
-    h11 = hm[2, 2]                   # h^{1,1}
-    h22 = hm[3, 3]                   # h^{2,2}
-    h13 = hm[2, 4]                   # h^{1,3}
+    chi = sum((-1)^(p + q) * hm[p, q] for p in 0:4, q in 0:4)
+    β2 = hm[1, 1]                    # h^{1,1}
+    β3 = hm[2, 1] + hm[1, 2]        # h^{2,1} + h^{1,2} = 2 h^{2,1}
+    h11 = hm[1, 1]                   # h^{1,1}
+    h22 = hm[2, 2]                   # h^{2,2}
+    h13 = hm[1, 3]                   # h^{1,3}
   catch e
     @warn "  $label Hodge failed: $(sprint(showerror, e))"
   end

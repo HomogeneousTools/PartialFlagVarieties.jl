@@ -177,7 +177,7 @@ const GP_FANO3 = [
 """
 Print a Hodge diamond for a threefold in the traditional centered layout.
 
-h[p+1, q+1] = h^{p,q}.  Within each anti-diagonal n = p+q, entries are
+h[p, q] = h^{p,q}.  Within each anti-diagonal n = p+q, entries are
 printed with p decreasing (h^{n,0} on the left, h^{0,n} on the right).
 Rows are indented by `ceil((w+1)/2)` characters per step from the widest
 row, so the diamond is visually centred.
@@ -235,10 +235,10 @@ function main()
     tdata[i, 1] = r.label
     tdata[i, 2] = r.desc
     tdata[i, 3] = r.χ
-    tdata[i, 4] = h[2, 2]   # h^{1,1}
-    tdata[i, 5] = h[2, 3]   # h^{1,2}
-    tdata[i, 6] = h[3, 2]   # h^{2,1}
-    tdata[i, 7] = h[3, 3]   # h^{2,2}
+    tdata[i, 4] = h[1, 1]   # h^{1,1}
+    tdata[i, 5] = h[1, 2]   # h^{1,2}
+    tdata[i, 6] = h[2, 1]   # h^{2,1}
+    tdata[i, 7] = h[2, 2]   # h^{2,2}
   end
   pretty_table(tdata;
     column_labels=header,
