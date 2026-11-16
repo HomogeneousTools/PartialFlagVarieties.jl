@@ -1773,6 +1773,15 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test occursin("0", lines1[2])
     @test occursin("1", lines1[end])
 
+    # The one-argument form writes the same diamond to stdout.
+    mktemp() do _, io
+      redirect_stdout(io) do
+        print_hodge_diamond(hodge_numbers(projective_space(1)))
+      end
+      seekstart(io)
+      @test read(io, String) == out1
+    end
+
     # Gr(2,4): 9 rows; h^{2,2} = b_4 = 2 sits on the middle row.
     out_gr = sprint(print_hodge_diamond, hodge_numbers(Gr(2, 4)))
     lines_gr = filter(!isempty, split(out_gr, '\n'))
