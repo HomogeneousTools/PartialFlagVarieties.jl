@@ -83,7 +83,7 @@ For example:
 ```julia
 X = projective_space(2)
 H = hodge_numbers(X)
-H[1, 1]  # h^{1,1}
+H[1, 1]
 ```
 
 ## Zero-locus assumptions

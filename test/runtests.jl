@@ -280,7 +280,6 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test parent(betti_numbers(projective_space(2))) == [1, 1, 1]
     @test parent(betti_numbers(projective_space(4))) == [1, 1, 1, 1, 1]
 
-    # The zero-based index p records b_{2p}; odd degrees remain omitted.
     b = betti_numbers(Gr(2, 4))
     @test axes(b) == (0:4,)
     @test b[0] == 1
@@ -801,7 +800,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # canonical ⊗ anticanonical = structure sheaf (trivial bundle)
     X = projective_space(2)
     product_bundle = canonical_bundle(X) ⊗ anticanonical_bundle(X)
-    @test cohomology(product_bundle)[0] == 1  # H^0(O) = 1
+    @test cohomology(product_bundle)[0] == 1
   end
 
   @testset "Fano index: ambient varieties" begin
@@ -1698,20 +1697,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # ℙ^3: diagonal Hodge diamond
     X = projective_space(3)
     h = hodge_numbers(X)
-    @test h[0, 0] == 1  # h^{0,0}
-    @test h[1, 1] == 1  # h^{1,1}
-    @test h[2, 2] == 1  # h^{2,2}
-    @test h[3, 3] == 1  # h^{3,3}
-    @test h[0, 1] == 0  # h^{0,1}
-    @test h[1, 0] == 0  # h^{1,0}
+    @test h[0, 0] == 1
+    @test h[1, 1] == 1
+    @test h[2, 2] == 1
+    @test h[3, 3] == 1
+    @test h[0, 1] == 0
+    @test h[1, 0] == 0
 
     # Gr(2, 4): b₀=1, b₂=1, b₄=2, b₆=1, b₈=1
     #           h^{p,q} = 0 for p ≠ q, h^{p,p} = b_{2p}
     X2 = Gr(2, 4)
     h2 = hodge_numbers(X2)
-    @test h2[0, 0] == 1  # h^{0,0} = b₀ = 1
-    @test h2[1, 1] == 1  # h^{1,1} = b₂ = 1
-    @test h2[2, 2] == 2  # h^{2,2} = b₄ = 2
+    @test h2[0, 0] == 1
+    @test h2[1, 1] == 1
+    @test h2[2, 2] == 2
     @test h2[0, 2] == 0
   end
 
@@ -1768,10 +1767,10 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # ℙ³, twist 0: h^q(Ω^p) for p ≠ q is 0
     X = projective_space(3)
     H0 = twisted_hodge_numbers(X, 0)
-    @test H0[0, 0] == 1  # h^0(𝒪)
-    @test H0[1, 1] == 1  # h^1(Ω^1)
-    @test H0[2, 2] == 1  # h^2(Ω^2)
-    @test H0[3, 3] == 1  # h^3(Ω^3)
+    @test H0[0, 0] == 1
+    @test H0[1, 1] == 1
+    @test H0[2, 2] == 1
+    @test H0[3, 3] == 1
   end
 
   @testset "print_hodge_diamond" begin
@@ -1810,19 +1809,19 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = projective_space(2)
     P = hochschild_cohomology(X)
     @test P isa PolyvectorParallelogram
-    @test P[0, 0] == 1    # h^0(𝒪) = 1
-    @test P[1, 0] == 8    # h^0(T_ℙ²) = h^0(𝒪(1)^3) = dim Aut(ℙ²) = 8
-    @test P[2, 0] == 10   # h^0(∧²T) = h^0(𝒪(3)) = 10
-    @test P[0, 1] == 0    # h^1(𝒪) = 0
-    @test P[0, 2] == 0    # h^2(𝒪) = 0
+    @test P[0, 0] == 1
+    @test P[1, 0] == 8  # dim Aut(ℙ²) = 8
+    @test P[2, 0] == 10  # ∧²T ≅ 𝒪(3)
+    @test P[0, 1] == 0
+    @test P[0, 2] == 0
 
     # ℙ^1
     X1 = projective_space(1)
     P1 = hochschild_cohomology(X1)
-    @test P1[0, 0] == 1   # h^0(𝒪) = 1
-    @test P1[1, 0] == 3   # h^0(T_ℙ¹) = dim SL₂ = 3
-    @test P1[0, 1] == 0   # h^1(𝒪) = 0
-    @test P1[1, 1] == 0   # h^1(T_ℙ¹) = 0
+    @test P1[0, 0] == 1
+    @test P1[1, 0] == 3  # dim SL₂ = 3
+    @test P1[0, 1] == 0
+    @test P1[1, 1] == 0
   end
 
   @testset "Hochschild cohomology: non-cominuscule filtration (regression)" begin
@@ -2543,20 +2542,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     X = projective_space(4)
     Z = zero_locus(line_bundle(X, 5))
     h = hodge_numbers(Z)
-    @test h[0, 0] == 1   # h^{0,0}
-    @test h[0, 3] == 1   # h^{0,3}
-    @test h[1, 1] == 1   # h^{1,1}
-    @test h[2, 1] == 101 # h^{2,1}
-    @test h[1, 2] == 101 # h^{1,2} = h^{2,1}
-    @test h[2, 2] == 1   # h^{2,2} = h^{1,1}
+    @test h[0, 0] == 1
+    @test h[0, 3] == 1
+    @test h[1, 1] == 1
+    @test h[2, 1] == 101
+    @test h[1, 2] == 101
+    @test h[2, 2] == 1
 
     # Two cubics in P^5: CY3, h^{1,1}=1, h^{2,1}=73
     X5 = projective_space(5)
     E = 2 * line_bundle(X5, 3)
     Z5 = zero_locus(E)
     h5 = hodge_numbers(Z5)
-    @test h5[1, 1] == 1   # h^{1,1}
-    @test h5[2, 1] == 73  # h^{2,1}
+    @test h5[1, 1] == 1
+    @test h5[2, 1] == 73
   end
 
   @testset "ZeroLocus: Hodge numbers (Fano 4-fold)" begin
@@ -2565,22 +2564,22 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Quadric 4-fold: h^{1,1}=1, h^{2,2}=2
     Z_q = zero_locus(line_bundle(X, 2))
     h_q = hodge_numbers(Z_q)
-    @test h_q[1, 1] == 1  # h^{1,1}
-    @test h_q[2, 2] == 2  # h^{2,2}
+    @test h_q[1, 1] == 1
+    @test h_q[2, 2] == 2
 
     # Cubic 4-fold: h^{1,1}=1, h^{1,3}=1, h^{2,2}=21
     Z_c = zero_locus(line_bundle(X, 3))
     h_c = hodge_numbers(Z_c)
-    @test h_c[1, 1] == 1  # h^{1,1}
-    @test h_c[1, 3] == 1  # h^{1,3}
-    @test h_c[2, 2] == 21 # h^{2,2}
+    @test h_c[1, 1] == 1
+    @test h_c[1, 3] == 1
+    @test h_c[2, 2] == 21
 
     # Quartic 4-fold: h^{1,1}=1, h^{1,3}=21, h^{2,2}=142
     Z_4 = zero_locus(line_bundle(X, 4))
     h_4 = hodge_numbers(Z_4)
-    @test h_4[1, 1] == 1   # h^{1,1}
-    @test h_4[1, 3] == 21  # h^{1,3}
-    @test h_4[2, 2] == 142 # h^{2,2}
+    @test h_4[1, 1] == 1
+    @test h_4[1, 3] == 21
+    @test h_4[2, 2] == 142
   end
 
   @testset "ZeroLocus: Hodge numbers (empty zero locus)" begin
@@ -2611,8 +2610,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     H = hodge_numbers(Z)
     @test axes(H) == (0:4, 0:4)
     @test all(is_determined, H)
-    @test H[1, 1] == 2 && H[2, 2] == 2      # h^{1,1}, h^{2,2}
-    @test H[2, 1] == 5 && H[1, 2] == 5      # h^{2,1}, h^{1,2}
+    @test H[1, 1] == 2 && H[2, 2] == 2
+    @test H[2, 1] == 5 && H[1, 2] == 5
 
     # Polyvectors and tangent-bundle cohomology also come out via Künneth.
     @test all(is_determined, hochschild_cohomology(Z).data)
@@ -2644,8 +2643,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     Z = zero_locus(E)
     @test dimension(Z) == 4
     h = hodge_numbers(Z)
-    @test h[1, 1] == 1  # h^{1,1}
-    @test h[2, 2] == 8  # h^{2,2}
+    @test h[1, 1] == 1
+    @test h[2, 2] == 8
   end
 
   @testset "ZeroLocus: conormal χ recursion" begin
@@ -2910,12 +2909,12 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     E2 = 4 * line_bundle(X2, 1)
     Z2 = zero_locus(E2)
     H2 = hodge_numbers_symbolic(Z2)
-    @test is_determined(H2[1, 0])       # h^{1,0} determined
-    @test H2[1, 0].constant == 0        # h^{1,0} = 0
-    @test is_determined(H2[1, 4])       # h^{1,4} determined
-    @test H2[1, 4].constant == 0        # h^{1,4} = 0
-    @test H2[1, 1].constant == 1        # h^{1,1} = 1
-    @test H2[2, 2].constant == 8        # h^{2,2} = 8
+    @test is_determined(H2[1, 0])
+    @test H2[1, 0].constant == 0
+    @test is_determined(H2[1, 4])
+    @test H2[1, 4].constant == 0
+    @test H2[1, 1].constant == 1
+    @test H2[2, 2].constant == 8
 
     # Hodge + Serre symmetry in symbolic result
     X3 = projective_space(5)
@@ -2958,13 +2957,13 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     Z1 = zero_locus(E1)
     @test dimension(Z1) == 4
     h1 = hodge_numbers(Z1)
-    @test h1[0, 0] == 1   # h^{0,0}
-    @test h1[1, 0] == 0   # h^{1,0}
-    @test h1[2, 0] == 1   # h^{2,0}: the holomorphic symplectic form
-    @test h1[2, 4] == 1   # h^{2,4}
+    @test h1[0, 0] == 1
+    @test h1[1, 0] == 0
+    @test h1[2, 0] == 1  # The holomorphic symplectic form.
+    @test h1[2, 4] == 1
     # Parameter-free consequences matching h^{1,1} = h^{1,3} = 21, h^{2,2} = 232:
-    @test h1[2, 2] - 2 * h1[2, 1] == AffineExpr(232)          # h^{2,2} - 2h^{2,1}
-    @test h1[1, 1] - h1[1, 2] + h1[1, 3] == AffineExpr(42)    # h^{1,1} - h^{1,2} + h^{1,3}
+    @test h1[2, 2] - 2 * h1[2, 1] == AffineExpr(232)
+    @test h1[1, 1] - h1[1, 2] + h1[1, 3] == AffineExpr(42)
     # Hodge symmetry and Serre duality hold identically in the parameters.
     @test h1[1, 2] == h1[2, 1]
     @test h1[1, 1] == h1[3, 3]
@@ -2987,16 +2986,15 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     # Selected families from Küchle, Math. Z. 218 (1995), 563–575.
     # Invariants verified against the paper and by χ_top = 2 + 2b₂ + 2h¹³ + h²²
     # (using b₃=0 and b₂=h¹¹ for these Fano fourfolds).
-    # Note: h^{p,q} is at matrix index h[p, q].
     # These families are Fano (not CY), so Serre duality H^k(F) = H^{d-k}(F*)
     # must NOT be applied when computing cohomology of bundles on the zero locus.
 
     # b2: O(2)² on Gr(2,5)   — h¹¹=1, h¹³=20, h²²=132, χ_top=176
     let X = Gr(2, 5), E = 2 * line_bundle(X, 2), Z = zero_locus(E), h = hodge_numbers(Z)
       @test dimension(Z) == 4
-      @test h[1, 1] == 1     # h^{1,1}
-      @test h[1, 3] == 20    # h^{1,3}
-      @test h[2, 2] == 132   # h^{2,2}
+      @test h[1, 1] == 1
+      @test h[1, 3] == 20
+      @test h[2, 2] == 132
       # χ_top = 2 + 2b₂ + 2h¹³ + h²²
       @test 2 + 2 * h[1, 1] + 2 * h[1, 3] + h[2, 2] == 176
     end
@@ -3006,9 +3004,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
-      @test h[1, 1] == 1     # h^{1,1}
-      @test h[1, 3] == 15    # h^{1,3}
-      @test h[2, 2] == 106   # h^{2,2}
+      @test h[1, 1] == 1
+      @test h[1, 3] == 15
+      @test h[2, 2] == 106
       @test 2 + 2 * h[1, 1] + 2 * h[1, 3] + h[2, 2] == 140
     end
 
@@ -3017,9 +3015,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
-      @test h[1, 1] == 1     # h^{1,1}
-      @test h[1, 3] == 6     # h^{1,3}
-      @test h[2, 2] == 57    # h^{2,2}
+      @test h[1, 1] == 1
+      @test h[1, 3] == 6
+      @test h[2, 2] == 57
       @test 2 + 2 * h[1, 1] + 2 * h[1, 3] + h[2, 2] == 73
     end
 
@@ -3030,9 +3028,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
-      @test h[1, 1] == 1     # h^{1,1}
-      @test h[1, 3] == 14    # h^{1,3}
-      @test h[2, 2] == 100   # h^{2,2}
+      @test h[1, 1] == 1
+      @test h[1, 3] == 14
+      @test h[2, 2] == 100
       @test 2 + 2 * h[1, 1] + 2 * h[1, 3] + h[2, 2] == 132
     end
 
@@ -3041,9 +3039,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       E = direct_sum(Qd1, Qd1), Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
-      @test h[1, 1] == 1     # h^{1,1}
-      @test h[1, 3] == 0     # h^{1,3}
-      @test h[2, 2] == 15    # h^{2,2}
+      @test h[1, 1] == 1
+      @test h[1, 3] == 0
+      @test h[2, 2] == 15
       @test 2 + 2 * h[1, 1] + 2 * h[1, 3] + h[2, 2] == 19
     end
 
@@ -3055,9 +3053,9 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       Z = zero_locus(E), h = hodge_numbers(Z)
 
       @test dimension(Z) == 4
-      @test h[1, 1] == 2     # h^{1,1}
-      @test h[1, 3] == 1     # h^{1,3}
-      @test h[2, 2] == 22    # h^{2,2}
+      @test h[1, 1] == 2
+      @test h[1, 3] == 1
+      @test h[2, 2] == 22
       @test 2 + 2 * h[1, 1] + 2 * h[1, 3] + h[2, 2] == 30
     end
   end
@@ -3084,11 +3082,11 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       end
 
       # Determined entries
-      @test is_determined(h[0, 0])  # h^{0,0}
+      @test is_determined(h[0, 0])
       @test h[0, 0] == 1
-      @test is_determined(h[6, 6])  # h^{6,6}
+      @test is_determined(h[6, 6])
       @test h[6, 6] == 1
-      @test is_determined(h[1, 1])  # h^{1,1}
+      @test is_determined(h[1, 1])
       @test h[1, 1] == 1
 
       # h^{1,2} has constant part 3 (undetermined — symbolic expression)
@@ -3318,7 +3316,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       @test does_E1_degenerate(S)
       H = cohomology(F)
       @test all(is_determined, H.entries)
-      @test H[0] == 15  # H^0(T) = sl(4)
+      @test H[0] == 15
       @test all(is_zero_expr(H[q]) for q in 1:dimension(Gr(2, 4)))
     end
 
@@ -3770,8 +3768,8 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     Z = zero_locus(direct_sum(E, line_bundle(X, 1)))
     h = hodge_numbers(Z)
     @test all(is_determined, h)
-    @test h[2, 2] == 3  # h^{2,2} = h^{2,2}(Z(E)) = b_4(Gr(2,8)) by Lefschetz
-    @test h[3, 3] == 3  # h^{3,3} via Serre duality
+    @test h[2, 2] == 3
+    @test h[3, 3] == 3  # By Serre duality.
     @test h[2, 3] == 2  # middle-degree row
   end
 

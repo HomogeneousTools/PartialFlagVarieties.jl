@@ -44,13 +44,13 @@ julia> X = Gr(2, 4);
 
 julia> H = hodge_numbers(X);
 
-julia> H[0, 0]  # h^{0,0}
+julia> H[0, 0]
 1
 
-julia> H[1, 1]  # h^{1,1}
+julia> H[1, 1]
 1
 
-julia> H[0, 1]  # h^{0,1}
+julia> H[0, 1]
 0
 ```
 """
@@ -95,7 +95,7 @@ julia> X = projective_space(3);
 
 julia> H = twisted_hodge_numbers(X, 0);
 
-julia> H[0, 0]  # h^0(ℙ³, 𝒪)
+julia> H[0, 0]
 1
 ```
 """
@@ -149,7 +149,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{3}, (1, 3));
 
-julia> twisted_hodge_numbers(X, [1, 1])[0, 0]  # h^0(O(1,1))
+julia> twisted_hodge_numbers(X, [1, 1])[0, 0]
 15
 ```
 """
@@ -292,10 +292,10 @@ julia> X = projective_space(2);
 
 julia> P = hochschild_cohomology(X);
 
-julia> P[0, 0]  # h⁰(𝒪) = 1
+julia> P[0, 0]
 1
 
-julia> P[2, 0]  # h⁰(∧²T) = h⁰(𝒪(3)) for ℙ²
+julia> P[2, 0]  # ∧²T ≅ 𝒪(3) on ℙ²
 10
 ```
 """
@@ -388,10 +388,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> h = hodge_numbers(Z);
 
-julia> h[1, 1]  # h^{1,1}
+julia> h[1, 1]
 1
 
-julia> h[2, 1]  # h^{2,1}
+julia> h[2, 1]
 101
 ```
 """
@@ -472,13 +472,13 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> H = hodge_numbers_symbolic(Z);
 
-julia> is_determined(H[1, 1])  # h^{1,1} fully determined
+julia> is_determined(H[1, 1])
 true
 
 julia> H[1, 1].constant
 1
 
-julia> H[2, 1].constant  # h^{2,1}
+julia> H[2, 1].constant
 101
 ```
 
@@ -496,10 +496,10 @@ julia> H = hodge_numbers_symbolic(Z);
 julia> all(is_determined(H[p, q]) for p in 0:4, q in 0:4)
 true
 
-julia> H[1, 1].constant  # h^{1,1}
+julia> H[1, 1].constant
 1
 
-julia> H[2, 2].constant  # h^{2,2}
+julia> H[2, 2].constant
 8
 ```
 """
@@ -952,10 +952,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> M = twisted_hodge_numbers(Z, structure_sheaf(X));
 
-julia> M[0, 0]  # h^0(Z, 𝒪_Z) = 1
+julia> M[0, 0]
 1
 
-julia> M[3, 0]  # h^0(Z, Ω³_Z) = h^{3,0} = 1 (CY3)
+julia> M[3, 0]
 1
 ```
 """
@@ -986,10 +986,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> M = twisted_hodge_numbers(Z, 0);
 
-julia> M[0, 0]  # h^0(Z, 𝒪_Z) = 1
+julia> M[0, 0]
 1
 
-julia> M[1, 1]  # h^1(Z, Ω¹_Z) = h^{1,1} = 1
+julia> M[1, 1]
 1
 ```
 """
@@ -1046,10 +1046,10 @@ julia> Z = zero_locus(line_bundle(X, 5));
 
 julia> P = hochschild_cohomology(Z);
 
-julia> P[0, 0]  # h⁰(𝒪_Z) = 1
+julia> P[0, 0]
 1
 
-julia> P[3, 0]  # h⁰(∧³T_Z) = h⁰(ω_Z⁻¹) = 1 (CY3)
+julia> P[3, 0]
 1
 ```
 """

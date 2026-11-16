@@ -37,7 +37,7 @@ using PartialFlagVarieties
 X = Gr(2, 5)
 dimension(X)             # 6
 picard_rank(X)           # 1
-betti_numbers(X)         # b[p] = b_{2p}, indexed by 0:6
+betti_numbers(X)
 ```
 
 When no named constructor exists, use [`partial_flag_variety`](@ref):
@@ -87,7 +87,7 @@ L = line_bundle(X, 1)
 Hdim = cohomology(L)                    # dimension-valued (default)
 Hchar = cohomology(L; characters=true)  # character-valued
 
-Hdim[0] == 5              # dim H^0(P^4, O(1)) — the standard representation
+Hdim[0] == 5              # The standard representation
 ```
 
 `Cohomology` objects use **0-based indexing**: `H[0]` means ``\mathrm{H}^0``,

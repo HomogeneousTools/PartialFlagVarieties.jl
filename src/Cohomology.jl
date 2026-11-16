@@ -166,10 +166,10 @@ julia> E = structure_sheaf(X);
 
 julia> H = cohomology(E; characters=true);
 
-julia> H[0]  # H⁰(ℙ⁴, 𝒪) = k
+julia> H[0]
 A4(0, 0, 0, 0)
 
-julia> H[1]  # H¹(ℙ⁴, 𝒪) = 0
+julia> H[1]
 0
 ```
 """
@@ -301,7 +301,7 @@ julia> using PartialFlagVarieties
 
 julia> X = partial_flag_variety(TypeA{4}, (1,));
 
-julia> cohomology(line_bundle(X, 1))[0]  # h⁰(ℙ⁴, 𝒪(1)) = 5
+julia> cohomology(line_bundle(X, 1))[0]
 5
 
 julia> degree(cohomology(line_bundle(X, 1); characters=true)[0])  # V(ω₁), dim 5
