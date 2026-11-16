@@ -59,10 +59,9 @@ function hodge_numbers(X::PartialFlagVariety)
   betti = betti_numbers(X)
 
   # For G/P: h^{p,q} = δ_{p,q} * b_{2p}
-  # betti_numbers returns only even Betti numbers: betti[p] = b_{2p}
   H = zeros(BigInt, d + 1, d + 1)
-  for p in 0:min(d, length(betti) - 1)
-    H[p + 1, p + 1] = betti[p]
+  for p in 0:d
+    H[p + 1, p + 1] = betti[2 * p]
   end
   OffsetArray(H, -1, -1)
 end
@@ -440,6 +439,36 @@ function hodge_numbers(Z::ZeroLocus)
   end
 
   OffsetArray(_renumber_variables!(M), -1, -1)
+end
+
+"""
+    betti_numbers(Z::ZeroLocus) -> OffsetVector{AffineExpr}
+
+Return the Betti numbers ``b_k(Z) = \\dim \\mathrm{H}^k(Z, \\mathbb{Q})``
+in all degrees, indexed by `0:2*dimension(Z)`.
+
+Sum the entries of [`hodge_numbers`](@ref) with total degree ``k``:
+``b_k(Z) = \\sum_{p+q=k} \\mathrm{h}^{p,q}(Z)``.
+Entries are [`AffineExpr`](@ref)s, retaining any unresolved parameters.
+As for Hodge numbers, this assumes a smooth zero locus of a regular section.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> Z = zero_locus(line_bundle(projective_space(4), 3));
+
+julia> b = betti_numbers(Z);
+
+julia> b[3]
+10
+```
+"""
+function betti_numbers(Z::ZeroLocus)
+  H = hodge_numbers(Z)
+  d = dimension(Z)
+  b = [sum(H[p, k - p] for p in max(0, k - d):min(d, k)) for k in 0:(2 * d)]
+  OffsetArray(b, -1)
 end
 
 """

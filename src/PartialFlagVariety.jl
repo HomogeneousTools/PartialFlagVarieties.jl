@@ -242,15 +242,15 @@ end
 """
     betti_numbers(X::PartialFlagVariety) -> OffsetVector{BigInt}
 
-Return the Betti numbers of `X` in even degrees, i.e.
-``[b_0, b_2, b_4, \\ldots, b_{2d}]``.
+Return the Betti numbers ``b_k(X) = \\dim \\mathrm{H}^k(X, \\mathbb{Q})``
+in all degrees, indexed by `0:2*dimension(X)`.
 
-Since ``\\mathrm{G}/\\mathrm{P}`` has no odd cohomology this completely describes ``\\mathrm{H}^\\bullet(X, \\mathbb{Z})``.
-Computed from the ratio of the Poincaré polynomials of the Weyl groups
-``\\mathrm{W}_{\\mathrm{G}}`` and ``\\mathrm{W}_{\\mathrm{L}}``.
+The odd entries vanish for a partial flag variety.
+The even entries are computed from the ratio of the Poincaré polynomials
+of the Weyl groups ``\\mathrm{W}_{\\mathrm{G}}`` and ``\\mathrm{W}_{\\mathrm{L}}``.
 
-The indices run from `0` to `dimension(X)`: the entry `b[p]` is ``b_{2p}``.
-Use `parent(b)` to access the underlying one-based vector.
+For `b = betti_numbers(X)`, `b[k]` is ``b_k(X)``.
+Use `parent(b)` to access the underlying ordinary one-based vector.
 """
 function betti_numbers(X::PartialFlagVariety)
   degs_G = collect(degrees_fundamental_invariants(dynkin_type(X)))
@@ -262,7 +262,10 @@ function betti_numbers(X::PartialFlagVariety)
 
   num = foldl((p, d) -> _poly_mul(p, ones(BigInt, d)), degs_G; init=BigInt[1])
   den = foldl((p, d) -> _poly_mul(p, ones(BigInt, d)), degs_L; init=BigInt[1])
-  OffsetArray(_poly_div(num, den), -1)
+  even = _poly_div(num, den)
+  b = zeros(BigInt, 2 * length(even) - 1)
+  b[1:2:end] = even
+  OffsetArray(b, -1)
 end
 
 function _poly_mul(a, b)
