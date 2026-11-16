@@ -173,6 +173,7 @@ end
     Z = zero_locus(L)
     euler_characteristic(Z)
     hodge_numbers(Z)
+    betti_numbers(Z)
   end
 end
 
