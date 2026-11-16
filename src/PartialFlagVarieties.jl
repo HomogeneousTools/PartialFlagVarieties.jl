@@ -17,7 +17,7 @@ module PartialFlagVarieties
 
 using Semisimple
 using LRUCache
-using OffsetArrays: OffsetArray
+using OffsetArrays: OffsetMatrix, OffsetVector
 using Preferences
 using PrettyTables
 using StaticArrays

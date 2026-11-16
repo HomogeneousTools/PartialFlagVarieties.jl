@@ -265,7 +265,7 @@ function betti_numbers(X::PartialFlagVariety)
   even = _poly_div(num, den)
   b = zeros(BigInt, 2 * length(even) - 1)
   b[1:2:end] = even
-  OffsetArray(b, -1)
+  OffsetVector(b, -1)
 end
 
 function _poly_mul(a, b)
