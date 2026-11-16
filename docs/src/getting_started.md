@@ -37,7 +37,7 @@ using PartialFlagVarieties
 X = Gr(2, 5)
 dimension(X)             # 6
 picard_rank(X)           # 1
-betti_numbers(X)         # [b_0, b_2, ..., b_12]
+betti_numbers(X)         # b[p] = b_{2p}, indexed by 0:6
 ```
 
 When no named constructor exists, use [`partial_flag_variety`](@ref):

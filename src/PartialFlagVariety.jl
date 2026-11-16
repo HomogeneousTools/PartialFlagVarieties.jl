@@ -240,7 +240,7 @@ function euler_characteristic(X::PartialFlagVariety)
 end
 
 """
-    betti_numbers(X::PartialFlagVariety) -> Vector{BigInt}
+    betti_numbers(X::PartialFlagVariety) -> OffsetVector{BigInt}
 
 Return the Betti numbers of `X` in even degrees, i.e.
 ``[b_0, b_2, b_4, \\ldots, b_{2d}]``.
@@ -249,7 +249,8 @@ Since ``\\mathrm{G}/\\mathrm{P}`` has no odd cohomology this completely describe
 Computed from the ratio of the Poincaré polynomials of the Weyl groups
 ``\\mathrm{W}_{\\mathrm{G}}`` and ``\\mathrm{W}_{\\mathrm{L}}``.
 
-The entry at index `p + 1` is ``b_{2p}``.
+The indices run from `0` to `dimension(X)`: the entry `b[p]` is ``b_{2p}``.
+Use `parent(b)` to access the underlying one-based vector.
 """
 function betti_numbers(X::PartialFlagVariety)
   degs_G = collect(degrees_fundamental_invariants(dynkin_type(X)))
@@ -261,7 +262,7 @@ function betti_numbers(X::PartialFlagVariety)
 
   num = foldl((p, d) -> _poly_mul(p, ones(BigInt, d)), degs_G; init=BigInt[1])
   den = foldl((p, d) -> _poly_mul(p, ones(BigInt, d)), degs_L; init=BigInt[1])
-  _poly_div(num, den)
+  OffsetArray(_poly_div(num, den), -1)
 end
 
 function _poly_mul(a, b)

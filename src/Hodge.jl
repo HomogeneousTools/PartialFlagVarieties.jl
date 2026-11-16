@@ -59,10 +59,10 @@ function hodge_numbers(X::PartialFlagVariety)
   betti = betti_numbers(X)
 
   # For G/P: h^{p,q} = δ_{p,q} * b_{2p}
-  # betti_numbers returns only even Betti numbers: betti[i] = b_{2(i-1)}
+  # betti_numbers returns only even Betti numbers: betti[p] = b_{2p}
   H = zeros(BigInt, d + 1, d + 1)
   for p in 0:min(d, length(betti) - 1)
-    H[p + 1, p + 1] = betti[p + 1]  # betti[p+1] = b_{2p}
+    H[p + 1, p + 1] = betti[p]
   end
   OffsetArray(H, -1, -1)
 end

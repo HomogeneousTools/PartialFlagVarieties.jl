@@ -75,6 +75,8 @@ Cohomological indices start at zero:
 3. The Hochschild [`PolyvectorParallelogram`](@ref) is **0-indexed**:
    `P[p, q]` is ``\mathrm{h}^q(X, \bigwedge\nolimits^p \mathrm{T}_X)`` and `P[n]` is
    ``\dim \mathrm{HH}^n``.
+4. [`betti_numbers`](@ref) is **0-indexed** and contains only even degrees:
+   `b[p]` means ``b_{2p}``, for `p` in `0:dimension(X)`.
 
 For example:
 

@@ -277,14 +277,24 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
 
   @testset "Betti numbers" begin
     # ℙⁿ: all Betti numbers = 1
-    @test betti_numbers(projective_space(2)) == [1, 1, 1]
-    @test betti_numbers(projective_space(4)) == [1, 1, 1, 1, 1]
+    @test parent(betti_numbers(projective_space(2))) == [1, 1, 1]
+    @test parent(betti_numbers(projective_space(4))) == [1, 1, 1, 1, 1]
+
+    # The zero-based index p records b_{2p}; odd degrees remain omitted.
+    b = betti_numbers(Gr(2, 4))
+    @test axes(b) == (0:4,)
+    @test b[0] == 1
+    @test b[1] == 1
+    @test b[2] == 2
+    @test b[4] == 1
+    @test_throws BoundsError b[-1]
+    @test_throws BoundsError b[5]
 
     # Gr(2,4): Betti = 1, 1, 2, 1, 1
-    @test betti_numbers(Gr(2, 4)) == [1, 1, 2, 1, 1]
+    @test parent(betti_numbers(Gr(2, 4))) == [1, 1, 2, 1, 1]
 
     # Gr(2,5): Betti = 1, 1, 2, 2, 2, 1, 1
-    @test betti_numbers(Gr(2, 5)) == [1, 1, 2, 2, 2, 1, 1]
+    @test parent(betti_numbers(Gr(2, 5))) == [1, 1, 2, 2, 2, 1, 1]
 
     # Sum of Betti = χ
     @test sum(betti_numbers(cayley_plane())) == 27
@@ -970,7 +980,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
   @testset "Projective space" begin
     V = projective_space(4)
     @test dimension(V) == 4
-    @test betti_numbers(V) == [1, 1, 1, 1, 1]
+    @test parent(betti_numbers(V)) == [1, 1, 1, 1, 1]
   end
 
   @testset "Flag varieties" begin
@@ -3323,7 +3333,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
       H = cohomology(exterior_power(Omega, p))
       for q in 0:dimension(X)
         if is_determined(H[q])
-          @test H[q] == (p == q ? betti[p + 1] : 0)
+          @test H[q] == (p == q ? betti[p] : 0)
         end
       end
     end
@@ -3712,7 +3722,7 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     h = hodge_numbers(zero_locus(line_bundle(X, 1)))
     for p in 0:6, q in 0:6
       p + q < 6 || continue
-      @test h[p, q] == (p == q ? betti[p + 1] : 0)
+      @test h[p, q] == (p == q ? betti[p] : 0)
     end
     @test h[3, 3] == 4
 

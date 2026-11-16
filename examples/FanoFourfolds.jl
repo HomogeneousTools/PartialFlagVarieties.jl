@@ -396,7 +396,7 @@ const BATCH_SIZE = parse(
       H[i] = AffineExpr(0)
     end
     for p in 0:4
-      H[p + 1, p + 1] = AffineExpr(betti[p + 1])
+      H[p + 1, p + 1] = AffineExpr(betti[p])
     end
     H
   end
