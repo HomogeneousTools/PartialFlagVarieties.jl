@@ -171,6 +171,7 @@ fano_index(::ZeroLocus)
 is_calabi_yau
 is_strict_calabi_yau
 is_strongly_fano
+is_rigid
 ```
 
 ## Internals
