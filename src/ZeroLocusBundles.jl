@@ -686,6 +686,53 @@ function cohomology(F::ZeroLocusBundle)
   Cohomology{AffineExpr}(entries, d)
 end
 
+"""
+    is_rigid(X::PartialFlagVariety) -> Bool
+    is_rigid(Z::ZeroLocus) -> Union{Bool,Nothing}
+
+Test infinitesimal rigidity. Return `true` if the tangent cohomology in
+degree one vanishes, `false` if it is provably nonzero, and `nothing` if
+the computation is inconclusive. A nonzero first-order deformation may be
+obstructed in higher order.
+
+Partial flag varieties are infinitesimally rigid by Bott's theorem.
+For a smooth regular zero locus, the test uses [`cohomology`](@ref) of its
+tangent bundle. A positive lower bound for h¹(T) or h¹(T) − h⁰(T)
+also certifies `false` when the exact dimension is symbolic.
+
+# Examples
+```jldoctest
+julia> using PartialFlagVarieties
+
+julia> is_rigid(Gr(2, 5))
+true
+
+julia> is_rigid(zero_locus(line_bundle(projective_space(4), 3)))
+false
+
+julia> S = spinor_bundle(OGr(3, 10), :plus);
+
+julia> isnothing(is_rigid(zero_locus(S + S)))
+true
+```
+"""
+function is_rigid(::PartialFlagVariety)
+  return true
+end
+
+function is_rigid(Z::ZeroLocus)
+  (dimension(Z) == 0 || codimension(Z) == 0) && return true
+  H = cohomology(tangent_bundle(Z))
+  h1 = H[1]
+  is_determined(h1) && return h1 == 0
+
+  # Both h⁰(T) and every free cohomology parameter are nonnegative.
+  for lower_bound in (h1, h1 - H[0])
+    lower_bound.constant > 0 && all(>=(0), values(lower_bound.coeffs)) && return false
+  end
+  return nothing
+end
+
 function Base.show(io::IO, F::ZeroLocusBundle)
   print(io, "Bundle(rank $(rank(F)) on ")
   show(io, variety(F))

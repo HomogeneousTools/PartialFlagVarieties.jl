@@ -3321,6 +3321,20 @@ mdt(::Type{DT}, marked) where {DT<:DynkinType} = MarkedDynkinType(DT, marked)
     @test is_zero_expr(a[3])
   end
 
+  @testset "Infinitesimal rigidity" begin
+    G = projective_space(4)
+    @test is_rigid(G) === true
+    @test is_rigid(zero_locus(zero_bundle(G))) === true
+    @test is_rigid(zero_locus(4 * line_bundle(G, 1))) === true
+    @test is_rigid(zero_locus(line_bundle(G, 5))) === false  # h¹(T) = 101
+    @test is_rigid(zero_locus(line_bundle(G, 3))) === false  # h¹(T) = 10 + h⁰(T)
+
+    Y = OGr(3, 10)
+    Sp, Sm = spinor_bundle(Y, :plus), spinor_bundle(Y, :minus)
+    @test is_rigid(zero_locus(Sp + Sp)) === nothing
+    @test is_rigid(zero_locus(Sp + Sm)) === nothing
+  end
+
   @testset "ZeroLocus: tangent-bundle cohomology" begin
     # Quintic threefold: h¹(T) = 101 deformations, h²(T) = h¹(Ω¹) = 1.
     let Z = zero_locus(line_bundle(projective_space(4), 5))
