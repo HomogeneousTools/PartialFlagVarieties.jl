@@ -716,7 +716,9 @@ julia> isnothing(is_rigid(zero_locus(S + S)))
 true
 ```
 """
-is_rigid(::PartialFlagVariety) = true
+function is_rigid(::PartialFlagVariety)
+  return true
+end
 
 function is_rigid(Z::ZeroLocus)
   (dimension(Z) == 0 || codimension(Z) == 0) && return true
